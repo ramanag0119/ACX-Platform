@@ -174,31 +174,42 @@ export const AppSidebar = ({ collapsed, onToggle }: AppSidebarProps) => {
     >
       {/* Logo & Brand */}
       <div className={cn(
-        "sidebar-brand flex items-center min-h-[64px]",
-        collapsed ? "justify-center" : "gap-3"
+        "sidebar-brand min-h-[64px]",
+        collapsed ? "flex items-center justify-center" : ""
       )}>
-        <img
-          src="/ikanos-app-icon.png"
-          alt="Ikanos Logo"
-          className="!w-[48px] !h-[48px] !max-w-none !max-h-none shrink-0 object-contain drop-shadow-md"
-        />
-        {!collapsed && (
-          <span className="sidebar-brand-text">IKANOS</span>
+        {collapsed ? (
+          <button
+            onClick={onToggle}
+            className="sidebar-hamburger-btn"
+            aria-label="Expand sidebar"
+          >
+            <span className="hamburger-line"></span>
+            <span className="hamburger-line"></span>
+            <span className="hamburger-line"></span>
+          </button>
+        ) : (
+          <>
+            {/* X close button (far left) */}
+            <button
+              onClick={onToggle}
+              className="sidebar-close-btn"
+              aria-label="Collapse sidebar"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+            {/* Logo icon */}
+            <img
+              src="/ikanos-app-icon.png"
+              alt="Ikanos Logo"
+              className="!w-[48px] !h-[48px] !max-w-none !max-h-none shrink-0 object-contain drop-shadow-md"
+            />
+            {/* Brand title */}
+            <span className="sidebar-brand-text">IKANOS</span>
+          </>
         )}
-      </div>
-
-      {/* Toggle Button */}
-      <div className={cn(
-        "flex px-4 py-3 relative z-10",
-        collapsed ? "justify-center" : "justify-end"
-      )}>
-        <button
-          onClick={onToggle}
-          className="sidebar-toggle-btn"
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
-          {collapsed ? <Menu className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-        </button>
       </div>
 
       {/* Navigation */}

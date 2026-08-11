@@ -1,6 +1,6 @@
 import { RefreshCw } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { useTheme } from "@/contexts/ThemeContext";
+import { useTheme } from "@/core/contexts/ThemeContext";
 
 const data = [
   { name: "Mon", avgEnergy: 0.2, perRoom: 0.3 },

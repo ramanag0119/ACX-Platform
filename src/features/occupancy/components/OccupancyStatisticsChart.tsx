@@ -1,6 +1,6 @@
 import { RefreshCw } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
-import { useTheme } from "@/contexts/ThemeContext";
+import { useTheme } from "@/core/contexts/ThemeContext";
 
 const data = [
   { name: "Occupied", value: 94, color: "hsl(145,70%,45%)" },

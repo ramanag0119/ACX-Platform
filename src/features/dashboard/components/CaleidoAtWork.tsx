@@ -1,5 +1,5 @@
 import { RefreshCw } from "lucide-react";
-import { useTheme } from "@/contexts/ThemeContext";
+import { useTheme } from "@/core/contexts/ThemeContext";
 
 interface CircularProgressProps {
   value: number;

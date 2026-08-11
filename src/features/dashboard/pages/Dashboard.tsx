@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { EnergyConsumptionChart } from "@/components/dashboard/EnergyConsumptionChart";
-import { OccupancyStatisticsChart } from "@/components/dashboard/OccupancyStatisticsChart";
-import { CaleidoAtWork } from "@/components/dashboard/CaleidoAtWork";
-import { AlertsPanel } from "@/components/dashboard/AlertsPanel";
-import { StatusSection } from "@/components/dashboard/StatusSection";
-import { RoomDetailsPanel } from "@/components/dashboard/RoomDetailsPanel";
-import { useTheme } from "@/contexts/ThemeContext";
+import { EnergyConsumptionChart } from "../components/EnergyConsumptionChart";
+import { OccupancyStatisticsChart } from "@/features/occupancy/components/OccupancyStatisticsChart";
+import { CaleidoAtWork } from "../components/CaleidoAtWork";
+import { AlertsPanel } from "../components/AlertsPanel";
+import { StatusSection } from "../components/StatusSection";
+import { RoomDetailsPanel } from "@/features/occupancy/components/RoomDetailsPanel";
+import { useTheme } from "@/core/contexts/ThemeContext";
 
 // Sample data
 const buildings = [

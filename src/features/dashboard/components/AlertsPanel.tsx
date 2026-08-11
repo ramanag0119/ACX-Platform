@@ -1,5 +1,5 @@
 import { List } from "lucide-react";
-import { useTheme } from "@/contexts/ThemeContext";
+import { useTheme } from "@/core/contexts/ThemeContext";
 
 export const AlertsPanel = () => {
   const { isDark } = useTheme();

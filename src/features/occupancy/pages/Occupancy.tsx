@@ -19,7 +19,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Info, ArrowRight } from "lucide-react";
-import { RoomDetailsModal } from "@/components/occupancy/RoomDetailsModal";
+import { RoomDetailsModal } from "../components/RoomDetailsModal";
 
 type RoomData = {
   roomNo: string;

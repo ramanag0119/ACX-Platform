@@ -1,6 +1,6 @@
 import { Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useTheme } from "@/contexts/ThemeContext";
+import { useTheme } from "@/core/contexts/ThemeContext";
 
 interface RoomDetailsPanelProps {
   roomNumber: string;

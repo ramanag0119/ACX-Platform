@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/core/contexts/AuthContext";
 
 const Login = () => {
   const [username, setUsername] = useState("");

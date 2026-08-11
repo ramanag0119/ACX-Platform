@@ -1,6 +1,6 @@
 import { Building2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useTheme } from "@/contexts/ThemeContext";
+import { useTheme } from "@/core/contexts/ThemeContext";
 
 interface Building {
   id: string;
