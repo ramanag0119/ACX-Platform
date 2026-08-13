@@ -18,7 +18,8 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Search, ChevronLeft, ChevronRight, Eye, Edit, Share2, Pencil, Settings, X, ChevronDown } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Eye, Edit, Share2, Pencil, Settings, X, ChevronDown, Bed, Briefcase, Building, Utensils, Wrench, HeartPulse, Sparkles } from "lucide-react";
+import { useTheme } from "@/core/contexts/ThemeContext";
 import {
     PieChart,
     Pie,
@@ -37,13 +38,76 @@ import { Label } from "@/components/ui/label";
 
 // KPI Card data
 const serviceTypes = [
-    { id: "room-service", label: "Room Service", count: "55", color: "bg-slate-700 border border-white" },
-    { id: "travel-desk", label: "Travel Desk", count: "1", color: "bg-amber-700" },
-    { id: "business-center", label: "Business Center", count: "3", color: "bg-green-700" },
-    { id: "food-order", label: "Food Order", count: "51", color: "bg-teal-800" },
-    { id: "facility-services", label: "Facility Services", count: "104174", color: "bg-yellow-700" },
-    { id: "health-fitness", label: "Health & Fitness", count: "0", color: "bg-red-900" },
-    { id: "sanitization", label: "Sanitization", count: "22", color: "bg-red-800" },
+    { 
+        id: "room-service", 
+        label: "Room Service", 
+        count: "55", 
+        icon: Bed, 
+        iconColor: "text-blue-600 dark:text-blue-400", 
+        iconBg: "bg-blue-50 dark:bg-blue-950/40", 
+        barColor: "bg-blue-500",
+        hoverBorder: "hover:border-blue-500 hover:ring-2 hover:ring-blue-500/30" 
+    },
+    { 
+        id: "travel-desk", 
+        label: "Travel Desk", 
+        count: "1", 
+        icon: Briefcase, 
+        iconColor: "text-foreground dark:text-purple-400", 
+        iconBg: "bg-purple-50 dark:bg-purple-950/40", 
+        barColor: "bg-purple-500",
+        hoverBorder: "hover:border-purple-500 hover:ring-2 hover:ring-purple-500/30" 
+    },
+    { 
+        id: "business-center", 
+        label: "Business Center", 
+        count: "3", 
+        icon: Building, 
+        iconColor: "text-green-600 dark:text-green-400", 
+        iconBg: "bg-green-50 dark:bg-green-950/40", 
+        barColor: "bg-green-500",
+        hoverBorder: "hover:border-green-500 hover:ring-2 hover:ring-green-500/30" 
+    },
+    { 
+        id: "food-order", 
+        label: "Food Order", 
+        count: "51", 
+        icon: Utensils, 
+        iconColor: "text-cyan-600 dark:text-cyan-400", 
+        iconBg: "bg-cyan-50 dark:bg-cyan-950/40", 
+        barColor: "bg-cyan-500",
+        hoverBorder: "hover:border-cyan-500 hover:ring-2 hover:ring-cyan-500/30" 
+    },
+    { 
+        id: "facility-services", 
+        label: "Facility Services", 
+        count: "104174", 
+        icon: Wrench, 
+        iconColor: "text-orange-500 dark:text-orange-400", 
+        iconBg: "bg-orange-50 dark:bg-orange-950/40", 
+        barColor: "bg-orange-500",
+        hoverBorder: "hover:border-orange-500 hover:ring-2 hover:ring-orange-500/30" 
+    },
+    { 
+        id: "health-fitness", 
+        label: "Health & Fitness", 
+        count: "0", 
+        icon: HeartPulse, 
+        iconColor: "text-red-600 dark:text-red-400", 
+        iconBg: "bg-red-50 dark:bg-red-950/40", 
+        barColor: "bg-red-500",
+        hoverBorder: "hover:border-red-500 hover:ring-2 hover:ring-red-500/30" 
+    },
+    { 
+        id: "sanitization", 
+        label: "Sanitization", 
+        count: "22", 
+        icon: Sparkles, 
+        iconColor: "text-slate-600 dark:text-slate-400", 
+        iconBg: "bg-slate-100 dark:bg-slate-800/40", 
+        barColor: "bg-slate-500",
+        hoverBorder: "hover:border-slate-500 hover:ring-2 hover:ring-slate-500/30" 
+    },
 ];
 
 // Chart data for the donut
@@ -477,17 +541,30 @@ const ServiceTracking = () => {
             </div>
 
             {/* KPI Cards Row */}
-            <div className="grid grid-cols-2 lg:grid-cols-7 gap-4">
-                {serviceTypes.map((card) => (
-                    <button
-                        key={card.id}
-                        onClick={() => setActiveService(card.id)}
-                        className={`${card.id === activeService ? "ring-2 ring-gray-900" : ""} ${card.color} border-0 text-white overflow-hidden rounded-sm px-4 py-3 hover:opacity-90 transition-all cursor-pointer text-left flex flex-col justify-center h-[90px]`}
-                    >
-                        <p className="text-3xl font-bold">{card.count}</p>
-                        <p className="text-xs font-medium mt-1 truncate w-full">{card.label}</p>
-                    </button>
-                ))}
+            <div className="bg-white/60 rounded-2xl border border-gray-200/60 p-4 shadow-sm">
+                <div className="grid grid-cols-2 lg:grid-cols-7 gap-4">
+                    {serviceTypes.map((card) => {
+                        const IconComp = card.icon;
+                        return (
+                            <button
+                                key={card.id}
+                                onClick={() => setActiveService(card.id)}
+                                className={`relative bg-white rounded-xl border-2 border-gray-100 shadow-sm overflow-hidden px-5 pt-5 pb-4 transition-all duration-200 cursor-pointer text-left flex flex-col gap-2 ${card.hoverBorder} ${card.id === activeService ? "ring-2 ring-primary shadow-md" : ""}`}
+                            >
+                                {/* Icon Badge */}
+                                <div className={`w-10 h-10 rounded-full ${card.iconBg} flex items-center justify-center`}>
+                                    <IconComp className={`h-5 w-5 ${card.iconColor}`} />
+                                </div>
+                                {/* Count */}
+                                <p className="text-3xl font-bold text-gray-900 mt-1">{card.count}</p>
+                                {/* Label */}
+                                <p className="text-xs font-medium text-gray-500 truncate w-full">{card.label}</p>
+                                {/* Bottom Bar */}
+                                <div className={`w-8 h-1 rounded-full ${card.barColor} mt-1`}></div>
+                            </button>
+                        );
+                    })}
+                </div>
             </div>
 
             {/* Donut Chart Section */}

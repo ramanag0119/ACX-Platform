@@ -748,22 +748,22 @@ const Bookings = () => {
           </div>
 
           {/* Table */}
-          <div className="rounded-xl overflow-hidden border border-gray-200">
+          <div className="rounded-xl overflow-hidden border border-gray-200 overflow-x-auto scrollbar-thin">
             <Table>
               <TableHeader>
                 <TableRow className="bg-gray-50 hover:bg-gray-50 border-b border-gray-200">
-                  <TableHead className="text-gray-600 font-medium">Name</TableHead>
-                  <TableHead className="text-gray-600 font-medium">Mobile Number</TableHead>
-                  <TableHead className="text-gray-600 font-medium">Email</TableHead>
-                  <TableHead className="text-gray-600 font-medium text-center">Occupants</TableHead>
-                  <TableHead className="text-gray-600 font-medium text-center">Room No</TableHead>
-                  <TableHead className="text-gray-600 font-medium">Room Type</TableHead>
-                  <TableHead className="text-gray-600 font-medium text-center">No. of rooms</TableHead>
-                  <TableHead className="text-gray-600 font-medium">Check In</TableHead>
-                  <TableHead className="text-gray-600 font-medium text-center">Extend Check Out</TableHead>
-                  <TableHead className="text-gray-600 font-medium">Booking Date</TableHead>
-                  <TableHead className="text-gray-600 font-medium text-center">Documents Approval</TableHead>
-                  <TableHead className="text-gray-600 font-medium text-center">Action</TableHead>
+                  <TableHead className="text-gray-600 font-medium whitespace-nowrap min-w-[150px]">Name</TableHead>
+                  <TableHead className="text-gray-600 font-medium whitespace-nowrap min-w-[170px]">Mobile Number</TableHead>
+                  <TableHead className="text-gray-600 font-medium whitespace-nowrap min-w-[280px] text-center">Email</TableHead>
+                  <TableHead className="text-gray-600 font-medium whitespace-nowrap min-w-[120px] text-center">Occupants</TableHead>
+                  <TableHead className="text-gray-600 font-medium whitespace-nowrap min-w-[100px] text-center">Room No</TableHead>
+                  <TableHead className="text-gray-600 font-medium whitespace-nowrap min-w-[140px]">Room Type</TableHead>
+                  <TableHead className="text-gray-600 font-medium whitespace-nowrap min-w-[120px] text-center">No. of Rooms</TableHead>
+                  <TableHead className="text-gray-600 font-medium whitespace-nowrap min-w-[100px] text-center">Check In</TableHead>
+                  <TableHead className="text-gray-600 font-medium whitespace-nowrap min-w-[150px] text-center">Extend Checkout</TableHead>
+                  <TableHead className="text-gray-600 font-medium whitespace-nowrap min-w-[130px]">Booking Date</TableHead>
+                  <TableHead className="text-gray-600 font-medium whitespace-nowrap min-w-[170px] text-center">Documents Approval</TableHead>
+                  <TableHead className="text-gray-600 font-medium whitespace-nowrap min-w-[100px] text-center">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -775,7 +775,7 @@ const Bookings = () => {
                   >
                     <TableCell className="font-medium text-primary">{booking.name}</TableCell>
                     <TableCell className="text-muted-foreground">{booking.mobileNumber}</TableCell>
-                    <TableCell className="text-primary">{booking.email || "-"}</TableCell>
+                    <TableCell className="text-primary text-center px-4">{booking.email || "-"}</TableCell>
                     <TableCell className="text-center">{booking.occupants}</TableCell>
                     <TableCell className="text-center">{booking.roomNo || "-"}</TableCell>
                     <TableCell>{booking.roomType}</TableCell>

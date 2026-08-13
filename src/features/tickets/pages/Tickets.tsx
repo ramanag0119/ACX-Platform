@@ -334,22 +334,22 @@ const Tickets = () => {
           </div>
 
           {/* Table */}
-          <div className="rounded-xl overflow-hidden border border-gray-200 overflow-x-auto">
+          <div className="rounded-xl overflow-hidden border border-gray-200 overflow-x-auto scrollbar-thin">
             <Table>
               <TableHeader>
                 <TableRow className="bg-gray-50 hover:bg-gray-50 border-b border-gray-200">
-                  <TableHead className="text-gray-600 font-medium whitespace-nowrap">Service Type ↕</TableHead>
-                  <TableHead className="text-gray-600 font-medium whitespace-nowrap">Service Category ↕</TableHead>
-                  <TableHead className="text-gray-600 font-medium whitespace-nowrap">Service Request ↕</TableHead>
-                  <TableHead className="text-gray-600 font-medium">Quantity</TableHead>
-                  <TableHead className="text-gray-600 font-medium whitespace-nowrap">Room No ↕</TableHead>
-                  <TableHead className="text-gray-600 font-medium">Department</TableHead>
-                  <TableHead className="text-gray-600 font-medium whitespace-nowrap">Assign to ↕</TableHead>
-                  <TableHead className="text-gray-600 font-medium">Date ↓</TableHead>
-                  <TableHead className="text-gray-600 font-medium">Time</TableHead>
-                  <TableHead className="text-gray-600 font-medium">Description</TableHead>
-                  <TableHead className="text-gray-600 font-medium">Status</TableHead>
-                  <TableHead className="text-gray-600 font-medium text-center">Action</TableHead>
+                  <TableHead className="text-gray-600 font-medium whitespace-nowrap min-w-[140px]">Service Type ↕</TableHead>
+                  <TableHead className="text-gray-600 font-medium whitespace-nowrap min-w-[150px]">Service Category ↕</TableHead>
+                  <TableHead className="text-gray-600 font-medium whitespace-nowrap min-w-[150px]">Service Request ↕</TableHead>
+                  <TableHead className="text-gray-600 font-medium whitespace-nowrap min-w-[90px] text-center">Quantity</TableHead>
+                  <TableHead className="text-gray-600 font-medium whitespace-nowrap min-w-[100px] text-center">Room No ↕</TableHead>
+                  <TableHead className="text-gray-600 font-medium whitespace-nowrap min-w-[130px]">Department</TableHead>
+                  <TableHead className="text-gray-600 font-medium whitespace-nowrap min-w-[140px]">Assign to ↕</TableHead>
+                  <TableHead className="text-gray-600 font-medium whitespace-nowrap min-w-[110px] text-center">Date ↓</TableHead>
+                  <TableHead className="text-gray-600 font-medium whitespace-nowrap min-w-[90px] text-center">Time</TableHead>
+                  <TableHead className="text-gray-600 font-medium whitespace-nowrap min-w-[180px]">Description</TableHead>
+                  <TableHead className="text-gray-600 font-medium whitespace-nowrap min-w-[120px] text-center">Status</TableHead>
+                  <TableHead className="text-gray-600 font-medium whitespace-nowrap min-w-[80px] text-center">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -358,14 +358,14 @@ const Tickets = () => {
                     <TableCell className="text-cyan-600 whitespace-nowrap">{ticket.serviceType}</TableCell>
                     <TableCell className="whitespace-nowrap">{ticket.serviceCategory}</TableCell>
                     <TableCell className={ticket.serviceRequest === "Items" ? "text-amber-500" : "text-cyan-600"}>{ticket.serviceRequest}</TableCell>
-                    <TableCell>{ticket.quantity}</TableCell>
-                    <TableCell>{ticket.roomNo}</TableCell>
+                    <TableCell className="text-center">{ticket.quantity}</TableCell>
+                    <TableCell className="text-center">{ticket.roomNo}</TableCell>
                     <TableCell className="whitespace-nowrap">{ticket.department}</TableCell>
                     <TableCell className="text-cyan-600 whitespace-nowrap">{ticket.assignTo}</TableCell>
-                    <TableCell className="whitespace-nowrap">{ticket.date}</TableCell>
-                    <TableCell>{ticket.time}</TableCell>
-                    <TableCell>{ticket.description || "-"}</TableCell>
-                    <TableCell>{getStatusBadge(ticket.status)}</TableCell>
+                    <TableCell className="whitespace-nowrap text-center">{ticket.date}</TableCell>
+                    <TableCell className="text-center">{ticket.time}</TableCell>
+                    <TableCell className="max-w-[200px] truncate">{ticket.description || "-"}</TableCell>
+                    <TableCell className="text-center">{getStatusBadge(ticket.status)}</TableCell>
                     <TableCell className="text-center">
                       <Button size="sm" className="bg-cyan-600 hover:bg-cyan-700 h-7 w-7 p-0">
                         <Pencil className="h-3 w-3 text-white" />

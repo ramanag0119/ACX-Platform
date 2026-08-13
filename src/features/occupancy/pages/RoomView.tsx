@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useTheme } from "@/core/contexts/ThemeContext";
 
 // Stat card data
 const statsData = [
@@ -29,23 +30,43 @@ const pieData = {
 
 const RoomView = () => {
   const [selectedFloor, setSelectedFloor] = useState("select");
+  const { isDark } = useTheme();
+
+  const pageBg = isDark ? "linear-gradient(180deg, #0f1117, #131824)" : "linear-gradient(180deg, #F4F2FA, #ECE9F6)";
+  const cardBg = isDark
+    ? "linear-gradient(180deg, #1e2233, #1a1e30)"
+    : "linear-gradient(180deg, rgba(255,255,255,0.85), rgba(245,242,255,0.95))";
+  const cardBorder = isDark ? "1px solid rgba(255,255,255,0.07)" : "1px solid rgba(124,92,255,0.12)";
+  const titleColor = isDark ? "#dde2ed" : "#1F1B3A";
+  const mutedColor = isDark ? "#8b95a9" : "#5E5A7A";
+  const gridBorder = isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.08)";
 
   return (
-    <div className="space-y-6 animate-fade-in bg-[hsl(220,20%,96%)] min-h-screen -m-6 p-6">
+    <div className="space-y-6 animate-fade-in min-h-screen -m-6 p-6" style={{ background: pageBg }}>
       {/* Header */}
       <div className="mb-2">
-        <h1 className="text-2xl font-semibold text-foreground">Room View</h1>
+        <h1 className="text-2xl font-semibold" style={{ color: titleColor }}>Room View</h1>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {statsData.map((stat, index) => (
-          <Card key={index} className={`border-t-4 ${stat.borderColor} shadow-lg`}>
+          <Card
+            key={index}
+            className={`border-t-4 ${stat.borderColor} shadow-lg`}
+            style={{
+              background: cardBg,
+              borderLeft: cardBorder,
+              borderRight: cardBorder,
+              borderBottom: cardBorder,
+              boxShadow: "0 8px 24px rgba(17,12,46,0.08)"
+            }}
+          >
             <CardContent className="p-4">
-              <p className={`text-sm ${index === 0 ? 'text-cyan-600' : 'text-muted-foreground'}`}>{stat.label}</p>
+              <p className="text-sm font-medium" style={{ color: index === 0 ? "hsl(199, 89%, 48%)" : mutedColor }}>{stat.label}</p>
               <div className="mt-4 text-center">
-                <span className="text-3xl font-bold text-cyan-600">{stat.value}</span>
-                <p className="text-sm text-muted-foreground mt-1">{stat.unit}</p>
+                <span className="text-3xl font-bold" style={{ color: "hsl(199, 89%, 48%)" }}>{stat.value}</span>
+                <p className="text-sm mt-1" style={{ color: mutedColor }}>{stat.unit}</p>
               </div>
             </CardContent>
           </Card>
@@ -53,48 +74,52 @@ const RoomView = () => {
       </div>
 
       {/* Formula Legend */}
-      <div className="text-right text-sm text-muted-foreground">
-        <span className="font-medium text-foreground">Current in House</span> = Total Occupied Rooms |
-        <span className="font-medium text-foreground"> End of Day</span> = Total Available Rooms
+      <div className="text-right text-sm" style={{ color: mutedColor }}>
+        <span className="font-medium" style={{ color: titleColor }}>Current in House</span> = Total Occupied Rooms |
+        <span className="font-medium" style={{ color: titleColor }}> End of Day</span> = Total Available Rooms
       </div>
 
       {/* Current Status and Room Status */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Current Status Table */}
-        <Card className="shadow-lg">
-          <div className="bg-gradient-to-r from-[#5a5a5a] to-[#6a6a6a] text-white px-4 py-2 rounded-t-lg">
-            <h2 className="text-sm font-medium">Current Status</h2>
+        <div
+          className="rounded-lg p-5 transition-all duration-250 ease hover:-translate-y-0.5"
+          style={{ background: cardBg, border: cardBorder, boxShadow: "0 8px 24px rgba(17,12,46,0.12)" }}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h3 style={{ color: titleColor }} className="font-medium">Current Status</h3>
           </div>
-          <CardContent className="p-4">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-dashed border-gray-300">
-                  <th className="text-left py-2 text-sm font-medium text-muted-foreground"></th>
-                  <th className="text-center py-2 text-sm font-medium text-muted-foreground">Room</th>
-                  <th className="text-center py-2 text-sm font-medium text-muted-foreground">Percent(%)</th>
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-dashed" style={{ borderColor: gridBorder }}>
+                <th className="text-left py-2 text-sm font-medium" style={{ color: mutedColor }}></th>
+                <th className="text-center py-2 text-sm font-medium" style={{ color: mutedColor }}>Room</th>
+                <th className="text-center py-2 text-sm font-medium" style={{ color: mutedColor }}>Percent(%)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {currentStatusData.map((row, index) => (
+                <tr key={index} className="border-b border-dashed" style={{ borderColor: gridBorder }}>
+                  <td className={`py-2 text-sm ${row.isLink ? 'text-cyan-600 cursor-pointer hover:underline' : ''}`} style={{ color: row.isLink ? undefined : titleColor }}>
+                    {row.label}
+                  </td>
+                  <td className="text-center py-2 text-sm text-cyan-500">{row.room}</td>
+                  <td className="text-center py-2 text-sm" style={{ color: titleColor }}>{row.percent}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {currentStatusData.map((row, index) => (
-                  <tr key={index} className="border-b border-dashed border-gray-200">
-                    <td className={`py-2 text-sm ${row.isLink ? 'text-cyan-600 cursor-pointer hover:underline' : 'text-foreground'}`}>
-                      {row.label}
-                    </td>
-                    <td className="text-center py-2 text-sm text-cyan-600">{row.room}</td>
-                    <td className="text-center py-2 text-sm text-foreground">{row.percent}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </CardContent>
-        </Card>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
         {/* Room Status Pie Chart */}
-        <Card className="shadow-lg">
-          <div className="bg-gradient-to-r from-[#5a5a5a] to-[#6a6a6a] text-white px-4 py-2 rounded-t-lg">
-            <h2 className="text-sm font-medium">Room Status</h2>
+        <div
+          className="rounded-lg p-5 transition-all duration-250 ease hover:-translate-y-0.5"
+          style={{ background: cardBg, border: cardBorder, boxShadow: "0 8px 24px rgba(17,12,46,0.12)" }}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h3 style={{ color: titleColor }} className="font-medium">Room Status</h3>
           </div>
-          <CardContent className="p-4 flex items-center justify-center">
+          <div className="flex items-center justify-center py-4">
             <div className="flex items-center gap-8">
               {/* Pie Chart */}
               <div className="relative w-40 h-40">
@@ -133,67 +158,65 @@ const RoomView = () => {
               <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 bg-red-500 rounded"></div>
-                  <span className="text-sm text-muted-foreground">Occupied</span>
+                  <span className="text-sm" style={{ color: mutedColor }}>Occupied</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 bg-green-500 rounded"></div>
-                  <span className="text-sm text-muted-foreground">Vacant</span>
+                  <span className="text-sm" style={{ color: mutedColor }}>Vacant</span>
                 </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
       {/* Status Bar */}
-      <Card className="shadow-lg">
-        <div className="bg-gradient-to-r from-[#5a5a5a] to-[#6a6a6a] text-white px-4 py-2 rounded-t-lg">
-          <h2 className="text-sm font-medium">Status</h2>
-        </div>
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            {/* Status Legend */}
-            <div className="flex items-center gap-6">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                <span className="text-sm text-muted-foreground">Perfect</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                <span className="text-sm text-muted-foreground">Dirty</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-amber-500 rounded-full"></div>
-                <span className="text-sm text-muted-foreground">Maintenance</span>
-              </div>
+      <div
+        className="rounded-lg p-5 transition-all duration-250 ease hover:-translate-y-0.5"
+        style={{ background: cardBg, border: cardBorder, boxShadow: "0 8px 24px rgba(17,12,46,0.12)" }}
+      >
+        <div className="flex items-center justify-between">
+          {/* Status Legend */}
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+              <span className="text-sm" style={{ color: mutedColor }}>Perfect</span>
             </div>
-
-            {/* Right Section */}
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 text-sm">
-                <span className="text-cyan-600">Occupied</span>
-                <span className="text-gray-400">|</span>
-                <span className="text-cyan-600">Available</span>
-                <span className="text-gray-400">|</span>
-                <span className="text-cyan-600">Dirty</span>
-                <span className="text-gray-400">|</span>
-                <span className="text-cyan-600">Maintenance</span>
-              </div>
-              <Select value={selectedFloor} onValueChange={setSelectedFloor}>
-                <SelectTrigger className="w-40 h-8 bg-muted/30 border-border/50">
-                  <SelectValue placeholder="Select All" />
-                </SelectTrigger>
-                <SelectContent className="bg-white">
-                  <SelectItem value="select-all">Select All</SelectItem>
-                  <SelectItem value="occupied">Occupied</SelectItem>
-                  <SelectItem value="available">Available</SelectItem>
-                  <SelectItem value="dirty-maintenance">Dirty / Maintenance</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+              <span className="text-sm" style={{ color: mutedColor }}>Dirty</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-amber-500 rounded-full"></div>
+              <span className="text-sm" style={{ color: mutedColor }}>Maintenance</span>
             </div>
           </div>
-        </CardContent>
-      </Card>
+
+          {/* Right Section */}
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-cyan-600 font-medium">Occupied</span>
+              <span style={{ color: gridBorder }}>|</span>
+              <span className="text-cyan-600 font-medium">Available</span>
+              <span style={{ color: gridBorder }}>|</span>
+              <span className="text-cyan-600 font-medium">Dirty</span>
+              <span style={{ color: gridBorder }}>|</span>
+              <span className="text-cyan-600 font-medium">Maintenance</span>
+            </div>
+            <Select value={selectedFloor} onValueChange={setSelectedFloor}>
+              <SelectTrigger className="w-40 h-8 border" style={{ color: titleColor, backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.03)", borderColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(124,92,255,0.12)" }}>
+                <SelectValue placeholder="Select All" />
+              </SelectTrigger>
+              <SelectContent className={isDark ? "bg-[#1e2233] text-foreground border-border/50" : "bg-white text-foreground"}>
+                <SelectItem value="select-all">Select All</SelectItem>
+                <SelectItem value="occupied">Occupied</SelectItem>
+                <SelectItem value="available">Available</SelectItem>
+                <SelectItem value="dirty-maintenance">Dirty / Maintenance</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

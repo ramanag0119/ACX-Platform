@@ -74,14 +74,22 @@ const AppLayoutInner = () => {
       <AppHeader sidebarCollapsed={sidebarCollapsed} />
       <main
         className={cn(
-          "pt-[70px] min-h-screen transition-all duration-300",
+          "pt-[70px] min-h-screen transition-all duration-300 flex flex-col justify-between",
           sidebarCollapsed ? "pl-[84px]" : "pl-[276px]"
         )}
         style={{ marginLeft: "16px" }}
       >
-        <div className="p-6">
+        <div className="p-6 flex-1">
           <Outlet />
         </div>
+        <footer className="flex justify-between items-center px-6 py-4 text-[10px] text-muted-foreground opacity-65">
+          <div>
+            {sidebarCollapsed && <span>© 2026 IKANOS Portal</span>}
+          </div>
+          <div>
+            Version : 2.1.0
+          </div>
+        </footer>
       </main>
     </div>
   );

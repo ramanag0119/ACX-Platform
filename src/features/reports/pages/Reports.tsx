@@ -278,18 +278,21 @@ const Reports = () => {
       </div>
 
       {/* Tabs Navigation */}
-      <div className="border-b border-border/50">
-        <div className="flex flex-wrap gap-x-1">
+      <div className="border-b border-gray-200">
+        <div className="flex flex-wrap gap-x-6">
           {reportTabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-3 text-sm font-medium transition-all duration-200 border-b-2 -mb-px ${activeTab === tab.id
-                ? "text-foreground border-blue-500"
-                : "text-muted-foreground border-transparent hover:text-foreground hover:border-gray-300"
+              className={`relative px-1 pb-3 text-sm font-medium transition-all duration-200 ${activeTab === tab.id
+                ? "text-foreground"
+                : "text-muted-foreground hover:text-foreground"
                 }`}
             >
               {tab.label}
+              {activeTab === tab.id && (
+                <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-purple-600 rounded-t-full" />
+              )}
             </button>
           ))}
         </div>

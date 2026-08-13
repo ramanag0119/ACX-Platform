@@ -88,14 +88,32 @@ const FirmwareManagement = () => {
                 </div>
 
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                    <TabsList className="bg-muted/30 p-1 rounded-xl w-fit mb-6">
-                        <TabsTrigger value="add-firmware" className="px-6 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm">
+                    <div className="flex gap-6 border-b border-gray-200 mb-6">
+                        <button
+                            onClick={() => setActiveTab("add-firmware")}
+                            className={`relative px-1 pb-3 text-sm font-medium transition-all duration-200 ${activeTab === "add-firmware"
+                                ? "text-foreground"
+                                : "text-muted-foreground hover:text-foreground"
+                                }`}
+                        >
                             Add Firmware
-                        </TabsTrigger>
-                        <TabsTrigger value="firmware-update" className="px-6 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm">
+                            {activeTab === "add-firmware" && (
+                                <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-purple-600 rounded-t-full" />
+                            )}
+                        </button>
+                        <button
+                            onClick={() => setActiveTab("firmware-update")}
+                            className={`relative px-1 pb-3 text-sm font-medium transition-all duration-200 ${activeTab === "firmware-update"
+                                ? "text-foreground"
+                                : "text-muted-foreground hover:text-foreground"
+                                }`}
+                        >
                             Firmware Update
-                        </TabsTrigger>
-                    </TabsList>
+                            {activeTab === "firmware-update" && (
+                                <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-purple-600 rounded-t-full" />
+                            )}
+                        </button>
+                    </div>
 
                     <TabsContent value="add-firmware" className="space-y-6">
                         {/* Add Firmware Form */}

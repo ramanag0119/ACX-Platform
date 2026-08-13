@@ -227,18 +227,16 @@ export const AppSidebar = ({ collapsed, onToggle }: AppSidebarProps) => {
       </nav>
 
       {/* Divider */}
-      <div className="sidebar-divider" />
+      {!collapsed && <div className="sidebar-divider" />}
 
       {/* Footer */}
-      <div className="sidebar-footer">
-        {!collapsed ? (
+      {!collapsed && (
+        <div className="sidebar-footer">
           <p className="sidebar-footer-text">
             © 2026 IKANOS Portal
           </p>
-        ) : (
-          <p className="sidebar-footer-text">©</p>
-        )}
-      </div>
+        </div>
+      )}
     </aside>
   );
 };

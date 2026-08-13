@@ -1187,17 +1187,20 @@ const ServicePlanning = () => {
             </div>
 
             {/* Tabs */}
-            <div className="flex gap-1 bg-muted/30 p-1 rounded-xl w-fit">
+            <div className="flex gap-6 border-b border-gray-200">
                 {tabs.map((tab) => (
                     <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
-                        className={`px-6 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${activeTab === tab.id
-                            ? "bg-white text-foreground shadow-sm"
+                        className={`relative px-1 pb-3 text-sm font-medium transition-all duration-200 ${activeTab === tab.id
+                            ? "text-foreground"
                             : "text-muted-foreground hover:text-foreground"
                             }`}
                     >
                         {tab.label}
+                        {activeTab === tab.id && (
+                            <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-purple-600 rounded-t-full" />
+                        )}
                     </button>
                 ))}
             </div>
