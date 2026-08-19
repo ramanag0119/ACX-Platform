@@ -67,8 +67,6 @@ const Occupancy = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const rooms = activeTab === "guest" ? guestRooms : nonGuestRooms;
-  const totalEntries = 40;
-  const totalPages = Math.ceil(totalEntries / parseInt(entriesPerPage));
 
   const filteredRooms = rooms.filter((room) => {
     const matchesSearch =
@@ -81,6 +79,13 @@ const Occupancy = () => {
     if (filterBy === "unavailable") return matchesSearch && room.status === "Unavailable";
     return matchesSearch;
   });
+
+  const totalEntries = filteredRooms.length;
+  const pageSize = parseInt(entriesPerPage) || 10;
+  const totalPages = Math.max(1, Math.ceil(totalEntries / pageSize));
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalEntries);
+  const paginatedRooms = filteredRooms.slice(startIndex, endIndex);
 
   const getConditionBadge = (condition: string) => {
     const lowerCondition = condition.toLowerCase();
@@ -245,74 +250,82 @@ const Occupancy = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredRooms.map((room, index) => (
-                  <TableRow
-                    key={room.roomNo}
-                    className={`${index % 2 === 0 ? "bg-card dark:bg-[#101526]/80" : "bg-muted/10 dark:bg-[#0d1120]/80"} hover:bg-muted/30 dark:hover:bg-slate-800/50 border-b border-border/50 dark:border-slate-800/70 transition-colors`}
-                  >
-                    <TableCell className="font-medium text-[13px] text-foreground py-3 px-4">{room.roomNo}</TableCell>
-                    <TableCell className="text-[13px] text-foreground/90 py-3 px-4">{room.roomType}</TableCell>
-                    <TableCell className="text-[13px] text-foreground/90 py-3 px-4">{room.guestName}</TableCell>
-                    
-                    {/* Action Button: Generate */}
-                    <TableCell className="text-center py-3 px-4">
-                      <button className="inline-flex items-center justify-center h-8 px-3 rounded-lg text-xs font-medium text-white bg-teal-600 hover:bg-teal-700 dark:bg-teal-600 dark:hover:bg-teal-500 shadow-sm transition-all hover:scale-105 active:scale-95">
-                        Generate
-                      </button>
-                    </TableCell>
+                {paginatedRooms.length > 0 ? (
+                  paginatedRooms.map((room, index) => (
+                    <TableRow
+                      key={room.roomNo}
+                      className={`${index % 2 === 0 ? "bg-card dark:bg-[#101526]/80" : "bg-muted/10 dark:bg-[#0d1120]/80"} hover:bg-muted/30 dark:hover:bg-slate-800/50 border-b border-border/50 dark:border-slate-800/70 transition-colors`}
+                    >
+                      <TableCell className="font-medium text-[13px] text-foreground py-3 px-4">{room.roomNo}</TableCell>
+                      <TableCell className="text-[13px] text-foreground/90 py-3 px-4">{room.roomType}</TableCell>
+                      <TableCell className="text-[13px] text-foreground/90 py-3 px-4">{room.guestName}</TableCell>
+                      
+                      {/* Action Button: Generate */}
+                      <TableCell className="text-center py-3 px-4">
+                        <button className="inline-flex items-center justify-center h-8 px-3 rounded-lg text-xs font-medium text-white bg-teal-600 hover:bg-teal-700 dark:bg-teal-600 dark:hover:bg-teal-500 shadow-sm transition-all hover:scale-105 active:scale-95">
+                          Generate
+                        </button>
+                      </TableCell>
 
-                    {/* Status Pill Badge: Green for Available, Red for Unavailable */}
-                    <TableCell className="text-center py-3 px-4">
-                      <span
-                        className={`inline-flex items-center justify-center px-3 py-0.5 rounded-full text-[11.5px] font-medium border ${room.status === "Available"
-                          ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:border-emerald-500/40 dark:bg-emerald-950/60 dark:text-emerald-400"
-                          : "bg-rose-50 text-rose-700 border-rose-200 dark:border-rose-500/40 dark:bg-rose-950/60 dark:text-rose-400"
-                          }`}
-                      >
-                        {room.status}
-                      </span>
-                    </TableCell>
+                      {/* Status Pill Badge: Green for Available, Red for Unavailable */}
+                      <TableCell className="text-center py-3 px-4">
+                        <span
+                          className={`inline-flex items-center justify-center px-3 py-0.5 rounded-full text-[11.5px] font-medium border ${room.status === "Available"
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:border-emerald-500/40 dark:bg-emerald-950/60 dark:text-emerald-400"
+                            : "bg-rose-50 text-rose-700 border-rose-200 dark:border-rose-500/40 dark:bg-rose-950/60 dark:text-rose-400"
+                            }`}
+                        >
+                          {room.status}
+                        </span>
+                      </TableCell>
 
-                    {/* Condition Pill Badge */}
-                    <TableCell className="text-center py-3 px-4">
-                      <div className="flex flex-wrap gap-1.5 justify-center">
-                        {room.conditions.length > 0
-                          ? room.conditions.map((condition) => getConditionBadge(condition))
-                          : <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border border-slate-200 bg-slate-100 text-slate-500 dark:border-slate-700/60 dark:bg-slate-800/60 dark:text-slate-400 text-[11.5px] font-medium">
-                              <Minus className="h-3 w-3" /> -
-                            </span>}
-                      </div>
-                    </TableCell>
+                      {/* Condition Pill Badge */}
+                      <TableCell className="text-center py-3 px-4">
+                        <div className="flex flex-wrap gap-1.5 justify-center">
+                          {room.conditions.length > 0
+                            ? room.conditions.map((condition) => getConditionBadge(condition))
+                            : <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border border-slate-200 bg-slate-100 text-slate-500 dark:border-slate-700/60 dark:bg-slate-800/60 dark:text-slate-400 text-[11.5px] font-medium">
+                                <Minus className="h-3 w-3" /> -
+                              </span>}
+                        </div>
+                      </TableCell>
 
-                    {/* Action Button: Details */}
-                    <TableCell className="text-center py-3 px-4">
-                      <button
-                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-amber-500 hover:bg-amber-600 text-white shadow-sm transition-all hover:scale-105 active:scale-95"
-                        onClick={() => handleDetailsClick(room)}
-                        title="View Details"
-                      >
-                        <Info className="h-4 w-4 stroke-[2.2]" />
-                      </button>
-                    </TableCell>
+                      {/* Action Button: Details */}
+                      <TableCell className="text-center py-3 px-4">
+                        <button
+                          className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-amber-500 hover:bg-amber-600 text-white shadow-sm transition-all hover:scale-105 active:scale-95"
+                          onClick={() => handleDetailsClick(room)}
+                          title="View Details"
+                        >
+                          <Info className="h-4 w-4 stroke-[2.2]" />
+                        </button>
+                      </TableCell>
 
-                    {/* Action Button: Reallocate */}
-                    <TableCell className="text-center py-3 px-4">
-                      <button 
-                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-cyan-600 hover:bg-cyan-700 text-white shadow-sm transition-all hover:scale-105 active:scale-95"
-                        title="Reallocate"
-                      >
-                        <ArrowRight className="h-4 w-4 stroke-[2.2]" />
-                      </button>
-                    </TableCell>
+                      {/* Action Button: Reallocate */}
+                      <TableCell className="text-center py-3 px-4">
+                        <button 
+                          className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-cyan-600 hover:bg-cyan-700 text-white shadow-sm transition-all hover:scale-105 active:scale-95"
+                          title="Reallocate"
+                        >
+                          <ArrowRight className="h-4 w-4 stroke-[2.2]" />
+                        </button>
+                      </TableCell>
 
-                    {/* Action Button: Invoice */}
-                    <TableCell className="text-center py-3 px-4">
-                      <button className="inline-flex items-center justify-center h-8 px-3 rounded-lg text-xs font-medium text-cyan-700 bg-cyan-50 hover:bg-cyan-600 hover:text-white border border-cyan-300 dark:text-cyan-300 dark:bg-cyan-950/60 dark:border-cyan-500/40 dark:hover:bg-cyan-600 dark:hover:text-white shadow-sm transition-all">
-                        Invoice
-                      </button>
+                      {/* Action Button: Invoice */}
+                      <TableCell className="text-center py-3 px-4">
+                        <button className="inline-flex items-center justify-center h-8 px-3 rounded-lg text-xs font-medium text-cyan-700 bg-cyan-50 hover:bg-cyan-600 hover:text-white border border-cyan-300 dark:text-cyan-300 dark:bg-cyan-950/60 dark:border-cyan-500/40 dark:hover:bg-cyan-600 dark:hover:text-white shadow-sm transition-all">
+                          Invoice
+                        </button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={9} className="text-center py-6 text-muted-foreground text-xs">
+                      No rooms found
                     </TableCell>
                   </TableRow>
-                ))}
+                )}
               </TableBody>
             </Table>
           </div>
@@ -320,13 +333,13 @@ const Occupancy = () => {
           {/* Pagination */}
           <div className="flex flex-wrap items-center justify-between gap-4 mt-5">
             <span className="text-muted-foreground text-xs">
-              Showing 1 to {Math.min(parseInt(entriesPerPage), filteredRooms.length)} of {totalEntries} entries
+              Showing {totalEntries > 0 ? startIndex + 1 : 0} to {endIndex} of {totalEntries} entries
             </span>
 
             <div className="flex items-center gap-1">
               <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>First</Button>
               <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1}>Previous</Button>
-              {[1, 2, 3, 4].map((page) => (
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                 <Button
                   key={page}
                   variant={currentPage === page ? "default" : "ghost"}

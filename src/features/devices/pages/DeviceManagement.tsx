@@ -276,27 +276,27 @@ const DeviceManagement = () => {
   // Caleido Network Page (default)
   if (!isFirmwareManagement) {
     return (
-      <div className="space-y-6 animate-fade-in bg-[hsl(220,20%,96%)] min-h-screen -m-6 p-6">
+      <div className="space-y-6 animate-fade-in text-foreground">
         {/* Page Header */}
         <div className="mb-2">
-          <h1 className="text-2xl font-semibold text-foreground">Device Management</h1>
+          <h1 className="text-xl font-semibold text-foreground tracking-tight">Device Management</h1>
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex gap-6 border-b border-gray-200">
+        <div className="flex gap-6 border-b border-border dark:border-slate-800">
           <div className="flex gap-6">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                className={`relative px-1 pb-3 text-sm font-medium transition-all duration-200 ${activeTab === tab.id
+                className={`relative px-1 pb-3 text-xs font-semibold uppercase tracking-wider transition-all duration-200 ${activeTab === tab.id
                   ? "text-foreground"
                   : "text-muted-foreground hover:text-foreground"
                   }`}
               >
                 {tab.label}
                 {activeTab === tab.id && (
-                  <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-purple-600 rounded-t-full" />
+                  <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-primary rounded-t-full" />
                 )}
               </button>
             ))}
@@ -304,12 +304,12 @@ const DeviceManagement = () => {
         </div>
 
         {/* Content Area */}
-        <Card className="border-0 shadow-lg rounded-2xl bg-white">
+        <Card className="border border-border/80 dark:border-slate-800 shadow-xl rounded-xl bg-card text-card-foreground">
           <CardContent className="p-6">
             {/* Add Device Tab */}
             {activeTab === "add-device" && (
               <div className="space-y-6">
-                <h2 className="text-lg font-semibold text-foreground">Add Devices</h2>
+                <h2 className="text-base font-semibold text-foreground">Add Devices</h2>
 
                 <div className="max-w-4xl space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -319,10 +319,10 @@ const DeviceManagement = () => {
                       Room No<span className="text-red-500">*</span>
                     </Label>
                     <Select value={roomNo} onValueChange={setRoomNo}>
-                      <SelectTrigger className="bg-muted/30 border-border/50 text-foreground">
+                      <SelectTrigger className="bg-muted/20 border-border dark:border-slate-700/80 text-foreground">
                         <SelectValue placeholder="Select Room Number" />
                       </SelectTrigger>
-                      <SelectContent className="bg-white max-h-60">
+                      <SelectContent className="bg-popover text-popover-foreground border-border max-h-60">
                         {roomNumbers.map((room) => (
                           <SelectItem key={room} value={room}>
                             {room}

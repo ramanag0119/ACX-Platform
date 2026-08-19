@@ -1075,12 +1075,34 @@ const ServicePlanning = () => {
         </div>
     );
 
+    const getActiveData = () => {
+        if (activeTab === "scheduled") return scheduledServicesData;
+        if (activeTab === "maintenance") return planMaintenanceData;
+        return disinfectionScheduleData;
+    };
+
+    const filterData = <T extends Record<string, any>>(data: T[]) => {
+        if (!searchQuery.trim()) return data;
+        const query = searchQuery.toLowerCase().trim();
+        return data.filter((item) =>
+            Object.values(item).some((val) =>
+                val !== null && val !== undefined && String(val).toLowerCase().includes(query)
+            )
+        );
+    };
+
+    const filteredData = filterData(getActiveData());
+    const totalEntries = filteredData.length;
+    const pageSize = parseInt(entriesPerPage) || 10;
+    const totalPages = Math.max(1, Math.ceil(totalEntries / pageSize));
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = Math.min(startIndex + pageSize, totalEntries);
+    const paginatedData = filteredData.slice(startIndex, endIndex);
+
     const renderTable = () => {
-        let data: any[] = [];
         let columns: { key: string; label: string }[] = [];
 
         if (activeTab === "scheduled") {
-            data = scheduledServicesData;
             columns = [
                 { key: "facilityServices", label: "Facility Services" },
                 { key: "serviceType", label: "Service Type" },
@@ -1092,7 +1114,6 @@ const ServicePlanning = () => {
                 { key: "roomNo", label: "Room No" },
             ];
         } else if (activeTab === "maintenance") {
-            data = planMaintenanceData;
             columns = [
                 { key: "facilityServices", label: "Facility Services" },
                 { key: "serviceType", label: "Service Type" },
@@ -1106,7 +1127,6 @@ const ServicePlanning = () => {
                 { key: "underMaintenance", label: "Under Maintenance" },
             ];
         } else {
-            data = disinfectionScheduleData;
             columns = [
                 { key: "sanitizerServices", label: "Sanitizer Services" },
                 { key: "serviceType", label: "Service Type" },
@@ -1120,59 +1140,66 @@ const ServicePlanning = () => {
         }
 
         return (
-            <div className="rounded-xl overflow-hidden border border-gray-200">
+            <div className="rounded-lg overflow-hidden border border-border/80 dark:border-slate-800">
                 <Table>
                     <TableHeader>
-                        <TableRow className="bg-gray-50 hover:bg-gray-50 border-b border-gray-200">
+                        <TableRow className="bg-muted/40 dark:bg-[#0e1322] border-b border-border dark:border-slate-800">
                             {columns.map((col) => (
-                                <TableHead key={col.key} className="text-gray-600 font-medium">
+                                <TableHead key={col.key} className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">
                                     {col.label}
                                 </TableHead>
                             ))}
-                            <TableHead className="text-gray-600 font-medium text-center">Action</TableHead>
+                            <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 text-center">Action</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {data.map((row, index) => (
-                            <TableRow
-                                key={row.id}
-                                className={`${index % 2 === 0 ? "bg-muted/20" : "bg-background"
-                                    } hover:bg-muted/40 transition-colors`}
-                            >
-                                {columns.map((col) => (
-                                    <TableCell key={col.key}>
-                                        {col.key === "assignTo" || col.key === "roomNo" ? (
-                                            <span className="text-cyan-400 cursor-pointer hover:underline">
-                                                {row[col.key]}
-                                            </span>
-                                        ) : col.key === "underMaintenance" ? (
-                                            <Badge
-                                                className={
-                                                    row[col.key] === "Yes"
-                                                        ? "bg-green-500/20 text-green-500"
-                                                        : "bg-gray-500/20 text-gray-400"
-                                                }
+                        {paginatedData.length > 0 ? (
+                            paginatedData.map((row, index) => (
+                                <TableRow
+                                    key={row.id}
+                                    className={`${index % 2 === 0 ? "bg-card dark:bg-[#101526]/80" : "bg-muted/10 dark:bg-[#0d1120]/80"} hover:bg-muted/30 dark:hover:bg-slate-800/50 border-b border-border/50 dark:border-slate-800/70 transition-colors`}
+                                >
+                                    {columns.map((col) => (
+                                        <TableCell key={col.key} className="text-xs text-foreground/90 py-3 px-4">
+                                            {col.key === "assignTo" || col.key === "roomNo" ? (
+                                                <span className="text-cyan-600 dark:text-cyan-400 cursor-pointer hover:underline">
+                                                    {row[col.key]}
+                                                </span>
+                                            ) : col.key === "underMaintenance" ? (
+                                                <Badge
+                                                    className={
+                                                        row[col.key] === "Yes"
+                                                            ? "bg-green-500/20 text-green-600 dark:text-green-400"
+                                                            : "bg-gray-500/20 text-muted-foreground"
+                                                    }
+                                                >
+                                                    {row[col.key]}
+                                                </Badge>
+                                            ) : (
+                                                row[col.key]
+                                            )}
+                                        </TableCell>
+                                    ))}
+                                    <TableCell className="py-3 px-4">
+                                        <div className="flex items-center justify-center gap-2">
+                                            <Button
+                                                size="sm"
+                                                className="bg-[#3eb1c8] hover:bg-[#3eb1c8]/90 text-white h-7 w-7 p-0 rounded-md"
+                                                onClick={() => setEditModalOpen(true)}
                                             >
-                                                {row[col.key]}
-                                            </Badge>
-                                        ) : (
-                                            row[col.key]
-                                        )}
+                                                <Edit className="h-3.5 w-3.5" />
+                                            </Button>
+                                        </div>
                                     </TableCell>
-                                ))}
-                                <TableCell>
-                                    <div className="flex items-center justify-center gap-2">
-                                        <Button
-                                            size="sm"
-                                            className="bg-[#3eb1c8] hover:bg-[#3eb1c8]/90 text-white h-7 w-7 p-0 rounded-[3px]"
-                                            onClick={() => setEditModalOpen(true)}
-                                        >
-                                            <Edit className="h-[14px] w-[14px]" />
-                                        </Button>
-                                    </div>
+                                </TableRow>
+                            ))
+                        ) : (
+                            <TableRow>
+                                <TableCell colSpan={columns.length + 1} className="text-center py-6 text-muted-foreground text-xs">
+                                    No records found {searchQuery ? `matching "${searchQuery}"` : ""}
                                 </TableCell>
                             </TableRow>
-                        ))}
+                        )}
                     </TableBody>
                 </Table>
             </div>
@@ -1180,33 +1207,33 @@ const ServicePlanning = () => {
     };
 
     return (
-        <div className="space-y-6 animate-fade-in bg-[hsl(220,20%,96%)] min-h-screen -m-6 p-6">
+        <div className="space-y-6 animate-fade-in text-foreground">
             {/* Page Header */}
             <div className="mb-2">
-                <h1 className="text-2xl font-semibold text-foreground">Services Planning</h1>
+                <h1 className="text-xl font-semibold text-foreground tracking-tight">Services Planning</h1>
             </div>
 
             {/* Tabs */}
-            <div className="flex gap-6 border-b border-gray-200">
+            <div className="flex gap-6 border-b border-border dark:border-slate-800">
                 {tabs.map((tab) => (
                     <button
                         key={tab.id}
-                        onClick={() => setActiveTab(tab.id)}
-                        className={`relative px-1 pb-3 text-sm font-medium transition-all duration-200 ${activeTab === tab.id
+                        onClick={() => { setActiveTab(tab.id); setCurrentPage(1); }}
+                        className={`relative px-1 pb-3 text-xs font-semibold uppercase tracking-wider transition-all duration-200 ${activeTab === tab.id
                             ? "text-foreground"
                             : "text-muted-foreground hover:text-foreground"
                             }`}
                     >
                         {tab.label}
                         {activeTab === tab.id && (
-                            <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-purple-600 rounded-t-full" />
+                            <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-primary rounded-t-full" />
                         )}
                     </button>
                 ))}
             </div>
 
             {/* Form Section */}
-            <Card className="border-0 shadow-lg rounded-2xl bg-white">
+            <Card className="border border-border/80 dark:border-slate-800 shadow-xl rounded-xl bg-card text-card-foreground">
                 <CardContent className="p-6">
                     {activeTab === "scheduled" && renderScheduledServicesForm()}
                     {activeTab === "maintenance" && renderPlanMaintenanceForm()}
@@ -1218,14 +1245,14 @@ const ServicePlanning = () => {
                             type="button"
                             onClick={handleReset}
                             variant="outline"
-                            className="h-11 px-8 min-w-[120px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all"
+                            className="h-10 px-8 min-w-[120px] rounded-xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all"
                         >
                             Reset
                         </Button>
                         <Button
                             type="button"
                             onClick={handleSubmit}
-                            className="h-11 px-8 min-w-[120px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
+                            className="h-10 px-8 min-w-[120px] rounded-xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
                         >
                             Submit
                         </Button>
@@ -1234,35 +1261,35 @@ const ServicePlanning = () => {
             </Card>
 
             {/* Data Table Section */}
-            <Card className="border-0 shadow-lg rounded-2xl bg-white">
-                <CardContent className="p-6">
+            <Card className="border border-border/80 dark:border-slate-800 shadow-xl rounded-xl bg-card text-card-foreground overflow-hidden">
+                <CardContent className="p-5">
                     {/* Controls */}
-                    <div className="flex items-center justify-between mb-6">
+                    <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
                         <div className="flex items-center gap-2">
-                            <span className="text-muted-foreground text-sm">Show</span>
-                            <Select value={entriesPerPage} onValueChange={setEntriesPerPage}>
-                                <SelectTrigger className="w-20 h-9 bg-muted/30 border-border/50">
+                            <span className="text-muted-foreground text-xs font-medium">Show</span>
+                            <Select value={entriesPerPage} onValueChange={(val) => { setEntriesPerPage(val); setCurrentPage(1); }}>
+                                <SelectTrigger className="w-18 h-8 text-xs bg-muted/20 border-border dark:border-slate-700/80 rounded-md">
                                     <SelectValue />
                                 </SelectTrigger>
-                                <SelectContent className="bg-popover">
+                                <SelectContent className="bg-popover text-popover-foreground border-border text-xs">
                                     <SelectItem value="10">10</SelectItem>
                                     <SelectItem value="25">25</SelectItem>
                                     <SelectItem value="50">50</SelectItem>
                                     <SelectItem value="100">100</SelectItem>
                                 </SelectContent>
                             </Select>
-                            <span className="text-muted-foreground text-sm">entries</span>
+                            <span className="text-muted-foreground text-xs font-medium">entries</span>
                         </div>
 
                         <div className="flex items-center gap-2">
-                            <span className="text-muted-foreground text-sm">Search:</span>
+                            <span className="text-muted-foreground text-xs font-medium">Search:</span>
                             <div className="relative">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
                                 <Input
                                     placeholder="Facility services, Service type, Room No"
                                     value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="pl-10 w-80 h-9 bg-muted/30 border-border/50"
+                                    onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                                    className="pl-9 w-64 md:w-80 h-8 text-xs bg-muted/20 border-border dark:border-slate-700/80 rounded-md placeholder:text-muted-foreground/60"
                                 />
                             </div>
                         </div>
@@ -1272,16 +1299,16 @@ const ServicePlanning = () => {
                     {renderTable()}
 
                     {/* Footer */}
-                    <div className="flex items-center justify-between mt-6">
-                        <span className="text-muted-foreground text-sm">
-                            Showing 1 to 10 of 136 entries
+                    <div className="flex flex-wrap items-center justify-between gap-4 mt-5">
+                        <span className="text-muted-foreground text-xs">
+                            Showing {totalEntries > 0 ? startIndex + 1 : 0} to {endIndex} of {totalEntries} entries
                         </span>
 
                         <div className="flex items-center gap-1">
                             <Button
                                 variant="ghost"
                                 size="sm"
-                                className="text-muted-foreground hover:text-foreground"
+                                className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground"
                                 onClick={() => setCurrentPage(1)}
                                 disabled={currentPage === 1}
                             >
@@ -1290,19 +1317,19 @@ const ServicePlanning = () => {
                             <Button
                                 variant="ghost"
                                 size="sm"
-                                className="text-muted-foreground hover:text-foreground"
+                                className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground"
                                 onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                                 disabled={currentPage === 1}
                             >
-                                <ChevronLeft className="h-4 w-4 mr-1" />
+                                <ChevronLeft className="h-3.5 w-3.5 mr-1" />
                                 Previous
                             </Button>
-                            {[1, 2, 3, 4, 5].map((page) => (
+                            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                                 <Button
                                     key={page}
                                     variant={currentPage === page ? "default" : "ghost"}
                                     size="sm"
-                                    className={`w-9 h-9 p-0 rounded-xl ${currentPage === page
+                                    className={`h-8 w-8 p-0 text-xs rounded-xl ${currentPage === page
                                         ? "bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold shadow-sm"
                                         : "text-muted-foreground hover:text-foreground"
                                         }`}
@@ -1311,21 +1338,22 @@ const ServicePlanning = () => {
                                     {page}
                                 </Button>
                             ))}
-                            <span className="text-muted-foreground px-2">...</span>
                             <Button
                                 variant="ghost"
                                 size="sm"
-                                className="text-muted-foreground hover:text-foreground"
-                                onClick={() => setCurrentPage(Math.min(14, currentPage + 1))}
+                                className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground"
+                                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                                disabled={currentPage === totalPages}
                             >
                                 Next
-                                <ChevronRight className="h-4 w-4 ml-1" />
+                                <ChevronRight className="h-3.5 w-3.5 ml-1" />
                             </Button>
                             <Button
                                 variant="ghost"
                                 size="sm"
-                                className="text-muted-foreground hover:text-foreground"
-                                onClick={() => setCurrentPage(14)}
+                                className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground"
+                                onClick={() => setCurrentPage(totalPages)}
+                                disabled={currentPage === totalPages}
                             >
                                 Last
                             </Button>

@@ -215,10 +215,10 @@ const PowerView = () => {
     );
 
     return (
-        <div className="space-y-6 animate-fade-in bg-[hsl(220,20%,96%)] min-h-screen -m-6 p-6">
+        <div className="space-y-6 animate-fade-in text-foreground">
             {/* Page Header */}
             <div className="mb-2">
-                <h1 className="text-2xl font-semibold text-foreground">Power View</h1>
+                <h1 className="text-xl font-semibold text-foreground tracking-tight">Power View</h1>
                 <p className="text-sm text-muted-foreground mt-1">
                     Monitor real-time power consumption across all rooms and devices
                 </p>
@@ -226,16 +226,16 @@ const PowerView = () => {
 
             {/* Filters and Summary */}
             <div className="grid gap-6 lg:grid-cols-4">
-                <Card className="lg:col-span-2">
+                <Card className="lg:col-span-2 border border-border/80 dark:border-slate-800 shadow-xl rounded-xl bg-card text-card-foreground">
                     <CardContent className="pt-6">
                         <div className="flex gap-4">
                             <div className="space-y-2 flex-1">
                                 <label className="text-sm font-medium">Buildings</label>
                                 <Select value={selectedBuilding} onValueChange={setSelectedBuilding}>
-                                    <SelectTrigger className="bg-muted/30 border-border/50">
+                                    <SelectTrigger className="bg-muted/20 border-border dark:border-slate-700/80">
                                         <SelectValue placeholder="All Buildings" />
                                     </SelectTrigger>
-                                    <SelectContent className="bg-white">
+                                    <SelectContent className="bg-popover text-popover-foreground border-border">
                                         <SelectItem value="all">All Buildings</SelectItem>
                                         <SelectItem value="Building A">Building A</SelectItem>
                                         <SelectItem value="Building B">Building B</SelectItem>
@@ -246,10 +246,10 @@ const PowerView = () => {
                             <div className="space-y-2 flex-1">
                                 <label className="text-sm font-medium">Floors</label>
                                 <Select value={selectedFloor} onValueChange={setSelectedFloor}>
-                                    <SelectTrigger className="bg-muted/30 border-border/50">
+                                    <SelectTrigger className="bg-muted/20 border-border dark:border-slate-700/80">
                                         <SelectValue placeholder="All Floors" />
                                     </SelectTrigger>
-                                    <SelectContent className="bg-white">
+                                    <SelectContent className="bg-popover text-popover-foreground border-border">
                                         <SelectItem value="all">All Floors</SelectItem>
                                         <SelectItem value="Floor 1">Floor 1</SelectItem>
                                         <SelectItem value="Floor 2">Floor 2</SelectItem>
@@ -260,10 +260,10 @@ const PowerView = () => {
                             <div className="space-y-2 flex-1">
                                 <label className="text-sm font-medium">Rooms</label>
                                 <Select value={selectedRoom} onValueChange={setSelectedRoom}>
-                                    <SelectTrigger className="bg-muted/30 border-border/50">
+                                    <SelectTrigger className="bg-muted/20 border-border dark:border-slate-700/80">
                                         <SelectValue placeholder="All Rooms" />
                                     </SelectTrigger>
-                                    <SelectContent className="bg-white">
+                                    <SelectContent className="bg-popover text-popover-foreground border-border">
                                         <SelectItem value="all">All Rooms</SelectItem>
                                         <SelectItem value="Room 01">Room 01</SelectItem>
                                         <SelectItem value="Room 02">Room 02</SelectItem>

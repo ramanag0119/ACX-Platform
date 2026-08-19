@@ -130,7 +130,7 @@ const JobOrder = () => {
 
     const renderCreateJobTab = () => (
         <div className="space-y-6">
-            <Card className="border-0 shadow-lg rounded-2xl bg-white">
+            <Card className="border border-border/80 dark:border-slate-800 shadow-xl rounded-xl bg-card text-card-foreground">
                 <CardContent className="p-6">
                     <div className="space-y-6">
                         {/* Work/Purchase Order Reference */}
@@ -141,7 +141,7 @@ const JobOrder = () => {
                                     placeholder="Enter Work/Purchase Order Reference"
                                     value={workPurchaseRef}
                                     onChange={(e) => setWorkPurchaseRef(e.target.value)}
-                                    className="bg-muted/30 border-border/50"
+                                    className="bg-muted/20 border-border dark:border-slate-700/80"
                                 />
                             </div>
                         </div>
@@ -171,7 +171,7 @@ const JobOrder = () => {
                                     placeholder="Enter Job Description"
                                     value={jobDescription}
                                     onChange={(e) => setJobDescription(e.target.value)}
-                                    className="bg-muted/30 border-border/50 min-h-[80px]"
+                                    className="bg-muted/20 border-border dark:border-slate-700/80 min-h-[80px]"
                                 />
                             </div>
                         </div>
@@ -184,7 +184,7 @@ const JobOrder = () => {
                                     type="date"
                                     value={workCommence}
                                     onChange={(e) => setWorkCommence(e.target.value)}
-                                    className="bg-amber-500 border-border/50 text-white"
+                                    className="bg-muted/20 border-border dark:border-slate-700/80"
                                 />
                             </div>
                         </div>
@@ -197,34 +197,23 @@ const JobOrder = () => {
                                     type="date"
                                     value={estimateCompleteDate}
                                     onChange={(e) => setEstimateCompleteDate(e.target.value)}
-                                    className="bg-muted/30 border-border/50"
+                                    className="bg-muted/20 border-border dark:border-slate-700/80"
                                 />
                             </div>
                         </div>
-                    </div>
-                </CardContent>
-            </Card>
 
-            {/* Rooms & Caleido Network Section */}
-            <Card className="border-0 shadow-lg rounded-2xl bg-white">
-                <CardContent className="p-6">
-                    <div className="space-y-6">
                         {/* Rooms */}
                         <div className="grid grid-cols-3 gap-4 items-center">
                             <Label className="text-sm font-medium text-right">Rooms<span className="text-red-500">*</span></Label>
                             <div className="col-span-2">
                                 <Select value={selectedRoom} onValueChange={setSelectedRoom}>
-                                    <SelectTrigger className="bg-muted/30 border-border/50">
-                                        <SelectValue placeholder="Select Rooms No" />
+                                    <SelectTrigger className="bg-muted/20 border-border dark:border-slate-700/80">
+                                        <SelectValue placeholder="Select Rooms" />
                                     </SelectTrigger>
-                                    <SelectContent className="bg-popover">
-                                        {roomOptions.length === 0 ? (
-                                            <div className="py-3 px-4 text-muted-foreground text-sm">No data available</div>
-                                        ) : (
-                                            roomOptions.map(room => (
-                                                <SelectItem key={room.id} value={room.name}>{room.name}</SelectItem>
-                                            ))
-                                        )}
+                                    <SelectContent className="bg-popover text-popover-foreground border-border">
+                                        {roomOptions.map(room => (
+                                            <SelectItem key={room} value={room}>{room}</SelectItem>
+                                        ))}
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -234,11 +223,11 @@ const JobOrder = () => {
                         <div className="grid grid-cols-3 gap-4 items-center">
                             <Label className="text-sm font-medium text-right">Caleido Network<span className="text-red-500">*</span></Label>
                             <div className="col-span-2">
-                                <Select value={selectedCaleidoNetwork} onValueChange={setSelectedCaleidoNetwork}>
-                                    <SelectTrigger className="bg-muted/30 border-border/50">
-                                        <SelectValue placeholder="Select Caleido Network" />
+                                <Select value={selectedNetwork} onValueChange={setSelectedNetwork}>
+                                    <SelectTrigger className="bg-muted/20 border-border dark:border-slate-700/80">
+                                        <SelectValue placeholder="Select Network" />
                                     </SelectTrigger>
-                                    <SelectContent className="bg-popover">
+                                    <SelectContent className="bg-popover text-popover-foreground border-border">
                                         {caleidoNetworkOptions.length === 0 ? (
                                             <div className="py-3 px-4 text-muted-foreground text-sm">No data available</div>
                                         ) : (
@@ -253,7 +242,7 @@ const JobOrder = () => {
 
                         {/* Add Button */}
                         <div className="flex justify-center">
-                            <Button onClick={handleAddRoom} className="h-10 px-8 min-w-[120px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">
+                            <Button onClick={handleAddRoom} className="h-10 px-8 min-w-[120px] rounded-xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">
                                 Add
                             </Button>
                         </div>
@@ -262,32 +251,32 @@ const JobOrder = () => {
             </Card>
 
             {/* Added Rooms Table */}
-            <Card className="border-0 shadow-lg rounded-2xl bg-white">
+            <Card className="border border-border/80 dark:border-slate-800 shadow-xl rounded-xl bg-card text-card-foreground">
                 <CardContent className="p-6">
-                    <div className="rounded-xl overflow-hidden border border-gray-200">
+                    <div className="rounded-lg overflow-hidden border border-border/80 dark:border-slate-800">
                         <Table>
                             <TableHeader>
-                                <TableRow className="bg-gray-50 hover:bg-gray-50 border-b border-gray-200">
-                                    <TableHead className="text-gray-600 font-medium">Rooms</TableHead>
-                                    <TableHead className="text-gray-600 font-medium">Caleido Network</TableHead>
-                                    <TableHead className="text-gray-600 font-medium text-center">Action</TableHead>
+                                <TableRow className="bg-muted/40 dark:bg-[#0e1322] border-b border-border dark:border-slate-800">
+                                    <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Rooms</TableHead>
+                                    <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Caleido Network</TableHead>
+                                    <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 text-center">Action</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {addedRooms.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+                                        <TableCell colSpan={3} className="text-center text-muted-foreground text-xs py-6">
                                             No rooms added yet. Select a room and network above.
                                         </TableCell>
                                     </TableRow>
                                 ) : (
                                     addedRooms.map((item, index) => (
-                                        <TableRow key={index} className={`${index % 2 === 0 ? "bg-muted/20" : "bg-background"} hover:bg-muted/40 transition-colors`}>
-                                            <TableCell>{item.room}</TableCell>
-                                            <TableCell>{item.network}</TableCell>
-                                            <TableCell className="text-center">
-                                                <Button size="sm" onClick={() => handleRemoveRoom(index)} className="bg-red-500 hover:bg-red-600 h-8 w-8 p-0">
-                                                    <Trash2 className="h-4 w-4" />
+                                        <TableRow key={index} className={`${index % 2 === 0 ? "bg-card dark:bg-[#101526]/80" : "bg-muted/10 dark:bg-[#0d1120]/80"} hover:bg-muted/30 dark:hover:bg-slate-800/50 border-b border-border/50 dark:border-slate-800/70 transition-colors`}>
+                                            <TableCell className="text-xs py-3 px-4 text-foreground/90">{item.room}</TableCell>
+                                            <TableCell className="text-xs py-3 px-4 text-foreground/90">{item.network}</TableCell>
+                                            <TableCell className="text-center py-3 px-4">
+                                                <Button size="sm" onClick={() => handleRemoveRoom(index)} className="bg-red-500 hover:bg-red-600 h-7 w-7 p-0 rounded-md">
+                                                    <Trash2 className="h-3.5 w-3.5" />
                                                 </Button>
                                             </TableCell>
                                         </TableRow>
@@ -299,7 +288,7 @@ const JobOrder = () => {
 
                     {/* Submit Button */}
                     <div className="flex justify-center mt-6">
-                        <Button onClick={handleSubmit} className="h-11 px-12 min-w-[140px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">
+                        <Button onClick={handleSubmit} className="h-10 px-12 min-w-[140px] rounded-xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">
                             Submit
                         </Button>
                     </div>
@@ -309,91 +298,95 @@ const JobOrder = () => {
     );
 
     const renderJobOrdersTab = () => (
-        <Card className="border-0 shadow-lg rounded-2xl bg-white">
-            <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-6">
+        <Card className="border border-border/80 dark:border-slate-800 shadow-xl rounded-xl bg-card text-card-foreground overflow-hidden">
+            <CardContent className="p-5">
+                <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
                     <div className="flex items-center gap-2">
-                        <span className="text-muted-foreground text-sm">Show</span>
-                        <Select value={entriesPerPage} onValueChange={setEntriesPerPage}>
-                            <SelectTrigger className="w-20 h-9 bg-muted/30 border-border/50">
+                        <span className="text-muted-foreground text-xs font-medium">Show</span>
+                        <Select value={entriesPerPage} onValueChange={(val) => { setEntriesPerPage(val); setCurrentPage(1); }}>
+                            <SelectTrigger className="w-18 h-8 text-xs bg-muted/20 border-border dark:border-slate-700/80 rounded-md">
                                 <SelectValue />
                             </SelectTrigger>
-                            <SelectContent className="bg-popover">
+                            <SelectContent className="bg-popover text-popover-foreground border-border text-xs">
                                 <SelectItem value="10">10</SelectItem>
                                 <SelectItem value="25">25</SelectItem>
                                 <SelectItem value="50">50</SelectItem>
                             </SelectContent>
                         </Select>
-                        <span className="text-muted-foreground text-sm">entries</span>
+                        <span className="text-muted-foreground text-xs font-medium">entries</span>
                     </div>
                     <div className="flex items-center gap-2">
-                        <span className="text-muted-foreground text-sm">Search:</span>
+                        <span className="text-muted-foreground text-xs font-medium">Search:</span>
                         <Input
                             placeholder="Job ID, Work/Purchase order, Room no"
                             value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-80 h-9 bg-muted/30 border-border/50"
+                            onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                            className="w-72 h-8 text-xs bg-muted/20 border-border dark:border-slate-700/80 rounded-md placeholder:text-muted-foreground/60"
                         />
                     </div>
                 </div>
 
-                <div className="rounded-xl overflow-hidden border border-gray-200 overflow-x-auto">
+                <div className="rounded-lg overflow-hidden border border-border/80 dark:border-slate-800 overflow-x-auto scrollbar-thin">
                     <Table>
                         <TableHeader>
-                            <TableRow className="bg-gray-50 hover:bg-gray-50 border-b border-gray-200">
-                                <TableHead className="text-gray-600 font-medium whitespace-nowrap">Job ID ◆</TableHead>
-                                <TableHead className="text-gray-600 font-medium whitespace-nowrap">Job Description ◆</TableHead>
-                                <TableHead className="text-gray-600 font-medium whitespace-nowrap">Work/Purchase Order ◆</TableHead>
-                                <TableHead className="text-gray-600 font-medium whitespace-nowrap">Rooms & devices</TableHead>
-                                <TableHead className="text-gray-600 font-medium whitespace-nowrap">Type of Work ◆</TableHead>
-                                <TableHead className="text-gray-600 font-medium whitespace-nowrap">Work Commence ◆</TableHead>
-                                <TableHead className="text-gray-600 font-medium whitespace-nowrap">Estimate Completion Date</TableHead>
-                                <TableHead className="text-gray-600 font-medium text-center">Action</TableHead>
-                                <TableHead className="text-gray-600 font-medium text-center">Printout</TableHead>
+                            <TableRow className="bg-muted/40 dark:bg-[#0e1322] border-b border-border dark:border-slate-800">
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap">Job ID</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap">Job Description</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap">Work/Purchase Order</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap">Rooms & devices</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap">Type of Work</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap">Work Commence</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap">Estimate Completion Date</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 text-center">Action</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 text-center">Printout</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {paginatedJobOrders.map((item, index) => (
-                                <TableRow key={item.id} className={`${index % 2 === 0 ? "bg-muted/20" : "bg-background"} hover:bg-muted/40 transition-colors`}>
-                                    <TableCell className="text-cyan-600 whitespace-nowrap">{item.id}</TableCell>
-                                    <TableCell className="text-cyan-600 hover:underline cursor-pointer whitespace-nowrap">{item.description}</TableCell>
-                                    <TableCell className="whitespace-nowrap">{item.workPurchaseOrder}</TableCell>
-                                    <TableCell className="text-cyan-600 hover:underline cursor-pointer whitespace-nowrap">{item.roomsDevices}</TableCell>
-                                    <TableCell className="whitespace-nowrap">{item.typeOfWork}</TableCell>
-                                    <TableCell className="whitespace-nowrap">{item.workCommence}</TableCell>
-                                    <TableCell className="whitespace-nowrap">{item.estimateCompleteDate}</TableCell>
-                                    <TableCell className="text-center">
-                                        <Button size="sm" className="bg-cyan-600 hover:bg-cyan-700 h-8 w-8 p-0" onClick={() => handleEditClick(item)}>
-                                            <Pencil className="h-4 w-4" />
-                                        </Button>
-                                    </TableCell>
-                                    <TableCell className="text-center">
-                                        <Button size="sm" className="bg-amber-500 hover:bg-amber-600 h-8 w-8 p-0">
-                                            <Printer className="h-4 w-4" />
-                                        </Button>
+                            {paginatedJobOrders.length > 0 ? (
+                                paginatedJobOrders.map((item, index) => (
+                                    <TableRow key={item.id} className={`${index % 2 === 0 ? "bg-card dark:bg-[#101526]/80" : "bg-muted/10 dark:bg-[#0d1120]/80"} hover:bg-muted/30 dark:hover:bg-slate-800/50 border-b border-border/50 dark:border-slate-800/70 transition-colors`}>
+                                        <TableCell className="text-cyan-600 dark:text-cyan-400 text-xs py-3 px-4 font-medium whitespace-nowrap">{item.id}</TableCell>
+                                        <TableCell className="text-cyan-600 dark:text-cyan-400 text-xs py-3 px-4 hover:underline cursor-pointer whitespace-nowrap">{item.description}</TableCell>
+                                        <TableCell className="whitespace-nowrap text-xs py-3 px-4 text-foreground/90">{item.workPurchaseOrder}</TableCell>
+                                        <TableCell className="text-cyan-600 dark:text-cyan-400 text-xs py-3 px-4 hover:underline cursor-pointer whitespace-nowrap">{item.roomsDevices}</TableCell>
+                                        <TableCell className="whitespace-nowrap text-xs py-3 px-4 text-foreground/90">{item.typeOfWork}</TableCell>
+                                        <TableCell className="whitespace-nowrap text-xs py-3 px-4 text-foreground/90">{item.workCommence}</TableCell>
+                                        <TableCell className="whitespace-nowrap text-xs py-3 px-4 text-foreground/90">{item.estimateCompleteDate}</TableCell>
+                                        <TableCell className="text-center py-3 px-4">
+                                            <Button size="sm" className="bg-cyan-600 hover:bg-cyan-700 h-7 w-7 p-0 rounded-md" onClick={() => handleEditClick(item)}>
+                                                <Pencil className="h-3.5 w-3.5 text-white" />
+                                            </Button>
+                                        </TableCell>
+                                        <TableCell className="text-center py-3 px-4">
+                                            <Button size="sm" className="bg-amber-500 hover:bg-amber-600 h-7 w-7 p-0 rounded-md">
+                                                <Printer className="h-3.5 w-3.5 text-white" />
+                                            </Button>
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={9} className="text-center py-6 text-muted-foreground text-xs">
+                                        No job orders found {searchQuery ? `matching "${searchQuery}"` : ""}
                                     </TableCell>
                                 </TableRow>
-                            ))}
+                            )}
                         </TableBody>
                     </Table>
                 </div>
 
-                <div className="flex items-center justify-between mt-6">
-                    <span className="text-muted-foreground text-sm">
-                        Showing {startIndex + 1} to {Math.min(endIndex, filteredJobOrders.length)} of {filteredJobOrders.length} entries
+                <div className="flex flex-wrap items-center justify-between gap-4 mt-5">
+                    <span className="text-muted-foreground text-xs">
+                        Showing {filteredJobOrders.length > 0 ? startIndex + 1 : 0} to {Math.min(endIndex, filteredJobOrders.length)} of {filteredJobOrders.length} entries
                     </span>
                     <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>First</Button>
-                        <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1}>Previous</Button>
-                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => i + 1).map((page) => (
-                            <Button key={page} variant={currentPage === page ? "default" : "ghost"} size="sm" className={`w-9 h-9 p-0 rounded-xl ${currentPage === page ? "bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold shadow-sm" : "text-muted-foreground"}`} onClick={() => setCurrentPage(page)}>{page}</Button>
+                        <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>First</Button>
+                        <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1}>Previous</Button>
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                            <Button key={page} variant={currentPage === page ? "default" : "ghost"} size="sm" className={`h-8 w-8 p-0 text-xs rounded-xl ${currentPage === page ? "bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold shadow-sm" : "text-muted-foreground hover:text-foreground"}`} onClick={() => setCurrentPage(page)}>{page}</Button>
                         ))}
-                        {totalPages > 5 && <span className="text-muted-foreground px-2">...</span>}
-                        {totalPages > 5 && (
-                            <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setCurrentPage(totalPages)}>{totalPages}</Button>
-                        )}
-                        <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages}>Next</Button>
-                        <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages}>Last</Button>
+                        <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages}>Next</Button>
+                        <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages}>Last</Button>
                     </div>
                 </div>
             </CardContent>
@@ -401,26 +394,26 @@ const JobOrder = () => {
     );
 
     return (
-        <div className="space-y-6 animate-fade-in bg-[hsl(220,20%,96%)] min-h-screen -m-6 p-6">
+        <div className="space-y-6 animate-fade-in text-foreground">
             {/* Header */}
             <div className="mb-2">
-                <h1 className="text-2xl font-semibold text-foreground">Job Order Management</h1>
+                <h1 className="text-xl font-semibold text-foreground tracking-tight">Job Order Management</h1>
             </div>
 
             {/* Tabs */}
-            <div className="flex gap-6 border-b border-gray-200">
+            <div className="flex gap-6 border-b border-border dark:border-slate-800">
                 {tabs.map((tab) => (
                     <button
                         key={tab.id}
-                        onClick={() => setActiveTab(tab.id)}
-                        className={`relative px-1 pb-3 text-sm font-medium transition-all duration-200 ${activeTab === tab.id
+                        onClick={() => { setActiveTab(tab.id); setCurrentPage(1); }}
+                        className={`relative px-1 pb-3 text-xs font-semibold uppercase tracking-wider transition-all duration-200 ${activeTab === tab.id
                             ? "text-foreground"
                             : "text-muted-foreground hover:text-foreground"
                             }`}
                     >
                         {tab.label}
                         {activeTab === tab.id && (
-                            <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-purple-600 rounded-t-full" />
+                            <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-primary rounded-t-full" />
                         )}
                     </button>
                 ))}

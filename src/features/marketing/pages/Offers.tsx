@@ -80,93 +80,102 @@ const Offers = () => {
     };
 
     return (
-        <div className="space-y-6 animate-fade-in bg-[hsl(220,20%,96%)] min-h-screen -m-6 p-6">
+        <div className="space-y-6 animate-fade-in text-foreground">
             {/* Header */}
             <div className="flex items-center justify-between mb-2">
-                <h1 className="text-2xl font-semibold text-foreground">Offers Management</h1>
-                <Button onClick={() => setIsModalOpen(true)} className="h-10 px-6 rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">Add Offers</Button>
+                <h1 className="text-xl font-semibold text-foreground tracking-tight">Offers Management</h1>
+                <Button onClick={() => setIsModalOpen(true)} className="h-10 px-6 rounded-xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">Add Offers</Button>
             </div>
 
             {/* Table Section */}
-            <Card className="border-0 shadow-lg rounded-2xl bg-white">
-                <CardContent className="p-6">
-                    <div className="flex items-center justify-between mb-6">
+            <Card className="border border-border/80 dark:border-slate-800 shadow-xl rounded-xl bg-card text-card-foreground overflow-hidden">
+                <CardContent className="p-5">
+                    <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
                         <div className="flex items-center gap-2">
-                            <span className="text-muted-foreground text-sm">Show</span>
-                            <Select value={entriesPerPage} onValueChange={setEntriesPerPage}>
-                                <SelectTrigger className="w-20 h-9 bg-muted/30 border-border/50"><SelectValue /></SelectTrigger>
-                                <SelectContent className="bg-white">
+                            <span className="text-muted-foreground text-xs font-medium">Show</span>
+                            <Select value={entriesPerPage} onValueChange={(val) => { setEntriesPerPage(val); setCurrentPage(1); }}>
+                                <SelectTrigger className="w-18 h-8 text-xs bg-muted/20 border-border dark:border-slate-700/80 rounded-md"><SelectValue /></SelectTrigger>
+                                <SelectContent className="bg-popover text-popover-foreground border-border text-xs">
                                     <SelectItem value="10">10</SelectItem>
                                     <SelectItem value="25">25</SelectItem>
+                                    <SelectItem value="50">50</SelectItem>
                                 </SelectContent>
                             </Select>
-                            <span className="text-muted-foreground text-sm">entries</span>
+                            <span className="text-muted-foreground text-xs font-medium">entries</span>
                         </div>
                         <div className="flex items-center gap-2">
-                            <span className="text-muted-foreground text-sm">Search:</span>
-                            <Input placeholder="Offer name, Coupon code" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-64 h-9 bg-muted/30 border-border/50" />
+                            <span className="text-muted-foreground text-xs font-medium">Search:</span>
+                            <Input placeholder="Offer name, Coupon code" value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }} className="w-64 h-8 text-xs bg-muted/20 border-border dark:border-slate-700/80 rounded-md placeholder:text-muted-foreground/60" />
                         </div>
                     </div>
 
-                    <div className="rounded-xl overflow-hidden border border-gray-200 overflow-x-auto">
+                    <div className="rounded-lg overflow-hidden border border-border/80 dark:border-slate-800 overflow-x-auto scrollbar-thin">
                         <Table>
                             <TableHeader>
-                                <TableRow className="bg-gray-50 hover:bg-gray-50 border-b border-gray-200">
-                                    <TableHead className="text-gray-600 font-medium whitespace-nowrap">Offer Name ↕</TableHead>
-                                    <TableHead className="text-gray-600 font-medium whitespace-nowrap">Applicable To</TableHead>
-                                    <TableHead className="text-gray-600 font-medium whitespace-nowrap">Coupon Code ↕</TableHead>
-                                    <TableHead className="text-gray-600 font-medium whitespace-nowrap">Coupon Description</TableHead>
-                                    <TableHead className="text-gray-600 font-medium whitespace-nowrap">Offer By ↕</TableHead>
-                                    <TableHead className="text-gray-600 font-medium whitespace-nowrap">Validity From ↕</TableHead>
-                                    <TableHead className="text-gray-600 font-medium whitespace-nowrap">Validity To</TableHead>
-                                    <TableHead className="text-gray-600 font-medium whitespace-nowrap">Offer Withdrawal</TableHead>
-                                    <TableHead className="text-gray-600 font-medium whitespace-nowrap">Image</TableHead>
-                                    <TableHead className="text-gray-600 font-medium text-center">Action</TableHead>
+                                <TableRow className="bg-muted/40 dark:bg-[#0e1322] border-b border-border dark:border-slate-800">
+                                    <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap">Offer Name</TableHead>
+                                    <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap">Applicable To</TableHead>
+                                    <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap">Coupon Code</TableHead>
+                                    <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap">Coupon Description</TableHead>
+                                    <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap">Offer By</TableHead>
+                                    <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap">Validity From</TableHead>
+                                    <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap">Validity To</TableHead>
+                                    <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap text-center">Offer Withdrawal</TableHead>
+                                    <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap text-center">Image</TableHead>
+                                    <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 text-center">Action</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {paginatedData.map((item, index) => (
-                                    <TableRow key={item.id} className={`${index % 2 === 0 ? "bg-muted/20" : "bg-white"} hover:bg-muted/40`}>
-                                        <TableCell className="text-cyan-600 whitespace-nowrap">{item.offerName}</TableCell>
-                                        <TableCell className="whitespace-nowrap">{item.applicableTo}</TableCell>
-                                        <TableCell className="whitespace-nowrap">{item.couponCode}</TableCell>
-                                        <TableCell className="whitespace-nowrap">{item.couponDescription}</TableCell>
-                                        <TableCell className="whitespace-nowrap">{item.offerBy}</TableCell>
-                                        <TableCell className="whitespace-nowrap">{item.validityFrom}</TableCell>
-                                        <TableCell className="whitespace-nowrap">{item.validityTo}</TableCell>
-                                        <TableCell className="text-center">
-                                            <div className="flex justify-center">
-                                                <Button size="sm" className="h-8 w-8 p-0 bg-[#3eb1c8] hover:bg-[#3eb1c8]/90" onClick={() => handleWithdrawClick(item)}>
-                                                    <Hourglass className="h-4 w-4 text-white" />
-                                                </Button>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="whitespace-nowrap text-center">
-                                            {item.image !== "-" ? <span className="text-cyan-600 hover:underline cursor-pointer">{item.image}</span> : "-"}
-                                        </TableCell>
-                                        <TableCell className="text-center">
-                                            <div className="flex gap-2 justify-center">
-                                                <Button size="sm" className="h-8 w-8 p-0 bg-[#f2716b] hover:bg-[#f2716b]/90 rounded-md" onClick={() => handleEditClick(item)}>
-                                                    <Pencil className="h-4 w-4 text-white" />
-                                                </Button>
-                                            </div>
+                                {paginatedData.length > 0 ? (
+                                    paginatedData.map((item, index) => (
+                                        <TableRow key={item.id} className={`${index % 2 === 0 ? "bg-card dark:bg-[#101526]/80" : "bg-muted/10 dark:bg-[#0d1120]/80"} hover:bg-muted/30 dark:hover:bg-slate-800/50 border-b border-border/50 dark:border-slate-800/70 transition-colors`}>
+                                            <TableCell className="text-cyan-600 dark:text-cyan-400 text-xs py-3 px-4 whitespace-nowrap font-medium">{item.offerName}</TableCell>
+                                            <TableCell className="whitespace-nowrap text-xs py-3 px-4 text-foreground/90">{item.applicableTo}</TableCell>
+                                            <TableCell className="whitespace-nowrap text-xs py-3 px-4 text-foreground/90 font-mono">{item.couponCode}</TableCell>
+                                            <TableCell className="whitespace-nowrap text-xs py-3 px-4 text-foreground/90">{item.couponDescription}</TableCell>
+                                            <TableCell className="whitespace-nowrap text-xs py-3 px-4 text-foreground/90">{item.offerBy}</TableCell>
+                                            <TableCell className="whitespace-nowrap text-xs py-3 px-4 text-foreground/90">{item.validityFrom}</TableCell>
+                                            <TableCell className="whitespace-nowrap text-xs py-3 px-4 text-foreground/90">{item.validityTo}</TableCell>
+                                            <TableCell className="text-center py-3 px-4">
+                                                <div className="flex justify-center">
+                                                    <Button size="sm" className="h-7 w-7 p-0 bg-[#3eb1c8] hover:bg-[#3eb1c8]/90 rounded-md" onClick={() => handleWithdrawClick(item)}>
+                                                        <Hourglass className="h-3.5 w-3.5 text-white" />
+                                                    </Button>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="whitespace-nowrap text-center py-3 px-4 text-xs">
+                                                {item.image !== "-" ? <span className="text-cyan-600 dark:text-cyan-400 hover:underline cursor-pointer">{item.image}</span> : "-"}
+                                            </TableCell>
+                                            <TableCell className="text-center py-3 px-4">
+                                                <div className="flex gap-2 justify-center">
+                                                    <Button size="sm" className="h-7 w-7 p-0 bg-[#f2716b] hover:bg-[#f2716b]/90 rounded-md" onClick={() => handleEditClick(item)}>
+                                                        <Pencil className="h-3.5 w-3.5 text-white" />
+                                                    </Button>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                ) : (
+                                    <TableRow>
+                                        <TableCell colSpan={10} className="text-center py-6 text-muted-foreground text-xs">
+                                            No offers found {searchQuery ? `matching "${searchQuery}"` : ""}
                                         </TableCell>
                                     </TableRow>
-                                ))}
+                                )}
                             </TableBody>
                         </Table>
                     </div>
 
-                    <div className="flex items-center justify-between mt-6">
-                        <span className="text-muted-foreground text-sm">Showing {startIndex + 1} to {Math.min(startIndex + parseInt(entriesPerPage), filteredData.length)} of {filteredData.length} entries</span>
+                    <div className="flex flex-wrap items-center justify-between gap-4 mt-5">
+                        <span className="text-muted-foreground text-xs">Showing {filteredData.length > 0 ? startIndex + 1 : 0} to {Math.min(startIndex + parseInt(entriesPerPage), filteredData.length)} of {filteredData.length} entries</span>
                         <div className="flex items-center gap-1">
-                            <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>First</Button>
-                            <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1}>Previous</Button>
-                            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => i + 1).map((page) => (
-                                <Button key={page} variant={currentPage === page ? "default" : "ghost"} size="sm" className={`w-9 h-9 p-0 rounded-xl ${currentPage === page ? "bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold shadow-sm" : "text-muted-foreground"}`} onClick={() => setCurrentPage(page)}>{page}</Button>
+                            <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>First</Button>
+                            <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1}>Previous</Button>
+                            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                                <Button key={page} variant={currentPage === page ? "default" : "ghost"} size="sm" className={`h-8 w-8 p-0 text-xs rounded-xl ${currentPage === page ? "bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold shadow-sm" : "text-muted-foreground hover:text-foreground"}`} onClick={() => setCurrentPage(page)}>{page}</Button>
                             ))}
-                            <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages}>Next</Button>
-                            <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages}>Last</Button>
+                            <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages}>Next</Button>
+                            <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages}>Last</Button>
                         </div>
                     </div>
                 </CardContent>

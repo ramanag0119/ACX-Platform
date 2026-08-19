@@ -177,15 +177,15 @@ const Employees = () => {
     // Add Employee Form
     if (showAddEmployee) {
         return (
-            <div className="space-y-6 animate-fade-in bg-[hsl(220,20%,96%)] min-h-screen -m-6 p-6">
+            <div className="space-y-6 animate-fade-in text-foreground">
                 <div className="flex items-center justify-between mb-2">
-                    <h1 className="text-2xl font-semibold text-foreground">Employee Management</h1>
-                    <Button onClick={() => setShowAddEmployee(false)} className="bg-red-500 hover:bg-red-600 text-white">
+                    <h1 className="text-xl font-semibold text-foreground tracking-tight">Employee Management</h1>
+                    <Button onClick={() => setShowAddEmployee(false)} variant="destructive" className="h-9 px-4 text-xs font-semibold rounded-xl shadow-sm">
                         Cancel
                     </Button>
                 </div>
 
-                <Card className="border-0 shadow-lg rounded-2xl bg-white">
+                <Card className="border border-border/80 dark:border-slate-800 shadow-xl rounded-xl bg-card text-card-foreground">
                     <CardContent className="p-8">
                         <div className="max-w-3xl mx-auto space-y-4">
                             <div className="grid grid-cols-3 gap-4 items-center">
@@ -531,29 +531,29 @@ const Employees = () => {
     );
 
     return (
-        <div className="space-y-6 animate-fade-in bg-[hsl(220,20%,96%)] min-h-screen -m-6 p-6">
+        <div className="space-y-6 animate-fade-in text-foreground">
             {/* Header */}
             <div className="flex items-center justify-between mb-2">
-                <h1 className="text-2xl font-semibold text-foreground">Employee Management</h1>
-                <Button onClick={() => setShowAddEmployee(true)} className="bg-cyan-600 hover:bg-cyan-700 text-white">
+                <h1 className="text-xl font-semibold text-foreground tracking-tight">Employee Management</h1>
+                <Button onClick={() => setShowAddEmployee(true)} className="h-9 px-4 text-xs font-semibold rounded-xl bg-[#5865F2] hover:bg-[#4752c4] text-white shadow-md hover:shadow-lg transition-all">
                     Add Employee
                 </Button>
             </div>
 
             {/* Tabs */}
-            <div className="flex gap-6 border-b border-gray-200">
+            <div className="flex gap-6 border-b border-border dark:border-slate-800">
                 {tabs.map((tab) => (
                     <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
-                        className={`relative px-1 pb-3 text-sm font-medium transition-all duration-200 ${activeTab === tab.id
+                        className={`relative px-1 pb-3 text-xs font-semibold uppercase tracking-wider transition-all duration-200 ${activeTab === tab.id
                             ? "text-foreground"
                             : "text-muted-foreground hover:text-foreground"
                             }`}
                     >
                         {tab.label}
                         {activeTab === tab.id && (
-                            <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-purple-600 rounded-t-full" />
+                            <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-primary rounded-t-full" />
                         )}
                     </button>
                 ))}
