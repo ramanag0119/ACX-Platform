@@ -213,7 +213,7 @@ const JobOrder = () => {
                                     </SelectTrigger>
                                     <SelectContent className="bg-popover text-popover-foreground border-border">
                                         {roomOptions.map(room => (
-                                            <SelectItem key={room} value={room}>{room}</SelectItem>
+                                            <SelectItem key={room.id} value={room.name}>{room.name}</SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
