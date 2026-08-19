@@ -82,9 +82,10 @@ const JobOrder = () => {
     const [entriesPerPage, setEntriesPerPage] = useState("10");
     const [currentPage, setCurrentPage] = useState(1);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [selectedJob, setSelectedJob] = useState<any>(null);
+    type JobOrderItem = typeof jobOrdersData[number];
+    const [selectedJob, setSelectedJob] = useState<JobOrderItem | null>(null);
 
-    const handleEditClick = (job: any) => {
+    const handleEditClick = (job: JobOrderItem) => {
         setSelectedJob(job);
         setIsEditModalOpen(true);
     };

@@ -54,8 +54,9 @@ const Offers = () => {
     // Form state
     const [offerName, setOfferName] = useState("");
     const [selectedRooms, setSelectedRooms] = useState<string[]>([]);
-    const [selectedItemToDelete, setSelectedItemToDelete] = useState<any>(null);
-    const [selectedItemToEdit, setSelectedItemToEdit] = useState<any>(null);
+    type OfferItem = typeof offersData[number];
+    const [selectedItemToDelete, setSelectedItemToDelete] = useState<OfferItem | null>(null);
+    const [selectedItemToEdit, setSelectedItemToEdit] = useState<OfferItem | null>(null);
 
     const filteredData = offersData.filter(item =>
         item.offerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -69,12 +70,12 @@ const Offers = () => {
         setSelectedRooms(prev => prev.includes(roomId) ? prev.filter(id => id !== roomId) : [...prev, roomId]);
     };
 
-    const handleWithdrawClick = (item: any) => {
+    const handleWithdrawClick = (item: OfferItem) => {
         setSelectedItemToDelete(item);
         setIsDeleteModalOpen(true);
     };
 
-    const handleEditClick = (item: any) => {
+    const handleEditClick = (item: OfferItem) => {
         setSelectedItemToEdit(item);
         setIsEditModalOpen(true);
     };

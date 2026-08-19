@@ -1081,7 +1081,7 @@ const ServicePlanning = () => {
         return disinfectionScheduleData;
     };
 
-    const filterData = <T extends Record<string, any>>(data: T[]) => {
+    const filterData = <T extends Record<string, unknown>>(data: T[]) => {
         if (!searchQuery.trim()) return data;
         const query = searchQuery.toLowerCase().trim();
         return data.filter((item) =>

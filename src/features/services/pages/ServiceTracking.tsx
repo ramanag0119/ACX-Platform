@@ -234,8 +234,8 @@ const ServiceTracking = () => {
     const currentChartData = chartDataMap[activeService] || chartDataMap["room-service"];
     const totalServices = totalServicesMap[activeService] || 136;
 
-    const renderActiveShape = (props: any) => {
-        const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
+    const renderActiveShape = (props: { cx?: number; cy?: number; innerRadius?: number; outerRadius?: number; startAngle?: number; endAngle?: number; fill?: string }) => {
+        const { cx = 0, cy = 0, innerRadius = 0, outerRadius = 0, startAngle = 0, endAngle = 0, fill = "#3eb1c8" } = props;
         return (
             <g>
                 <Sector
@@ -294,7 +294,7 @@ const ServiceTracking = () => {
         );
     };
 
-    const filterData = <T extends Record<string, any>>(data: T[]) => {
+    const filterData = <T extends Record<string, unknown>>(data: T[]) => {
         if (!searchQuery.trim()) return data;
         const query = searchQuery.toLowerCase().trim();
         return data.filter((item) =>
@@ -712,7 +712,7 @@ const ServiceTracking = () => {
                                     ))}
                                 </Pie>
                                 <Tooltip
-                                    formatter={(value: any) => [`${value}%`, 'Percentage']}
+                                    formatter={(value: unknown) => [`${value}%`, 'Percentage']}
                                     contentStyle={{
                                         backgroundColor: "hsl(var(--card))",
                                         border: "1px solid hsl(var(--border))",

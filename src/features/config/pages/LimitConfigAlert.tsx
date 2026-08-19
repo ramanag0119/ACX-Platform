@@ -52,8 +52,20 @@ const deviceNameOptions = [
     { id: "17", name: "3003MIK01 - Cxpl" },
 ];
 
+interface LimitConfigItem {
+    parameter: string;
+    deviceName: string;
+    limitCheck: string;
+    limitBy: string;
+    nominal: string;
+    limitLow: string;
+    limitHigh: string;
+    limitLowValue: string;
+    limitHighValue: string;
+}
+
 // Sample data (empty initially)
-const limitConfigData: any[] = [];
+const limitConfigData: LimitConfigItem[] = [];
 
 const LimitConfigAlert = () => {
     // Form state

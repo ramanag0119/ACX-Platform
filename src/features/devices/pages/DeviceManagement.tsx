@@ -246,7 +246,7 @@ const DeviceManagement = () => {
     const pages = [];
     const maxVisiblePages = 5;
     let start = Math.max(1, current - Math.floor(maxVisiblePages / 2));
-    let end = Math.min(total, start + maxVisiblePages - 1);
+    const end = Math.min(total, start + maxVisiblePages - 1);
 
     if (end - start + 1 < maxVisiblePages) {
       start = Math.max(1, end - maxVisiblePages + 1);
