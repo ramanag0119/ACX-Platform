@@ -1075,18 +1075,18 @@ const ServicePlanning = () => {
         </div>
     );
 
-    const getActiveData = (): Record<string, unknown>[] => {
+    const getActiveData = (): Record<string, string>[] => {
         if (activeTab === "scheduled") return scheduledServicesData;
         if (activeTab === "maintenance") return planMaintenanceData;
         return disinfectionScheduleData;
     };
 
-    const filterData = (data: Record<string, unknown>[]) => {
+    const filterData = (data: Record<string, string>[]): Record<string, string>[] => {
         if (!searchQuery.trim()) return data;
         const query = searchQuery.toLowerCase().trim();
         return data.filter((item) =>
             Object.values(item).some((val) =>
-                val !== null && val !== undefined && String(val).toLowerCase().includes(query)
+                val && val.toLowerCase().includes(query)
             )
         );
     };
@@ -1128,7 +1128,7 @@ const ServicePlanning = () => {
             ];
         } else {
             columns = [
-                { key: "sanitizerServices", label: "Sanitizer Services" },
+                { key: "facilityServices", label: "Facility Services" },
                 { key: "serviceType", label: "Service Type" },
                 { key: "department", label: "Department" },
                 { key: "assignTo", label: "Assign To" },
@@ -1156,7 +1156,7 @@ const ServicePlanning = () => {
                         {paginatedData.length > 0 ? (
                             paginatedData.map((row, index) => (
                                 <TableRow
-                                    key={row.id}
+                                    key={row.id || index}
                                     className={`${index % 2 === 0 ? "bg-card dark:bg-[#101526]/80" : "bg-muted/10 dark:bg-[#0d1120]/80"} hover:bg-muted/30 dark:hover:bg-slate-800/50 border-b border-border/50 dark:border-slate-800/70 transition-colors`}
                                 >
                                     {columns.map((col) => (
