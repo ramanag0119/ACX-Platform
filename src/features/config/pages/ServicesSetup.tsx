@@ -424,6 +424,7 @@ const ServicesSetup = () => {
 
     // Modal states
     const [editFoodCategoryOpen, setEditFoodCategoryOpen] = useState(false);
+    const [editFacilityServiceOpen, setEditFacilityServiceOpen] = useState(false);
     const [editSanitationServiceOpen, setEditSanitationServiceOpen] = useState(false);
     const [editFoodMenuOpen, setEditFoodMenuOpen] = useState(false);
 
@@ -1538,10 +1539,10 @@ const ServicesSetup = () => {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {paginatedFacilityServicesType.map((item, index) => (
+                                        {paginatedFacilityServicesTypeData.map((item, index) => (
                                             <TableRow key={item.id} className={`${index % 2 === 0 ? "bg-muted/20" : "bg-background"} hover:bg-muted/40 transition-colors`}>
-                                                <TableCell className="text-cyan-600 hover:underline cursor-pointer">{item.type}</TableCell>
-                                                <TableCell>{item.time}</TableCell>
+                                                <TableCell className="text-cyan-600 hover:underline cursor-pointer">{item.typeOfService}</TableCell>
+                                                <TableCell>30</TableCell>
                                                 <TableCell className="text-center">
                                                     <Button size="sm" className="bg-[#3eb1c8] hover:bg-[#3eb1c8]/90 text-white h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditFacilityServiceOpen(true)}>
                                                         <Edit className="h-[14px] w-[14px]" />
@@ -1553,7 +1554,7 @@ const ServicesSetup = () => {
                                 </Table>
                             </div>
                             <div className="flex items-center justify-between mt-6">
-                                <span className="text-muted-foreground text-sm">Showing {facilityServicesTypeStartIndex + 1} to {Math.min(facilityServicesTypeEndIndex, filteredFacilityServicesType.length)} of {filteredFacilityServicesType.length} entries</span>
+                                <span className="text-muted-foreground text-sm">Showing {facilityServicesTypeStartIndex + 1} to {Math.min(facilityServicesTypeEndIndex, filteredFacilityServicesTypeData.length)} of {filteredFacilityServicesTypeData.length} entries</span>
                                 <div className="flex items-center gap-1">
                                     <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setFacilityServicesTypeCurrentPage(1)} disabled={facilityServicesTypeCurrentPage === 1}>First</Button>
                                     <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setFacilityServicesTypeCurrentPage(Math.max(1, facilityServicesTypeCurrentPage - 1))} disabled={facilityServicesTypeCurrentPage === 1}>Previous</Button>

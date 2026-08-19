@@ -1075,13 +1075,13 @@ const ServicePlanning = () => {
         </div>
     );
 
-    const getActiveData = () => {
+    const getActiveData = (): Record<string, unknown>[] => {
         if (activeTab === "scheduled") return scheduledServicesData;
         if (activeTab === "maintenance") return planMaintenanceData;
         return disinfectionScheduleData;
     };
 
-    const filterData = <T extends Record<string, unknown>>(data: T[]) => {
+    const filterData = (data: Record<string, unknown>[]) => {
         if (!searchQuery.trim()) return data;
         const query = searchQuery.toLowerCase().trim();
         return data.filter((item) =>
