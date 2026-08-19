@@ -224,9 +224,9 @@ const JobOrder = () => {
                         <div className="grid grid-cols-3 gap-4 items-center">
                             <Label className="text-sm font-medium text-right">Caleido Network<span className="text-red-500">*</span></Label>
                             <div className="col-span-2">
-                                <Select value={selectedNetwork} onValueChange={setSelectedNetwork}>
+                                <Select value={selectedCaleidoNetwork} onValueChange={setSelectedCaleidoNetwork}>
                                     <SelectTrigger className="bg-muted/20 border-border dark:border-slate-700/80">
-                                        <SelectValue placeholder="Select Network" />
+                                        <SelectValue placeholder="Select Caleido Network" />
                                     </SelectTrigger>
                                     <SelectContent className="bg-popover text-popover-foreground border-border">
                                         {caleidoNetworkOptions.length === 0 ? (
