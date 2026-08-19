@@ -67,30 +67,31 @@ const AppLayoutInner = () => {
           : 'linear-gradient(180deg, #F4F2FA, #ECE9F6)'
       }}
     >
-      <AppSidebar
-        collapsed={sidebarCollapsed}
-        onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+      <AppHeader
+        sidebarCollapsed={sidebarCollapsed}
+        onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
       />
-      <AppHeader sidebarCollapsed={sidebarCollapsed} />
+      <AppSidebar collapsed={sidebarCollapsed} />
       <main
         className={cn(
-          "pt-[70px] min-h-screen transition-all duration-300 flex flex-col justify-between",
-          sidebarCollapsed ? "pl-[84px]" : "pl-[276px]"
+          "pt-[48px] pb-[28px] min-h-screen transition-all duration-300 flex flex-col justify-between",
+          sidebarCollapsed ? "pl-[64px]" : "pl-[240px]"
         )}
-        style={{ marginLeft: "16px" }}
       >
-        <div className="p-6 flex-1">
+        <div className="p-5 flex-1">
           <Outlet />
         </div>
-        <footer className="flex justify-between items-center px-6 py-4 text-[10px] text-muted-foreground opacity-65">
-          <div>
-            {sidebarCollapsed && <span>© 2026 IKANOS Portal</span>}
-          </div>
-          <div>
-            Version : 2.1.0
-          </div>
-        </footer>
       </main>
+
+      {/* Full-width fixed bottom footer spanning 100% from left to right edge */}
+      <footer className="fixed bottom-0 left-0 right-0 w-full h-[28px] z-50 flex items-center justify-between px-4 text-[11.5px] font-normal text-slate-500 dark:text-slate-400 border-t border-slate-200/90 dark:border-slate-800 bg-[#F0F4F8] dark:bg-[#0f1117] select-none">
+        <div className="flex items-center">
+          <span>© 2026 IKANOS Portal</span>
+        </div>
+        <div className="flex items-center">
+          <span>Version : 2.1.0</span>
+        </div>
+      </footer>
     </div>
   );
 };

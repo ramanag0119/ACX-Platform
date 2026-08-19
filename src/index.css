@@ -336,8 +336,9 @@ header .text-muted-foreground {
   border-right: 1px solid hsl(var(--sidebar-border)) !important;
   position: fixed;
   left: 0;
-  top: 0;
-  height: 100vh;
+  top: 48px;
+  bottom: 28px;
+  height: calc(100vh - 48px - 28px);
   z-index: 40;
   box-shadow: none !important;
   border-top-right-radius: 0px !important;

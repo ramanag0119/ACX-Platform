@@ -61,9 +61,10 @@ const mockNotifications: Notification[] = [
 
 interface AppHeaderProps {
   sidebarCollapsed: boolean;
+  onToggleSidebar: () => void;
 }
 
-export const AppHeader = ({ sidebarCollapsed }: AppHeaderProps) => {
+export const AppHeader = ({ sidebarCollapsed, onToggleSidebar }: AppHeaderProps) => {
   const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
   const [showNotifications, setShowNotifications] = useState(false);
   const { logout } = useAuth();
@@ -92,76 +93,97 @@ export const AppHeader = ({ sidebarCollapsed }: AppHeaderProps) => {
   return (
     <>
       <header
-        className={cn(
-          "fixed top-0 right-0 h-[70px] z-30 flex items-center justify-between px-6 transition-all duration-300",
-          sidebarCollapsed ? "left-[72px]" : "left-[240px]"
-        )}
-        style={{
-          background: '#FFFFFF',
-          borderBottom: '1px solid rgba(124,92,255,0.1)'
-        }}
+        className="fixed top-0 left-0 right-0 h-[48px] z-50 flex items-center justify-between px-3 md:px-4 bg-white dark:bg-[#0f1117] border-b border-slate-200/90 dark:border-slate-800 transition-colors shadow-xs"
       >
-        <div className="flex items-center gap-3">
-          {/* Search could go here */}
+        {/* Left: Sidebar Toggle, App Icon, App Name */}
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={onToggleSidebar}
+            className="flex items-center justify-center w-8 h-8 rounded-md text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {sidebarCollapsed ? (
+              <Menu className="w-4 h-4" />
+            ) : (
+              <X className="w-4 h-4" />
+            )}
+          </button>
+
+          <div className="flex items-center gap-2">
+            <img
+              src="/ikanos-app-icon.png"
+              alt="Logo"
+              className="w-6 h-6 object-contain rounded-md shadow-xs"
+            />
+            <span className="font-semibold text-[15px] text-[#2563eb] dark:text-blue-400 tracking-tight select-none">
+              Inspironics Ikanos
+            </span>
+          </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        {/* Right: Notifications, User, Theme Toggle, Logout */}
+        <div className="flex items-center gap-1.5 sm:gap-2">
           {/* Notifications */}
           <Button
             variant="ghost"
             size="icon"
-            className="relative h-10 w-10 rounded-xl hover:bg-muted"
+            className="relative h-8 w-8 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
             onClick={() => setShowNotifications(true)}
+            title="Notifications"
           >
-            <Bell className="h-5 w-5 text-muted-foreground" />
+            <Bell className="h-4 w-4" />
             {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-primary text-white text-[10px] flex items-center justify-center font-bold">
+              <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-primary text-white text-[9px] flex items-center justify-center font-bold">
                 {unreadCount}
               </span>
             )}
           </Button>
 
-          {/* Dark Mode Toggle */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="relative h-10 w-10 rounded-xl hover:bg-muted transition-all duration-300"
-            onClick={toggleTheme}
-            title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
-          >
-            <div className="relative">
-              {isDark ? (
-                <Sun className="h-5 w-5 text-amber-400 transition-all duration-300 rotate-0 scale-100" />
-              ) : (
-                <Moon className="h-5 w-5 text-muted-foreground transition-all duration-300 rotate-0 scale-100" />
-              )}
-            </div>
-          </Button>
-
-          {/* User Menu */}
+          {/* User Display */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="rounded-xl h-10 w-10 p-0 hover:bg-muted">
-                <div className="h-9 w-9 rounded-xl bg-primary flex items-center justify-center">
-                  <User className="h-4 w-4 text-white" />
-                </div>
-              </Button>
+              <button className="flex items-center gap-1.5 py-1 px-2 rounded-lg text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-xs font-medium">
+                <User className="h-3.5 w-3.5 text-slate-600 dark:text-slate-400" />
+                <span className="hidden sm:inline">INSP Admin</span>
+              </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 rounded-xl shadow-lg border">
-              <DropdownMenuItem className="cursor-pointer rounded-lg">
-                <User className="mr-2 h-4 w-4" />
+            <DropdownMenuContent align="end" className="w-44 rounded-xl shadow-lg border">
+              <DropdownMenuItem className="cursor-pointer text-xs">
+                <User className="mr-2 h-3.5 w-3.5" />
                 Profile
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={handleLogout}
-                className="cursor-pointer text-destructive focus:text-destructive rounded-lg"
+                className="cursor-pointer text-destructive focus:text-destructive text-xs"
               >
-                <LogOut className="mr-2 h-4 w-4" />
+                <LogOut className="mr-2 h-3.5 w-3.5" />
                 Logout
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {/* Dark Mode Toggle */}
+          <button
+            className="flex items-center justify-center w-8 h-8 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            onClick={toggleTheme}
+            title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
+          >
+            {isDark ? (
+              <Sun className="h-4 w-4 text-amber-400" />
+            ) : (
+              <Moon className="h-4 w-4" />
+            )}
+          </button>
+
+          {/* Direct Logout Button */}
+          <button
+            onClick={handleLogout}
+            className="flex items-center justify-center w-8 h-8 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-destructive transition-colors"
+            title="Logout"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
         </div>
       </header>
 
