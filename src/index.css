@@ -1718,71 +1718,77 @@ html.dark .bg-slate-900 button[type="submit"]:hover {
 }
 
 /* =========================================================
-   Reset and Submit Form Button Styles (FleetExplorer Style)
+   Reset/Cancel and Submit Button Styles (Modern Rounded Box)
    ========================================================= */
 
-/* Reset button styling */
+/* Reset/Cancel button styling */
 .btn-reset {
-  background-color: transparent !important;
-  background: transparent !important;
-  border-radius: 6px !important;
-  height: 38px !important;
-  padding: 0 18px !important;
-  font-weight: 500 !important;
-  font-size: 13px !important;
+  border-radius: 14px !important;
+  height: 44px !important;
+  padding: 0 28px !important;
+  min-width: 110px !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
   transition: all 0.2s ease !important;
-  box-shadow: none !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
 }
 
 /* Light mode Reset */
 html:not(.dark) .btn-reset {
-  border: 1px solid rgba(0, 0, 0, 0.15) !important;
-  color: #0f172a !important;
+  background-color: #f1f5f9 !important;
+  background: #f1f5f9 !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #334155 !important;
 }
 
 html:not(.dark) .btn-reset:hover {
-  background-color: rgba(0, 0, 0, 0.04) !important;
-  border-color: rgba(0, 0, 0, 0.3) !important;
-  color: #000000 !important;
+  background-color: #e2e8f0 !important;
+  background: #e2e8f0 !important;
+  border-color: #94a3b8 !important;
+  color: #0f172a !important;
 }
 
 /* Dark mode Reset */
 html.dark .btn-reset {
-  border: 1px solid rgba(255, 255, 255, 0.18) !important;
-  color: #f1f5f9 !important;
+  background-color: rgba(30, 35, 54, 0.85) !important;
+  background: rgba(30, 35, 54, 0.85) !important;
+  border: 1px solid rgba(51, 65, 85, 0.7) !important;
+  color: #ffffff !important;
 }
 
 html.dark .btn-reset:hover {
-  background-color: rgba(255, 255, 255, 0.05) !important;
-  border-color: rgba(255, 255, 255, 0.35) !important;
+  background-color: rgba(40, 48, 73, 0.95) !important;
+  background: rgba(40, 48, 73, 0.95) !important;
+  border-color: rgba(71, 85, 105, 0.9) !important;
   color: #ffffff !important;
 }
 
 /* Submit/Confirm/Save button styling */
 .btn-submit {
-  background-color: #5850ec !important;
-  background: #5850ec !important;
+  background-color: #5865F2 !important;
+  background: #5865F2 !important;
   border: none !important;
-  border-radius: 6px !important;
-  height: 38px !important;
-  padding: 0 20px !important;
+  border-radius: 14px !important;
+  height: 44px !important;
+  padding: 0 28px !important;
+  min-width: 110px !important;
   color: #ffffff !important;
   font-weight: 600 !important;
-  font-size: 13px !important;
+  font-size: 14px !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  box-shadow: 0 4px 12px rgba(88, 80, 236, 0.2) !important;
+  box-shadow: 0 4px 14px rgba(88, 101, 242, 0.35) !important;
   transition: all 0.2s ease !important;
 }
 
 .btn-submit:hover {
-  background-color: #4f46e5 !important;
-  background: #4f46e5 !important;
-  box-shadow: 0 6px 16px rgba(88, 80, 236, 0.35) !important;
+  background-color: #4752c4 !important;
+  background: #4752c4 !important;
+  box-shadow: 0 6px 18px rgba(88, 101, 242, 0.45) !important;
   color: #ffffff !important;
 }
 
@@ -1790,4 +1796,52 @@ html.dark .btn-reset:hover {
 html:not(.dark) .btn-submit,
 html:not(.dark) .btn-submit * {
   color: #ffffff !important;
+}
+
+/* Prevent any orange/amber effect on Submit/Save/Update buttons */
+button.btn-submit,
+button[type="submit"] {
+  background-color: #5865F2 !important;
+  background: #5865F2 !important;
+  color: #ffffff !important;
+}
+
+/* =========================================================
+   Universal Pagination Active Page Button (#5865F2)
+   ========================================================= */
+button[class*="bg-cyan-600"]:is([class*="w-9"], [class*="h-9"], [class*="p-0"]),
+button[class*="bg-primary"]:is([class*="w-9"], [class*="h-9"], [class*="p-0"]),
+button.bg-primary:is([class*="w-9"], [class*="h-9"]),
+button[variant="default"]:is([class*="w-9"], [class*="h-9"]) {
+  background-color: #5865F2 !important;
+  background: #5865F2 !important;
+  color: #ffffff !important;
+  border-radius: 12px !important;
+  font-weight: 600 !important;
+  box-shadow: 0 2px 8px rgba(88, 101, 242, 0.35) !important;
+}
+
+button[class*="bg-cyan-600"]:is([class*="w-9"], [class*="h-9"], [class*="p-0"]):hover,
+button[class*="bg-primary"]:is([class*="w-9"], [class*="h-9"], [class*="p-0"]):hover,
+button.bg-primary:is([class*="w-9"], [class*="h-9"]):hover,
+button[variant="default"]:is([class*="w-9"], [class*="h-9"]):hover {
+  background-color: #4752c4 !important;
+  background: #4752c4 !important;
+  color: #ffffff !important;
+}
+
+/* =========================================================
+   Dropdown Select Option Hover Style (Ice-Blue on Hover Only)
+   ========================================================= */
+[data-radix-select-item][data-highlighted],
+select option:hover,
+select option:focus {
+  background-color: #93c5fd !important;
+  color: #0f172a !important;
+}
+
+[data-radix-select-item] {
+  padding-left: 14px !important;
+  padding-right: 14px !important;
+  cursor: pointer !important;
 }

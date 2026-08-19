@@ -311,7 +311,8 @@ const DeviceManagement = () => {
               <div className="space-y-6">
                 <h2 className="text-lg font-semibold text-foreground">Add Devices</h2>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl">
+                <div className="max-w-4xl space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Room No */}
                   <div className="space-y-2">
                     <Label className="text-foreground">
@@ -372,7 +373,7 @@ const DeviceManagement = () => {
                         className="bg-muted/30 border-border/50 text-foreground flex-1"
                       />
                       <Button
-                        className="bg-amber-500 hover:bg-amber-600 text-white"
+                        className="h-10 px-6 rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
                         onClick={getDeviceName}
                       >
                         Get device name
@@ -408,21 +409,22 @@ const DeviceManagement = () => {
                 </div>
 
                 {/* Form Buttons */}
-                <div className="flex justify-center gap-4 mt-6">
+                <div className="flex justify-center gap-4 pt-6 border-t border-border/30">
                   <Button
                     variant="outline"
                     onClick={handleReset}
-                    className="bg-muted/30 border-border/50 text-foreground hover:bg-muted/50 px-8"
+                    className="h-11 px-8 min-w-[120px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all"
                   >
                     Reset
                   </Button>
                   <Button
                     onClick={handleSubmit}
-                    className="bg-cyan-600 hover:bg-cyan-700 text-white px-8"
+                    className="h-11 px-8 min-w-[120px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
                   >
                     Submit
                   </Button>
                 </div>
+              </div>
 
                 {/* Table Section */}
                 <div className="mt-8">
@@ -510,7 +512,7 @@ const DeviceManagement = () => {
                       <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>First</Button>
                       <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1}>Previous</Button>
                       {getPageNumbers(totalPages, currentPage).map((page) => (
-                        <Button key={page} variant={currentPage === page ? "default" : "ghost"} size="sm" className={`w-9 h-9 p-0 ${currentPage === page ? "bg-cyan-600 text-white" : "text-muted-foreground hover:text-foreground"}`} onClick={() => setCurrentPage(page)}>{page}</Button>
+                        <Button key={page} variant={currentPage === page ? "default" : "ghost"} size="sm" className={`w-9 h-9 p-0 rounded-xl ${currentPage === page ? "bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold shadow-sm" : "text-muted-foreground hover:text-foreground"}`} onClick={() => setCurrentPage(page)}>{page}</Button>
                       ))}
                       <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages || totalPages === 0}>Next</Button>
                       <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages || totalPages === 0}>Last</Button>
@@ -606,7 +608,7 @@ const DeviceManagement = () => {
                     <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>First</Button>
                     <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1}>Previous</Button>
                     {getPageNumbers(totalPages, currentPage).map((page) => (
-                      <Button key={page} variant={currentPage === page ? "default" : "ghost"} size="sm" className={`w-9 h-9 p-0 ${currentPage === page ? "bg-cyan-600 text-white" : "text-muted-foreground hover:text-foreground"}`} onClick={() => setCurrentPage(page)}>{page}</Button>
+                      <Button key={page} variant={currentPage === page ? "default" : "ghost"} size="sm" className={`w-9 h-9 p-0 rounded-xl ${currentPage === page ? "bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold shadow-sm" : "text-muted-foreground hover:text-foreground"}`} onClick={() => setCurrentPage(page)}>{page}</Button>
                     ))}
                     <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages || totalPages === 0}>Next</Button>
                     <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages || totalPages === 0}>Last</Button>
@@ -706,7 +708,7 @@ const DeviceManagement = () => {
                     <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" onClick={() => setNetworkCurrentPage(1)} disabled={networkCurrentPage === 1}>First</Button>
                     <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" onClick={() => setNetworkCurrentPage(Math.max(1, networkCurrentPage - 1))} disabled={networkCurrentPage === 1}>Previous</Button>
                     {[1, 2, 3, 4, 5].map((page) => (
-                      <Button key={page} variant={networkCurrentPage === page ? "default" : "ghost"} size="sm" className={`w-9 h-9 p-0 ${networkCurrentPage === page ? "bg-cyan-600 text-white" : "text-muted-foreground hover:text-foreground"}`} onClick={() => setNetworkCurrentPage(page)}>{page}</Button>
+                      <Button key={page} variant={networkCurrentPage === page ? "default" : "ghost"} size="sm" className={`w-9 h-9 p-0 rounded-xl ${networkCurrentPage === page ? "bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold shadow-sm" : "text-muted-foreground hover:text-foreground"}`} onClick={() => setNetworkCurrentPage(page)}>{page}</Button>
                     ))}
                     <span className="text-muted-foreground mx-1">...</span>
                     <span className="text-muted-foreground text-sm">190,879</span>
@@ -840,7 +842,7 @@ const DeviceManagement = () => {
                     <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" onClick={() => setMaintenanceCurrentPage(1)} disabled={maintenanceCurrentPage === 1}>First</Button>
                     <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" onClick={() => setMaintenanceCurrentPage(Math.max(1, maintenanceCurrentPage - 1))} disabled={maintenanceCurrentPage === 1}>Previous</Button>
                     {getPageNumbers(maintenanceTotalPages, maintenanceCurrentPage).map((page) => (
-                      <Button key={page} variant={maintenanceCurrentPage === page ? "default" : "ghost"} size="sm" className={`w-9 h-9 p-0 ${maintenanceCurrentPage === page ? "bg-cyan-600 text-white" : "text-muted-foreground hover:text-foreground"}`} onClick={() => setMaintenanceCurrentPage(page)}>{page}</Button>
+                      <Button key={page} variant={maintenanceCurrentPage === page ? "default" : "ghost"} size="sm" className={`w-9 h-9 p-0 rounded-xl ${maintenanceCurrentPage === page ? "bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold shadow-sm" : "text-muted-foreground hover:text-foreground"}`} onClick={() => setMaintenanceCurrentPage(page)}>{page}</Button>
                     ))}
                     <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" onClick={() => setMaintenanceCurrentPage(Math.min(maintenanceTotalPages, maintenanceCurrentPage + 1))} disabled={maintenanceCurrentPage === maintenanceTotalPages || maintenanceTotalPages === 0}>Next</Button>
                     <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" onClick={() => setMaintenanceCurrentPage(maintenanceTotalPages)} disabled={maintenanceCurrentPage === maintenanceTotalPages || maintenanceTotalPages === 0}>Last</Button>
@@ -893,8 +895,8 @@ const DeviceManagement = () => {
               </div>
             </div>
             <div className="flex justify-center gap-4 pb-8 border-t border-gray-100 pt-6 mt-2">
-              <Button variant="outline" className="text-amber-500 border-amber-500 hover:bg-amber-50 hover:text-amber-600 h-8 px-6 rounded-[3px] font-normal" onClick={() => setEditDeviceOpen(false)}>Reset</Button>
-              <Button className="bg-transparent text-[#3eb1c8] border border-[#3eb1c8] hover:bg-cyan-50 h-8 px-6 rounded-[3px] font-normal" onClick={() => setEditDeviceOpen(false)}>Submit</Button>
+              <Button variant="outline" className="h-10 px-8 min-w-[110px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all" onClick={() => setEditDeviceOpen(false)}>Reset</Button>
+              <Button className="h-10 px-8 min-w-[110px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all" onClick={() => setEditDeviceOpen(false)}>Submit</Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -997,9 +999,9 @@ const DeviceManagement = () => {
                 </div>
               </div>
             </div>
-            <div className="flex justify-end gap-2 mt-6">
-              <Button variant="outline" className="bg-muted/30 border-border/50">Reset</Button>
-              <Button className="bg-cyan-600 hover:bg-cyan-700">
+            <div className="flex justify-end gap-3 mt-6">
+              <Button variant="outline" className="h-10 px-8 min-w-[110px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all">Reset</Button>
+              <Button className="h-10 px-6 rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">
                 <Upload className="h-4 w-4 mr-2" />
                 Upload Firmware
               </Button>
@@ -1035,7 +1037,7 @@ const DeviceManagement = () => {
                         <Button size="sm" className="bg-[#3eb1c8] hover:bg-[#3eb1c8]/90 text-white h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditFirmwareOpen(true)}>
                           <Edit className="h-[14px] w-[14px]" />
                         </Button>
-                        <Button size="sm" className="bg-[#d33] hover:bg-[#bd2d2d] text-white h-7 w-7 p-0 rounded-[3px]" onClick={() => setDeleteFirmwareOpen(true)}>
+                        <Button size="sm" className="bg-red-500 hover:bg-red-600 text-white h-7 w-7 p-0 rounded-[3px]" onClick={() => setDeleteFirmwareOpen(true)}>
                           <Trash2 className="h-[14px] w-[14px]" />
                         </Button>
                       </div>
@@ -1053,7 +1055,7 @@ const DeviceManagement = () => {
                         <Button size="sm" className="bg-[#3eb1c8] hover:bg-[#3eb1c8]/90 text-white h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditFirmwareOpen(true)}>
                           <Edit className="h-[14px] w-[14px]" />
                         </Button>
-                        <Button size="sm" className="bg-[#d33] hover:bg-[#bd2d2d] text-white h-7 w-7 p-0 rounded-[3px]" onClick={() => setDeleteFirmwareOpen(true)}>
+                        <Button size="sm" className="bg-red-500 hover:bg-red-600 text-white h-7 w-7 p-0 rounded-[3px]" onClick={() => setDeleteFirmwareOpen(true)}>
                           <Trash2 className="h-[14px] w-[14px]" />
                         </Button>
                       </div>
@@ -1071,7 +1073,7 @@ const DeviceManagement = () => {
                         <Button size="sm" className="bg-[#3eb1c8] hover:bg-[#3eb1c8]/90 text-white h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditFirmwareOpen(true)}>
                           <Edit className="h-[14px] w-[14px]" />
                         </Button>
-                        <Button size="sm" className="bg-[#d33] hover:bg-[#bd2d2d] text-white h-7 w-7 p-0 rounded-[3px]" onClick={() => setDeleteFirmwareOpen(true)}>
+                        <Button size="sm" className="bg-red-500 hover:bg-red-600 text-white h-7 w-7 p-0 rounded-[3px]" onClick={() => setDeleteFirmwareOpen(true)}>
                           <Trash2 className="h-[14px] w-[14px]" />
                         </Button>
                       </div>
@@ -1229,8 +1231,8 @@ const DeviceManagement = () => {
             </div>
           </div>
           <div className="flex justify-center gap-4 pb-8 border-t border-gray-100 pt-6 mt-2">
-            <Button variant="outline" className="text-amber-500 border-amber-500 hover:bg-amber-50 hover:text-amber-600 h-8 px-6 rounded-[3px] font-normal" onClick={() => setEditFirmwareOpen(false)}>Close</Button>
-            <Button className="bg-transparent text-[#3eb1c8] border border-[#3eb1c8] hover:bg-cyan-50 h-8 px-6 rounded-[3px] font-normal" onClick={() => setEditFirmwareOpen(false)}>Submit</Button>
+            <Button variant="outline" className="h-10 px-8 min-w-[110px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all" onClick={() => setEditFirmwareOpen(false)}>Close</Button>
+            <Button className="h-10 px-8 min-w-[110px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all" onClick={() => setEditFirmwareOpen(false)}>Submit</Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -1251,8 +1253,8 @@ const DeviceManagement = () => {
             </div>
           </div>
           <div className="flex justify-center gap-4 pb-8 border-t border-gray-100 pt-6 mt-2">
-            <Button variant="outline" className="text-amber-500 border-amber-500 hover:bg-amber-50 hover:text-amber-600 h-8 px-6 rounded-[3px] font-normal" onClick={() => setDeleteFirmwareOpen(false)}>Close</Button>
-            <Button className="bg-transparent text-[#3eb1c8] border border-[#3eb1c8] hover:bg-cyan-50 h-8 px-6 rounded-[3px] font-normal" onClick={() => setDeleteFirmwareOpen(false)}>Update</Button>
+            <Button variant="outline" className="h-10 px-8 min-w-[110px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all" onClick={() => setDeleteFirmwareOpen(false)}>Close</Button>
+            <Button className="h-10 px-8 min-w-[110px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all" onClick={() => setDeleteFirmwareOpen(false)}>Update</Button>
           </div>
         </DialogContent>
       </Dialog>

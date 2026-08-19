@@ -262,62 +262,62 @@ export function RoomDetailsModal({
 
                         {/* Device Details Section */}
                         <section>
-                            <h3 className="text-sm font-medium text-muted-foreground mb-4">
+                            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
                                 Device Details
                             </h3>
-                            <div className="rounded-md border border-border">
+                            <div className="rounded-lg overflow-hidden border border-border/80 dark:border-slate-800">
                                 <Table>
-                                    <TableHeader className="bg-muted/50">
-                                        <TableRow>
-                                            <TableHead className="w-[50px] font-medium">
+                                    <TableHeader className="bg-muted/40 dark:bg-[#0e1322]">
+                                        <TableRow className="border-b border-border dark:border-slate-800">
+                                            <TableHead className="w-[50px] text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">
                                                 S.No
                                             </TableHead>
-                                            <TableHead className="font-medium">Device Type</TableHead>
-                                            <TableHead className="font-medium">
+                                            <TableHead className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">Device Type</TableHead>
+                                            <TableHead className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">
                                                 Occupancy No
                                             </TableHead>
-                                            <TableHead className="font-medium">Name/Tag</TableHead>
-                                            <TableHead className="font-medium">MAC Address</TableHead>
-                                            <TableHead className="font-medium">Status</TableHead>
-                                            <TableHead className="font-medium text-center">
+                                            <TableHead className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">Name/Tag</TableHead>
+                                            <TableHead className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">MAC Address</TableHead>
+                                            <TableHead className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">Status</TableHead>
+                                            <TableHead className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3 text-center">
                                                 Health
                                             </TableHead>
-                                            <TableHead className="font-medium text-right">
+                                            <TableHead className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3 text-right">
                                                 Added On
                                             </TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {devicesData.map((device, index) => (
-                                            <TableRow key={index} className="hover:bg-muted/5">
-                                                <TableCell className="font-medium">
+                                            <TableRow key={index} className="hover:bg-muted/30 dark:hover:bg-slate-800/50 border-b border-border/50 dark:border-slate-800/70 text-[13px]">
+                                                <TableCell className="font-medium py-2.5 px-3">
                                                     {index + 1}
                                                 </TableCell>
-                                                <TableCell>{device.type}</TableCell>
-                                                <TableCell>{roomNo}</TableCell>
-                                                <TableCell>{device.name}</TableCell>
-                                                <TableCell className="font-mono text-xs">
+                                                <TableCell className="py-2.5 px-3">{device.type}</TableCell>
+                                                <TableCell className="py-2.5 px-3">{roomNo}</TableCell>
+                                                <TableCell className="py-2.5 px-3">{device.name}</TableCell>
+                                                <TableCell className="font-mono text-xs py-2.5 px-3">
                                                     {device.mac || "-"}
                                                 </TableCell>
-                                                <TableCell>
+                                                <TableCell className="py-2.5 px-3">
                                                     <span
-                                                        className={
+                                                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11.5px] font-medium border ${
                                                             device.status === "Commissioned"
-                                                                ? "text-green-600"
-                                                                : "text-muted-foreground"
-                                                        }
+                                                                ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:border-emerald-500/40 dark:bg-emerald-950/60 dark:text-emerald-400"
+                                                                : "bg-slate-100 text-slate-600 border-slate-200 dark:border-slate-700/60 dark:bg-slate-800/60 dark:text-slate-400"
+                                                        }`}
                                                     >
                                                         {device.status}
                                                     </span>
                                                 </TableCell>
-                                                <TableCell className="text-center">
+                                                <TableCell className="text-center py-2.5 px-3">
                                                     {device.health === "success" ? (
-                                                        <CheckCircle className="h-4 w-4 text-green-500 mx-auto" />
+                                                        <CheckCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400 mx-auto" />
                                                     ) : (
-                                                        <XCircle className="h-4 w-4 text-red-500 mx-auto" />
+                                                        <XCircle className="h-4 w-4 text-rose-600 dark:text-rose-400 mx-auto" />
                                                     )}
                                                 </TableCell>
-                                                <TableCell className="text-right">
+                                                <TableCell className="text-right py-2.5 px-3 text-muted-foreground">
                                                     {device.addedOn}
                                                 </TableCell>
                                             </TableRow>
@@ -329,50 +329,49 @@ export function RoomDetailsModal({
 
                         {/* Maintenance Details Section */}
                         <section>
-                            <h3 className="text-sm font-medium text-muted-foreground mb-4">
+                            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
                                 Maintenance Details
                             </h3>
-                            <div className="rounded-md border border-border">
+                            <div className="rounded-lg overflow-hidden border border-border/80 dark:border-slate-800">
                                 <Table>
-                                    <TableHeader className="bg-muted/50">
-                                        <TableRow>
-                                            <TableHead className="font-medium">
+                                    <TableHeader className="bg-muted/40 dark:bg-[#0e1322]">
+                                        <TableRow className="border-b border-border dark:border-slate-800">
+                                            <TableHead className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">
                                                 Service Category
                                             </TableHead>
-                                            <TableHead className="font-medium">
+                                            <TableHead className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">
                                                 Services Type
                                             </TableHead>
-                                            <TableHead className="font-medium">From Date</TableHead>
-                                            <TableHead className="font-medium">To Date</TableHead>
-                                            <TableHead className="font-medium">Start Time</TableHead>
-                                            <TableHead className="font-medium">Stop Time</TableHead>
-                                            <TableHead className="font-medium">Department</TableHead>
-                                            <TableHead className="font-medium">
+                                            <TableHead className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">From Date</TableHead>
+                                            <TableHead className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">To Date</TableHead>
+                                            <TableHead className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">Start Time</TableHead>
+                                            <TableHead className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">Stop Time</TableHead>
+                                            <TableHead className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">Department</TableHead>
+                                            <TableHead className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">
                                                 Emp ID/Name
                                             </TableHead>
-                                            <TableHead className="font-medium text-right">
+                                            <TableHead className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3 text-right">
                                                 Status
                                             </TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {maintenanceData.map((item, index) => (
-                                            <TableRow key={index} className="hover:bg-muted/5">
-                                                <TableCell>{item.category}</TableCell>
-                                                <TableCell>{item.type}</TableCell>
-                                                <TableCell>{item.fromDate}</TableCell>
-                                                <TableCell>{item.toDate}</TableCell>
-                                                <TableCell>{item.startTime}</TableCell>
-                                                <TableCell>{item.stopTime}</TableCell>
-                                                <TableCell>{item.department}</TableCell>
-                                                <TableCell>{item.emp}</TableCell>
-                                                <TableCell className="text-right">
-                                                    <Badge
-                                                        variant="secondary"
-                                                        className="bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400"
+                                            <TableRow key={index} className="hover:bg-muted/30 dark:hover:bg-slate-800/50 border-b border-border/50 dark:border-slate-800/70 text-[13px]">
+                                                <TableCell className="py-2.5 px-3">{item.category}</TableCell>
+                                                <TableCell className="py-2.5 px-3">{item.type}</TableCell>
+                                                <TableCell className="py-2.5 px-3">{item.fromDate}</TableCell>
+                                                <TableCell className="py-2.5 px-3">{item.toDate}</TableCell>
+                                                <TableCell className="py-2.5 px-3">{item.startTime}</TableCell>
+                                                <TableCell className="py-2.5 px-3">{item.stopTime}</TableCell>
+                                                <TableCell className="py-2.5 px-3">{item.department}</TableCell>
+                                                <TableCell className="py-2.5 px-3">{item.emp}</TableCell>
+                                                <TableCell className="text-right py-2.5 px-3">
+                                                    <span
+                                                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11.5px] font-medium border bg-emerald-50 text-emerald-700 border-emerald-200 dark:border-emerald-500/40 dark:bg-emerald-950/60 dark:text-emerald-400"
                                                     >
                                                         {item.status}
-                                                    </Badge>
+                                                    </span>
                                                 </TableCell>
                                             </TableRow>
                                         ))}

@@ -214,8 +214,8 @@ const UserRoles = () => {
                             </div>
 
                             <div className="flex justify-center gap-4 pt-6 mt-6 border-t border-border/30">
-                                <Button onClick={handleReset} className="h-10 px-8 bg-cyan-600 text-white hover:bg-cyan-700">Reset</Button>
-                                <Button onClick={handleSubmit} className="h-10 px-8 bg-amber-500 hover:bg-amber-600 text-white">Submit</Button>
+                                <Button onClick={handleReset} variant="outline" className="h-11 px-8 min-w-[120px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all">Reset</Button>
+                                <Button onClick={handleSubmit} className="h-11 px-8 min-w-[120px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">Submit</Button>
                             </div>
                         </CardContent>
                     </Card>
@@ -290,7 +290,7 @@ const UserRoles = () => {
                                     <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>First</Button>
                                     <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1}>Previous</Button>
                                     {Array.from({ length: Math.min(5, totalPages) }, (_, i) => i + 1).map((page) => (
-                                        <Button key={page} variant={currentPage === page ? "default" : "ghost"} size="sm" className={`w-9 h-9 p-0 ${currentPage === page ? "bg-cyan-600 text-white" : ""}`} onClick={() => setCurrentPage(page)}>
+                                        <Button key={page} variant={currentPage === page ? "default" : "ghost"} size="sm" className={`w-9 h-9 p-0 rounded-xl ${currentPage === page ? "bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold shadow-sm" : "text-muted-foreground"}`} onClick={() => setCurrentPage(page)}>
                                             {page}
                                         </Button>
                                     ))}
@@ -344,9 +344,9 @@ const UserRoles = () => {
                                 </Table>
                             </div>
 
-                            <div className="flex justify-center gap-4 p-6">
-                                <Button className="h-10 px-8 bg-cyan-600 text-white hover:bg-cyan-700">Reset</Button>
-                                <Button className="h-10 px-8 bg-amber-500 hover:bg-amber-600 text-white">Save</Button>
+                            <div className="flex justify-center gap-4 pt-6 mt-6 border-t border-border/30">
+                                <Button variant="outline" className="h-11 px-8 min-w-[120px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all">Reset</Button>
+                                <Button className="h-11 px-8 min-w-[120px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">Save</Button>
                             </div>
                         </CardContent>
                     </Card>

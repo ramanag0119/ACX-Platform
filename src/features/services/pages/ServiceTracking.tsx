@@ -26,6 +26,7 @@ import {
     Cell,
     ResponsiveContainer,
     Tooltip,
+    Sector,
 } from "recharts";
 import {
     Dialog,
@@ -228,8 +229,31 @@ const ServiceTracking = () => {
     const [statusModalConfig, setStatusModalConfig] = useState<{ isOpen: boolean; type: "yellow" | "red" | "blue" | null }>({ isOpen: false, type: null });
     const [itemsModalConfig, setItemsModalConfig] = useState<{ isOpen: boolean; roomNo: string }>({ isOpen: false, roomNo: "" });
 
+    const [activeChartIndex, setActiveChartIndex] = useState<number | undefined>(undefined);
+
     const currentChartData = chartDataMap[activeService] || chartDataMap["room-service"];
     const totalServices = totalServicesMap[activeService] || 136;
+
+    const renderActiveShape = (props: any) => {
+        const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
+        return (
+            <g>
+                <Sector
+                    cx={cx}
+                    cy={cy}
+                    innerRadius={innerRadius - 2}
+                    outerRadius={outerRadius + 6}
+                    startAngle={startAngle}
+                    endAngle={endAngle}
+                    fill={fill}
+                    style={{
+                        filter: `drop-shadow(0 0 10px ${fill}80)`,
+                        transition: "all 0.3s ease-out",
+                    }}
+                />
+            </g>
+        );
+    };
 
     const getStatusBadge = (status: string) => {
         let colorClass = "bg-gray-500/20 text-gray-400";
@@ -270,9 +294,20 @@ const ServiceTracking = () => {
         );
     };
 
+    const filterData = <T extends Record<string, any>>(data: T[]) => {
+        if (!searchQuery.trim()) return data;
+        const query = searchQuery.toLowerCase().trim();
+        return data.filter((item) =>
+            Object.values(item).some((val) =>
+                val !== null && val !== undefined && String(val).toLowerCase().includes(query)
+            )
+        );
+    };
+
     const renderTable = () => {
         switch (activeService) {
-            case "room-service":
+            case "room-service": {
+                const filtered = filterData(roomServiceData);
                 return (
                     <Table>
                         <TableHeader>
@@ -291,35 +326,45 @@ const ServiceTracking = () => {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {roomServiceData.map((row) => (
-                                <TableRow key={row.id} className="border-b border-gray-200 bg-white hover:bg-muted/50">
-                                    <TableCell className="font-medium text-foreground">{row.roomNo}</TableCell>
-                                    <TableCell>{row.serviceType}</TableCell>
-                                    <TableCell>{row.request}</TableCell>
-                                    <TableCell>
-                                        <Badge
-                                            variant="outline"
-                                            className="text-amber-600 border-amber-600 bg-amber-50 hover:bg-amber-100 cursor-pointer transition-colors"
-                                            onClick={() => setItemsModalConfig({ isOpen: true, roomNo: row.roomNo })}
-                                        >
-                                            {row.item}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell className="text-muted-foreground">{row.assignedTo}</TableCell>
-                                    <TableCell>{row.date}</TableCell>
-                                    <TableCell>{row.time}</TableCell>
-                                    <TableCell className="text-muted-foreground">{row.description}</TableCell>
-                                    <TableCell className="text-muted-foreground">{row.statusReason}</TableCell>
-                                    <TableCell>{getStatusBadge(row.status)}</TableCell>
-                                    <TableCell>
-                                        {renderAction(row.status)}
+                            {filtered.length > 0 ? (
+                                filtered.map((row) => (
+                                    <TableRow key={row.id} className="border-b border-gray-200 bg-white hover:bg-muted/50">
+                                        <TableCell className="font-medium text-foreground">{row.roomNo}</TableCell>
+                                        <TableCell>{row.serviceType}</TableCell>
+                                        <TableCell>{row.request}</TableCell>
+                                        <TableCell>
+                                            <Badge
+                                                variant="outline"
+                                                className="text-amber-600 border-amber-600 bg-amber-50 hover:bg-amber-100 cursor-pointer transition-colors"
+                                                onClick={() => setItemsModalConfig({ isOpen: true, roomNo: row.roomNo })}
+                                            >
+                                                {row.item}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell className="text-muted-foreground">{row.assignedTo}</TableCell>
+                                        <TableCell>{row.date}</TableCell>
+                                        <TableCell>{row.time}</TableCell>
+                                        <TableCell className="text-muted-foreground">{row.description}</TableCell>
+                                        <TableCell className="text-muted-foreground">{row.statusReason}</TableCell>
+                                        <TableCell>{getStatusBadge(row.status)}</TableCell>
+                                        <TableCell>
+                                            {renderAction(row.status)}
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={11} className="text-center py-6 text-muted-foreground">
+                                        No records found matching "{searchQuery}"
                                     </TableCell>
                                 </TableRow>
-                            ))}
+                            )}
                         </TableBody>
                     </Table>
                 );
-            case "travel-desk":
+            }
+            case "travel-desk": {
+                const filtered = filterData(travelDeskData);
                 return (
                     <Table>
                         <TableHeader>
@@ -337,26 +382,36 @@ const ServiceTracking = () => {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {travelDeskData.map((row) => (
-                                <TableRow key={row.id} className="border-b border-gray-200 bg-white hover:bg-muted/50">
-                                    <TableCell className="font-medium text-foreground">{row.roomNo}</TableCell>
-                                    <TableCell>{row.serviceType}</TableCell>
-                                    <TableCell>{row.request}</TableCell>
-                                    <TableCell className="text-muted-foreground">{row.assignedTo}</TableCell>
-                                    <TableCell>{row.date}</TableCell>
-                                    <TableCell>{row.time}</TableCell>
-                                    <TableCell className="text-muted-foreground">{row.description}</TableCell>
-                                    <TableCell className="text-muted-foreground">{row.statusReason}</TableCell>
-                                    <TableCell>{getStatusBadge(row.status)}</TableCell>
-                                    <TableCell>
-                                        {renderAction(row.status)}
+                            {filtered.length > 0 ? (
+                                filtered.map((row) => (
+                                    <TableRow key={row.id} className="border-b border-gray-200 bg-white hover:bg-muted/50">
+                                        <TableCell className="font-medium text-foreground">{row.roomNo}</TableCell>
+                                        <TableCell>{row.serviceType}</TableCell>
+                                        <TableCell>{row.request}</TableCell>
+                                        <TableCell className="text-muted-foreground">{row.assignedTo}</TableCell>
+                                        <TableCell>{row.date}</TableCell>
+                                        <TableCell>{row.time}</TableCell>
+                                        <TableCell className="text-muted-foreground">{row.description}</TableCell>
+                                        <TableCell className="text-muted-foreground">{row.statusReason}</TableCell>
+                                        <TableCell>{getStatusBadge(row.status)}</TableCell>
+                                        <TableCell>
+                                            {renderAction(row.status)}
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={10} className="text-center py-6 text-muted-foreground">
+                                        No records found matching "{searchQuery}"
                                     </TableCell>
                                 </TableRow>
-                            ))}
+                            )}
                         </TableBody>
                     </Table>
                 );
-            case "business-center":
+            }
+            case "business-center": {
+                const filtered = filterData(businessCenterData);
                 return (
                     <Table>
                         <TableHeader>
@@ -374,26 +429,36 @@ const ServiceTracking = () => {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {businessCenterData.map((row) => (
-                                <TableRow key={row.id} className="border-b border-gray-200 bg-white hover:bg-muted/50">
-                                    <TableCell className="font-medium text-foreground">{row.roomNo}</TableCell>
-                                    <TableCell>{row.serviceType}</TableCell>
-                                    <TableCell>{row.request}</TableCell>
-                                    <TableCell className="text-muted-foreground">{row.assignedTo}</TableCell>
-                                    <TableCell>{row.date}</TableCell>
-                                    <TableCell>{row.time}</TableCell>
-                                    <TableCell className="text-muted-foreground">{row.description}</TableCell>
-                                    <TableCell className="text-muted-foreground">{row.statusReason}</TableCell>
-                                    <TableCell>{getStatusBadge(row.status)}</TableCell>
-                                    <TableCell>
-                                        {renderAction(row.status)}
+                            {filtered.length > 0 ? (
+                                filtered.map((row) => (
+                                    <TableRow key={row.id} className="border-b border-gray-200 bg-white hover:bg-muted/50">
+                                        <TableCell className="font-medium text-foreground">{row.roomNo}</TableCell>
+                                        <TableCell>{row.serviceType}</TableCell>
+                                        <TableCell>{row.request}</TableCell>
+                                        <TableCell className="text-muted-foreground">{row.assignedTo}</TableCell>
+                                        <TableCell>{row.date}</TableCell>
+                                        <TableCell>{row.time}</TableCell>
+                                        <TableCell className="text-muted-foreground">{row.description}</TableCell>
+                                        <TableCell className="text-muted-foreground">{row.statusReason}</TableCell>
+                                        <TableCell>{getStatusBadge(row.status)}</TableCell>
+                                        <TableCell>
+                                            {renderAction(row.status)}
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={10} className="text-center py-6 text-muted-foreground">
+                                        No records found matching "{searchQuery}"
                                     </TableCell>
                                 </TableRow>
-                            ))}
+                            )}
                         </TableBody>
                     </Table>
                 );
-            case "food-order":
+            }
+            case "food-order": {
+                const filtered = filterData(foodOrderData);
                 return (
                     <Table>
                         <TableHeader>
@@ -410,33 +475,43 @@ const ServiceTracking = () => {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {foodOrderData.map((row) => (
-                                <TableRow key={row.id} className="border-b border-gray-200 bg-white hover:bg-muted/50">
-                                    <TableCell className="font-medium text-foreground">{row.roomNo}</TableCell>
-                                    <TableCell>
-                                        <Badge
-                                            variant="outline"
-                                            className="text-amber-600 border-amber-600 bg-amber-50 hover:bg-amber-100 cursor-pointer transition-colors"
-                                            onClick={() => setItemsModalConfig({ isOpen: true, roomNo: row.roomNo })}
-                                        >
-                                            {row.menu}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell className="text-muted-foreground">{row.assignedTo}</TableCell>
-                                    <TableCell>{row.date}</TableCell>
-                                    <TableCell>{row.time}</TableCell>
-                                    <TableCell className="text-muted-foreground">{row.description}</TableCell>
-                                    <TableCell>{getStatusBadge(row.status)}</TableCell>
-                                    <TableCell className="text-muted-foreground">{row.statusReason}</TableCell>
-                                    <TableCell>
-                                        {renderAction(row.status)}
+                            {filtered.length > 0 ? (
+                                filtered.map((row) => (
+                                    <TableRow key={row.id} className="border-b border-gray-200 bg-white hover:bg-muted/50">
+                                        <TableCell className="font-medium text-foreground">{row.roomNo}</TableCell>
+                                        <TableCell>
+                                            <Badge
+                                                variant="outline"
+                                                className="text-amber-600 border-amber-600 bg-amber-50 hover:bg-amber-100 cursor-pointer transition-colors"
+                                                onClick={() => setItemsModalConfig({ isOpen: true, roomNo: row.roomNo })}
+                                            >
+                                                {row.menu}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell className="text-muted-foreground">{row.assignedTo}</TableCell>
+                                        <TableCell>{row.date}</TableCell>
+                                        <TableCell>{row.time}</TableCell>
+                                        <TableCell className="text-muted-foreground">{row.description}</TableCell>
+                                        <TableCell>{getStatusBadge(row.status)}</TableCell>
+                                        <TableCell className="text-muted-foreground">{row.statusReason}</TableCell>
+                                        <TableCell>
+                                            {renderAction(row.status)}
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={9} className="text-center py-6 text-muted-foreground">
+                                        No records found matching "{searchQuery}"
                                     </TableCell>
                                 </TableRow>
-                            ))}
+                            )}
                         </TableBody>
                     </Table>
                 );
-            case "facility-services":
+            }
+            case "facility-services": {
+                const filtered = filterData(facilityServicesData);
                 return (
                     <Table>
                         <TableHeader>
@@ -457,29 +532,39 @@ const ServiceTracking = () => {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {facilityServicesData.map((row) => (
-                                <TableRow key={row.id} className="border-b border-gray-200 bg-white hover:bg-muted/50">
-                                    <TableCell>{row.management}</TableCell>
-                                    <TableCell>{row.category}</TableCell>
-                                    <TableCell>{row.type}</TableCell>
-                                    <TableCell>{row.dept}</TableCell>
-                                    <TableCell className="text-blue-600 cursor-pointer hover:underline">{row.assignedTo}</TableCell>
-                                    <TableCell>{row.from}</TableCell>
-                                    <TableCell>{row.to}</TableCell>
-                                    <TableCell>{row.start}</TableCell>
-                                    <TableCell>{row.end}</TableCell>
-                                    <TableCell className="text-blue-600 cursor-pointer hover:underline">{row.roomNo}</TableCell>
-                                    <TableCell>{row.maintenance}</TableCell>
-                                    <TableCell>{getStatusBadge(row.status)}</TableCell>
-                                    <TableCell>
-                                        {renderAction(row.status)}
+                            {filtered.length > 0 ? (
+                                filtered.map((row) => (
+                                    <TableRow key={row.id} className="border-b border-gray-200 bg-white hover:bg-muted/50">
+                                        <TableCell>{row.management}</TableCell>
+                                        <TableCell>{row.category}</TableCell>
+                                        <TableCell>{row.type}</TableCell>
+                                        <TableCell>{row.dept}</TableCell>
+                                        <TableCell className="text-blue-600 cursor-pointer hover:underline">{row.assignedTo}</TableCell>
+                                        <TableCell>{row.from}</TableCell>
+                                        <TableCell>{row.to}</TableCell>
+                                        <TableCell>{row.start}</TableCell>
+                                        <TableCell>{row.end}</TableCell>
+                                        <TableCell className="text-blue-600 cursor-pointer hover:underline">{row.roomNo}</TableCell>
+                                        <TableCell>{row.maintenance}</TableCell>
+                                        <TableCell>{getStatusBadge(row.status)}</TableCell>
+                                        <TableCell>
+                                            {renderAction(row.status)}
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={13} className="text-center py-6 text-muted-foreground">
+                                        No records found matching "{searchQuery}"
                                     </TableCell>
                                 </TableRow>
-                            ))}
+                            )}
                         </TableBody>
                     </Table>
                 );
-            case "sanitization":
+            }
+            case "sanitization": {
+                const filtered = filterData(sanitizationData);
                 return (
                     <Table>
                         <TableHeader>
@@ -499,27 +584,36 @@ const ServiceTracking = () => {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {sanitizationData.map((row) => (
-                                <TableRow key={row.id} className="border-b border-gray-200 bg-white hover:bg-muted/50">
-                                    <TableCell>{row.management}</TableCell>
-                                    <TableCell>{row.category}</TableCell>
-                                    <TableCell>{row.type}</TableCell>
-                                    <TableCell>{row.dept}</TableCell>
-                                    <TableCell className="text-blue-600 cursor-pointer hover:underline">{row.assignedTo}</TableCell>
-                                    <TableCell>{row.from}</TableCell>
-                                    <TableCell>{row.to}</TableCell>
-                                    <TableCell>{row.start}</TableCell>
-                                    <TableCell>{row.end}</TableCell>
-                                    <TableCell className="text-blue-600 cursor-pointer hover:underline">{row.roomNo}</TableCell>
-                                    <TableCell>{getStatusBadge(row.status)}</TableCell>
-                                    <TableCell>
-                                        {renderAction(row.status)}
+                            {filtered.length > 0 ? (
+                                filtered.map((row) => (
+                                    <TableRow key={row.id} className="border-b border-gray-200 bg-white hover:bg-muted/50">
+                                        <TableCell>{row.management}</TableCell>
+                                        <TableCell>{row.category}</TableCell>
+                                        <TableCell>{row.type}</TableCell>
+                                        <TableCell>{row.dept}</TableCell>
+                                        <TableCell className="text-blue-600 cursor-pointer hover:underline">{row.assignedTo}</TableCell>
+                                        <TableCell>{row.from}</TableCell>
+                                        <TableCell>{row.to}</TableCell>
+                                        <TableCell>{row.start}</TableCell>
+                                        <TableCell>{row.end}</TableCell>
+                                        <TableCell className="text-blue-600 cursor-pointer hover:underline">{row.roomNo}</TableCell>
+                                        <TableCell>{getStatusBadge(row.status)}</TableCell>
+                                        <TableCell>
+                                            {renderAction(row.status)}
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={12} className="text-center py-6 text-muted-foreground">
+                                        No records found matching "{searchQuery}"
                                     </TableCell>
                                 </TableRow>
-                            ))}
+                            )}
                         </TableBody>
                     </Table>
                 );
+            }
             default:
                 return (
                     <div className="flex flex-col items-center justify-center p-12 text-muted-foreground">
@@ -568,62 +662,118 @@ const ServiceTracking = () => {
             </div>
 
             {/* Donut Chart Section */}
-            <div className="flex justify-center py-6">
-                <div className="relative">
-                    <div className="h-64 w-64">
+            <div className="bg-card dark:bg-[#0c101d] rounded-2xl border border-border/80 dark:border-slate-800/80 p-6 shadow-md max-w-lg mx-auto transition-all">
+                <div className="flex flex-col items-center">
+                    <div className="relative w-64 h-64 flex items-center justify-center">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <Pie
                                     data={currentChartData}
                                     cx="50%"
                                     cy="50%"
-                                    innerRadius={80}
-                                    outerRadius={100}
-                                    startAngle={-40}
-                                    endAngle={220}
+                                    innerRadius={56}
+                                    outerRadius={98}
+                                    startAngle={90}
+                                    endAngle={-270}
                                     paddingAngle={0}
                                     dataKey="value"
-                                    cornerRadius={10}
-                                    stroke="none"
+                                    stroke="hsl(var(--card))"
+                                    strokeWidth={2}
+                                    activeIndex={activeChartIndex}
+                                    activeShape={renderActiveShape}
+                                    onMouseEnter={(_, index) => setActiveChartIndex(index)}
+                                    onMouseLeave={() => setActiveChartIndex(undefined)}
+                                    className="cursor-pointer"
                                 >
                                     {currentChartData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={entry.color} />
+                                        <Cell
+                                            key={`cell-${index}`}
+                                            fill={entry.color}
+                                            className="transition-all duration-300 cursor-pointer"
+                                            opacity={activeChartIndex === undefined || activeChartIndex === index ? 1 : 0.6}
+                                        />
                                     ))}
                                 </Pie>
                                 <Tooltip
+                                    formatter={(value: any) => [`${value}%`, 'Percentage']}
                                     contentStyle={{
                                         backgroundColor: "hsl(var(--card))",
                                         border: "1px solid hsl(var(--border))",
-                                        borderRadius: "8px",
+                                        borderRadius: "10px",
+                                        boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.2)",
+                                        fontSize: "12px",
                                     }}
                                 />
                             </PieChart>
                         </ResponsiveContainer>
-                        {/* Center text */}
-                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none pb-2">
-                            <span className="text-5xl font-bold text-foreground">{totalServices}</span>
-                            <span className="text-sm text-muted-foreground mt-1">Services</span>
+                        {/* Center Metric Display (dynamic on hover) */}
+                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center transition-all duration-200">
+                            {activeChartIndex !== undefined && currentChartData[activeChartIndex] ? (
+                                <>
+                                    <span className="text-3xl font-bold tracking-tight text-foreground transition-all">
+                                        {currentChartData[activeChartIndex].value}%
+                                    </span>
+                                    <span className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mt-0.5">
+                                        {currentChartData[activeChartIndex].name}
+                                    </span>
+                                </>
+                            ) : (
+                                <>
+                                    <span className="text-3xl font-bold tracking-tight text-foreground transition-all">
+                                        {totalServices.toLocaleString()}
+                                    </span>
+                                    <span className="text-sm text-muted-foreground font-normal mt-0.5">
+                                        services
+                                    </span>
+                                </>
+                            )}
                         </div>
                     </div>
-                    <div className="flex justify-center gap-6 mt-2">
-                        {currentChartData.map((data, index) => (
-                            <div key={index} className="flex flex-col items-center">
-                                <span className="text-foreground font-medium">{data.name}</span>
-                                <span className="text-muted-foreground text-xs">{data.value}%</span>
-                                <div className={`w-8 h-1 mt-1 rounded-full`} style={{ backgroundColor: data.color }}></div>
-                            </div>
-                        ))}
+
+                    {/* Stats Legend Cards (interactive hover synced with chart) */}
+                    <div className="flex flex-wrap items-center justify-center gap-4 mt-5 w-full">
+                        {currentChartData.map((data, index) => {
+                            const isGreen = data.name.toLowerCase().includes("complete") || data.name.toLowerCase().includes("sanitized");
+                            const isHovered = activeChartIndex === index;
+                            return (
+                                <div
+                                    key={index}
+                                    onMouseEnter={() => setActiveChartIndex(index)}
+                                    onMouseLeave={() => setActiveChartIndex(undefined)}
+                                    className={`flex items-center gap-3 px-4 py-2.5 rounded-xl border cursor-pointer transition-all duration-200 ${
+                                        isHovered
+                                            ? "scale-105 shadow-md ring-2 ring-primary/40 brightness-105"
+                                            : "hover:scale-102 hover:shadow-sm"
+                                    } ${
+                                        isGreen
+                                            ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:border-emerald-500/30 dark:text-emerald-300"
+                                            : "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:border-rose-500/30 dark:text-rose-300"
+                                    }`}
+                                >
+                                    <div
+                                        className={`w-2.5 h-2.5 rounded-full shrink-0 transition-transform duration-200 ${
+                                            isHovered ? "scale-125 shadow-sm" : ""
+                                        }`}
+                                        style={{ backgroundColor: data.color }}
+                                    />
+                                    <div className="flex flex-col text-left">
+                                        <span className="text-xs font-semibold text-foreground/90">{data.name}</span>
+                                        <span className="text-sm font-bold">{data.value}%</span>
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             </div>
 
             {/* Table Container */}
             {/* Controls */}
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2 text-muted-foreground">
                     <span className="text-sm">Show</span>
                     <Select value={entriesPerPage} onValueChange={setEntriesPerPage}>
-                        <SelectTrigger className="w-16 h-8 bg-white text-foreground border border-gray-200">
+                        <SelectTrigger className="w-18 h-9 bg-white text-foreground border border-gray-200 rounded-lg">
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent className="bg-white">
@@ -636,13 +786,13 @@ const ServiceTracking = () => {
                     <span className="text-sm">entries</span>
                 </div>
 
-                <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground text-sm">Search:</span>
+                <div className="relative">
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none stroke-[2]" />
                     <Input
-                        placeholder="Employee First name/ Last name, ID, Room No"
+                        placeholder="Search by Employee, ID, Room..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-80 h-8 bg-white text-foreground border border-gray-200"
+                        className="pl-10 pr-4 w-72 md:w-80 h-10 bg-white dark:bg-[#0c101d] border border-gray-200 dark:border-slate-800 rounded-xl text-sm placeholder:text-slate-400 dark:placeholder:text-slate-500 focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-primary shadow-sm transition-all"
                     />
                 </div>
             </div>

@@ -383,7 +383,7 @@ const Tickets = () => {
             <div className="flex items-center gap-1">
               <Button variant="ghost" size="sm" className="text-muted-foreground">First</Button>
               <Button variant="ghost" size="sm" className="text-muted-foreground">Previous</Button>
-              <Button size="sm" className="w-9 h-9 p-0 bg-cyan-600 text-white">1</Button>
+              <Button size="sm" className="w-9 h-9 p-0 rounded-xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold shadow-sm">1</Button>
               <Button variant="ghost" size="sm" className="w-9 h-9 p-0 text-muted-foreground">2</Button>
               <Button variant="ghost" size="sm" className="w-9 h-9 p-0 text-muted-foreground">3</Button>
               <Button variant="ghost" size="sm" className="w-9 h-9 p-0 text-muted-foreground">4</Button>

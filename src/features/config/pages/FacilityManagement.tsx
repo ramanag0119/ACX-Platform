@@ -374,10 +374,10 @@ const FacilityManagement = () => {
                     </div>
 
                     <div className="flex justify-center gap-4 pt-6 mt-6 border-t border-border/30">
-                        <Button onClick={handleReset} variant="outline" className="h-10 px-8 bg-cyan-600 text-white border-0 hover:bg-cyan-700">
+                        <Button onClick={handleReset} variant="outline" className="h-11 px-8 min-w-[120px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all">
                             Reset
                         </Button>
-                        <Button onClick={handleSubmit} className="h-10 px-8 bg-amber-500 hover:bg-amber-600 text-white">
+                        <Button onClick={handleSubmit} className="h-11 px-8 min-w-[120px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">
                             Submit
                         </Button>
                     </div>
@@ -477,21 +477,21 @@ const FacilityManagement = () => {
                     <h3 className="text-lg font-semibold mb-4">Room Amenities</h3>
 
                     <div className="p-4 border border-gray-200 rounded-lg bg-muted/20 mb-6">
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-2.5">
                             {selectedAmenities.map((amenity) => (
                                 <Badge
                                     key={amenity}
-                                    className="bg-cyan-600/20 text-cyan-400 border border-cyan-500/30 px-3 py-1.5 flex items-center gap-2"
+                                    className="bg-[#5865F2]/15 text-[#5865F2] dark:bg-[#5865F2]/25 dark:text-[#c7d2fe] border border-[#5865F2]/35 px-3.5 py-1.5 rounded-full flex items-center gap-2 font-medium text-xs shadow-sm hover:bg-[#5865F2]/25 transition-all"
                                 >
                                     {amenity}
-                                    <X className="h-3 w-3 cursor-pointer hover:text-white" />
+                                    <X className="h-3.5 w-3.5 cursor-pointer hover:text-red-500 hover:scale-110 transition-all opacity-70 hover:opacity-100" />
                                 </Badge>
                             ))}
                         </div>
                     </div>
 
-                    <div className="flex justify-center">
-                        <Button onClick={handleSubmit} className="h-10 px-8 bg-amber-500 hover:bg-amber-600 text-white">
+                    <div className="flex justify-center pt-6 mt-6 border-t border-border/30">
+                        <Button onClick={handleSubmit} className="h-11 px-12 min-w-[140px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">
                             Submit
                         </Button>
                     </div>
@@ -1343,8 +1343,8 @@ const FacilityManagement = () => {
                         </div>
                     </div>
                     <div className="flex justify-center gap-4 pb-8">
-                        <Button variant="outline" className="text-amber-500 border-amber-500 hover:bg-amber-50 hover:text-amber-600 h-8 px-6 rounded-[3px] font-normal" onClick={() => setEditAmenityOpen(false)}>Reset</Button>
-                        <Button className="bg-transparent text-[#3eb1c8] border border-[#3eb1c8] hover:bg-cyan-50 h-8 px-6 rounded-[3px] font-normal" onClick={() => setEditAmenityOpen(false)}>Submit</Button>
+                        <Button variant="outline" className="h-10 px-8 min-w-[110px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all" onClick={() => setEditAmenityOpen(false)}>Reset</Button>
+                        <Button className="h-10 px-8 min-w-[110px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all" onClick={() => setEditAmenityOpen(false)}>Submit</Button>
                     </div>
                 </DialogContent>
             </Dialog>
@@ -1496,8 +1496,8 @@ const FacilityManagement = () => {
                         </div>
                     </div>
                     <div className="flex justify-center gap-4 pb-8 border-t border-transparent pt-4">
-                        <Button variant="outline" className="text-amber-500 border-amber-500 hover:bg-amber-50 hover:text-amber-600 h-[34px] px-8 rounded-[3px] font-medium" onClick={() => setEditRoomOpen(false)}>Reset</Button>
-                        <Button className="bg-transparent text-[#3eb1c8] border border-[#3eb1c8] hover:bg-cyan-50 h-[34px] px-8 rounded-[3px] font-medium" onClick={() => setEditRoomOpen(false)}>Submit</Button>
+                        <Button variant="outline" className="h-10 px-8 min-w-[110px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all" onClick={() => setEditRoomOpen(false)}>Reset</Button>
+                        <Button className="h-10 px-8 min-w-[110px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all" onClick={() => setEditRoomOpen(false)}>Submit</Button>
                     </div>
                 </DialogContent>
             </Dialog>

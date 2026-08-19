@@ -608,7 +608,7 @@ const ServicePlanning = () => {
                             min={0}
                             max={59}
                         />
-                        <Button variant="outline" size="sm" className="bg-cyan-600 text-white border-0">
+                        <Button variant="outline" size="sm" className="bg-[#5865F2] hover:bg-[#4752c4] text-white border-0 font-medium rounded-xl h-10 px-3.5 shadow-sm">
                             AM
                         </Button>
                     </div>
@@ -632,7 +632,7 @@ const ServicePlanning = () => {
                             min={0}
                             max={59}
                         />
-                        <Button variant="outline" size="sm" className="bg-cyan-600 text-white border-0">
+                        <Button variant="outline" size="sm" className="bg-[#5865F2] hover:bg-[#4752c4] text-white border-0 font-medium rounded-xl h-10 px-3.5 shadow-sm">
                             AM
                         </Button>
                     </div>
@@ -685,8 +685,8 @@ const ServicePlanning = () => {
                                 key={day}
                                 variant={scheduledForm.frequency.includes(day) ? "default" : "outline"}
                                 size="sm"
-                                className={`w-12 ${scheduledForm.frequency.includes(day)
-                                    ? "bg-cyan-600 text-white"
+                                className={`w-12 rounded-xl transition-all ${scheduledForm.frequency.includes(day)
+                                    ? "bg-[#5865F2] hover:bg-[#4752c4] text-white font-medium shadow-sm"
                                     : "bg-muted/30 border-border/50"
                                     }`}
                                 onClick={() => toggleFrequency(day, "scheduled")}
@@ -819,7 +819,7 @@ const ServicePlanning = () => {
                             placeholder="MM"
                             className="w-16 h-10 bg-muted/30 border-border/50 text-center"
                         />
-                        <Button variant="outline" size="sm" className="bg-cyan-600 text-white border-0">
+                        <Button variant="outline" size="sm" className="bg-[#5865F2] hover:bg-[#4752c4] text-white border-0 font-medium rounded-xl h-10 px-3.5 shadow-sm">
                             AM
                         </Button>
                     </div>
@@ -839,7 +839,7 @@ const ServicePlanning = () => {
                             placeholder="MM"
                             className="w-16 h-10 bg-muted/30 border-border/50 text-center"
                         />
-                        <Button variant="outline" size="sm" className="bg-cyan-600 text-white border-0">
+                        <Button variant="outline" size="sm" className="bg-[#5865F2] hover:bg-[#4752c4] text-white border-0 font-medium rounded-xl h-10 px-3.5 shadow-sm">
                             AM
                         </Button>
                     </div>
@@ -981,7 +981,7 @@ const ServicePlanning = () => {
                             placeholder="MM"
                             className="w-16 h-10 bg-muted/30 border-border/50 text-center"
                         />
-                        <Button variant="outline" size="sm" className="bg-cyan-600 text-white border-0">
+                        <Button variant="outline" size="sm" className="bg-[#5865F2] hover:bg-[#4752c4] text-white border-0 font-medium rounded-xl h-10 px-3.5 shadow-sm">
                             AM
                         </Button>
                     </div>
@@ -1001,7 +1001,7 @@ const ServicePlanning = () => {
                             placeholder="MM"
                             className="w-16 h-10 bg-muted/30 border-border/50 text-center"
                         />
-                        <Button variant="outline" size="sm" className="bg-cyan-600 text-white border-0">
+                        <Button variant="outline" size="sm" className="bg-[#5865F2] hover:bg-[#4752c4] text-white border-0 font-medium rounded-xl h-10 px-3.5 shadow-sm">
                             AM
                         </Button>
                     </div>
@@ -1052,8 +1052,8 @@ const ServicePlanning = () => {
                                 key={day}
                                 variant={disinfectionForm.frequency.includes(day) ? "default" : "outline"}
                                 size="sm"
-                                className={`w-12 ${disinfectionForm.frequency.includes(day)
-                                    ? "bg-cyan-600 text-white"
+                                className={`w-12 rounded-xl transition-all ${disinfectionForm.frequency.includes(day)
+                                    ? "bg-[#5865F2] hover:bg-[#4752c4] text-white font-medium shadow-sm"
                                     : "bg-muted/30 border-border/50"
                                     }`}
                                 onClick={() => toggleFrequency(day, "disinfection")}
@@ -1213,17 +1213,19 @@ const ServicePlanning = () => {
                     {activeTab === "disinfection" && renderDisinfectionForm()}
 
                     {/* Action Buttons */}
-                    <div className="flex justify-center gap-4 pt-4 border-t border-border/30">
+                    <div className="flex justify-center gap-4 pt-6 border-t border-border/30">
                         <Button
+                            type="button"
                             onClick={handleReset}
                             variant="outline"
-                            className="h-10 px-8 bg-cyan-600 text-white border-0 hover:bg-cyan-700"
+                            className="h-11 px-8 min-w-[120px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all"
                         >
                             Reset
                         </Button>
                         <Button
+                            type="button"
                             onClick={handleSubmit}
-                            className="h-10 px-8 bg-amber-500 hover:bg-amber-600 text-white"
+                            className="h-11 px-8 min-w-[120px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
                         >
                             Submit
                         </Button>
@@ -1300,8 +1302,8 @@ const ServicePlanning = () => {
                                     key={page}
                                     variant={currentPage === page ? "default" : "ghost"}
                                     size="sm"
-                                    className={`w-9 h-9 p-0 ${currentPage === page
-                                        ? "bg-primary text-white"
+                                    className={`w-9 h-9 p-0 rounded-xl ${currentPage === page
+                                        ? "bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold shadow-sm"
                                         : "text-muted-foreground hover:text-foreground"
                                         }`}
                                     onClick={() => setCurrentPage(page)}
@@ -1401,7 +1403,7 @@ const ServicePlanning = () => {
                                     <ChevronDown className="h-5 w-5 text-[#3eb1c8] cursor-pointer" />
                                 </div>
                                 <div className="pb-6">
-                                    <div className="border border-[#3eb1c8] text-[#3eb1c8] rounded-[2px] px-3 py-[2px] text-[13px] font-medium cursor-pointer">AM</div>
+                                    <div className="bg-[#5865F2] hover:bg-[#4752c4] text-white rounded-xl px-4 py-1.5 text-sm font-semibold cursor-pointer shadow-sm transition-all">AM</div>
                                 </div>
                             </div>
                         </div>
@@ -1410,18 +1412,18 @@ const ServicePlanning = () => {
                             <Label className="text-sm font-medium text-gray-800 text-left pt-6">End Time <span className="text-red-500">*</span></Label>
                             <div className="flex items-center gap-4">
                                 <div className="flex flex-col items-center">
-                                    <ChevronUp className="h-5 w-5 text-[#3eb1c8] cursor-pointer" />
+                                    <ChevronUp className="h-5 w-5 text-[#5865F2] cursor-pointer" />
                                     <input type="text" value="12" readOnly className="w-12 text-center bg-transparent border-0 border-b border-gray-300 text-gray-900 focus:ring-0 px-0 pb-1 text-base outline-none cursor-default" />
-                                    <ChevronDown className="h-5 w-5 text-[#3eb1c8] cursor-pointer" />
+                                    <ChevronDown className="h-5 w-5 text-[#5865F2] cursor-pointer" />
                                 </div>
                                 <span className="text-xl font-bold pb-6">:</span>
                                 <div className="flex flex-col items-center">
-                                    <ChevronUp className="h-5 w-5 text-[#3eb1c8] cursor-pointer" />
+                                    <ChevronUp className="h-5 w-5 text-[#5865F2] cursor-pointer" />
                                     <input type="text" value="00" readOnly className="w-12 text-center bg-transparent border-0 border-b border-gray-300 text-gray-900 focus:ring-0 px-0 pb-1 text-base outline-none cursor-default" />
-                                    <ChevronDown className="h-5 w-5 text-[#3eb1c8] cursor-pointer" />
+                                    <ChevronDown className="h-5 w-5 text-[#5865F2] cursor-pointer" />
                                 </div>
                                 <div className="pb-6">
-                                    <div className="border border-[#3eb1c8] text-[#3eb1c8] rounded-[2px] px-3 py-[2px] text-[13px] font-medium cursor-pointer">AM</div>
+                                    <div className="bg-[#5865F2] hover:bg-[#4752c4] text-white rounded-xl px-4 py-1.5 text-sm font-semibold cursor-pointer shadow-sm transition-all">AM</div>
                                 </div>
                             </div>
                         </div>
@@ -1468,9 +1470,22 @@ const ServicePlanning = () => {
                             </div>
                         </div>
 
-                        <div className="flex justify-center gap-4 pt-4">
-                            <Button variant="outline" className="text-amber-500 border-amber-500 hover:bg-amber-50 hover:text-amber-600 h-8 px-6 rounded-[3px] font-normal" onClick={() => setEditModalOpen(false)}>Reset</Button>
-                            <Button className="bg-transparent text-[#3eb1c8] border border-[#3eb1c8] hover:bg-cyan-50 h-8 px-6 rounded-[3px] font-normal" onClick={() => setEditModalOpen(false)}>Submit</Button>
+                        <div className="flex justify-center gap-4 pt-6 border-t border-gray-200 dark:border-slate-800">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className="h-11 px-8 min-w-[120px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all"
+                                onClick={() => setEditModalOpen(false)}
+                            >
+                                Reset
+                            </Button>
+                            <Button
+                                type="button"
+                                className="h-11 px-8 min-w-[120px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
+                                onClick={() => setEditModalOpen(false)}
+                            >
+                                Submit
+                            </Button>
                         </div>
                     </div>
                 </DialogContent>

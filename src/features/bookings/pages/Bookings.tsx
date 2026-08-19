@@ -697,16 +697,16 @@ const Bookings = () => {
         <div className="flex items-center gap-3">
           <Button
             onClick={() => setViewMode("add")}
-            className="bg-cyan-600 hover:bg-cyan-700 text-white font-medium px-5 h-10 rounded-lg shadow-md hover:shadow-lg transition-all"
+            className="bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold px-5 h-10 rounded-xl shadow-md hover:shadow-lg transition-all"
           >
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="h-4 w-4 mr-2 stroke-[2.5]" />
             Add Bookings
           </Button>
           <Button
             onClick={() => setBulkUploadOpen(true)}
-            className="bg-amber-500 hover:bg-amber-600 text-white font-medium px-5 h-10 rounded-lg shadow-md hover:shadow-lg transition-all"
+            className="bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold px-5 h-10 rounded-xl shadow-md hover:shadow-lg transition-all"
           >
-            <Upload className="h-4 w-4 mr-2" />
+            <Upload className="h-4 w-4 mr-2 stroke-[2.5]" />
             Bulk Upload
           </Button>
         </div>
@@ -733,17 +733,14 @@ const Bookings = () => {
               <span className="text-muted-foreground text-sm">entries</span>
             </div>
 
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground text-sm">Search:</span>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Mobile number, Room Type, Guest name, Email"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 w-80 h-9 bg-muted/30 border-border/50"
-                />
-              </div>
+            <div className="relative">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none stroke-[2]" />
+              <Input
+                placeholder="Search bookings..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 pr-4 w-72 md:w-80 h-10 bg-slate-50/80 dark:bg-[#0c101d] border border-slate-200 dark:border-slate-800 rounded-xl text-sm placeholder:text-slate-400 dark:placeholder:text-slate-500 focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-primary shadow-sm transition-all"
+              />
             </div>
           </div>
 
@@ -865,8 +862,8 @@ const Bookings = () => {
                   key={page}
                   variant={currentPage === page ? "default" : "ghost"}
                   size="sm"
-                  className={`w-9 h-9 p-0 ${currentPage === page
-                    ? "bg-primary text-white"
+                  className={`w-9 h-9 p-0 rounded-xl ${currentPage === page
+                    ? "bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold shadow-sm"
                     : "text-muted-foreground hover:text-foreground"
                     }`}
                   onClick={() => setCurrentPage(page)}
@@ -907,7 +904,7 @@ const Bookings = () => {
           <div className="space-y-6 py-4">
             <div className="flex items-center gap-4">
               <Button
-                className="bg-amber-500 hover:bg-amber-600 text-white font-medium px-5 h-10 rounded-lg"
+                className="bg-[#5865F2] hover:bg-[#4752c4] text-white font-medium px-5 h-10 rounded-xl shadow-sm"
               >
                 <Download className="h-4 w-4 mr-2" />
                 Sample Template
@@ -955,7 +952,7 @@ const Bookings = () => {
               <Button
                 onClick={handleBulkUpload}
                 disabled={!selectedFile}
-                className="h-10 px-6 bg-cyan-600 hover:bg-cyan-700 text-white"
+                className="h-10 px-6 bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold rounded-lg"
               >
                 Submit
               </Button>
@@ -1052,27 +1049,27 @@ const Bookings = () => {
                 </div>
                 <span className="text-foreground font-medium">:</span>
                 <div className="flex flex-col items-center">
-                  <Button variant="ghost" size="sm" className="h-6 text-cyan-500 hover:bg-cyan-50"><ChevronLeft className="h-4 w-4 rotate-90" /></Button>
+                  <Button variant="ghost" size="sm" className="h-6 text-[#5865F2] hover:bg-[#5865F2]/10"><ChevronLeft className="h-4 w-4 rotate-90" /></Button>
                   <span className="text-muted-foreground text-sm">MM</span>
-                  <Button variant="ghost" size="sm" className="h-6 text-cyan-500 hover:bg-cyan-50"><ChevronRight className="h-4 w-4 rotate-90" /></Button>
+                  <Button variant="ghost" size="sm" className="h-6 text-[#5865F2] hover:bg-[#5865F2]/10"><ChevronRight className="h-4 w-4 rotate-90" /></Button>
                 </div>
                 <div className="flex items-center ml-2">
-                  <button className="px-3 py-1 border border-cyan-500 text-cyan-500 rounded text-xs hover:bg-cyan-50">AM</button>
+                  <button className="px-3.5 py-1 bg-[#5865F2] hover:bg-[#4752c4] text-white rounded-xl text-xs font-semibold shadow-sm transition-all">AM</button>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="flex justify-center gap-4 pt-6">
+          <div className="flex justify-center gap-4 pt-6 border-t border-border/30">
             <Button
               variant="outline"
               onClick={() => { }}
-              className="border-amber-500 text-amber-500 hover:bg-amber-50 hover:text-amber-500"
+              className="h-10 px-8 min-w-[110px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all"
             >
               Reset
             </Button>
             <Button
-              className="bg-transparent border border-cyan-500 text-cyan-500 hover:bg-cyan-50"
+              className="h-10 px-8 min-w-[110px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
               onClick={() => setExtendModalOpen(false)}
             >
               Check & Extend

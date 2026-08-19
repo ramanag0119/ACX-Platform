@@ -345,7 +345,7 @@ const LimitConfigAlert = () => {
                             <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>First</Button>
                             <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1}>Previous</Button>
                             {Array.from({ length: Math.min(5, totalPages) }, (_, i) => i + 1).map((page) => (
-                                <Button key={page} variant={currentPage === page ? "default" : "ghost"} size="sm" className={`w-9 h-9 p-0 ${currentPage === page ? "bg-primary text-white" : "text-muted-foreground"}`} onClick={() => setCurrentPage(page)}>{page}</Button>
+                                <Button key={page} variant={currentPage === page ? "default" : "ghost"} size="sm" className={`w-9 h-9 p-0 rounded-xl ${currentPage === page ? "bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold shadow-sm" : "text-muted-foreground"}`} onClick={() => setCurrentPage(page)}>{page}</Button>
                             ))}
                             {totalPages > 5 && <span className="text-muted-foreground px-2">...</span>}
                             {totalPages > 5 && (

@@ -67,7 +67,7 @@ const Events = () => {
             {/* Header */}
             <div className="flex items-center justify-between mb-2">
                 <h1 className="text-2xl font-semibold text-foreground">Events Management</h1>
-                <Button onClick={() => setIsAddEventOpen(true)} className="bg-cyan-600 hover:bg-cyan-700 text-white">Add Events</Button>
+                <Button onClick={() => setIsAddEventOpen(true)} className="h-10 px-6 rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">Add Events</Button>
             </div>
 
             {/* Table Section */}
@@ -145,7 +145,7 @@ const Events = () => {
                             <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>First</Button>
                             <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1}>Previous</Button>
                             {Array.from({ length: Math.min(3, totalPages) }, (_, i) => i + 1).map((page) => (
-                                <Button key={page} variant={currentPage === page ? "default" : "ghost"} size="sm" className={`w-9 h-9 p-0 ${currentPage === page ? "bg-cyan-600 text-white" : ""}`} onClick={() => setCurrentPage(page)}>{page}</Button>
+                                <Button key={page} variant={currentPage === page ? "default" : "ghost"} size="sm" className={`w-9 h-9 p-0 rounded-xl ${currentPage === page ? "bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold shadow-sm" : "text-muted-foreground"}`} onClick={() => setCurrentPage(page)}>{page}</Button>
                             ))}
                             <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages}>Next</Button>
                             <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages}>Last</Button>
@@ -251,7 +251,7 @@ const Events = () => {
                                     <span className="text-gray-600 text-sm mt-1 border-b border-gray-300 pb-1 px-2">31</span>
                                     <ChevronDown className="h-4 w-4 text-cyan-600 cursor-pointer mt-1" />
                                 </div>
-                                <div className="ml-2 border border-[#3eb1c8] text-[#3eb1c8] rounded px-3 py-1 text-sm font-medium">PM</div>
+                                <div className="ml-2 bg-[#5865F2] hover:bg-[#4752c4] text-white rounded-xl px-3.5 py-1 text-sm font-semibold cursor-pointer shadow-sm">PM</div>
                             </div>
                         </div>
 
@@ -260,17 +260,17 @@ const Events = () => {
                             <Label className="text-sm font-medium text-gray-800">End Time <span className="text-red-500">*</span></Label>
                             <div className="flex items-center gap-4">
                                 <div className="flex flex-col items-center">
-                                    <ChevronUp className="h-4 w-4 text-cyan-600 cursor-pointer" />
+                                    <ChevronUp className="h-4 w-4 text-[#5865F2] cursor-pointer" />
                                     <span className="text-gray-600 text-sm mt-1 border-b border-gray-300 pb-1 px-2">09</span>
-                                    <ChevronDown className="h-4 w-4 text-cyan-600 cursor-pointer mt-1" />
+                                    <ChevronDown className="h-4 w-4 text-[#5865F2] cursor-pointer mt-1" />
                                 </div>
                                 <span className="text-gray-800 font-medium pb-2">:</span>
                                 <div className="flex flex-col items-center">
-                                    <ChevronUp className="h-4 w-4 text-cyan-600 cursor-pointer" />
+                                    <ChevronUp className="h-4 w-4 text-[#5865F2] cursor-pointer" />
                                     <span className="text-gray-600 text-sm mt-1 border-b border-gray-300 pb-1 px-2">00</span>
-                                    <ChevronDown className="h-4 w-4 text-cyan-600 cursor-pointer mt-1" />
+                                    <ChevronDown className="h-4 w-4 text-[#5865F2] cursor-pointer mt-1" />
                                 </div>
-                                <div className="ml-2 border border-[#3eb1c8] text-[#3eb1c8] rounded px-3 py-1 text-sm font-medium">PM</div>
+                                <div className="ml-2 bg-[#5865F2] hover:bg-[#4752c4] text-white rounded-xl px-3.5 py-1 text-sm font-semibold cursor-pointer shadow-sm">PM</div>
                             </div>
                         </div>
 

@@ -119,30 +119,18 @@ const SelectItem = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Item>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item>
 >(({ className, children, ...props }, ref) => {
-  const { isDark } = useTheme();
   return (
     <SelectPrimitive.Item
       ref={ref}
       className={cn(
-        "relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 transition-colors",
+        "relative flex w-full cursor-pointer select-none items-center rounded-lg px-3.5 py-2 text-sm outline-none transition-colors",
+        "text-slate-900 dark:text-slate-200",
+        "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+        "data-[highlighted]:!bg-[#93c5fd] data-[highlighted]:!text-[#0f172a] data-[highlighted]:font-medium",
         className,
       )}
-      style={{ color: isDark ? "#dde2ed" : "#1F1B3A" }}
-      onMouseEnter={(e) => {
-        (e.currentTarget as HTMLDivElement).style.backgroundColor = isDark
-          ? "rgba(255,255,255,0.07)"
-          : "rgba(124,92,255,0.08)";
-      }}
-      onMouseLeave={(e) => {
-        (e.currentTarget as HTMLDivElement).style.backgroundColor = "transparent";
-      }}
       {...props}
     >
-      <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
-        <SelectPrimitive.ItemIndicator>
-          <Check className="h-4 w-4" />
-        </SelectPrimitive.ItemIndicator>
-      </span>
       <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
     </SelectPrimitive.Item>
   );

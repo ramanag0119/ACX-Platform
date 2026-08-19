@@ -197,7 +197,7 @@ const JobOrder = () => {
                                     type="date"
                                     value={estimateCompleteDate}
                                     onChange={(e) => setEstimateCompleteDate(e.target.value)}
-                                    className="bg-amber-500 border-border/50 text-white"
+                                    className="bg-muted/30 border-border/50"
                                 />
                             </div>
                         </div>
@@ -253,7 +253,7 @@ const JobOrder = () => {
 
                         {/* Add Button */}
                         <div className="flex justify-center">
-                            <Button onClick={handleAddRoom} className="bg-cyan-600 hover:bg-cyan-700 text-white px-8">
+                            <Button onClick={handleAddRoom} className="h-10 px-8 min-w-[120px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">
                                 Add
                             </Button>
                         </div>
@@ -299,7 +299,7 @@ const JobOrder = () => {
 
                     {/* Submit Button */}
                     <div className="flex justify-center mt-6">
-                        <Button onClick={handleSubmit} className="bg-cyan-600 hover:bg-cyan-700 text-white px-12">
+                        <Button onClick={handleSubmit} className="h-11 px-12 min-w-[140px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">
                             Submit
                         </Button>
                     </div>
@@ -386,7 +386,7 @@ const JobOrder = () => {
                         <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>First</Button>
                         <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1}>Previous</Button>
                         {Array.from({ length: Math.min(5, totalPages) }, (_, i) => i + 1).map((page) => (
-                            <Button key={page} variant={currentPage === page ? "default" : "ghost"} size="sm" className={`w-9 h-9 p-0 ${currentPage === page ? "bg-primary text-white" : "text-muted-foreground"}`} onClick={() => setCurrentPage(page)}>{page}</Button>
+                            <Button key={page} variant={currentPage === page ? "default" : "ghost"} size="sm" className={`w-9 h-9 p-0 rounded-xl ${currentPage === page ? "bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold shadow-sm" : "text-muted-foreground"}`} onClick={() => setCurrentPage(page)}>{page}</Button>
                         ))}
                         {totalPages > 5 && <span className="text-muted-foreground px-2">...</span>}
                         {totalPages > 5 && (
@@ -499,7 +499,7 @@ const JobOrder = () => {
                                 </div>
 
                                 <div className="flex justify-center pt-4">
-                                    <Button className="bg-[#1f899e] hover:bg-[#1f899e]/90 text-white h-7 px-5 rounded-sm text-xs border border-[#1f899e]">Add Job</Button>
+                                    <Button className="h-9 px-6 rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-xs shadow-md hover:shadow-lg transition-all border-0">Add Job</Button>
                                 </div>
                             </div>
                         </div>
@@ -523,7 +523,7 @@ const JobOrder = () => {
                         </div>
 
                         <div className="flex justify-center mt-2 pb-4">
-                            <Button className="bg-[#1f899e] hover:bg-[#1f899e]/90 text-white h-7 px-6 rounded-sm text-xs border border-[#1f899e]">Update</Button>
+                            <Button className="h-10 px-8 min-w-[120px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all border-0">Update</Button>
                         </div>
                     </div>
                 </DialogContent>

@@ -120,44 +120,46 @@ const FirmwareManagement = () => {
                         <Card className="border-0 shadow-lg rounded-2xl bg-white">
                             <CardContent className="p-6">
                                 <h2 className="text-lg font-semibold mb-6">Add New Firmware</h2>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl">
-                                    <div className="space-y-2">
-                                        <Label>Device Type<span className="text-red-500">*</span></Label>
-                                        <Select value={deviceType} onValueChange={setDeviceType}>
-                                            <SelectTrigger className="h-10 bg-muted/30 border-border/50">
-                                                <SelectValue placeholder="Select device type" />
-                                            </SelectTrigger>
-                                            <SelectContent className="bg-white">
-                                                <SelectItem value="intellihub">Intellihub</SelectItem>
-                                                <SelectItem value="airq">AirQ</SelectItem>
-                                                <SelectItem value="mikos">Mikos</SelectItem>
-                                                <SelectItem value="kleio">Kleio</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Firmware Version<span className="text-red-500">*</span></Label>
-                                        <Input placeholder="e.g., v2.1.5" value={firmwareVersion} onChange={(e) => setFirmwareVersion(e.target.value)} className="h-10 bg-muted/30 border-border/50" />
-                                    </div>
-                                    <div className="space-y-2 md:col-span-2">
-                                        <Label>Release Notes</Label>
-                                        <Textarea placeholder="Enter release notes..." value={releaseNotes} onChange={(e) => setReleaseNotes(e.target.value)} className="bg-muted/30 border-border/50 min-h-[100px]" />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>CRC Value</Label>
-                                        <Input placeholder="Enter CRC value" value={crcValue} onChange={(e) => setCrcValue(e.target.value)} className="h-10 bg-muted/30 border-border/50" />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Firmware File<span className="text-red-500">*</span></Label>
-                                        <div className="flex gap-2">
-                                            <Input type="file" className="bg-muted/30 border-border/50" />
-                                            <Button className="bg-cyan-600 hover:bg-cyan-700 text-white"><Upload className="h-4 w-4" /></Button>
+                                <div className="max-w-4xl space-y-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-2">
+                                            <Label>Device Type<span className="text-red-500">*</span></Label>
+                                            <Select value={deviceType} onValueChange={setDeviceType}>
+                                                <SelectTrigger className="h-10 bg-muted/30 border-border/50">
+                                                    <SelectValue placeholder="Select device type" />
+                                                </SelectTrigger>
+                                                <SelectContent className="bg-white">
+                                                    <SelectItem value="intellihub">Intellihub</SelectItem>
+                                                    <SelectItem value="airq">AirQ</SelectItem>
+                                                    <SelectItem value="mikos">Mikos</SelectItem>
+                                                    <SelectItem value="kleio">Kleio</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Firmware Version<span className="text-red-500">*</span></Label>
+                                            <Input placeholder="e.g., v2.1.5" value={firmwareVersion} onChange={(e) => setFirmwareVersion(e.target.value)} className="h-10 bg-muted/30 border-border/50" />
+                                        </div>
+                                        <div className="space-y-2 md:col-span-2">
+                                            <Label>Release Notes</Label>
+                                            <Textarea placeholder="Enter release notes..." value={releaseNotes} onChange={(e) => setReleaseNotes(e.target.value)} className="bg-muted/30 border-border/50 min-h-[100px]" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>CRC Value</Label>
+                                            <Input placeholder="Enter CRC value" value={crcValue} onChange={(e) => setCrcValue(e.target.value)} className="h-10 bg-muted/30 border-border/50" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Firmware File<span className="text-red-500">*</span></Label>
+                                            <div className="flex gap-2">
+                                                <Input type="file" className="bg-muted/30 border-border/50" />
+                                                <Button className="h-10 px-4 rounded-xl bg-[#5865F2] hover:bg-[#4752c4] text-white shadow-md hover:shadow-lg transition-all"><Upload className="h-4 w-4" /></Button>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                                <div className="flex justify-center gap-4 mt-6">
-                                    <Button variant="outline" onClick={handleReset} className="px-8">Reset</Button>
-                                    <Button className="bg-cyan-600 hover:bg-cyan-700 text-white px-8">Submit</Button>
+                                    <div className="flex justify-center gap-4 pt-6 border-t border-border/30">
+                                        <Button variant="outline" onClick={handleReset} className="h-11 px-8 min-w-[120px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all">Reset</Button>
+                                        <Button className="h-11 px-8 min-w-[120px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">Submit</Button>
+                                    </div>
                                 </div>
                             </CardContent>
                         </Card>
@@ -224,7 +226,7 @@ const FirmwareManagement = () => {
                                     <div className="flex items-center gap-1">
                                         <Button variant="ghost" size="sm" className="text-muted-foreground">First</Button>
                                         <Button variant="ghost" size="sm" className="text-muted-foreground">Previous</Button>
-                                        <Button size="sm" className="w-9 h-9 p-0 bg-cyan-600 text-white">1</Button>
+                                        <Button size="sm" className="w-9 h-9 p-0 rounded-xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold shadow-sm">1</Button>
                                         <Button variant="ghost" size="sm" className="text-muted-foreground">Next</Button>
                                         <Button variant="ghost" size="sm" className="text-muted-foreground">Last</Button>
                                     </div>
@@ -299,7 +301,7 @@ const FirmwareManagement = () => {
                                 </div>
 
                                 <div className="flex justify-center gap-4 mt-6">
-                                    <Button className="bg-cyan-600 hover:bg-cyan-700 text-white px-8">Push Firmware Update</Button>
+                                    <Button className="h-11 px-8 min-w-[160px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">Push Firmware Update</Button>
                                 </div>
                             </CardContent>
                         </Card>
@@ -343,8 +345,8 @@ const FirmwareManagement = () => {
                         </div>
                     </div>
                     <div className="flex justify-center gap-4 pb-8 border-t border-gray-100 pt-6 mt-2">
-                        <Button variant="outline" className="text-red-500 border-red-400 hover:bg-red-50 hover:text-red-600 h-8 px-6 rounded-[3px] font-normal" onClick={() => setEditFirmwareOpen(false)}>Close</Button>
-                        <Button className="bg-transparent text-[#3eb1c8] border border-[#3eb1c8] hover:bg-cyan-50 h-8 px-6 rounded-[3px] font-normal" onClick={() => setEditFirmwareOpen(false)}>Submit</Button>
+                        <Button variant="outline" className="h-10 px-8 min-w-[110px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all" onClick={() => setEditFirmwareOpen(false)}>Close</Button>
+                        <Button className="h-10 px-8 min-w-[110px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all" onClick={() => setEditFirmwareOpen(false)}>Submit</Button>
                     </div>
                 </DialogContent>
             </Dialog>
@@ -365,8 +367,8 @@ const FirmwareManagement = () => {
                         </div>
                     </div>
                     <div className="flex justify-center gap-4 pb-8 border-t border-gray-100 pt-6 mt-2">
-                        <Button variant="outline" className="text-red-500 border-red-400 hover:bg-red-50 hover:text-red-600 h-8 px-6 rounded-[3px] font-normal" onClick={() => setDeleteFirmwareOpen(false)}>Close</Button>
-                        <Button className="bg-transparent text-[#3eb1c8] border border-[#3eb1c8] hover:bg-cyan-50 h-8 px-6 rounded-[3px] font-normal" onClick={() => setDeleteFirmwareOpen(false)}>Update</Button>
+                        <Button variant="outline" className="h-10 px-8 min-w-[110px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all" onClick={() => setDeleteFirmwareOpen(false)}>Close</Button>
+                        <Button className="h-10 px-8 min-w-[110px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all" onClick={() => setDeleteFirmwareOpen(false)}>Update</Button>
                     </div>
                 </DialogContent>
             </Dialog>
