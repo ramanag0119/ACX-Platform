@@ -19,7 +19,7 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
-import { X, Check, Pencil, Trash2, ChevronDown } from "lucide-react";
+import { X, Check, Pencil, Trash2, ChevronDown, Edit } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 
 type TabType = "room-service" | "travel-desk" | "business-center" | "food-order" | "facility-maintenance" | "health-fitness" | "sanitation-maintenance";
