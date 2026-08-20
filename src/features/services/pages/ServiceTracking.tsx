@@ -304,7 +304,7 @@ const ServiceTracking = () => {
         );
     };
 
-    const getActiveData = () => {
+    const getActiveData = (): Record<string, unknown>[] => {
         switch (activeService) {
             case "room-service": return roomServiceData;
             case "travel-desk": return travelDeskData;
@@ -346,7 +346,7 @@ const ServiceTracking = () => {
                         </TableHeader>
                         <TableBody>
                             {paginatedData.length > 0 ? (
-                                (paginatedData as typeof roomServiceData).map((row) => (
+                                (paginatedData as unknown as typeof roomServiceData).map((row) => (
                                     <TableRow key={row.id} className="border-b border-border/50 dark:border-slate-800/70 bg-card dark:bg-[#101526]/80 hover:bg-muted/30 dark:hover:bg-slate-800/50 transition-colors">
                                         <TableCell className="font-medium text-foreground text-xs py-3 px-4">{row.roomNo}</TableCell>
                                         <TableCell className="text-xs text-foreground/90 py-3 px-4">{row.serviceType}</TableCell>
@@ -401,7 +401,7 @@ const ServiceTracking = () => {
                         </TableHeader>
                         <TableBody>
                             {paginatedData.length > 0 ? (
-                                (paginatedData as typeof travelDeskData).map((row) => (
+                                (paginatedData as unknown as typeof travelDeskData).map((row) => (
                                     <TableRow key={row.id} className="border-b border-border/50 dark:border-slate-800/70 bg-card dark:bg-[#101526]/80 hover:bg-muted/30 dark:hover:bg-slate-800/50 transition-colors">
                                         <TableCell className="font-medium text-foreground text-xs py-3 px-4">{row.roomNo}</TableCell>
                                         <TableCell className="text-xs text-foreground/90 py-3 px-4">{row.serviceType}</TableCell>
@@ -447,7 +447,7 @@ const ServiceTracking = () => {
                         </TableHeader>
                         <TableBody>
                             {paginatedData.length > 0 ? (
-                                (paginatedData as typeof businessCenterData).map((row) => (
+                                (paginatedData as unknown as typeof businessCenterData).map((row) => (
                                     <TableRow key={row.id} className="border-b border-border/50 dark:border-slate-800/70 bg-card dark:bg-[#101526]/80 hover:bg-muted/30 dark:hover:bg-slate-800/50 transition-colors">
                                         <TableCell className="font-medium text-foreground text-xs py-3 px-4">{row.roomNo}</TableCell>
                                         <TableCell className="text-xs text-foreground/90 py-3 px-4">{row.serviceType}</TableCell>
@@ -492,7 +492,7 @@ const ServiceTracking = () => {
                         </TableHeader>
                         <TableBody>
                             {paginatedData.length > 0 ? (
-                                (paginatedData as typeof foodOrderData).map((row) => (
+                                (paginatedData as unknown as typeof foodOrderData).map((row) => (
                                     <TableRow key={row.id} className="border-b border-border/50 dark:border-slate-800/70 bg-card dark:bg-[#101526]/80 hover:bg-muted/30 dark:hover:bg-slate-800/50 transition-colors">
                                         <TableCell className="font-medium text-foreground text-xs py-3 px-4">{row.roomNo}</TableCell>
                                         <TableCell className="text-xs py-3 px-4">
@@ -548,7 +548,7 @@ const ServiceTracking = () => {
                         </TableHeader>
                         <TableBody>
                             {paginatedData.length > 0 ? (
-                                (paginatedData as typeof facilityServicesData).map((row) => (
+                                (paginatedData as unknown as typeof facilityServicesData).map((row) => (
                                     <TableRow key={row.id} className="border-b border-border/50 dark:border-slate-800/70 bg-card dark:bg-[#101526]/80 hover:bg-muted/30 dark:hover:bg-slate-800/50 transition-colors">
                                         <TableCell className="text-xs text-foreground/90 py-3 px-4">{row.management}</TableCell>
                                         <TableCell className="text-xs text-foreground/90 py-3 px-4">{row.category}</TableCell>
@@ -599,7 +599,7 @@ const ServiceTracking = () => {
                         </TableHeader>
                         <TableBody>
                             {paginatedData.length > 0 ? (
-                                (paginatedData as typeof sanitizationData).map((row) => (
+                                (paginatedData as unknown as typeof sanitizationData).map((row) => (
                                     <TableRow key={row.id} className="border-b border-border/50 dark:border-slate-800/70 bg-card dark:bg-[#101526]/80 hover:bg-muted/30 dark:hover:bg-slate-800/50 transition-colors">
                                         <TableCell className="text-xs text-foreground/90 py-3 px-4">{row.management}</TableCell>
                                         <TableCell className="text-xs text-foreground/90 py-3 px-4">{row.category}</TableCell>

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell, User, LogOut, Check, Trash2, X, Moon, Sun } from "lucide-react";
+import { Bell, User, LogOut, Check, Trash2, X, Moon, Sun, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/core/contexts/AuthContext";
 import { useTheme } from "@/core/contexts/ThemeContext";

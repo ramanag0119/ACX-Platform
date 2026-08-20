@@ -410,16 +410,14 @@ const Employees = () => {
                         <Table>
                             <TableHeader>
                                 <TableRow className="bg-gray-50 hover:bg-gray-50 border-b border-gray-200">
-                                    <TableHead className="text-gray-600 font-medium">Department ◆</TableHead>
-                                    <TableHead className="text-gray-600 font-medium">Function ◆</TableHead>
+                                    <TableHead className="text-gray-600 font-medium">Function Name ▲</TableHead>
                                     <TableHead className="text-gray-600 font-medium text-center">Action</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {paginatedFunctions.map((item, index) => (
                                     <TableRow key={item.id} className={`${index % 2 === 0 ? "bg-muted/20" : "bg-background"} hover:bg-muted/40 transition-colors`}>
-                                        <TableCell className="text-cyan-600 hover:underline cursor-pointer">{item.department}</TableCell>
-                                        <TableCell className="text-cyan-600 hover:underline cursor-pointer">{item.function}</TableCell>
+                                        <TableCell className="text-cyan-600 hover:underline cursor-pointer">{item.name}</TableCell>
                                         <TableCell className="text-center">
                                             <div className="flex justify-center gap-2">
                                                 <Button size="sm" className="bg-[#3eb1c8] hover:bg-[#3eb1c8]/90 text-white h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditFunctionOpen(true)}>
