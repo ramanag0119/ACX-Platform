@@ -403,7 +403,7 @@ const Employees = () => {
                         </div>
                         <div className="flex items-center gap-2">
                             <span className="text-muted-foreground text-sm">Search:</span>
-                            <Input placeholder="Department, Function" value={functionSearch} onChange={(e) => setFunctionSearch(e.target.value)} className="w-48 h-9 bg-muted/30 border-border/50" />
+                            <Input placeholder="Function name" value={functionSearch} onChange={(e) => setFunctionSearch(e.target.value)} className="w-48 h-9 bg-muted/30 border-border/50" />
                         </div>
                     </div>
                     <div className="rounded-xl overflow-hidden border border-gray-200">
