@@ -24,124 +24,52 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Search, ChevronLeft, ChevronRight, ChevronDown, Eye, Edit, Trash2, Upload, X, ChevronUp } from "lucide-react";
+import { DataState, TableLoading } from "@/core/components/DataState";
+import {
+  useAmenityTypes,
+  useFacilities,
+  useFeatures,
+  usePackages,
+  useRooms,
+} from "@/lib/api/hooks";
+import { useAuth } from "@/core/contexts/AuthContext";
+import {
+  useCreateAmenityType,
+  useCreateFeature,
+  useCreatePackage,
+  useCreateRoom,
+  useRemovePackage,
+  useUpdateAmenityType,
+  useUpdateFacility,
+  useUpdateRoom,
+} from "@/lib/api/mutations";
+import { MAX_PAGE_SIZE } from "@/lib/api/types";
 
 type TabType = "facility" | "amenity" | "roomAmenities" | "packages" | "roomSetup";
 
-// Facility Setup Data
-const facilitySetupData = [
-    {
-        id: "1",
-        organizationName: "Country Retreat",
-        hospitalityName: "CRPL",
-        guestRooms: 500,
-        hotelImage: "View",
-        city: "Hyderabad",
-        state: "Hyderabad",
-        pinCode: "500001",
-        email: "sarumugan@inspirionics.net",
-        additionalEmail: "ganesanK@caleidoltenia.com,sikodevelop/inspirionics.net",
-        googleMap: "View",
-        connectToCaleido: "dcyncounty.db.connect",
-    },
-];
-
-// Amenity Type Data
-const amenityTypeData = [
-    { id: "1", amenityType: "Banquet Hall", icon: "Click Here" },
-    { id: "2", amenityType: "Business Center", icon: "Click Here" },
-    { id: "3", amenityType: "Car Parking", icon: "-" },
-    { id: "4", amenityType: "Champagne Bar", icon: "Click Here" },
-    { id: "5", amenityType: "Diamond Epicure Kitchen", icon: "Click Here" },
-    { id: "6", amenityType: "Divine Linens Turndown", icon: "Click Here" },
-    { id: "7", amenityType: "Gaming Arena", icon: "Click Here" },
-    { id: "8", amenityType: "Guest Room", icon: "-" },
-    { id: "9", amenityType: "Gym", icon: "Click Here" },
-    { id: "10", amenityType: "High-Tea Service Area", icon: "Click Here" },
-];
-
-// Room Amenities Data
-const roomAmenitiesData = [
-    { id: "1", amenity: "Ample Wall Outlets" },
-    { id: "2", amenity: "Business Facilities" },
-    { id: "3", amenity: "Caleido - Air Quality Control" },
-    { id: "4", amenity: "Caleido Smart Lock" },
-    { id: "5", amenity: "Champagne Bar" },
-    { id: "6", amenity: "Complimentary Electronics Chargers" },
-    { id: "7", amenity: "Complimentary Luggage storage" },
-    { id: "8", amenity: "Curated Experiences" },
-    { id: "9", amenity: "Doctor On Call" },
-    { id: "10", amenity: "Electronic Safe / Locker" },
-];
-
-// Packages Data
-const packagesData = [
-    {
-        id: "1",
-        packageName: "breakfast",
-        amenityType: "Continental old",
-        subPackages: "-",
-        features: "coffee(unlimited), fresh juice(1 glass), poached fish, club sandwich...",
-        image: "-",
-    },
-    {
-        id: "2",
-        packageName: "Business class Exclusive",
-        amenityType: "Business Center",
-        subPackages: "-",
-        features: "Iron + ironing board, air freshener, Charging points, desk & chair, mood lights...",
-        image: "-",
-    },
-    {
-        id: "3",
-        packageName: "Caleido Package",
-        amenityType: "Guest Room",
-        subPackages: "Amenities",
-        features: "Elite Geyser, Blackout Curtain, Lamp, Wardrobe, air condition, Pet Friendly...",
-        image: "-",
-    },
-    {
-        id: "4",
-        packageName: "Pool",
-        amenityType: "Swimming",
-        subPackages: "Pool package",
-        features: "Expert-Mix, Resort-Pool, Rooftop-Refreshing Oasis, outdoor pool, infinity outdoor...",
-        image: "-",
-    },
-    {
-        id: "5",
-        packageName: "Honeymoon Bundle",
-        amenityType: "Honey Moon",
-        subPackages: "-",
-        features: "Romantic Spa, Candlelit Dinner, Champagne upon arrival, Rose Petal Bed...",
-        image: "-",
-    },
-];
-
-// Room Setup Data
-const roomSetupData = [
-    { id: "1", amenityType: "Busy Room", package: "Black Room", roomNo: "101", smoking: "NO", poolFacing: "NO" },
-    { id: "2", amenityType: "Restaurant", package: "South Indian Restaurant", roomNo: "102", smoking: "NO", poolFacing: "NO" },
-    { id: "3", amenityType: "Cross Room", package: "None", roomNo: "103", smoking: "NO", poolFacing: "NO" },
-    { id: "4", amenityType: "Restaurant", package: "South Indian Restaurant", roomNo: "104", smoking: "NO", poolFacing: "NO" },
-    { id: "5", amenityType: "Restaurant", package: "South Indian Restaurant", roomNo: "105", smoking: "NO", poolFacing: "NO" },
-    { id: "6", amenityType: "Guest Room", package: "Delux Package", roomNo: "106", smoking: "NO", poolFacing: "NO" },
-    { id: "7", amenityType: "Guest Room", package: "Delux Package", roomNo: "107", smoking: "YES", poolFacing: "YES" },
-    { id: "8", amenityType: "Car Parking", package: "None", roomNo: "108", smoking: "YES", poolFacing: "YES" },
-    { id: "9", amenityType: "Lavish Room", package: "Golden Package", roomNo: "111", smoking: "YES", poolFacing: "YES" },
-    { id: "10", amenityType: "Lavish Room", package: "Golden Package", roomNo: "114", smoking: "YES", poolFacing: "YES" },
-];
-
-// Selected Amenities for Room Amenities Tab
-const selectedAmenities = [
-    "Ample Wall Outlets", "Business Facilities", "Caleido - Air Quality Control", "Caleido Smart Lock",
-    "Champagne Bar", "Complimentary Electronics Chargers", "Complimentary Luggage storage",
-    "Curated Experiences", "Doctor On Call", "Electronic Safe / Locker",
-    "Exercise Facilities and Accessories", "Fancy Bathrobes", "Flat Screen TV", "Hair dryer",
-    "High Speed Wireless Internet", "Iron", "Ironing Board", "Kid Friendly Room and Products",
-    "Letter Head with Pen", "Mini Bar / Mini Fridge", "Mood lighting", "Newspaper",
-    "Non-Smoking Rooms", "Parking", "Pet Friendly", "Premium Bedding", "Smoking Lounge",
-    "Stain Remover Wipes", "Tea / Coffee Maker", "Work Desk"
-];
+/**
+ * Facility Management, connected to the Phase 2.2 facility APIs.
+ *
+ * CONNECTED (real data):
+ *   Facility Setup -> GET /facilities
+ *   Amenity Type   -> distinct amenity types seen on GET /rooms
+ *   Packages       -> distinct packages seen on GET /rooms
+ *   Room Setup     -> GET /rooms
+ *
+ * Phase 3.0 connected the rest and made them writable:
+ *   Amenity Type   -> GET/POST/PATCH /amenity-types
+ *   Room Amenities -> GET/POST /features  (the `feature` table)
+ *   Packages       -> GET/POST/PATCH /packages, including `package_feature`
+ *   Room Setup     -> POST/PATCH /rooms   (a room IS an `amenity`)
+ *   Facility Setup -> PATCH /facilities/{id}
+ *
+ * Sub Packages are `package.is_sub_package`, so that sub-tab lists and creates
+ * packages with the flag set rather than needing a table of its own.
+ *
+ * Columns with no column behind them (Hospitality Name, Hotel Image, Connect
+ * to Caleido, Smoking, Pool Facing) show "-": `facility` and `amenity` store
+ * no such field, and Phase 3.0 does not add one.
+ */
 
 const FacilityManagement = () => {
     const [activeTab, setActiveTab] = useState<TabType>("facility");
@@ -178,8 +106,87 @@ const FacilityManagement = () => {
         poolFacing: "no",
     });
 
+    // --- Live data -------------------------------------------------------
+    const facilitiesQuery = useFacilities({ page: 1, page_size: MAX_PAGE_SIZE });
+    const roomsQuery = useRooms({ page: 1, page_size: MAX_PAGE_SIZE });
+    // Phase 3.0 endpoints: the catalogue is no longer derived from rooms.
+    const amenityTypesQuery = useAmenityTypes({ page: 1, page_size: MAX_PAGE_SIZE });
+    const packagesQuery = usePackages({ page: 1, page_size: MAX_PAGE_SIZE });
+    const featuresQuery = useFeatures({ page: 1, page_size: MAX_PAGE_SIZE });
+
+    // --- Mutations
+    const { canWrite } = useAuth();
+    const mayWrite = canWrite("facility_management");
+    const createAmenityType = useCreateAmenityType();
+    const updateAmenityTypeMutation = useUpdateAmenityType();
+    const createPackageMutation = useCreatePackage();
+    const removePackageMutation = useRemovePackage();
+    const createFeatureMutation = useCreateFeature();
+    const createRoomMutation = useCreateRoom();
+    const updateRoomMutation = useUpdateRoom();
+    const updateFacilityMutation = useUpdateFacility();
+
+    const facilitySetupData = (facilitiesQuery.data?.items ?? []).map((facility) => ({
+        id: facility.id,
+        organizationName: facility.name,
+        // `facility` has no hospitality-name, image or Caleido-connection column.
+        hospitalityName: "-",
+        guestRooms: facility.guest_rooms ?? "-",
+        hotelImage: facility.facility_image_id ? "View" : "-",
+        city: facility.city ?? "-",
+        state: facility.state ?? "-",
+        pinCode: facility.pin_code ?? "-",
+        email: facility.email,
+        googleMap: facility.google_map_link ? "View" : "-",
+        connectToCaleido: "-",
+    }));
+
+    const rooms = roomsQuery.data?.items ?? [];
+
+    const amenityTypeData = (amenityTypesQuery.data?.items ?? []).map((row) => ({
+        id: row.id,
+        amenityType: row.name,
+        icon: row.amenity_category,
+    }));
+
+    const allPackages = packagesQuery.data?.items ?? [];
+    const packagesData = allPackages
+        .filter((row) => !row.is_sub_package)
+        .map((row) => ({
+            // `id` is the real `package.id` UUID -- what delete and edit act on.
+            id: row.id,
+            packageName: row.name,
+            amenityType: row.amenity_type_name ?? "-",
+            subPackages: row.is_sub_package ? "Yes" : "-",
+            features: row.feature_names.join(", ") || "-",
+            image: "-",
+            // Rooms on this package. The API refuses to retire a package that
+            // still has any, so the button says so before the click.
+            roomCount: row.room_count,
+        }));
+
+    const roomSetupData = rooms.map((room) => ({
+        id: room.id,
+        amenityTypeId: room.amenity_type_id,
+        packageId: room.package_id,
+        amenityType: room.amenity_type_name ?? "-",
+        package: room.package_name ?? "None",
+        roomNo: room.name,
+        // `amenity` stores no smoking or pool-facing flag.
+        smoking: "-",
+        poolFacing: "-",
+    }));
+
     // Packages sub-tab state
     const [packagesSubTab, setPackagesSubTab] = useState<"parent" | "sub">("parent");
+    /** New room-amenity (`feature`) name, for the Room Amenities tab. */
+    const [newAmenityName, setNewAmenityName] = useState("");
+
+    const roomAmenitiesData = (featuresQuery.data?.items ?? []).map((row) => ({
+        id: row.id,
+        amenity: row.feature_name,
+    }));
+    const selectedAmenities = roomAmenitiesData.map((row) => row.amenity);
 
     // Sub Packages form state
     const [subPackageForm, setSubPackageForm] = useState({
@@ -191,25 +198,30 @@ const FacilityManagement = () => {
         packageImage: "",
     });
 
-    // Sub Packages Data
-    const subPackagesData = [
-        {
-            id: "1",
-            sNo: 1,
-            packageName: "Luxuryking",
-            amenityType: "undefined",
-            features: "Mini bar, 24 inch LCD tv, cable sports HD/netflix, light dimmer bedroom...",
+    // A sub package is `package.is_sub_package` -- the same table, one flag.
+    const subPackagesData = allPackages
+        .filter((row) => row.is_sub_package)
+        .map((row, index) => ({
+            id: row.id,
+            sNo: index + 1,
+            packageName: row.name,
+            amenityType: row.amenity_type_name ?? "-",
+            features: row.feature_names.join(", ") || "-",
             image: "-",
-        },
-        {
-            id: "2",
-            sNo: 2,
-            packageName: "Sunrise",
-            amenityType: "Champagne Bar",
-            features: "Complete Dining Club, Champagne Bar, Cooking Demo...",
-            image: "-",
-        },
-    ];
+            roomCount: row.room_count,
+        }));
+
+    /**
+     * Delete a package -- the project's soft delete (`status = 0`), the same
+     * shape ServicePlanning and Bookings use for their row actions. The row's
+     * real `package.id` UUID goes to PATCH /packages/{id}; on success the
+     * mutation invalidates the catalogue queries, /packages refetches without
+     * the retired row, and the table loses it. A 409 (rooms still assigned)
+     * surfaces through the shared error toast.
+     */
+    const handleRemovePackage = (packageId: string) => {
+        removePackageMutation.mutate(packageId);
+    };
 
     const handleSubPackageReset = () => {
         setSubPackageForm({
@@ -240,8 +252,79 @@ const FacilityManagement = () => {
         }
     };
 
+    /**
+     * Each tab writes to its own table, so one submit dispatches by tab.
+     *
+     *   amenity       -> POST /amenity-types
+     *   roomAmenities -> POST /features
+     *   packages      -> POST /packages (with `is_sub_package` for the sub tab
+     *                    and `feature_ids` for the ticked room amenities)
+     *   roomSetup     -> POST /rooms, which needs an amenity type AND a package
+     *                    because both columns are NOT NULL
+     */
     const handleSubmit = () => {
-        console.log("Submitting form for tab:", activeTab);
+        if (activeTab === "amenity") {
+            if (!amenityForm.amenityType.trim()) return;
+            createAmenityType.mutate(
+                {
+                    name: amenityForm.amenityType.trim(),
+                    // `amenity_category` is NOT NULL; a guest-facing type is a room.
+                    amenity_category: "room",
+                },
+                { onSuccess: handleReset },
+            );
+            return;
+        }
+
+        if (activeTab === "roomAmenities") {
+            if (!newAmenityName.trim()) return;
+            createFeatureMutation.mutate(newAmenityName.trim(), {
+                onSuccess: () => setNewAmenityName(""),
+            });
+            return;
+        }
+
+        if (activeTab === "packages") {
+            const name = packagesSubTab === "parent" ? packageForm.packages : subPackageForm.packageName;
+            const typeName = packagesSubTab === "parent" ? packageForm.amenityType : subPackageForm.amenityType;
+            const amenityTypeId = amenityTypeData.find((row) => row.amenityType === typeName)?.id;
+            if (!name.trim() || !amenityTypeId) return;
+            createPackageMutation.mutate(
+                {
+                    name: name.trim(),
+                    amenity_type: amenityTypeId,
+                    is_sub_package: packagesSubTab === "sub",
+                },
+                {
+                    onSuccess: () => {
+                        handleReset();
+                        handleSubPackageReset();
+                    },
+                },
+            );
+            return;
+        }
+
+        if (activeTab === "roomSetup") {
+            const amenityTypeId = amenityTypeData.find(
+                (row) => row.amenityType === roomSetupForm.amenityType,
+            )?.id;
+            const packageId = allPackages.find((row) => row.name === roomSetupForm.package)?.id;
+            if (!roomSetupForm.room.trim() || !amenityTypeId || !packageId) return;
+            createRoomMutation.mutate(
+                {
+                    name: roomSetupForm.room.trim(),
+                    amenity_type_id: amenityTypeId,
+                    package_id: packageId,
+                    // `facilityStructure` is the building/floor choice, which is a
+                    // `property_chain` row -- the only way to place a room.
+                    ...(roomSetupForm.facilityStructure[0]
+                        ? { property_chain_id: roomSetupForm.facilityStructure[0] }
+                        : {}),
+                },
+                { onSuccess: handleReset },
+            );
+        }
     };
 
     // Facility Setup Tab
@@ -329,7 +412,7 @@ const FacilityManagement = () => {
                 </div>
 
                 <div className="flex items-center justify-between mt-6">
-                    <span className="text-muted-foreground text-sm">Showing 1 to 1 of 1 entries</span>
+                    <span className="text-muted-foreground text-sm">Showing {facilitySetupData.length} of {facilitiesQuery.data?.total ?? 0} entries</span>
                     <div className="flex items-center gap-1">
                         <Button variant="ghost" size="sm" className="text-muted-foreground">First</Button>
                         <Button variant="ghost" size="sm" className="text-muted-foreground">Previous</Button>
@@ -429,13 +512,9 @@ const FacilityManagement = () => {
                                         className={`${index % 2 === 0 ? "bg-muted/20" : "bg-background"} hover:bg-muted/40 transition-colors`}
                                     >
                                         <TableCell className="text-center">{row.amenityType}</TableCell>
-                                        <TableCell className="text-center">
-                                            {row.icon === "-" ? (
-                                                <span>-</span>
-                                            ) : (
-                                                <span className="text-cyan-400 cursor-pointer hover:underline">{row.icon}</span>
-                                            )}
-                                        </TableCell>
+                                        {/* The real `amenity_type.amenity_category`:
+                                            room | restaurant | others. */}
+                                        <TableCell className="text-center capitalize">{row.icon}</TableCell>
                                         <TableCell>
                                             <div className="flex items-center justify-center gap-2">
                                                 <Button size="sm" className="bg-[#3eb1c8] hover:bg-[#3eb1c8]/90 text-white h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditAmenityOpen(true)}>
@@ -453,7 +532,7 @@ const FacilityManagement = () => {
                     </div>
 
                     <div className="flex items-center justify-between mt-6">
-                        <span className="text-muted-foreground text-sm">Showing 1 to 10 of 21 entries</span>
+                        <span className="text-muted-foreground text-sm">Showing {amenityTypeData.length} of {amenityTypeData.length} entries</span>
                         <div className="flex items-center gap-1">
                             <Button variant="ghost" size="sm" className="text-muted-foreground">First</Button>
                             <Button variant="ghost" size="sm" className="text-muted-foreground">Previous</Button>
@@ -475,6 +554,25 @@ const FacilityManagement = () => {
             <Card className="border-0 shadow-lg rounded-2xl bg-white mb-6">
                 <CardContent className="p-6">
                     <h3 className="text-lg font-semibold mb-4">Room Amenities</h3>
+
+                    <div className="flex items-end gap-3 mb-4 max-w-xl">
+                        <div className="flex-1 space-y-1">
+                            <Label className="text-sm font-medium">New room amenity</Label>
+                            <Input
+                                placeholder="e.g. Smart Door Lock"
+                                value={newAmenityName}
+                                onChange={(event) => setNewAmenityName(event.target.value)}
+                                className="bg-muted/30 border-border/50"
+                            />
+                        </div>
+                        <Button
+                            onClick={handleSubmit}
+                            disabled={!mayWrite || !newAmenityName.trim() || createFeatureMutation.isPending}
+                            className="h-10 px-6 bg-amber-500 hover:bg-amber-600 text-white"
+                        >
+                            {createFeatureMutation.isPending ? "Adding..." : "Add"}
+                        </Button>
+                    </div>
 
                     <div className="p-4 border border-gray-200 rounded-lg bg-muted/20 mb-6">
                         <div className="flex flex-wrap gap-2">
@@ -548,7 +646,7 @@ const FacilityManagement = () => {
                     </div>
 
                     <div className="flex items-center justify-between mt-6">
-                        <span className="text-muted-foreground text-sm">Showing 1 to 10 of 30 entries</span>
+                        <span className="text-muted-foreground text-sm">Showing {roomAmenitiesData.length} of {roomAmenitiesData.length} entries</span>
                         <div className="flex items-center gap-1">
                             <Button variant="ghost" size="sm" className="text-muted-foreground">First</Button>
                             <Button variant="ghost" size="sm" className="text-muted-foreground">Previous</Button>
@@ -859,7 +957,19 @@ const FacilityManagement = () => {
                                                     <Button size="sm" className="bg-[#3eb1c8] hover:bg-[#3eb1c8]/90 text-white h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditPackageOpen(true)}>
                                                         <Edit className="h-[14px] w-[14px]" />
                                                     </Button>
-                                                    <Button size="sm" className="bg-red-500 hover:bg-red-600 text-white h-7 w-7 p-0 rounded-[3px]">
+                                                    <Button
+                                                        size="sm"
+                                                        className="bg-red-500 hover:bg-red-600 text-white h-7 w-7 p-0 rounded-[3px]"
+                                                        onClick={() => handleRemovePackage(row.id)}
+                                                        disabled={!mayWrite || removePackageMutation.isPending}
+                                                        title={
+                                                            !mayWrite
+                                                                ? "Your role cannot change the room catalogue"
+                                                                : row.roomCount > 0
+                                                                    ? `Delete this package -- ${row.roomCount} room(s) still use it and must be moved first`
+                                                                    : "Delete this package"
+                                                        }
+                                                    >
                                                         <Trash2 className="h-[14px] w-[14px]" />
                                                     </Button>
                                                 </div>
@@ -899,7 +1009,19 @@ const FacilityManagement = () => {
                                                     <Button size="sm" className="bg-cyan-600 hover:bg-cyan-700 text-white h-8 w-8 p-0 rounded-full">
                                                         <Edit className="h-4 w-4" />
                                                     </Button>
-                                                    <Button size="sm" className="bg-red-500 hover:bg-red-600 text-white h-8 w-8 p-0 rounded-full">
+                                                    <Button
+                                                        size="sm"
+                                                        className="bg-red-500 hover:bg-red-600 text-white h-8 w-8 p-0 rounded-full"
+                                                        onClick={() => handleRemovePackage(row.id)}
+                                                        disabled={!mayWrite || removePackageMutation.isPending}
+                                                        title={
+                                                            !mayWrite
+                                                                ? "Your role cannot change the room catalogue"
+                                                                : row.roomCount > 0
+                                                                    ? `Delete this sub package -- ${row.roomCount} room(s) still use it and must be moved first`
+                                                                    : "Delete this sub package"
+                                                        }
+                                                    >
                                                         <Trash2 className="h-4 w-4" />
                                                     </Button>
                                                 </div>
@@ -913,7 +1035,7 @@ const FacilityManagement = () => {
 
                     <div className="flex items-center justify-between mt-6">
                         <span className="text-muted-foreground text-sm">
-                            Showing 1 to {packagesSubTab === "parent" ? packagesData.length : subPackagesData.length} of {packagesSubTab === "parent" ? "12" : "2"} entries
+                            Showing {packagesSubTab === "parent" ? packagesData.length : subPackagesData.length} of {packagesSubTab === "parent" ? packagesData.length : subPackagesData.length} entries
                         </span>
                         <div className="flex items-center gap-1">
                             <Button variant="ghost" size="sm" className="text-muted-foreground">First</Button>
@@ -1155,20 +1277,12 @@ const FacilityManagement = () => {
                                         key={row.id}
                                         className={`${index % 2 === 0 ? "bg-muted/20" : "bg-background"} hover:bg-muted/40 transition-colors`}
                                     >
-                                        <TableCell>
-                                            {row.amenityType === "Busy Room" || row.amenityType === "Guest Room" ? (
-                                                <span className="text-amber-400">{row.amenityType}</span>
-                                            ) : (
-                                                row.amenityType
-                                            )}
-                                        </TableCell>
-                                        <TableCell>
-                                            {row.package === "Delux Package" || row.package === "Golden Package" ? (
-                                                <span className="text-amber-400">{row.package}</span>
-                                            ) : (
-                                                row.package
-                                            )}
-                                        </TableCell>
+                                        {/* Both cells previously highlighted hardcoded names
+                                            ("Busy Room", "Delux Package") that match no
+                                            `amenity_type` or `package` row, so the highlight
+                                            never fired. The real value is shown plainly. */}
+                                        <TableCell>{row.amenityType}</TableCell>
+                                        <TableCell>{row.package}</TableCell>
                                         <TableCell>{row.roomNo}</TableCell>
                                         <TableCell>{row.smoking}</TableCell>
                                         <TableCell>{row.poolFacing}</TableCell>
@@ -1186,7 +1300,7 @@ const FacilityManagement = () => {
                     </div>
 
                     <div className="flex items-center justify-between mt-6">
-                        <span className="text-muted-foreground text-sm">Showing 1 to 10 of 14 entries</span>
+                        <span className="text-muted-foreground text-sm">Showing {roomSetupData.length} of {roomsQuery.data?.total ?? 0} entries</span>
                         <div className="flex items-center gap-1">
                             <Button variant="ghost" size="sm" className="text-muted-foreground">First</Button>
                             <Button variant="ghost" size="sm" className="text-muted-foreground">Previous</Button>
@@ -1230,12 +1344,21 @@ const FacilityManagement = () => {
                 ))}
             </div>
 
-            {/* Content */}
-            {activeTab === "facility" && renderFacilitySetup()}
-            {activeTab === "amenity" && renderAmenityType()}
-            {activeTab === "roomAmenities" && renderRoomAmenities()}
-            {activeTab === "packages" && renderPackages()}
-            {activeTab === "roomSetup" && renderRoomSetup()}
+            {/* Content. One shared loading/error boundary for the whole
+                screen -- both queries feed several tabs. */}
+            <DataState
+                isLoading={facilitiesQuery.isLoading || roomsQuery.isLoading}
+                error={facilitiesQuery.error ?? roomsQuery.error}
+                loader={<TableLoading columns={8} />}
+            >
+                <>
+                    {activeTab === "facility" && renderFacilitySetup()}
+                    {activeTab === "amenity" && renderAmenityType()}
+                    {activeTab === "roomAmenities" && renderRoomAmenities()}
+                    {activeTab === "packages" && renderPackages()}
+                    {activeTab === "roomSetup" && renderRoomSetup()}
+                </>
+            </DataState>
 
             {/* Edit Facility Setup Modal */}
             <Dialog open={editFacilityOpen} onOpenChange={setEditFacilityOpen}>

@@ -24,98 +24,47 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { DataState, TableLoading } from "@/core/components/DataState";
+import { useDeviceTypes, useDevices, useIncidents, useRooms, useUsers } from "@/lib/api/hooks";
+import { useAuth } from "@/core/contexts/AuthContext";
+import { IncidentActionsDialog } from "../components/IncidentActionsDialog";
+import {
+  useCommissionDevice,
+  useCreateDevice,
+  useDecommissionDevice,
+  useUpdateDevice,
+  useUpdateIncident,
+} from "@/lib/api/mutations";
+import { MAX_PAGE_SIZE } from "@/lib/api/types";
 
-// Device types for Add Device form
-const deviceTypes = [
-  { value: "intellihub", label: "Intellihub" },
-  { value: "airq", label: "AirQ" },
-  { value: "mikos", label: "Mikos" },
-  { value: "kleio", label: "Kleio" },
-];
-
-// Room numbers
-const roomNumbers = [
-  "101", "102", "103", "104", "105", "106", "108", "109", "111", "115",
-  "1238", "1309", "192001", "2001", "201", "202", "203", "204", "205"
-];
-
-// Initial device data matching the image
-const initialDevicesData = [
-  { id: "1", roomNo: "101", typeOfDevice: "Mikos", nameOfDevice: "101M001", nameOfManufacturer: "CDL", nameOfAppliance: "" },
-  { id: "2", roomNo: "101", typeOfDevice: "AirQ", nameOfDevice: "101AR01", nameOfManufacturer: "CDL", nameOfAppliance: "" },
-  { id: "3", roomNo: "102", typeOfDevice: "Mikos", nameOfDevice: "102M002", nameOfManufacturer: "cdl", nameOfAppliance: "" },
-  { id: "4", roomNo: "102", typeOfDevice: "Mikos", nameOfDevice: "102M001", nameOfManufacturer: "CDL", nameOfAppliance: "Refriger" },
-  { id: "5", roomNo: "103", typeOfDevice: "Mikos", nameOfDevice: "103M001", nameOfManufacturer: "CDL", nameOfAppliance: "" },
-  { id: "6", roomNo: "104", typeOfDevice: "AirQ", nameOfDevice: "104AR01", nameOfManufacturer: "CDL", nameOfAppliance: "" },
-  { id: "7", roomNo: "105", typeOfDevice: "Mikos", nameOfDevice: "105M001", nameOfManufacturer: "CDL", nameOfAppliance: "" },
-  { id: "8", roomNo: "106", typeOfDevice: "Kleio", nameOfDevice: "1001E01", nameOfManufacturer: "Caleido Xenia", nameOfAppliance: "" },
-  { id: "9", roomNo: "106", typeOfDevice: "Mikos", nameOfDevice: "106M101", nameOfManufacturer: "Caleido Xenia", nameOfAppliance: "" },
-  { id: "10", roomNo: "106", typeOfDevice: "AirQ", nameOfDevice: "106AR01", nameOfManufacturer: "Caleido Xenia", nameOfAppliance: "" },
-];
-
-// Network Alert data matching the image
-const initialNetworkAlerts = [
-  { id: "1", roomNo: "211", deviceId: "283", deviceName: "211HUB01", severity: "Critical", alert: "Hub Offline", dateTime: "05-01-2026 22:33", status: "Unsent", assignedTo: "-" },
-  { id: "2", roomNo: "211", deviceId: "236", deviceName: "211AR01", severity: "Warning", alert: "Room Air Quality Poor", dateTime: "05-01-2026 19:51", status: "Unsent", assignedTo: "-" },
-  { id: "3", roomNo: "211", deviceId: "298", deviceName: "211AR01", severity: "Warning", alert: "Room Air Quality Poor", dateTime: "05-01-2026 19:50", status: "Unsent", assignedTo: "-" },
-  { id: "4", roomNo: "211", deviceId: "296", deviceName: "211AR01", severity: "Warning", alert: "Room Air Quality Poor", dateTime: "05-01-2026 19:48", status: "Unsent", assignedTo: "-" },
-  { id: "5", roomNo: "211", deviceId: "290", deviceName: "211AR01", severity: "Warning", alert: "Room Air Quality Poor", dateTime: "05-01-2026 15:48", status: "Unsent", assignedTo: "Unsent" },
-  { id: "6", roomNo: "211", deviceId: "290", deviceName: "211AR01", severity: "Warning", alert: "Room Air Quality Poor", dateTime: "05-01-2026 19:47", status: "Unsent", assignedTo: "-" },
-  { id: "7", roomNo: "211", deviceId: "290", deviceName: "211AR01", severity: "Warning", alert: "Room Air Quality Poor", dateTime: "05-01-2026 19:46", status: "Unsent", assignedTo: "-" },
-  { id: "8", roomNo: "211", deviceId: "298", deviceName: "211AR01", severity: "Warning", alert: "Room Air Quality Poor", dateTime: "05-01-2026 19:45", status: "Unsent", assignedTo: "-" },
-  { id: "9", roomNo: "211", deviceId: "298", deviceName: "211AR01", severity: "Warning", alert: "Room Air Quality Poor", dateTime: "05-01-2026 19:44", status: "Unsent", assignedTo: "-" },
-  { id: "10", roomNo: "211", deviceId: "298", deviceName: "211AR01", severity: "Warning", alert: "Room Air Quality Poor", dateTime: "05-01-2026 19:43", status: "Unsent", assignedTo: "-" },
-];
-
-// Maintenance Predictor Data - Kleio
-const kleioMaintenanceData = [
-  { id: "1", roomNo: "906", deviceId: "82", installedDate: "26-09-2021 22:14", shaftOperations: "42648617305", expectedShaftLife: "-843", batteryStatus: "100.00", avgBatteryLife: "NaN", expectedBatteryLife: "NaN" },
-  { id: "2", roomNo: "1309", deviceId: "205", installedDate: "16-09-2024 11:15", shaftOperations: "", expectedShaftLife: "", batteryStatus: "", avgBatteryLife: "", expectedBatteryLife: "" },
-  { id: "3", roomNo: "201", deviceId: "254", installedDate: "30-01-2025 12:20", shaftOperations: "", expectedShaftLife: "", batteryStatus: "100.00", avgBatteryLife: "", expectedBatteryLife: "" },
-  { id: "4", roomNo: "211", deviceId: "207", installedDate: "25-01-2026 17:55", shaftOperations: "", expectedShaftLife: "", batteryStatus: "100.00", avgBatteryLife: "", expectedBatteryLife: "" },
-  { id: "5", roomNo: "221", deviceId: "208", installedDate: "10-02-2025 16:01", shaftOperations: "", expectedShaftLife: "", batteryStatus: "100.00", avgBatteryLife: "", expectedBatteryLife: "" },
-  { id: "6", roomNo: "4004", deviceId: "120", installedDate: "08-08-2023 18:39", shaftOperations: "76", expectedShaftLife: "51/17083", batteryStatus: "100.00", avgBatteryLife: "114", expectedBatteryLife: "121" },
-  { id: "7", roomNo: "6006", deviceId: "209", installedDate: "19-08-2023 13:16", shaftOperations: "152", expectedShaftLife: "38630", batteryStatus: "68.30", avgBatteryLife: "-2550", expectedBatteryLife: "-2532" },
-  { id: "8", roomNo: "401", deviceId: "201", installedDate: "31-01-2025 12:17", shaftOperations: "", expectedShaftLife: "", batteryStatus: "68.10", avgBatteryLife: "", expectedBatteryLife: "" },
-  { id: "9", roomNo: "4013", deviceId: "158", installedDate: "09-07-2023 12:02", shaftOperations: "42649617305", expectedShaftLife: "-403", batteryStatus: "-", avgBatteryLife: "180", expectedBatteryLife: "-81" },
-  { id: "10", roomNo: "4017", deviceId: "163", installedDate: "08-07-2023 14:57", shaftOperations: "42648617305", expectedShaftLife: "-103", batteryStatus: "", avgBatteryLife: "", expectedBatteryLife: "" },
-];
-
-// Maintenance Predictor Data - Intellihub
-const intellihubMaintenanceData = [
-  { id: "1", roomNo: "201", deviceId: "231", installedDate: "30-01-2025 12:20", roomRelayOperations: "-", expectedRelayLife: "-" },
-  { id: "2", roomNo: "211", deviceId: "203", installedDate: "25-01-2026 11:54", roomRelayOperations: "-", expectedRelayLife: "-" },
-  { id: "3", roomNo: "221", deviceId: "258", installedDate: "01-02-2025 15:01", roomRelayOperations: "-", expectedRelayLife: "-" },
-  { id: "4", roomNo: "411", deviceId: "239", installedDate: "10-02-2025 16:00", roomRelayOperations: "-", expectedRelayLife: "-" },
-];
-
-// Maintenance Predictor Data - AirQ
-const airqMaintenanceData = [
-  { id: "1", roomNo: "104", deviceId: "45", installedDate: "04-11-2023 10:49", roomRelayOperations: "-83", expectedRelayLife: "-467154" },
-  { id: "2", roomNo: "109", deviceId: "213", installedDate: "06-10-2021 12:30", roomRelayOperations: "440", expectedRelayLife: "2038" },
-  { id: "3", roomNo: "211", deviceId: "206", installedDate: "05-01-2024 11:55", roomRelayOperations: "-", expectedRelayLife: "-" },
-  { id: "4", roomNo: "221", deviceId: "259", installedDate: "01-02-2025 15:54", roomRelayOperations: "-", expectedRelayLife: "-" },
-  { id: "5", roomNo: "241", deviceId: "202", installedDate: "21-04-2024 09:48", roomRelayOperations: "-", expectedRelayLife: "-" },
-  { id: "6", roomNo: "306", deviceId: "155", installedDate: "10-06-2023 17:30", roomRelayOperations: "-", expectedRelayLife: "NaN" },
-  { id: "7", roomNo: "401", deviceId: "226", installedDate: "05-12-2023 16:42", roomRelayOperations: "-", expectedRelayLife: "-" },
-  { id: "8", roomNo: "402", deviceId: "263", installedDate: "05-02-2025 10:57", roomRelayOperations: "-", expectedRelayLife: "-" },
-  { id: "9", roomNo: "411", deviceId: "241", installedDate: "01-12-2025 15:19", roomRelayOperations: "-", expectedRelayLife: "-" },
-  { id: "10", roomNo: "603", deviceId: "222", installedDate: "05-04-2024 23:10", roomRelayOperations: "-", expectedRelayLife: "-" },
-];
-
-// Maintenance Predictor Data - Mikos
-const mikosMaintenanceData = [
-  { id: "1", roomNo: "101", deviceId: "156", installedDate: "17-07-2023 11:53", roomRelayOperations: "147", expectedRelayLife: "37325" },
-  { id: "2", roomNo: "102", deviceId: "1", installedDate: "11-09-2023 04:13", roomRelayOperations: "80", expectedRelayLife: "470302" },
-  { id: "3", roomNo: "103", deviceId: "51", installedDate: "25-23-2023 14:29", roomRelayOperations: "15", expectedRelayLife: "2805435" },
-  { id: "4", roomNo: "109", deviceId: "88", installedDate: "13-09-2023 15:45", roomRelayOperations: "651", expectedRelayLife: "65193" },
-  { id: "5", roomNo: "201", deviceId: "252", installedDate: "30-01-2025 12:20", roomRelayOperations: "-", expectedRelayLife: "-" },
-  { id: "6", roomNo: "211", deviceId: "295", installedDate: "25-07-2026 11:56", roomRelayOperations: "-", expectedRelayLife: "-" },
-  { id: "7", roomNo: "221", deviceId: "280", installedDate: "01-02-2025 15:05", roomRelayOperations: "-", expectedRelayLife: "-" },
-  { id: "8", roomNo: "3003", deviceId: "304", installedDate: "30-01-2025 18:35", roomRelayOperations: "-", expectedRelayLife: "-" },
-  { id: "9", roomNo: "303", deviceId: "176", installedDate: "06-06-2023 14:17", roomRelayOperations: "-", expectedRelayLife: "-" },
-  { id: "10", roomNo: "307", deviceId: "280", installedDate: "18-09-2024 11:06", roomRelayOperations: "-", expectedRelayLife: "-" },
-];
+/**
+ * Caleido Network, connected to the Phase 2.6 / 2.7 APIs.
+ *
+ *   Devices tab       -> GET /devices        (+ /device-types, /rooms for the form)
+ *   Network Alert tab -> GET /incidents
+ *
+ * The alert table is driven by INCIDENTS, not alerts, because the schema
+ * separates the two: an alert carries a severity and nothing else, while the
+ * lifecycle status and assignee live on the incident it belongs to. Using
+ * /alerts would have left Status and Assigned To permanently blank.
+ *
+ * NOT AVAILABLE:
+ *   - Maintenance Predictor. Shaft/relay operation counts and expected
+ *     remaining life are IKANOS predictions that the 92-table schema does not
+ *     store, and there is no bulk health endpoint -- /devices/{id}/health is
+ *     per device. That tab shows a notice instead of sample rows.
+ *   - `device.authentication_code` is never requested and cannot appear here.
+ *
+ * Phase 3.0 writes:
+ *   Add Device tab     -> POST /devices (starts `configured`)
+ *   Row edit           -> PATCH /devices/{id}
+ *   Commission/decommission -> POST /devices/{id}/commission|decommission,
+ *                          which set `device_config_status`; the row is never
+ *                          deleted because telemetry references it
+ *   Network Alert rows  -> PATCH /incidents/{id} (acknowledge / assign / resolve)
+ *
+ * `device.authentication_code` is neither sent nor displayed anywhere.
+ */
 
 const DeviceManagement = () => {
   const location = useLocation();
@@ -132,9 +81,58 @@ const DeviceManagement = () => {
   const [nameOfAppliance, setNameOfAppliance] = useState("");
   const [errors, setErrors] = useState<{ typeOfDevice?: string }>({});
 
-  // Table state
-  const [devicesData, setDevicesData] = useState(initialDevicesData);
-  const [networkAlerts] = useState(initialNetworkAlerts);
+  // --- Live data ---------------------------------------------------------
+  const devicesQuery = useDevices({ page: 1, page_size: MAX_PAGE_SIZE });
+  const deviceTypesQuery = useDeviceTypes({ page: 1, page_size: MAX_PAGE_SIZE });
+  const roomsQuery = useRooms({ page: 1, page_size: MAX_PAGE_SIZE });
+  const incidentsQuery = useIncidents({ page: 1, page_size: MAX_PAGE_SIZE });
+  const staffQuery = useUsers({ page: 1, page_size: MAX_PAGE_SIZE, is_staff: 1 });
+
+  // --- Mutations
+  const { canWrite } = useAuth();
+  const mayWrite = canWrite("caleido_network");
+  const createDeviceMutation = useCreateDevice();
+  const updateDeviceMutation = useUpdateDevice();
+  const commission = useCommissionDevice();
+  const decommission = useDecommissionDevice();
+  const updateIncidentMutation = useUpdateIncident();
+  const [editingDevice, setEditingDevice] = useState<{ id: string; appliance: string } | null>(null);
+  const [incidentTarget, setIncidentTarget] = useState<{
+    id: string;
+    subject: string;
+    statusId: number | null;
+    assignedToId: string | null;
+  } | null>(null);
+
+  const deviceTypes = (deviceTypesQuery.data?.items ?? []).map((type) => ({
+    value: String(type.id),
+    label: type.name ?? String(type.id),
+  }));
+  const roomNumbers = (roomsQuery.data?.items ?? []).map((room) => room.name);
+
+  const devicesData = (devicesQuery.data?.items ?? []).map((device) => ({
+    id: device.id,
+    roomNo: device.amenity_name ?? "-",
+    typeOfDevice: device.device_type_name ?? "-",
+    nameOfDevice: device.device_name ?? device.device_uid ?? "-",
+    nameOfManufacturer: device.manufacturer_name ?? "-",
+    nameOfAppliance: device.appliance_name ?? "",
+    configStatus: device.device_config_status ?? "-",
+  }));
+
+  const networkAlerts = (incidentsQuery.data?.items ?? []).map((incident) => ({
+    id: incident.id,
+    statusId: incident.current_incident_status ?? null,
+    assignedToId: incident.assignee?.id ?? null,
+    roomNo: incident.amenity_name ?? "-",
+    deviceId: incident.device_uid ?? "-",
+    deviceName: incident.device_name ?? "-",
+    severity: incident.latest_alert_severity ?? "-",
+    alert: incident.subject ?? incident.alert_type_name ?? "-",
+    dateTime: new Date(incident.created_on).toLocaleString(),
+    status: incident.status_name ?? "-",
+    assignedTo: incident.assignee?.name ?? "-",
+  }));
   const [search, setSearch] = useState("");
   const [entriesPerPage, setEntriesPerPage] = useState("10");
   const [currentPage, setCurrentPage] = useState(1);
@@ -147,8 +145,6 @@ const DeviceManagement = () => {
 
   // Modal States
   const [editDeviceOpen, setEditDeviceOpen] = useState(false);
-  const [decommissionOpen, setDecommissionOpen] = useState(false);
-  const [editAlertOpen, setEditAlertOpen] = useState(false);
   const [editFirmwareOpen, setEditFirmwareOpen] = useState(false);
   const [deleteFirmwareOpen, setDeleteFirmwareOpen] = useState(false);
 
@@ -161,16 +157,26 @@ const DeviceManagement = () => {
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) return;
 
-    const newDevice = {
-      id: String(Date.now()),
-      roomNo,
-      typeOfDevice: deviceTypes.find(d => d.value === typeOfDevice)?.label || "",
-      nameOfDevice,
-      nameOfManufacturer,
-      nameOfAppliance,
-    };
-    setDevicesData(prev => [newDevice, ...prev]);
-    handleReset();
+    const room = (roomsQuery.data?.items ?? []).find((item) => item.name === roomNo);
+    if (!room) {
+      setErrors({ typeOfDevice: "Select a room that exists" });
+      return;
+    }
+
+    createDeviceMutation.mutate(
+      {
+        device_type: Number(typeOfDevice),
+        amenity_id: room.id,
+        device_name: nameOfDevice || null,
+        manufacturer_name: nameOfManufacturer || null,
+        appliance_name: nameOfAppliance || null,
+        // `device.mfg_date` is NOT NULL; today is the honest default for a
+        // device being registered now.
+        mfg_date: new Date().toISOString(),
+        installed_on: new Date().toISOString(),
+      },
+      { onSuccess: handleReset },
+    );
   };
 
   // Handle reset
@@ -220,18 +226,14 @@ const DeviceManagement = () => {
   const networkEndIndex = networkStartIndex + parseInt(networkEntriesPerPage);
   const paginatedNetworkAlerts = filteredNetworkAlerts.slice(networkStartIndex, networkEndIndex);
 
-  // Get maintenance data based on device type
-  const getMaintenanceData = () => {
-    switch (maintenanceDeviceType) {
-      case "kleio": return kleioMaintenanceData;
-      case "intellihub": return intellihubMaintenanceData;
-      case "airq": return airqMaintenanceData;
-      case "mikos": return mikosMaintenanceData;
-      default: return kleioMaintenanceData;
-    }
-  };
-
-  const maintenanceData = getMaintenanceData();
+  // Shaft/relay operation counts and expected remaining life are not stored
+  // anywhere in the schema, so there is nothing to list.
+  const maintenanceData: {
+    id: string; roomNo: string; deviceId: string; installedDate: string;
+    shaftOperations?: string; expectedShaftLife?: string; batteryStatus?: string;
+    avgBatteryLife?: string; expectedBatteryLife?: string;
+    roomRelayOperations?: string; expectedRelayLife?: string;
+  }[] = [];
   const filteredMaintenanceData = maintenanceData.filter(item =>
     item.roomNo.toLowerCase().includes(maintenanceSearch.toLowerCase()) ||
     item.deviceId.toLowerCase().includes(maintenanceSearch.toLowerCase())
@@ -246,7 +248,7 @@ const DeviceManagement = () => {
     const pages = [];
     const maxVisiblePages = 5;
     let start = Math.max(1, current - Math.floor(maxVisiblePages / 2));
-    let end = Math.min(total, start + maxVisiblePages - 1);
+    const end = Math.min(total, start + maxVisiblePages - 1);
 
     if (end - start + 1 < maxVisiblePages) {
       start = Math.max(1, end - maxVisiblePages + 1);
@@ -469,10 +471,18 @@ const DeviceManagement = () => {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {paginatedData.length === 0 ? (
+                        {devicesQuery.isLoading || devicesQuery.error || paginatedData.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                              No devices found
+                            <TableCell colSpan={6} className="py-2">
+                              <DataState
+                                isLoading={devicesQuery.isLoading}
+                                error={devicesQuery.error}
+                                isEmpty
+                                emptyTitle="No devices found"
+                                loader={<TableLoading columns={6} />}
+                              >
+                                <span />
+                              </DataState>
                             </TableCell>
                           </TableRow>
                         ) : (
@@ -488,7 +498,15 @@ const DeviceManagement = () => {
                               <TableCell className="text-foreground">{item.nameOfAppliance || "-"}</TableCell>
                               <TableCell>
                                 <div className="flex items-center justify-center">
-                                  <Button size="sm" className="bg-[#3eb1c8] hover:bg-[#3eb1c8]/90 text-white h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditDeviceOpen(true)}>
+                                  <Button
+                                    size="sm"
+                                    className="bg-[#3eb1c8] hover:bg-[#3eb1c8]/90 text-white h-7 w-7 p-0 rounded-[3px]"
+                                    disabled={!mayWrite}
+                                    onClick={() => {
+                                      setEditingDevice({ id: item.id, appliance: item.nameOfAppliance });
+                                      setEditDeviceOpen(true);
+                                    }}
+                                  >
                                     <Edit className="h-[14px] w-[14px]" />
                                   </Button>
                                 </div>
@@ -580,12 +598,25 @@ const DeviceManagement = () => {
                               <TooltipProvider delayDuration={100}>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <Button size="sm" className="bg-[#ffc107] hover:bg-[#e0a800] text-[#333] h-8 w-8 p-0 rounded-[4px]" onClick={() => setDecommissionOpen(true)}>
+                                    <Button
+                                      size="sm"
+                                      className="bg-[#ffc107] hover:bg-[#e0a800] text-[#333] h-8 w-8 p-0 rounded-[4px]"
+                                      disabled={!mayWrite || commission.isPending || decommission.isPending}
+                                      onClick={() =>
+                                        item.configStatus === "decommissioned"
+                                          ? commission.mutate(item.id)
+                                          : decommission.mutate({ id: item.id })
+                                      }
+                                    >
                                       <Server className="h-4 w-4" />
                                     </Button>
                                   </TooltipTrigger>
                                   <TooltipContent side="left" className="bg-black text-white text-xs border-0 pr-3 pl-3 py-2 -mr-1">
-                                    Click here to change device status<br />to decommission
+                                    {item.configStatus === "decommissioned" ? (
+                                      <>Currently decommissioned.<br />Click to commission it again.</>
+                                    ) : (
+                                      <>Currently {item.configStatus}.<br />Click to decommission.</>
+                                    )}
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
@@ -664,9 +695,19 @@ const DeviceManagement = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {paginatedNetworkAlerts.length === 0 ? (
+                      {incidentsQuery.isLoading || incidentsQuery.error || paginatedNetworkAlerts.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={9} className="text-center text-muted-foreground py-8">No alerts found</TableCell>
+                          <TableCell colSpan={9} className="py-2">
+                            <DataState
+                              isLoading={incidentsQuery.isLoading}
+                              error={incidentsQuery.error}
+                              isEmpty
+                              emptyTitle="No alerts found"
+                              loader={<TableLoading columns={9} />}
+                            >
+                              <span />
+                            </DataState>
+                          </TableCell>
                         </TableRow>
                       ) : (
                         paginatedNetworkAlerts.map((item, index) => (
@@ -675,7 +716,10 @@ const DeviceManagement = () => {
                             <TableCell className="text-foreground">{item.deviceId}</TableCell>
                             <TableCell className="text-cyan-600">{item.deviceName}</TableCell>
                             <TableCell>
-                              <span className={`px-2 py-1 rounded text-xs font-medium ${item.severity === "Critical" ? "bg-red-500/20 text-red-400" : "bg-amber-500/20 text-amber-400"}`}>
+                              {/* `alert_severity` labels are lower-case: warning | critical.
+                                  Comparing against "Critical" never matched, so critical
+                                  incidents were rendered in the warning colour. */}
+                              <span className={`px-2 py-1 rounded text-xs font-medium ${item.severity === "critical" ? "bg-red-500/20 text-red-400" : "bg-amber-500/20 text-amber-400"}`}>
                                 {item.severity}
                               </span>
                             </TableCell>
@@ -685,7 +729,24 @@ const DeviceManagement = () => {
                             <TableCell className="text-foreground">{item.assignedTo}</TableCell>
                             <TableCell>
                               <div className="flex items-center justify-center">
-                                <Button size="sm" className="bg-[#3eb1c8] hover:bg-[#3eb1c8]/90 text-white h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditAlertOpen(true)}>
+                                <Button
+                                  size="sm"
+                                  className="bg-[#3eb1c8] hover:bg-[#3eb1c8]/90 text-white h-7 w-7 p-0 rounded-[3px]"
+                                  disabled={!mayWrite}
+                                  onClick={() =>
+                                    setIncidentTarget({
+                                      id: item.id,
+                                      subject: item.alert,
+                                      statusId: item.statusId,
+                                      assignedToId: item.assignedToId,
+                                    })
+                                  }
+                                  title={
+                                    mayWrite
+                                      ? "Acknowledge, assign or resolve"
+                                      : "Your role cannot change the device network"
+                                  }
+                                >
                                   <Edit className="h-[14px] w-[14px]" />
                                 </Button>
                               </div>
@@ -700,18 +761,16 @@ const DeviceManagement = () => {
                 {/* Pagination */}
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground text-sm">
-                    Showing {filteredNetworkAlerts.length > 0 ? networkStartIndex + 1 : 0} to {Math.min(networkEndIndex, filteredNetworkAlerts.length)} of 1,908,789 entries
+                    Showing {filteredNetworkAlerts.length > 0 ? networkStartIndex + 1 : 0} to {Math.min(networkEndIndex, filteredNetworkAlerts.length)} of {filteredNetworkAlerts.length} entries
                   </span>
                   <div className="flex items-center gap-1">
                     <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" onClick={() => setNetworkCurrentPage(1)} disabled={networkCurrentPage === 1}>First</Button>
                     <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" onClick={() => setNetworkCurrentPage(Math.max(1, networkCurrentPage - 1))} disabled={networkCurrentPage === 1}>Previous</Button>
-                    {[1, 2, 3, 4, 5].map((page) => (
+                    {getPageNumbers(networkTotalPages, networkCurrentPage).map((page) => (
                       <Button key={page} variant={networkCurrentPage === page ? "default" : "ghost"} size="sm" className={`w-9 h-9 p-0 ${networkCurrentPage === page ? "bg-cyan-600 text-white" : "text-muted-foreground hover:text-foreground"}`} onClick={() => setNetworkCurrentPage(page)}>{page}</Button>
                     ))}
-                    <span className="text-muted-foreground mx-1">...</span>
-                    <span className="text-muted-foreground text-sm">190,879</span>
-                    <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" onClick={() => setNetworkCurrentPage(networkCurrentPage + 1)}>Next</Button>
-                    <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">Last</Button>
+                    <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" onClick={() => setNetworkCurrentPage(Math.min(networkTotalPages, networkCurrentPage + 1))} disabled={networkCurrentPage === networkTotalPages || networkTotalPages === 0}>Next</Button>
+                    <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" onClick={() => setNetworkCurrentPage(networkTotalPages)} disabled={networkCurrentPage === networkTotalPages || networkTotalPages === 0}>Last</Button>
                   </div>
                 </div>
               </div>
@@ -720,6 +779,13 @@ const DeviceManagement = () => {
             {/* Maintenance Predictor Tab */}
             {activeTab === "maintenance" && (
               <div className="space-y-6">
+                <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                  Maintenance prediction is not available. Shaft and relay operation
+                  counts and expected remaining life are not stored in the database,
+                  and device health is only exposed one device at a time
+                  (<span className="font-mono">GET /devices/&#123;id&#125;/health</span>).
+                  No predicted figures are shown rather than estimated ones.
+                </p>
                 {/* Device Type Tabs */}
                 <div className="bg-muted/30 p-1 rounded-xl w-fit">
                   <div className="flex gap-1">
@@ -812,16 +878,16 @@ const DeviceManagement = () => {
                             <TableCell className="text-cyan-600">{item.installedDate}</TableCell>
                             {maintenanceDeviceType === "kleio" ? (
                               <>
-                                <TableCell className="text-cyan-600">{(item as typeof kleioMaintenanceData[0]).shaftOperations || "-"}</TableCell>
-                                <TableCell className="text-foreground">{(item as typeof kleioMaintenanceData[0]).expectedShaftLife || "-"}</TableCell>
-                                <TableCell className="text-foreground">{(item as typeof kleioMaintenanceData[0]).batteryStatus || "-"}</TableCell>
-                                <TableCell className="text-foreground">{(item as typeof kleioMaintenanceData[0]).avgBatteryLife || "-"}</TableCell>
-                                <TableCell className="text-foreground">{(item as typeof kleioMaintenanceData[0]).expectedBatteryLife || "-"}</TableCell>
+                                <TableCell className="text-cyan-600">{(item as typeof maintenanceData[0]).shaftOperations || "-"}</TableCell>
+                                <TableCell className="text-foreground">{(item as typeof maintenanceData[0]).expectedShaftLife || "-"}</TableCell>
+                                <TableCell className="text-foreground">{(item as typeof maintenanceData[0]).batteryStatus || "-"}</TableCell>
+                                <TableCell className="text-foreground">{(item as typeof maintenanceData[0]).avgBatteryLife || "-"}</TableCell>
+                                <TableCell className="text-foreground">{(item as typeof maintenanceData[0]).expectedBatteryLife || "-"}</TableCell>
                               </>
                             ) : (
                               <>
-                                <TableCell className="text-cyan-600">{(item as typeof intellihubMaintenanceData[0]).roomRelayOperations || "-"}</TableCell>
-                                <TableCell className="text-foreground">{(item as typeof intellihubMaintenanceData[0]).expectedRelayLife || "-"}</TableCell>
+                                <TableCell className="text-cyan-600">{(item as typeof maintenanceData[0]).roomRelayOperations || "-"}</TableCell>
+                                <TableCell className="text-foreground">{(item as typeof maintenanceData[0]).expectedRelayLife || "-"}</TableCell>
                               </>
                             )}
                           </TableRow>
@@ -864,8 +930,13 @@ const DeviceManagement = () => {
               <div className="grid grid-cols-[160px_1fr] items-center gap-4">
                 <Label className="text-sm font-medium text-gray-800">Room No <span className="text-red-500">*</span></Label>
                 <div className="relative">
-                  <select className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-500 focus:ring-0 px-0 pb-1 text-sm appearance-none outline-none">
-                    <option>101</option>
+                  <select
+                    className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-500 focus:ring-0 px-0 pb-1 text-sm appearance-none outline-none"
+                    disabled
+                  >
+                    <option>
+                      {devicesData.find((row) => row.id === editingDevice?.id)?.roomNo ?? "-"}
+                    </option>
                   </select>
                   <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                 </div>
@@ -873,79 +944,83 @@ const DeviceManagement = () => {
               <div className="grid grid-cols-[160px_1fr] items-center gap-4">
                 <Label className="text-sm font-medium text-gray-800">Type of Device <span className="text-red-500">*</span></Label>
                 <div className="relative">
-                  <select className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-500 focus:ring-0 px-0 pb-1 text-sm appearance-none outline-none">
-                    <option>Mikos</option>
+                  <select
+                    className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-500 focus:ring-0 px-0 pb-1 text-sm appearance-none outline-none"
+                    disabled
+                  >
+                    <option>
+                      {devicesData.find((row) => row.id === editingDevice?.id)?.typeOfDevice ?? "-"}
+                    </option>
                   </select>
                   <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                 </div>
               </div>
               <div className="grid grid-cols-[160px_1fr] items-center gap-4">
                 <Label className="text-sm font-medium text-gray-800">Name of Device <span className="text-red-500">*</span></Label>
-                <input type="text" defaultValue="101MIKD1" className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-500 focus:ring-0 px-0 pb-1 text-sm outline-none" />
+                <input
+                  type="text"
+                  readOnly
+                  value={devicesData.find((row) => row.id === editingDevice?.id)?.nameOfDevice ?? ""}
+                  className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-500 focus:ring-0 px-0 pb-1 text-sm outline-none"
+                />
               </div>
               <div className="grid grid-cols-[160px_1fr] items-center gap-4">
                 <Label className="text-sm font-medium text-gray-800">Name of Manufacturer <span className="text-red-500">*</span></Label>
-                <input type="text" defaultValue="CXPL" className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-500 focus:ring-0 px-0 pb-1 text-sm outline-none" />
+                <input
+                  type="text"
+                  readOnly
+                  value={
+                    devicesData.find((row) => row.id === editingDevice?.id)?.nameOfManufacturer ?? ""
+                  }
+                  className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-500 focus:ring-0 px-0 pb-1 text-sm outline-none"
+                />
               </div>
               <div className="grid grid-cols-[160px_1fr] items-center gap-4">
                 <Label className="text-sm font-medium text-gray-800">Name of Appliance</Label>
-                <input type="text" placeholder="Enter Name of Appliance" className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-500 focus:ring-0 px-0 pb-1 text-sm outline-none" />
+                <input
+                  type="text"
+                  placeholder="Enter Name of Appliance"
+                  value={editingDevice?.appliance ?? ""}
+                  onChange={(event) =>
+                    setEditingDevice((current) =>
+                      current ? { ...current, appliance: event.target.value } : current,
+                    )
+                  }
+                  className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-700 focus:ring-0 px-0 pb-1 text-sm outline-none"
+                />
               </div>
+              <p className="text-xs text-gray-500">
+                Room, device type, name and manufacturer identify the device and are
+                set when it is registered.
+              </p>
             </div>
             <div className="flex justify-center gap-4 pb-8 border-t border-gray-100 pt-6 mt-2">
               <Button variant="outline" className="text-amber-500 border-amber-500 hover:bg-amber-50 hover:text-amber-600 h-8 px-6 rounded-[3px] font-normal" onClick={() => setEditDeviceOpen(false)}>Reset</Button>
-              <Button className="bg-transparent text-[#3eb1c8] border border-[#3eb1c8] hover:bg-cyan-50 h-8 px-6 rounded-[3px] font-normal" onClick={() => setEditDeviceOpen(false)}>Submit</Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* Decommission Confirmation Modal */}
-        <Dialog open={decommissionOpen} onOpenChange={setDecommissionOpen}>
-          <DialogContent className="max-w-[400px] bg-white text-gray-900 border-0 p-0 overflow-hidden flex flex-col hide-close-button shadow-2xl [&>button]:hidden rounded-[8px]">
-            <div className="p-10 flex flex-col items-center text-center space-y-4">
-              <div className="h-[84px] w-[84px] rounded-full border-[4px] border-[#facea8] flex items-center justify-center">
-                <div className="text-[#f8bb86] text-[56px] leading-none font-light mb-2">!</div>
-              </div>
-              <div className="space-y-2 mt-2">
-                <h2 className="text-[26px] font-semibold text-[#545454]">Are you sure?</h2>
-                <p className="text-[16px] text-[#545454]">This will decommission the device!</p>
-              </div>
-
-              <div className="flex gap-2.5 justify-center pt-2">
-                <Button className="bg-[#3085d6] hover:bg-[#2b78c1] text-white text-[15px] font-medium px-4 py-2 rounded-[4px] h-[40px]" onClick={() => setDecommissionOpen(false)}>Yes, Decommission it!</Button>
-                <Button className="bg-[#d33] hover:bg-[#bd2d2d] text-white text-[15px] font-medium px-4 py-2 rounded-[4px] h-[40px]" onClick={() => setDecommissionOpen(false)}>Cancel</Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* Edit Alert Status Modal */}
-        <Dialog open={editAlertOpen} onOpenChange={setEditAlertOpen}>
-          <DialogContent className="max-w-[500px] bg-white text-gray-900 border-0 p-0 overflow-hidden flex flex-col hide-close-button shadow-2xl [&>button]:hidden rounded-[4px]">
-            <div className="flex justify-between items-center p-3 px-5 bg-white border-b border-gray-200">
-              <h2 className="text-[17px] font-semibold text-gray-800 tracking-wide">Edit alert status</h2>
-              <Button variant="ghost" className="h-7 w-7 p-0 border-[1.5px] border-gray-300 rounded-[2px] hover:bg-gray-100" onClick={() => setEditAlertOpen(false)}>
-                <X className="h-4 w-4 text-gray-500 stroke-[3]" />
+              <Button
+                className="bg-transparent text-[#3eb1c8] border border-[#3eb1c8] hover:bg-cyan-50 h-8 px-6 rounded-[3px] font-normal"
+                disabled={!editingDevice || updateDeviceMutation.isPending}
+                onClick={() =>
+                  editingDevice &&
+                  updateDeviceMutation.mutate(
+                    { id: editingDevice.id, body: { appliance_name: editingDevice.appliance || null } },
+                    { onSuccess: () => setEditDeviceOpen(false) },
+                  )
+                }
+              >
+                {updateDeviceMutation.isPending ? "Saving..." : "Submit"}
               </Button>
             </div>
-            <div className="p-8 px-10 space-y-7">
-              <div className="grid grid-cols-[80px_1fr] items-center gap-4">
-                <Label className="text-sm font-medium text-gray-800">Status <span className="text-red-500">*</span></Label>
-                <div className="relative">
-                  <select className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-500 focus:ring-0 px-0 pb-1 text-sm appearance-none outline-none">
-                    <option>Mark as unread</option>
-                    <option>Mark as read</option>
-                  </select>
-                  <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-center gap-4 pb-6 mt-1">
-              <Button className="bg-[#3eb1c8] hover:bg-[#3296a9] text-white h-8 px-6 rounded-[3px] font-normal" onClick={() => setEditAlertOpen(false)}>Update Status</Button>
-            </div>
           </DialogContent>
         </Dialog>
+
+        {/* The decommission confirmation dialog was removed: the row button is a
+            single action whose tooltip states the device's current
+            device_config_status and what clicking will change it to. */}
+
+        {/* The old "Edit alert status" dialog was removed: an ALERT is a fact a
+            device reported and has no status column. The lifecycle belongs to the
+            INCIDENT, which IncidentActionsDialog edits (and which records an
+            incident_history row for every transition). */}
       </div>
     );
   }
@@ -1256,6 +1331,17 @@ const DeviceManagement = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Network Alert Tracking -> acknowledge / assign / resolve an incident.
+          The row action already set `incidentTarget`, but this dialog was
+          imported and never rendered, so the button appeared to do nothing.
+          It writes through PATCH /incidents/{id}. */}
+      <IncidentActionsDialog
+        open={incidentTarget !== null}
+        target={incidentTarget}
+        canWrite={mayWrite}
+        onClose={() => setIncidentTarget(null)}
+      />
     </div>
   );
 };

@@ -21,41 +21,75 @@ import { Card, CardContent } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Pencil, Trash2 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+import { DataState, TableLoading } from "@/core/components/DataState";
+import { useDeviceParams, useDevices, useLimitConfigs } from "@/lib/api/hooks";
+import { useAuth } from "@/core/contexts/AuthContext";
+import { useCreateLimitConfig, useUpdateLimitConfig } from "@/lib/api/mutations";
+import { MAX_PAGE_SIZE } from "@/lib/api/types";
 
-// Parameter options
-const parameterOptions = [
-    { id: "1", name: "Voltage" },
-    { id: "2", name: "Current" },
-    { id: "3", name: "Power" },
-    { id: "4", name: "Energy 5 mnts" },
-    { id: "5", name: "Energy 24 hrs" },
-];
-
-// Device Name options
-const deviceNameOptions = [
-    { id: "1", name: "102MIK01 - Refridge" },
-    { id: "2", name: "105MIK01" },
-    { id: "3", name: "109MIK01" },
-    { id: "4", name: "401MIK01" },
-    { id: "5", name: "303MIK01" },
-    { id: "6", name: "101MIK01" },
-    { id: "7", name: "201HUB01" },
-    { id: "8", name: "201MIK01" },
-    { id: "9", name: "411HUB01" },
-    { id: "10", name: "411MIK01" },
-    { id: "11", name: "402MIK01 - CXPL" },
-    { id: "12", name: "221HUB01" },
-    { id: "13", name: "221MIK01" },
-    { id: "14", name: "307MIK01" },
-    { id: "15", name: "211HUB01 - Hub" },
-    { id: "16", name: "211MIK01 - Mikos" },
-    { id: "17", name: "3003MIK01 - Cxpl" },
-];
-
-// Sample data (empty initially)
-const limitConfigData: any[] = [];
+/**
+ * Limit Config Alert, connected to the Phase 2.7 / 2.9 APIs.
+ *
+ *   Parameter list -> GET /device-params  (the real telemetry parameter names)
+ *   Device list    -> GET /devices
+ *   Table          -> GET /value-alerts   (the recorded limit breaches)
+ *
+ * The table now lists the CONFIGURATIONS themselves (GET /limit-configs, new in
+ * Phase 3.0) rather than the breaches, because that is what this screen edits.
+ * `is_percentage_value` selects which pair of limit columns applies, and the
+ * backend stores the IKANOS text flags ('Y' / 'yes') behind the booleans.
+ *
+ * Both /device-params and /value-alerts are gated on `caleido_network` by the
+ * backend, which is the module this route is guarded with.
+ */
 
 const LimitConfigAlert = () => {
+    // --- Live data -------------------------------------------------------
+    const paramsQuery = useDeviceParams({ page: 1, page_size: MAX_PAGE_SIZE });
+    const devicesQuery = useDevices({ page: 1, page_size: MAX_PAGE_SIZE });
+    const configsQuery = useLimitConfigs({ page: 1, page_size: MAX_PAGE_SIZE });
+
+    // --- Mutations
+    const { canWrite } = useAuth();
+    const mayWrite = canWrite("caleido_network");
+    const createConfig = useCreateLimitConfig();
+    const updateConfig = useUpdateLimitConfig();
+
+    // `param_name` is not unique across device types, so de-duplicate by name.
+    const parameterOptions = [
+        ...new Map(
+            (paramsQuery.data?.items ?? []).map((param) => [param.param_name, {
+                id: String(param.id),
+                name: param.unit ? `${param.param_name} (${param.unit})` : param.param_name,
+            }]),
+        ).values(),
+    ].sort((a, b) => a.name.localeCompare(b.name));
+
+    const deviceNameOptions = (devicesQuery.data?.items ?? []).map((device) => ({
+        id: device.id,
+        name: [device.device_name, device.appliance_name].filter(Boolean).join(" - ")
+            || device.device_uid
+            || device.id,
+    }));
+
+    // Every column is a real `value_alert_limit_config` column now.
+    const limitConfigData = (configsQuery.data?.items ?? []).map((config) => ({
+        id: config.id,
+        parameter: config.parameter,
+        deviceName: config.device_name,
+        roomNo: "-",
+        limitCheck: config.limit_check ? "Yes" : "No",
+        limitBy: config.is_percentage_value ? "Percentage" : "Value",
+        nominal: config.nominal ?? "-",
+        limitLow: config.limit_low_percentage ?? "-",
+        limitHigh: config.limit_high_percentage ?? "-",
+        limitLowValue: config.limit_low_value ?? "-",
+        limitHighValue: config.limit_high_value ?? "-",
+        description: config.remarks,
+        timestamp: new Date(config.updated_on).toLocaleString(),
+        isPercentage: config.is_percentage_value,
+    }));
+
     // Form state
     const [parameter, setParameter] = useState("");
     const [deviceName, setDeviceName] = useState("");
@@ -91,17 +125,32 @@ const LimitConfigAlert = () => {
         setComments("");
     };
 
+    /**
+     * Create a monitoring threshold.
+     *
+     * `limit_by` picks which pair of columns is written: the percentage pair or
+     * the absolute pair. The backend rejects a low limit that is not below the
+     * high one, and the (device_name, parameter, facility) triple is unique.
+     */
     const handleSubmit = () => {
-        console.log("Limit Config Alert Submit:", {
-            parameter,
-            deviceName,
-            limitCheck,
-            limitBy,
-            nominal,
-            limitLow,
-            limitHigh,
-            comments
-        });
+        const device = (devicesQuery.data?.items ?? []).find((row) => row.id === deviceName);
+        if (!parameter || !device) return;
+        const byPercentage = limitBy === "percentage";
+        createConfig.mutate(
+            {
+                parameter,
+                device_name: device.device_name ?? device.device_uid ?? "",
+                device_id: device.id,
+                limit_check: limitCheck === "yes",
+                is_percentage_value: byPercentage,
+                nominal: nominal || null,
+                ...(byPercentage
+                    ? { limit_low_percentage: limitLow || null, limit_high_percentage: limitHigh || null }
+                    : { limit_low_value: limitLow || null, limit_high_value: limitHigh || null }),
+                remarks: comments || "",
+            },
+            { onSuccess: handleReset },
+        );
     };
 
     return (
@@ -302,10 +351,18 @@ const LimitConfigAlert = () => {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {paginatedData.length === 0 ? (
+                                {configsQuery.isLoading || configsQuery.error || paginatedData.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
-                                            No data available in table
+                                        <TableCell colSpan={10} className="py-2">
+                                            <DataState
+                                                isLoading={configsQuery.isLoading}
+                                                error={configsQuery.error}
+                                                isEmpty
+                                                emptyTitle="No limit configurations yet"
+                                                loader={<TableLoading columns={10} />}
+                                            >
+                                                <span />
+                                            </DataState>
                                         </TableCell>
                                     </TableRow>
                                 ) : (

@@ -22,54 +22,72 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Pencil, Trash2, X, ChevronDown, Edit } from "lucide-react";
+import { DataState, TableLoading } from "@/core/components/DataState";
+import { useNotificationTemplates, useRolePermissions, useRoles } from "@/lib/api/hooks";
+import { useAuth } from "@/core/contexts/AuthContext";
+import {
+  useCreateRole,
+  useReplaceRolePermissions,
+  useUpdateRole,
+} from "@/lib/api/mutations";
+import { MAX_PAGE_SIZE } from "@/lib/api/types";
 
-// Notification types
-const notificationTypes = [
-    "booking-confirmation",
-    "checkout-initiation",
-    "checkout-acception",
-    "checkout-confirmation",
-    "checkout-reminder",
-    "service-request-creation",
-    "service-request-assigned",
-    "service-request-status-change",
-    "maintenance-request-creation",
-    "maintenance-request-status-update",
-    "checkin-confirmation",
-    "checkout-extend",
-    "share-default-key",
-    "device-not-found",
-];
-
-// Sample data for the table
-const sampleRoles = [
-    { id: 1, userRole: "ASHOK", roleType: "Manager", notifications: "List of notifications subscribed to" },
-    { id: 2, userRole: "Floor Manager", roleType: "Manager", notifications: "List of notifications subscribed to" },
-    { id: 3, userRole: "food service", roleType: "Staff", notifications: "List of notifications subscribed to" },
-    { id: 4, userRole: "Maintenance staff", roleType: "Staff", notifications: "List of notifications subscribed to" },
-    { id: 5, userRole: "Manager", roleType: "Manager", notifications: "List of notifications subscribed to" },
-    { id: 6, userRole: "manoj", roleType: "Manager", notifications: "List of notifications subscribed to" },
-    { id: 7, userRole: "Nisha", roleType: "Staff", notifications: "List of notifications subscribed to" },
-    { id: 8, userRole: "priya", roleType: "Manager", notifications: "List of notifications subscribed to" },
-    { id: 9, userRole: "Room service", roleType: "Staff", notifications: "List of notifications subscribed to" },
-];
-
-// Web Modules data
-const webModules = [
-    { id: "dashboard", name: "Dashboard", view: true, edit: false },
-    { id: "occupancy", name: "Occupancy", view: true, edit: true },
-    { id: "bookings", name: "Bookings", view: true, edit: true },
-    { id: "services", name: "Services", view: true, edit: false },
-    { id: "configuration", name: "Configuration", view: false, edit: false },
-    { id: "offers", name: "Offers", view: true, edit: true },
-    { id: "holidays", name: "Holidays", view: true, edit: false },
-    { id: "events", name: "Events", view: true, edit: true },
-    { id: "devices", name: "Device Management", view: true, edit: false },
-    { id: "reports", name: "Reports", view: true, edit: false },
-    { id: "tickets", name: "Tickets", view: true, edit: true },
-];
+/**
+ * User Role Management, connected to the Phase 2.3 access APIs.
+ *
+ *   User Role tab -> GET /roles
+ *   Web Modules   -> GET /roles/{id}/permissions
+ *
+ * The Web Modules matrix IS the authoritative RBAC data: one row per
+ * `role_module` grant with the real `read_access` / `write_access` flags.
+ * `write_applicable` comes from the module definition and decides whether an
+ * Edit checkbox means anything at all. No role name is interpreted anywhere.
+ *
+ * The notification picker lists the template names actually registered
+ * (GET /notification-templates) instead of a hardcoded list. Template BODIES
+ * are never fetched -- they can carry OTPs and keypad keys.
+ *
+ * Phase 3.0 writes:
+ *   Create role -> POST /roles
+ *   Edit role   -> PATCH /roles/{id}
+ *   Web Modules -> PUT /roles/{id}/permissions (the whole matrix, one call)
+ *
+ * The backend refuses write-without-read, and write on a module whose
+ * `write_applicable` is false, so an invalid matrix cannot be stored.
+ *
+ * Per-role notification subscriptions have no column and no endpoint: the
+ * picker lists real template names but there is nothing to attach them to.
+ */
 
 const UserRoles = () => {
+    // --- Live data -------------------------------------------------------
+    const rolesQuery = useRoles({ page: 1, page_size: MAX_PAGE_SIZE });
+    const { canWrite } = useAuth();
+    const mayWrite = canWrite("user_roles");
+    const createRole = useCreateRole();
+    const updateRole = useUpdateRole();
+    const savePermissions = useReplaceRolePermissions();
+    const [editingRole, setEditingRole] = useState<{
+        id: string;
+        name: string;
+        roleType: string;
+    } | null>(null);
+    /** Pending matrix ticks, keyed by module id; empty until the user changes one. */
+    const [matrixEdits, setMatrixEdits] = useState<
+        Record<string, { view: boolean; edit: boolean }>
+    >({});
+    const templatesQuery = useNotificationTemplates({ page: 1, page_size: MAX_PAGE_SIZE });
+    const notificationTypes = (templatesQuery.data?.items ?? []).map((template) => template.name);
+
+    const sampleRoles = (rolesQuery.data?.items ?? []).map((role) => ({
+        id: role.id,
+        userRole: role.name,
+        roleType: role.role_type,
+        // `role` carries a description; per-role notification subscriptions
+        // are not exposed by any endpoint.
+        notifications: role.description ?? "-",
+    }));
+
     // Form state
     const [roleType, setRoleType] = useState("");
     const [roleName, setRoleName] = useState("");
@@ -82,9 +100,35 @@ const UserRoles = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [editModalOpen, setEditModalOpen] = useState(false);
 
-    // Web Modules state
+    // Web Modules state -- the matrix is whatever the backend reports for the
+    // selected role, never something derived from the role's name.
     const [selectedRole, setSelectedRole] = useState("");
-    const [modulePermissions, setModulePermissions] = useState(webModules);
+    const permissionsQuery = useRolePermissions(selectedRole || null);
+    const modulePermissions = (permissionsQuery.data ?? []).map((permission) => {
+        const key = String(permission.module_id);
+        const pending = matrixEdits[key];
+        return {
+            id: key,
+            moduleId: permission.module_id,
+            name: permission.module_name,
+            view: pending ? pending.view : permission.read_access,
+            edit: pending ? pending.edit : Boolean(permission.write_access),
+            editApplicable: permission.write_applicable !== false,
+        };
+    });
+
+    /** Write requires read, so unticking View clears Edit with it. */
+    const toggleMatrix = (moduleId: number, column: "view" | "edit", value: boolean) => {
+        const key = String(moduleId);
+        const row = modulePermissions.find((entry) => entry.id === key);
+        if (!row) return;
+        const view = column === "view" ? value : row.view;
+        const edit = column === "edit" ? value : row.edit;
+        setMatrixEdits((edits) => ({
+            ...edits,
+            [key]: { view, edit: view ? edit : false },
+        }));
+    };
 
     const handleNotificationToggle = (notification: string) => {
         setSelectedNotifications(prev =>
@@ -109,7 +153,17 @@ const UserRoles = () => {
     };
 
     const handleSubmit = () => {
-        console.log("Submitting:", { roleType, roleName, selectedNotifications });
+        if (!roleName.trim() || !roleType) return;
+        createRole.mutate(
+            { name: roleName.trim(), role_type: roleType as "staff" | "manager" | "admin" },
+            {
+                onSuccess: () => {
+                    setRoleName("");
+                    setRoleType("");
+                    setSelectedNotifications([]);
+                },
+            },
+        );
     };
 
     // Filter roles
@@ -215,7 +269,14 @@ const UserRoles = () => {
 
                             <div className="flex justify-center gap-4 pt-6 mt-6 border-t border-border/30">
                                 <Button onClick={handleReset} className="h-10 px-8 bg-cyan-600 text-white hover:bg-cyan-700">Reset</Button>
-                                <Button onClick={handleSubmit} className="h-10 px-8 bg-amber-500 hover:bg-amber-600 text-white">Submit</Button>
+                                <Button
+                                    onClick={handleSubmit}
+                                    className="h-10 px-8 bg-amber-500 hover:bg-amber-600 text-white"
+                                    disabled={!mayWrite || !roleName.trim() || !roleType || createRole.isPending}
+                                    title={mayWrite ? "Create this role" : "Your role cannot manage roles"}
+                                >
+                                    {createRole.isPending ? "Creating..." : "Submit"}
+                                </Button>
                             </div>
                         </CardContent>
                     </Card>
@@ -250,6 +311,13 @@ const UserRoles = () => {
                             </div>
 
                             <div className="rounded-xl overflow-hidden border border-gray-200">
+                              <DataState
+                                isLoading={rolesQuery.isLoading}
+                                error={rolesQuery.error}
+                                isEmpty={currentEntries.length === 0}
+                                emptyTitle="No roles found"
+                                loader={<TableLoading columns={4} />}
+                              >
                                 <Table>
                                     <TableHeader>
                                         <TableRow className="bg-gray-50 hover:bg-gray-50 border-b border-gray-200">
@@ -267,7 +335,7 @@ const UserRoles = () => {
                                                 <TableCell className="text-cyan-600">{role.notifications}</TableCell>
                                                 <TableCell className="text-center">
                                                     <div className="flex gap-2 justify-center">
-                                                        <Button size="sm" className="bg-[#3eb1c8] hover:bg-[#3eb1c8]/90 text-white h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditModalOpen(true)}>
+                                                        <Button size="sm" className="bg-[#3eb1c8] hover:bg-[#3eb1c8]/90 text-white h-7 w-7 p-0 rounded-[3px]" disabled={!mayWrite} onClick={() => { setEditingRole({ id: role.id, name: role.userRole, roleType: role.roleType }); setEditModalOpen(true); }}>
                                                             <Edit className="h-[14px] w-[14px]" />
                                                         </Button>
                                                         <Button size="sm" className="bg-red-500 hover:bg-red-600 text-white h-7 w-7 p-0 rounded-[3px]">
@@ -279,6 +347,7 @@ const UserRoles = () => {
                                         ))}
                                     </TableBody>
                                 </Table>
+                              </DataState>
                             </div>
 
                             {/* Pagination */}
@@ -307,19 +376,32 @@ const UserRoles = () => {
                         <CardContent className="p-6">
                             <div className="space-y-4 max-w-md mb-6">
                                 <Label className="text-sm font-medium">Select User Role</Label>
-                                <Select value={selectedRole} onValueChange={setSelectedRole}>
+                                <Select
+                                    value={selectedRole}
+                                    onValueChange={(next) => {
+                                        setMatrixEdits({});
+                                        setSelectedRole(next);
+                                    }}
+                                >
                                     <SelectTrigger className="h-10 bg-muted/30 border-border/50">
                                         <SelectValue placeholder="Select a role" />
                                     </SelectTrigger>
                                     <SelectContent className="bg-white">
                                         {sampleRoles.map((role) => (
-                                            <SelectItem key={role.id} value={role.userRole}>{role.userRole}</SelectItem>
+                                            <SelectItem key={role.id} value={role.id}>{role.userRole}</SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
                             </div>
 
                             <div className="rounded-xl overflow-hidden border border-gray-200">
+                              <DataState
+                                isLoading={Boolean(selectedRole) && permissionsQuery.isLoading}
+                                error={permissionsQuery.error}
+                                isEmpty={!selectedRole || modulePermissions.length === 0}
+                                emptyTitle={selectedRole ? "This role has no module grants" : "Select a role to see its module permissions"}
+                                loader={<TableLoading columns={3} />}
+                              >
                                 <Table>
                                     <TableHeader>
                                         <TableRow className="bg-gray-50 hover:bg-gray-50 border-b border-gray-200">
@@ -333,20 +415,68 @@ const UserRoles = () => {
                                             <TableRow key={module.id} className={`${index % 2 === 0 ? "bg-muted/20" : "bg-white"} hover:bg-muted/40`}>
                                                 <TableCell className="font-medium">{module.name}</TableCell>
                                                 <TableCell className="text-center">
-                                                    <Checkbox checked={module.view} />
+                                                    <Checkbox
+                                                        checked={module.view}
+                                                        disabled={!mayWrite}
+                                                        onCheckedChange={(next) =>
+                                                            toggleMatrix(module.moduleId, "view", Boolean(next))
+                                                        }
+                                                    />
                                                 </TableCell>
                                                 <TableCell className="text-center">
-                                                    <Checkbox checked={module.edit} />
+                                                    {module.editApplicable ? (
+                                                        <Checkbox
+                                                            checked={module.edit}
+                                                            disabled={!mayWrite || !module.view}
+                                                            onCheckedChange={(next) =>
+                                                                toggleMatrix(module.moduleId, "edit", Boolean(next))
+                                                            }
+                                                        />
+                                                    ) : (
+                                                        <span className="text-xs text-muted-foreground">n/a</span>
+                                                    )}
                                                 </TableCell>
                                             </TableRow>
                                         ))}
                                     </TableBody>
                                 </Table>
+                              </DataState>
                             </div>
 
-                            <div className="flex justify-center gap-4 p-6">
-                                <Button className="h-10 px-8 bg-cyan-600 text-white hover:bg-cyan-700">Reset</Button>
-                                <Button className="h-10 px-8 bg-amber-500 hover:bg-amber-600 text-white">Save</Button>
+                            <div className="flex flex-col items-center gap-2 p-6">
+                                <div className="flex justify-center gap-4">
+                                    <Button
+                                        className="h-10 px-8 bg-cyan-600 text-white hover:bg-cyan-700"
+                                        onClick={() => setMatrixEdits({})}
+                                        disabled={Object.keys(matrixEdits).length === 0}
+                                    >
+                                        Reset
+                                    </Button>
+                                    <Button
+                                        className="h-10 px-8 bg-amber-500 hover:bg-amber-600 text-white"
+                                        disabled={!mayWrite || !selectedRole || savePermissions.isPending}
+                                        onClick={() =>
+                                            savePermissions.mutate(
+                                                {
+                                                    id: selectedRole,
+                                                    permissions: modulePermissions.map((row) => ({
+                                                        module_id: row.moduleId,
+                                                        read_access: row.view,
+                                                        write_access: row.editApplicable && row.edit,
+                                                    })),
+                                                },
+                                                { onSuccess: () => setMatrixEdits({}) },
+                                            )
+                                        }
+                                    >
+                                        {savePermissions.isPending ? "Saving..." : "Save"}
+                                    </Button>
+                                </div>
+                                {!mayWrite && (
+                                    <p className="text-xs text-muted-foreground">
+                                        Your role holds no write grant on user_roles.
+                                    </p>
+                                )}
                             </div>
                         </CardContent>
                     </Card>
@@ -366,9 +496,18 @@ const UserRoles = () => {
                         <div className="grid grid-cols-[200px_1fr] items-center gap-4">
                             <Label className="text-sm font-medium text-gray-800">Role type <span className="text-red-500">*</span></Label>
                             <div className="relative">
-                                <select className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-400 focus:ring-0 px-0 pb-1 text-sm appearance-none outline-none">
-                                    <option>Manager</option>
-                                    <option>Staff</option>
+                                <select
+                                    className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-600 focus:ring-0 px-0 pb-1 text-sm appearance-none outline-none"
+                                    value={editingRole?.roleType ?? ""}
+                                    onChange={(event) =>
+                                        setEditingRole((current) =>
+                                            current ? { ...current, roleType: event.target.value } : current,
+                                        )
+                                    }
+                                >
+                                    <option value="manager">Manager</option>
+                                    <option value="staff">Staff</option>
+                                    <option value="admin">Admin</option>
                                 </select>
                                 <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                             </div>
@@ -378,8 +517,13 @@ const UserRoles = () => {
                             <Label className="text-sm font-medium text-gray-800">User Role Name <span className="text-red-500">*</span></Label>
                             <input
                                 type="text"
-                                defaultValue="ASHOK"
-                                className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-500 focus:ring-0 px-0 pb-1 text-sm outline-none"
+                                value={editingRole?.name ?? ""}
+                                onChange={(event) =>
+                                    setEditingRole((current) =>
+                                        current ? { ...current, name: event.target.value } : current,
+                                    )
+                                }
+                                className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-700 focus:ring-0 px-0 pb-1 text-sm outline-none"
                             />
                         </div>
 
@@ -396,7 +540,28 @@ const UserRoles = () => {
 
                     <div className="flex justify-center gap-4 pb-8">
                         <Button variant="outline" className="text-amber-500 border-amber-500 hover:bg-amber-50 hover:text-amber-600 h-8 px-6 rounded-[3px] font-normal" onClick={() => setEditModalOpen(false)}>Reset</Button>
-                        <Button className="bg-transparent text-[#3eb1c8] border border-[#3eb1c8] hover:bg-cyan-50 h-8 px-6 rounded-[3px] font-normal" onClick={() => setEditModalOpen(false)}>Update</Button>
+                        <Button
+                            className="bg-transparent text-[#3eb1c8] border border-[#3eb1c8] hover:bg-cyan-50 h-8 px-6 rounded-[3px] font-normal"
+                            disabled={!editingRole?.name || updateRole.isPending}
+                            onClick={() =>
+                                editingRole &&
+                                updateRole.mutate(
+                                    {
+                                        id: editingRole.id,
+                                        body: {
+                                            name: editingRole.name,
+                                            role_type: editingRole.roleType as
+                                                | "staff"
+                                                | "manager"
+                                                | "admin",
+                                        },
+                                    },
+                                    { onSuccess: () => setEditModalOpen(false) },
+                                )
+                            }
+                        >
+                            Update
+                        </Button>
                     </div>
                 </DialogContent>
             </Dialog>

@@ -21,60 +21,103 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Pencil } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { DataState, TableLoading } from "@/core/components/DataState";
+import {
+  useRooms,
+  useServiceRequests,
+  useServiceTypes,
+  useUsers,
+} from "@/lib/api/hooks";
+import { MAX_PAGE_SIZE } from "@/lib/api/types";
+import { useServiceCategories } from "@/lib/api/hooks";
+import {
+  useCancelServiceRequest,
+  useCreateServiceRequest,
+  useUpdateServiceRequest,
+} from "@/lib/api/mutations";
+import { useAuth } from "@/core/contexts/AuthContext";
+import {
+  ServiceRequestActionsDialog,
+  type ServiceRequestActionTarget,
+} from "@/features/services/components/ServiceRequestActionsDialog";
 
-// Room numbers
-const roomNumbers = ["201", "211", "221", "231", "241", "301", "302", "303", "304", "401", "411", "414"];
-
-// Service Types
-const serviceTypes = [
-  { value: "room-service", label: "Room Service" },
-  { value: "travel-desk", label: "Travel Desk" },
-  { value: "business-center", label: "Business Center" },
-  { value: "food-order", label: "Food Order" },
-  { value: "health-fitness", label: "Health & Fitness" },
-];
-
-// Departments
-const departments = [
-  { value: "admin", label: "Admin" },
-  { value: "deputy-housekeeping", label: "Deputy Housekeeping" },
-  { value: "floor-house-keeper", label: "Floor house keeper" },
-  { value: "food-service", label: "Food Service" },
-  { value: "housekeeping", label: "Housekeeping" },
-  { value: "housekeeping-manager", label: "Housekeeping Manager" },
-  { value: "maintenance", label: "Maintenance" },
-  { value: "room-service-dept", label: "Room service" },
-];
-
-// Service Categories
-const serviceCategories = ["Room Amenities", "Bath Amenities", "-"];
-
-// Service Requests
-const serviceRequests = ["Medicines", "Extra Bed", "Bedsheet", "Conditioner", "Hair Dryer", "Comb", "Shampoo", "Items"];
-
-// Staff for assignment
-const staffMembers = [
-  { value: "alice-konyak", label: "Alice konyak" },
-  { value: "binitha-g", label: "Binitha G" },
-  { value: "manukha-pandian", label: "Manukha Pandian M" },
-  { value: "nill-rajesh", label: "N.B.Rajesh Hanna" },
-];
-
-// Sample ticket data matching the image
-const ticketsData = [
-  { id: "1", serviceType: "Room Service", serviceCategory: "Room Amenities", serviceRequest: "Medicines", quantity: 2, roomNo: "221", department: "Housekeeping Manager", assignTo: "Alice konyak", date: "03-12-2024", time: "17:31", description: "", status: "Assigned" },
-  { id: "2", serviceType: "Room Service", serviceCategory: "Room Amenities", serviceRequest: "Extra Bed", quantity: 2, roomNo: "221", department: "Maintenance", assignTo: "Manukha Pandian M", date: "03-12-2024", time: "10:51", description: "", status: "Completed" },
-  { id: "3", serviceType: "Room Service", serviceCategory: "Room Amenities", serviceRequest: "Extra Bed", quantity: 2, roomNo: "231", department: "Housekeeping", assignTo: "Alice konyak", date: "25-11-2024", time: "10:15", description: "", status: "Completed" },
-  { id: "4", serviceType: "Room Service", serviceCategory: "Room Amenities", serviceRequest: "Bedsheet", quantity: 2, roomNo: "221", department: "Housekeeping", assignTo: "Alice konyak", date: "15-11-2024", time: "17:15", description: "", status: "Completed" },
-  { id: "5", serviceType: "Room Service", serviceCategory: "Bath Amenities", serviceRequest: "Conditioner", quantity: 3, roomNo: "301", department: "Housekeeping", assignTo: "Alice konyak", date: "11-11-2024", time: "12:08", description: "", status: "Completed" },
-  { id: "6", serviceType: "Room Service", serviceCategory: "Bath Amenities", serviceRequest: "Hair Dryer", quantity: 2, roomNo: "221", department: "Housekeeping", assignTo: "Alice konyak", date: "09-11-2024", time: "15:22", description: "", status: "Completed" },
-  { id: "7", serviceType: "Food Order", serviceCategory: "-", serviceRequest: "Items", quantity: "-", roomNo: "201", department: "Food Service", assignTo: "Binitha G", date: "20-09-2024", time: "11:22", description: "", status: "Assigned" },
-  { id: "8", serviceType: "Room Service", serviceCategory: "Bath Amenities", serviceRequest: "Comb", quantity: 2, roomNo: "411", department: "Food Service", assignTo: "Binitha G", date: "13-08-2024", time: "15:18", description: "", status: "Assigned" },
-  { id: "9", serviceType: "Room Service", serviceCategory: "Bath Amenities", serviceRequest: "Shampoo", quantity: 2, roomNo: "221", department: "Housekeeping", assignTo: "N.B.Rajesh Hanna", date: "05-08-2024", time: "15:05", description: "", status: "Assigned" },
-  { id: "10", serviceType: "Food Order", serviceCategory: "-", serviceRequest: "Items", quantity: "-", roomNo: "414", department: "Housekeeping", assignTo: "N.B.Rajesh Hanna", date: "03-07-2024", time: "14:31", description: "", status: "Assigned" },
-];
+/**
+ * Tickets, connected to the Phase 2.5 service APIs.
+ *
+ *   Table          -> GET /service-requests
+ *   Room picker    -> GET /rooms
+ *   Service types  -> GET /service-types
+ *   Assignee/dept  -> GET /users (staff only; departments ride along on users)
+ *
+ * A "ticket" here is a `service_request` row: the schema has no separate
+ * ticket table. The Quantity column lives on the request's ITEMS, which only
+ * GET /service-requests/{id} returns, so it shows "-" in the list.
+ *
+ * Note on RBAC: this route is guarded with the `tickets` module (its nav
+ * entry), while the backend gates /service-requests on `service_tracking`. A
+ * role holding one but not the other will see the screen answer 403 through
+ * the shared error state -- the backend stays authoritative.
+ *
+ * The create form is display-only: raising a request needs a write endpoint.
+ */
 
 const Tickets = () => {
+  // --- Live data -----------------------------------------------------------
+  const requestsQuery = useServiceRequests({ page: 1, page_size: MAX_PAGE_SIZE });
+  const roomsQuery = useRooms({ page: 1, page_size: MAX_PAGE_SIZE });
+  const serviceTypesQuery = useServiceTypes({ page: 1, page_size: MAX_PAGE_SIZE });
+  const usersQuery = useUsers({ page: 1, page_size: MAX_PAGE_SIZE, is_staff: 1 });
+
+  const roomNumbers = (roomsQuery.data?.items ?? []).map((room) => room.name);
+  const serviceTypes = (serviceTypesQuery.data?.items ?? []).map((type) => ({
+    value: String(type.id),
+    label: type.name,
+  }));
+  const staffUsers = usersQuery.data?.items ?? [];
+  const departments = [
+    ...new Map(
+      staffUsers
+        .filter((user) => user.department_id && user.department_name)
+        .map((user) => [user.department_id as string, {
+          value: user.department_id as string,
+          label: user.department_name as string,
+        }]),
+    ).values(),
+  ].sort((a, b) => a.label.localeCompare(b.label));
+  const staffMembers = staffUsers.map((user) => ({
+    value: user.id,
+    label: [user.first_name, user.last_name].filter(Boolean).join(" "),
+  }));
+
+  const categoriesQuery = useServiceCategories({ page: 1, page_size: MAX_PAGE_SIZE });
+  const serviceCategories = categoriesQuery.data?.items ?? [];
+
+  // --- Mutations
+  const { canWrite } = useAuth();
+  const mayWrite = canWrite("service_tracking");
+  const createRequest = useCreateServiceRequest();
+  const updateRequest = useUpdateServiceRequest();
+  const cancelRequest = useCancelServiceRequest();
+  const [actionTarget, setActionTarget] = useState<ServiceRequestActionTarget | null>(null);
+
+  const ticketsData = (requestsQuery.data?.items ?? []).map((request) => ({
+    id: request.id,
+    serviceType: request.service_type_name ?? "-",
+    serviceCategory: request.category_name ?? "-",
+    serviceRequest: request.ref_number ?? "-",
+    // Quantity is per ITEM and only the detail endpoint returns items.
+    quantity: "-" as string | number,
+    roomNo: request.amenity_name ?? "-",
+    department: request.department_name ?? "-",
+    assignTo: request.assignee?.name ?? "-",
+    date: new Date(request.created_on).toLocaleDateString(),
+    time: new Date(request.created_on).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    description: request.description ?? "",
+    status: request.status_name ?? "-",
+    statusId: request.status ?? null,
+    assignedToId: request.assignee?.id ?? null,
+  }));
+
   const [entriesPerPage, setEntriesPerPage] = useState("10");
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -103,11 +146,39 @@ const Tickets = () => {
     return Object.keys(newErrors).length === 0;
   };
 
+  /**
+   * Raise a real service request.
+   *
+   * `service_type` and the room are what the schema requires; naming an
+   * assignee moves the request straight to Assigned, which is the invariant
+   * every seeded row with an assignee holds. The expected date is assembled
+   * from the existing date + HH/MM/AM-PM controls.
+   */
   const handleSubmit = () => {
-    if (validateForm()) {
-      console.log("Form submitted:", { roomNo, serviceType, department, assignTo, date, timeHour, timeMinute, timePeriod, description });
-      handleReset();
-    }
+    if (!validateForm()) return;
+
+    const expected = (() => {
+      if (!date) return null;
+      const hour = Number(timeHour || "0") % 12 + (timePeriod === "PM" ? 12 : 0);
+      const minute = Number(timeMinute || "0");
+      const when = new Date(date);
+      when.setHours(hour, minute, 0, 0);
+      return when.toISOString();
+    })();
+
+    const room = (roomsQuery.data?.items ?? []).find((item) => item.name === roomNo);
+
+    createRequest.mutate(
+      {
+        service_type: Number(serviceType),
+        ...(room ? { amenity_id: room.id } : {}),
+        ...(department ? { department_id: department } : {}),
+        ...(assignTo ? { assigned_to: assignTo } : {}),
+        ...(description ? { description } : {}),
+        ...(expected ? { expected_date: expected } : {}),
+      },
+      { onSuccess: handleReset },
+    );
   };
 
   const handleReset = () => {
@@ -353,6 +424,21 @@ const Tickets = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
+                {(requestsQuery.isLoading || requestsQuery.error || filteredTickets.length === 0) && (
+                  <TableRow>
+                    <TableCell colSpan={12} className="py-2">
+                      <DataState
+                        isLoading={requestsQuery.isLoading}
+                        error={requestsQuery.error}
+                        isEmpty
+                        emptyTitle="No tickets found"
+                        loader={<TableLoading columns={11} />}
+                      >
+                        <span />
+                      </DataState>
+                    </TableCell>
+                  </TableRow>
+                )}
                 {filteredTickets.map((ticket, index) => (
                   <TableRow key={ticket.id} className={`${index % 2 === 0 ? "bg-muted/20" : "bg-white"} hover:bg-muted/40`}>
                     <TableCell className="text-cyan-600 whitespace-nowrap">{ticket.serviceType}</TableCell>
@@ -367,7 +453,24 @@ const Tickets = () => {
                     <TableCell className="max-w-[200px] truncate">{ticket.description || "-"}</TableCell>
                     <TableCell className="text-center">{getStatusBadge(ticket.status)}</TableCell>
                     <TableCell className="text-center">
-                      <Button size="sm" className="bg-cyan-600 hover:bg-cyan-700 h-7 w-7 p-0">
+                      <Button
+                        size="sm"
+                        className="bg-cyan-600 hover:bg-cyan-700 h-7 w-7 p-0"
+                        disabled={!mayWrite}
+                        onClick={() =>
+                          setActionTarget({
+                            id: ticket.id,
+                            ref: ticket.serviceRequest,
+                            statusId: ticket.statusId,
+                            assignedToId: ticket.assignedToId,
+                          })
+                        }
+                        title={
+                          mayWrite
+                            ? "Assign, change status or cancel"
+                            : "Your role cannot change service requests"
+                        }
+                      >
                         <Pencil className="h-3 w-3 text-white" />
                       </Button>
                     </TableCell>
@@ -393,6 +496,12 @@ const Tickets = () => {
           </div>
         </CardContent>
       </Card>
+      <ServiceRequestActionsDialog
+        open={Boolean(actionTarget)}
+        onClose={() => setActionTarget(null)}
+        target={actionTarget}
+        canWrite={mayWrite}
+      />
     </div>
   );
 };

@@ -35,209 +35,177 @@ import {
     DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { DataState, TableLoading } from "@/core/components/DataState";
+import { useServiceRequests, useServiceStatuses, useServiceTypes } from "@/lib/api/hooks";
+import { useAuth } from "@/core/contexts/AuthContext";
+import {
+  ServiceRequestActionsDialog,
+  type ServiceRequestActionTarget,
+} from "../components/ServiceRequestActionsDialog";
+import { MAX_PAGE_SIZE } from "@/lib/api/types";
 
-// KPI Card data
-const serviceTypes = [
-    { 
-        id: "room-service", 
-        label: "Room Service", 
-        count: "55", 
-        icon: Bed, 
-        iconColor: "text-blue-600 dark:text-blue-400", 
-        iconBg: "bg-blue-50 dark:bg-blue-950/40", 
-        barColor: "bg-blue-500",
-        hoverBorder: "hover:border-blue-500 hover:ring-2 hover:ring-blue-500/30" 
-    },
-    { 
-        id: "travel-desk", 
-        label: "Travel Desk", 
-        count: "1", 
-        icon: Briefcase, 
-        iconColor: "text-foreground dark:text-purple-400", 
-        iconBg: "bg-purple-50 dark:bg-purple-950/40", 
-        barColor: "bg-purple-500",
-        hoverBorder: "hover:border-purple-500 hover:ring-2 hover:ring-purple-500/30" 
-    },
-    { 
-        id: "business-center", 
-        label: "Business Center", 
-        count: "3", 
-        icon: Building, 
-        iconColor: "text-green-600 dark:text-green-400", 
-        iconBg: "bg-green-50 dark:bg-green-950/40", 
-        barColor: "bg-green-500",
-        hoverBorder: "hover:border-green-500 hover:ring-2 hover:ring-green-500/30" 
-    },
-    { 
-        id: "food-order", 
-        label: "Food Order", 
-        count: "51", 
-        icon: Utensils, 
-        iconColor: "text-cyan-600 dark:text-cyan-400", 
-        iconBg: "bg-cyan-50 dark:bg-cyan-950/40", 
-        barColor: "bg-cyan-500",
-        hoverBorder: "hover:border-cyan-500 hover:ring-2 hover:ring-cyan-500/30" 
-    },
-    { 
-        id: "facility-services", 
-        label: "Facility Services", 
-        count: "104174", 
-        icon: Wrench, 
-        iconColor: "text-orange-500 dark:text-orange-400", 
-        iconBg: "bg-orange-50 dark:bg-orange-950/40", 
-        barColor: "bg-orange-500",
-        hoverBorder: "hover:border-orange-500 hover:ring-2 hover:ring-orange-500/30" 
-    },
-    { 
-        id: "health-fitness", 
-        label: "Health & Fitness", 
-        count: "0", 
-        icon: HeartPulse, 
-        iconColor: "text-red-600 dark:text-red-400", 
-        iconBg: "bg-red-50 dark:bg-red-950/40", 
-        barColor: "bg-red-500",
-        hoverBorder: "hover:border-red-500 hover:ring-2 hover:ring-red-500/30" 
-    },
-    { 
-        id: "sanitization", 
-        label: "Sanitization", 
-        count: "22", 
-        icon: Sparkles, 
-        iconColor: "text-slate-600 dark:text-slate-400", 
-        iconBg: "bg-slate-100 dark:bg-slate-800/40", 
-        barColor: "bg-slate-500",
-        hoverBorder: "hover:border-slate-500 hover:ring-2 hover:ring-slate-500/30" 
-    },
-];
+/**
+ * Service Tracking, connected to the Phase 2.5 APIs.
+ *
+ *   KPI cards  -> GET /service-types  + GET /service-requests?service_type=N
+ *   Donut      -> completed vs not-completed counts of the same requests
+ *   Tables     -> GET /service-requests, filtered by the selected type
+ *
+ * The seven cards are the seven real `service_type` rows. Counts are the API's
+ * `total`, never a length of the current page. The donut splits on the real
+ * `service_status` name "Completed" -- there is no stored completion ratio.
+ *
+ * Columns with no source in `service_request`, shown as "-":
+ *   Time span (start/stop time), "Maintenance" flag and the per-request staff
+ *   list. `maintenance_request` is a separate table with no endpoint.
+ *
+ * This screen is read-only: assignment and status changes need write
+ * endpoints, which Phase 2.10 does not add.
+ */
 
-// Chart data for the donut
-// Chart Data Map
-const chartDataMap: Record<string, { name: string; value: number; color: string }[]> = {
-    "room-service": [
-        { name: "Completed", value: 59.56, color: "#22c55e" },
-        { name: "Pending", value: 40.44, color: "#ef4444" },
-    ],
-    "travel-desk": [
-        { name: "Completed", value: 80.00, color: "#22c55e" },
-        { name: "Pending", value: 20.00, color: "#ef4444" },
-    ],
-    "business-center": [
-        { name: "Pending", value: 100.00, color: "#ef4444" },
-        { name: "Completed", value: 0.00, color: "#22c55e" },
-    ],
-    "food-order": [
-        { name: "Pending", value: 50.50, color: "#ef4444" },
-        { name: "Completed", value: 49.50, color: "#22c55e" },
-    ],
-    "facility-services": [
-        { name: "Pending", value: 97.31, color: "#ef4444" },
-        { name: "Completed", value: 2.69, color: "#22c55e" },
-    ],
-    "health-fitness": [
-        { name: "Pending", value: 0, color: "#ef4444" },
-        { name: "Completed", value: 0, color: "#22c55e" },
-    ],
-    "sanitization": [
-        { name: "Sanitized", value: 98.15, color: "#22c55e" },
-        { name: "Un-Sanitized", value: 1.85, color: "#ef4444" },
-    ],
+/** Card/tab id -> icon and colour treatment, keyed by the real type name. */
+const TYPE_STYLES: Record<string, { icon: typeof Bed; iconColor: string; iconBg: string; barColor: string; hoverBorder: string }> = {
+    "Room Service": {
+        icon: Bed, iconColor: "text-blue-600 dark:text-blue-400",
+        iconBg: "bg-blue-50 dark:bg-blue-950/40", barColor: "bg-blue-500",
+        hoverBorder: "hover:border-blue-500 hover:ring-2 hover:ring-blue-500/30",
+    },
+    "Travel Desk": {
+        icon: Briefcase, iconColor: "text-foreground dark:text-purple-400",
+        iconBg: "bg-purple-50 dark:bg-purple-950/40", barColor: "bg-purple-500",
+        hoverBorder: "hover:border-purple-500 hover:ring-2 hover:ring-purple-500/30",
+    },
+    "Business Center": {
+        icon: Building, iconColor: "text-green-600 dark:text-green-400",
+        iconBg: "bg-green-50 dark:bg-green-950/40", barColor: "bg-green-500",
+        hoverBorder: "hover:border-green-500 hover:ring-2 hover:ring-green-500/30",
+    },
+    "Food Order": {
+        icon: Utensils, iconColor: "text-cyan-600 dark:text-cyan-400",
+        iconBg: "bg-cyan-50 dark:bg-cyan-950/40", barColor: "bg-cyan-500",
+        hoverBorder: "hover:border-cyan-500 hover:ring-2 hover:ring-cyan-500/30",
+    },
+    "Facility Maintenance Service": {
+        icon: Wrench, iconColor: "text-orange-500 dark:text-orange-400",
+        iconBg: "bg-orange-50 dark:bg-orange-950/40", barColor: "bg-orange-500",
+        hoverBorder: "hover:border-orange-500 hover:ring-2 hover:ring-orange-500/30",
+    },
+    "Health & Fitness": {
+        icon: HeartPulse, iconColor: "text-red-600 dark:text-red-400",
+        iconBg: "bg-red-50 dark:bg-red-950/40", barColor: "bg-red-500",
+        hoverBorder: "hover:border-red-500 hover:ring-2 hover:ring-red-500/30",
+    },
+    "Sanitation Maintenance Service": {
+        icon: Sparkles, iconColor: "text-slate-600 dark:text-slate-400",
+        iconBg: "bg-slate-100 dark:bg-slate-800/40", barColor: "bg-slate-500",
+        hoverBorder: "hover:border-slate-500 hover:ring-2 hover:ring-slate-500/30",
+    },
 };
 
-const totalServicesMap: Record<string, number> = {
-    "room-service": 136,
-    "travel-desk": 5,
-    "business-center": 3,
-    "food-order": 101,
-    "facility-services": 107414,
-    "health-fitness": 0,
-    "sanitization": 572,
+const DEFAULT_STYLE = {
+    icon: Wrench, iconColor: "text-slate-600 dark:text-slate-400",
+    iconBg: "bg-slate-100 dark:bg-slate-800/40", barColor: "bg-slate-500",
+    hoverBorder: "hover:border-slate-500 hover:ring-2 hover:ring-slate-500/30",
 };
 
-// Mock Data Definitions
-const roomServiceData = [
-    { id: 1, roomNo: "221", serviceType: "Room Service", request: "Room Amenities", item: "Items", assignedTo: "A-101 / Alice konyak", date: "05-12-2024", time: "17:43", description: "-", statusReason: "-", status: "Assigned" },
-    { id: 2, roomNo: "221", serviceType: "Room Service", request: "Room Amenities", item: "Items", assignedTo: "PE0018 / Marudhu Pandian M", date: "03-12-2024", time: "10:51", description: "-", statusReason: "-", status: "Completed" },
-    { id: 3, roomNo: "211", serviceType: "Room Service", request: "Room Amenities", item: "Items", assignedTo: "A-101 / Alice konyak", date: "25-11-2024", time: "10:35", description: "-", statusReason: "-", status: "Completed" },
-    { id: 4, roomNo: "211", serviceType: "Room Service", request: "Room Amenities", item: "Items", assignedTo: "- / -", date: "21-11-2024", time: "12:43", description: "-", statusReason: "-", status: "Completed" },
-    { id: 5, roomNo: "211", serviceType: "Room Service", request: "Room Amenities", item: "Items", assignedTo: "- / -", date: "21-11-2024", time: "12:41", description: "-", statusReason: "-", status: "Completed" },
-    { id: 6, roomNo: "211", serviceType: "Room Service", request: "Room Amenities", item: "Items", assignedTo: "- / -", date: "21-11-2024", time: "12:39", description: "-", statusReason: "-", status: "Completed" },
-    { id: 7, roomNo: "221", serviceType: "Room Service", request: "Room Amenities", item: "Items", assignedTo: "A-101 / Alice konyak", date: "15-11-2024", time: "17:15", description: "-", statusReason: "-", status: "Completed" },
-    { id: 8, roomNo: "221", serviceType: "Room Service", request: "Bath Amenities", item: "Items", assignedTo: "A-101 / Alice konyak", date: "11-11-2024", time: "12:09", description: "-", statusReason: "-", status: "Completed" },
-    { id: 9, roomNo: "221", serviceType: "Room Service", request: "Bath Amenities", item: "Items", assignedTo: "A-101 / Alice konyak", date: "09-11-2024", time: "13:22", description: "-", statusReason: "-", status: "Completed" },
-    { id: 10, roomNo: "201", serviceType: "Room Service", request: "Room Amenities", item: "Items", assignedTo: "- / -", date: "08-11-2024", time: "15:59", description: "-", statusReason: "-", status: "Pending" },
-];
-
-const travelDeskData = [
-    { id: 1, roomNo: "414", serviceType: "Travel Desk", request: "Car rental service", assignedTo: "12 / N.B. Rajesh Kanna", date: "01-07-2024", time: "12:35", description: "-", statusReason: "-", status: "Assigned" },
-    { id: 2, roomNo: "108", serviceType: "Travel Desk", request: "Transfer and chauffeur driven limousine services", assignedTo: "PE0010 / Queen Evangelin S", date: "11-05-2023", time: "12:12", description: "-", statusReason: "-", status: "Completed" },
-    { id: 3, roomNo: "108", serviceType: "Travel Desk", request: "Car rental service", assignedTo: "PE0010 / Queen Evangelin S", date: "11-05-2023", time: "11:14", description: "test", statusReason: "-", status: "Completed" },
-    { id: 4, roomNo: "108", serviceType: "Travel Desk", request: "Car rental service", assignedTo: "PE0010 / Queen Evangelin S", date: "26-04-2023", time: "17:30", description: "test", statusReason: "test", status: "Completed" },
-    { id: 5, roomNo: "2001", serviceType: "Travel Desk", request: "Ticket Bookings - Air, Train, Bus", assignedTo: "000001 / System User", date: "10-12-2022", time: "18:15", description: "test", statusReason: "-", status: "Completed" },
-];
-
-const businessCenterData = [
-    { id: 1, roomNo: "501", serviceType: "Business Center", request: "Conference and meeting facilities", assignedTo: "Place14 / Manoj A", date: "19-07-2023", time: "22:22", description: "cweyh", statusReason: "-", status: "Partially Completed" },
-    { id: 2, roomNo: "108", serviceType: "Business Center", request: "Computer desk facility", assignedTo: "PE0010 / Queen Evangelin S", date: "11-05-2023", time: "12:00", description: "-", statusReason: "-", status: "Assigned" },
-    { id: 3, roomNo: "108", serviceType: "Business Center", request: "Meeting rooms", assignedTo: "CXP001 / Pradhiksha A", date: "09-05-2023", time: "17:37", description: "-", statusReason: "-", status: "Assigned" },
-];
-
-const foodOrderData = [
-    { id: 1, roomNo: "211", menu: "Food Order", assignedTo: "- / -", date: "21-11-2024", time: "12:42", description: "-", statusReason: "-", status: "Pending" },
-    { id: 2, roomNo: "211", menu: "Food Order", assignedTo: "- / -", date: "21-11-2024", time: "12:38", description: "-", statusReason: "-", status: "Pending" },
-    { id: 3, roomNo: "211", menu: "Food Order", assignedTo: "- / -", date: "21-11-2024", time: "12:38", description: "-", statusReason: "-", status: "Pending" },
-    { id: 4, roomNo: "201", menu: "Food Order", assignedTo: "- / -", date: "08-11-2024", time: "16:00", description: "-", statusReason: "I want it tomorrow", status: "Cancelled" },
-    { id: 5, roomNo: "201", menu: "Food Order", assignedTo: "PE-04 / Radha Krishnan", date: "16-10-2024", time: "14:51", description: "-", statusReason: "-", status: "Completed" },
-    { id: 6, roomNo: "201", menu: "Food Order", assignedTo: "PE-04 / Radha Krishnan", date: "14-10-2024", time: "14:47", description: "-", statusReason: "-", status: "Completed" },
-    { id: 7, roomNo: "201", menu: "Food Order", assignedTo: "- / -", date: "14-10-2024", time: "13:20", description: "-", statusReason: "-", status: "Completed" },
-    { id: 8, roomNo: "412", menu: "Food Order", assignedTo: "12 / N.B. Rajesh Kanna", date: "27-09-2024", time: "16:51", description: "test", statusReason: "test", status: "Completed" },
-    { id: 9, roomNo: "412", menu: "Food Order", assignedTo: "- / -", date: "26-09-2024", time: "16:44", description: "test test", statusReason: "-", status: "Pending" },
-    { id: 10, roomNo: "201", menu: "Food Order", assignedTo: "PE00015 / Brindha G", date: "26-04-2024", time: "11:22", description: "-", statusReason: "-", status: "Assigned" },
-];
-
-const facilityServicesData = [
-    { id: 1, management: "Scheduled", category: "Room Cleaning", type: "Housekeeping", dept: "Maintenance", assignedTo: "View staff", from: "27-01-2026", to: "27-01-2026", start: "11:05", end: "11:20", roomNo: "View rooms", maintenance: "No", status: "Assigned" },
-    { id: 2, management: "Scheduled", category: "Room Cleaning", type: "Cleaning", dept: "Room service", assignedTo: "View staff", from: "27-01-2026", to: "27-01-2026", start: "15:41", end: "19:01", roomNo: "View rooms", maintenance: "No", status: "Assigned" },
-    { id: 3, management: "Scheduled", category: "Room Cleaning", type: "Housekeeping", dept: "Housekeeping", assignedTo: "View staff", from: "27-01-2026", to: "27-01-2026", start: "16:53", end: "17:01", roomNo: "View rooms", maintenance: "No", status: "Assigned" },
-    { id: 4, management: "Scheduled", category: "Room Cleaning", type: "Cleaning", dept: "Maintenance", assignedTo: "View staff", from: "27-01-2026", to: "27-01-2026", start: "12:14", end: "12:15", roomNo: "View rooms", maintenance: "No", status: "Assigned" },
-    { id: 5, management: "Scheduled", category: "Room Cleaning", type: "Cleaning", dept: "Maintenance", assignedTo: "View staff", from: "27-01-2026", to: "27-01-2026", start: "13:01", end: "13:02", roomNo: "View rooms", maintenance: "No", status: "Assigned" },
-    { id: 6, management: "Scheduled", category: "Room Cleaning", type: "Cleaning", dept: "Maintenance", assignedTo: "View staff", from: "27-01-2026", to: "27-01-2026", start: "13:17", end: "13:18", roomNo: "View rooms", maintenance: "No", status: "Assigned" },
-    { id: 7, management: "Scheduled", category: "Room Cleaning", type: "Cleaning", dept: "Maintenance", assignedTo: "View staff", from: "27-01-2026", to: "27-01-2026", start: "14:28", end: "14:29", roomNo: "View rooms", maintenance: "No", status: "Assigned" },
-    { id: 8, management: "Scheduled", category: "Room Cleaning", type: "Cleaning", dept: "Room service", assignedTo: "View staff", from: "27-01-2026", to: "27-01-2026", start: "14:48", end: "18:03", roomNo: "View rooms", maintenance: "No", status: "Assigned" },
-    { id: 9, management: "Scheduled", category: "Room Cleaning", type: "Cleaning", dept: "Housekeeping", assignedTo: "View staff", from: "27-01-2026", to: "27-01-2026", start: "15:18", end: "16:01", roomNo: "View rooms", maintenance: "No", status: "Assigned" },
-    { id: 10, management: "Scheduled", category: "Room Cleaning", type: "Cleaning", dept: "Maintenance", assignedTo: "View staff", from: "27-01-2026", to: "27-01-2026", start: "03:18", end: "19:19", roomNo: "View rooms", maintenance: "No", status: "Assigned" },
-];
-
-const sanitizationData = [
-    { id: 1, management: "Disinfection", category: "Sanitation", type: "Guest Room sanitation", dept: "Housekeeping", assignedTo: "View staff", from: "05-12-2024", to: "05-12-2024", start: "14:42", end: "19:00", roomNo: "View rooms", status: "Completed" },
-    { id: 2, management: "Disinfection", category: "Sanitation", type: "Guest Room sanitation", dept: "Housekeeping", assignedTo: "View staff", from: "02-12-2024", to: "02-12-2024", start: "12:33", end: "14:20", roomNo: "View rooms", status: "Completed" },
-    { id: 3, management: "Disinfection", category: "Sanitation", type: "Guest Room sanitation", dept: "Housekeeping", assignedTo: "View staff", from: "27-11-2024", to: "27-11-2024", start: "12:47", end: "19:00", roomNo: "View rooms", status: "Completed" },
-    { id: 4, management: "Disinfection", category: "Sanitation", type: "Guest Room sanitation", dept: "Housekeeping", assignedTo: "View staff", from: "26-11-2024", to: "26-11-2024", start: "11:44", end: "14:30", roomNo: "View rooms", status: "Completed" },
-    { id: 5, management: "Disinfection", category: "Sanitation", type: "Guest Room sanitation", dept: "Housekeeping", assignedTo: "View staff", from: "15-11-2024", to: "15-11-2024", start: "17:00", end: "19:00", roomNo: "View rooms", status: "Completed" },
-    { id: 6, management: "Disinfection", category: "Sanitation", type: "Guest Room sanitation", dept: "Housekeeping", assignedTo: "View staff", from: "12-11-2024", to: "12-11-2024", start: "12:45", end: "12:48", roomNo: "View rooms", status: "Completed" },
-    { id: 7, management: "Disinfection", category: "Sanitation", type: "Guest Room sanitation", dept: "Housekeeping", assignedTo: "View staff", from: "08-11-2024", to: "08-11-2024", start: "15:42", end: "17:00", roomNo: "View rooms", status: "Completed" },
-    { id: 8, management: "Disinfection", category: "Sanitation", type: "Guest Room sanitation", dept: "Housekeeping", assignedTo: "View staff", from: "30-10-2024", to: "30-10-2024", start: "11:50", end: "12:00", roomNo: "View rooms", status: "Completed" },
-    { id: 9, management: "Disinfection", category: "Sanitation", type: "Guest Room sanitation", dept: "Housekeeping", assignedTo: "View staff", from: "29-10-2024", to: "29-10-2024", start: "17:25", end: "17:55", roomNo: "View rooms", status: "Completed" },
-    { id: 10, management: "Disinfection", category: "Sanitation", type: "Guest Room sanitation", dept: "Housekeeping", assignedTo: "View staff", from: "28-10-2024", to: "28-10-2024", start: "11:05", end: "11:10", roomNo: "View rooms", status: "Completed" },
-];
+const formatDate = (value: string | null) => (value ? new Date(value).toLocaleDateString() : "-");
+const formatTime = (value: string | null) =>
+    value ? new Date(value).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "-";
 
 const ServiceTracking = () => {
-    const [activeService, setActiveService] = useState("room-service");
+    const [activeService, setActiveService] = useState<number | null>(null);
     const [entriesPerPage, setEntriesPerPage] = useState("10");
     const [searchQuery, setSearchQuery] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
     const [statusModalConfig, setStatusModalConfig] = useState<{ isOpen: boolean; type: "yellow" | "red" | "blue" | null }>({ isOpen: false, type: null });
+    // The real action target: assign / change status / cancel.
+    const [actionTarget, setActionTarget] = useState<ServiceRequestActionTarget | null>(null);
+    const { canWrite } = useAuth();
+    const mayWriteTracking = canWrite("service_tracking");
     const [itemsModalConfig, setItemsModalConfig] = useState<{ isOpen: boolean; roomNo: string }>({ isOpen: false, roomNo: "" });
 
-    const currentChartData = chartDataMap[activeService] || chartDataMap["room-service"];
-    const totalServices = totalServicesMap[activeService] || 136;
+    // --- Live data -------------------------------------------------------
+    const typesQuery = useServiceTypes({ page: 1, page_size: MAX_PAGE_SIZE });
+    const statusesQuery = useServiceStatuses({ page: 1, page_size: MAX_PAGE_SIZE });
+    // One page of every request: the cards need per-type counts and the donut
+    // needs the status split, and the seeded volume fits inside one page.
+    const allRequestsQuery = useServiceRequests({ page: 1, page_size: MAX_PAGE_SIZE });
+
+    const serviceTypeRows = typesQuery.data?.items ?? [];
+    const allRequests = allRequestsQuery.data?.items ?? [];
+
+    const selectedTypeId = activeService ?? serviceTypeRows[0]?.id ?? null;
+    const selectedType = serviceTypeRows.find((type) => type.id === selectedTypeId);
+
+    const serviceTypes = serviceTypeRows.map((type) => {
+        const style = TYPE_STYLES[type.name] ?? DEFAULT_STYLE;
+        return {
+            id: type.id,
+            label: type.name,
+            count: String(allRequests.filter((request) => request.service_type === type.id).length),
+            ...style,
+        };
+    });
+
+    const requestsForType = allRequests.filter(
+        (request) => request.service_type === selectedTypeId,
+    );
+
+    const completedCount = requestsForType.filter(
+        (request) => request.status_name === "Completed",
+    ).length;
+    const totalServices = requestsForType.length;
+    const currentChartData = totalServices
+        ? [
+            { name: "Completed", value: Number(((completedCount / totalServices) * 100).toFixed(2)), color: "#22c55e" },
+            { name: "Pending", value: Number((((totalServices - completedCount) / totalServices) * 100).toFixed(2)), color: "#ef4444" },
+        ]
+        : [];
+
+    // One row shape covering every table variant below. Each value is a real
+    // `service_request` field; "-" means the schema has no such column.
+    const rows = requestsForType.map((request) => ({
+        id: request.id,
+        statusId: request.status ?? null,
+        assignedToId: request.assignee?.id ?? null,
+        statusReasonRaw: request.status_reason ?? null,
+        refNumber: request.ref_number ?? "-",
+        roomNo: request.amenity_name ?? "-",
+        serviceType: request.service_type_name ?? "-",
+        request: request.category_name ?? "-",
+        item: "Items",
+        menu: request.category_name ?? "-",
+        management: request.request_source ?? "-",
+        category: request.category_name ?? "-",
+        type: request.service_type_name ?? "-",
+        dept: request.department_name ?? "-",
+        assignedTo: request.assignee
+            ? [request.assignee.emp_id, request.assignee.name].filter(Boolean).join(" / ")
+            : "- / -",
+        date: formatDate(request.created_on),
+        time: formatTime(request.created_on),
+        from: formatDate(request.created_on),
+        to: formatDate(request.expected_date),
+        start: formatTime(request.created_on),
+        end: formatTime(request.completed_on),
+        maintenance: "-",
+        description: request.description ?? "-",
+        statusReason: request.status_reason ?? "-",
+        status: request.status_name ?? "-",
+    }));
+
+    const isLoading =
+        typesQuery.isLoading || statusesQuery.isLoading || allRequestsQuery.isLoading;
+    const error = typesQuery.error ?? statusesQuery.error ?? allRequestsQuery.error;
 
     const getStatusBadge = (status: string) => {
         let colorClass = "bg-gray-500/20 text-gray-400";
-        if (status === "Assigned") colorClass = "bg-cyan-500/20 text-cyan-400";
-        else if (status === "Completed") colorClass = "bg-emerald-500/20 text-emerald-500";
-        else if (status === "Pending") colorClass = "bg-amber-500/20 text-amber-500";
-        else if (status === "Cancelled") colorClass = "bg-red-500/20 text-red-500";
-        else if (status === "Partially Completed") colorClass = "bg-blue-500/20 text-blue-500";
+        const normalised = status.toLowerCase();
+        if (normalised === "assigned") colorClass = "bg-cyan-500/20 text-cyan-400";
+        else if (normalised === "completed") colorClass = "bg-emerald-500/20 text-emerald-500";
+        else if (normalised === "pending") colorClass = "bg-amber-500/20 text-amber-500";
+        else if (normalised === "canceled" || normalised === "cancelled") colorClass = "bg-red-500/20 text-red-500";
+        else if (normalised === "partially completed") colorClass = "bg-blue-500/20 text-blue-500";
 
         return (
             <Badge className={`${colorClass} hover:${colorClass} font-medium border-0`}>
@@ -246,22 +214,34 @@ const ServiceTracking = () => {
         );
     };
 
-    const renderAction = (status: string) => {
+    const renderAction = (status: string, row?: (typeof rows)[number]) => {
         let bgColor = "bg-[#808080] hover:bg-[#666666]"; // Default for Completed etc
         let modalType: "yellow" | "red" | "blue" | null = null;
-        if (status === "Assigned") { bgColor = "bg-[#e5a910] hover:bg-[#cc960e]"; modalType = "yellow"; }
-        else if (status === "Pending" || status === "Cancelled") { bgColor = "bg-[#ed5565] hover:bg-[#da4453]"; modalType = "red"; }
-        else if (status === "Partially Completed") { bgColor = "bg-[#3eb1c8] hover:bg-[#2e93a8]"; modalType = "blue"; }
+        const normalised = status.toLowerCase();
+        if (normalised === "assigned") { bgColor = "bg-[#e5a910] hover:bg-[#cc960e]"; modalType = "yellow"; }
+        else if (normalised === "pending" || normalised.startsWith("cancel")) { bgColor = "bg-[#ed5565] hover:bg-[#da4453]"; modalType = "red"; }
+        else if (normalised === "partially completed") { bgColor = "bg-[#3eb1c8] hover:bg-[#2e93a8]"; modalType = "blue"; }
 
         return (
             <div className="flex justify-center gap-2">
                 <Button
                     size="icon"
                     className={`h-7 w-7 ${bgColor} text-white rounded-sm`}
+                    disabled={!mayWriteTracking || !row}
+                    title={
+                        mayWriteTracking
+                            ? "Assign, change status or cancel"
+                            : "Your role cannot change service requests"
+                    }
                     onClick={() => {
-                        if (modalType) {
-                            setStatusModalConfig({ isOpen: true, type: modalType });
-                        }
+                        if (!row) return;
+                        setActionTarget({
+                            id: row.id,
+                            ref: row.refNumber,
+                            statusId: row.statusId,
+                            assignedToId: row.assignedToId,
+                            statusReason: row.statusReasonRaw,
+                        });
                     }}
                 >
                     <Settings className="h-4 w-4" />
@@ -271,8 +251,8 @@ const ServiceTracking = () => {
     };
 
     const renderTable = () => {
-        switch (activeService) {
-            case "room-service":
+        switch (selectedType?.name) {
+            case "Room Service":
                 return (
                     <Table>
                         <TableHeader>
@@ -291,7 +271,7 @@ const ServiceTracking = () => {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {roomServiceData.map((row) => (
+                            {rows.map((row) => (
                                 <TableRow key={row.id} className="border-b border-gray-200 bg-white hover:bg-muted/50">
                                     <TableCell className="font-medium text-foreground">{row.roomNo}</TableCell>
                                     <TableCell>{row.serviceType}</TableCell>
@@ -312,14 +292,14 @@ const ServiceTracking = () => {
                                     <TableCell className="text-muted-foreground">{row.statusReason}</TableCell>
                                     <TableCell>{getStatusBadge(row.status)}</TableCell>
                                     <TableCell>
-                                        {renderAction(row.status)}
+                                        {renderAction(row.status, row)}
                                     </TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
                     </Table>
                 );
-            case "travel-desk":
+            case "Travel Desk":
                 return (
                     <Table>
                         <TableHeader>
@@ -337,7 +317,7 @@ const ServiceTracking = () => {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {travelDeskData.map((row) => (
+                            {rows.map((row) => (
                                 <TableRow key={row.id} className="border-b border-gray-200 bg-white hover:bg-muted/50">
                                     <TableCell className="font-medium text-foreground">{row.roomNo}</TableCell>
                                     <TableCell>{row.serviceType}</TableCell>
@@ -349,14 +329,14 @@ const ServiceTracking = () => {
                                     <TableCell className="text-muted-foreground">{row.statusReason}</TableCell>
                                     <TableCell>{getStatusBadge(row.status)}</TableCell>
                                     <TableCell>
-                                        {renderAction(row.status)}
+                                        {renderAction(row.status, row)}
                                     </TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
                     </Table>
                 );
-            case "business-center":
+            case "Business Center":
                 return (
                     <Table>
                         <TableHeader>
@@ -374,7 +354,7 @@ const ServiceTracking = () => {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {businessCenterData.map((row) => (
+                            {rows.map((row) => (
                                 <TableRow key={row.id} className="border-b border-gray-200 bg-white hover:bg-muted/50">
                                     <TableCell className="font-medium text-foreground">{row.roomNo}</TableCell>
                                     <TableCell>{row.serviceType}</TableCell>
@@ -386,14 +366,14 @@ const ServiceTracking = () => {
                                     <TableCell className="text-muted-foreground">{row.statusReason}</TableCell>
                                     <TableCell>{getStatusBadge(row.status)}</TableCell>
                                     <TableCell>
-                                        {renderAction(row.status)}
+                                        {renderAction(row.status, row)}
                                     </TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
                     </Table>
                 );
-            case "food-order":
+            case "Food Order":
                 return (
                     <Table>
                         <TableHeader>
@@ -410,7 +390,7 @@ const ServiceTracking = () => {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {foodOrderData.map((row) => (
+                            {rows.map((row) => (
                                 <TableRow key={row.id} className="border-b border-gray-200 bg-white hover:bg-muted/50">
                                     <TableCell className="font-medium text-foreground">{row.roomNo}</TableCell>
                                     <TableCell>
@@ -429,14 +409,14 @@ const ServiceTracking = () => {
                                     <TableCell>{getStatusBadge(row.status)}</TableCell>
                                     <TableCell className="text-muted-foreground">{row.statusReason}</TableCell>
                                     <TableCell>
-                                        {renderAction(row.status)}
+                                        {renderAction(row.status, row)}
                                     </TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
                     </Table>
                 );
-            case "facility-services":
+            case "Facility Maintenance Service":
                 return (
                     <Table>
                         <TableHeader>
@@ -457,7 +437,7 @@ const ServiceTracking = () => {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {facilityServicesData.map((row) => (
+                            {rows.map((row) => (
                                 <TableRow key={row.id} className="border-b border-gray-200 bg-white hover:bg-muted/50">
                                     <TableCell>{row.management}</TableCell>
                                     <TableCell>{row.category}</TableCell>
@@ -472,14 +452,14 @@ const ServiceTracking = () => {
                                     <TableCell>{row.maintenance}</TableCell>
                                     <TableCell>{getStatusBadge(row.status)}</TableCell>
                                     <TableCell>
-                                        {renderAction(row.status)}
+                                        {renderAction(row.status, row)}
                                     </TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
                     </Table>
                 );
-            case "sanitization":
+            case "Sanitation Maintenance Service":
                 return (
                     <Table>
                         <TableHeader>
@@ -499,7 +479,7 @@ const ServiceTracking = () => {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {sanitizationData.map((row) => (
+                            {rows.map((row) => (
                                 <TableRow key={row.id} className="border-b border-gray-200 bg-white hover:bg-muted/50">
                                     <TableCell>{row.management}</TableCell>
                                     <TableCell>{row.category}</TableCell>
@@ -513,7 +493,7 @@ const ServiceTracking = () => {
                                     <TableCell className="text-blue-600 cursor-pointer hover:underline">{row.roomNo}</TableCell>
                                     <TableCell>{getStatusBadge(row.status)}</TableCell>
                                     <TableCell>
-                                        {renderAction(row.status)}
+                                        {renderAction(row.status, row)}
                                     </TableCell>
                                 </TableRow>
                             ))}
@@ -521,20 +501,51 @@ const ServiceTracking = () => {
                     </Table>
                 );
             default:
+                // Any other service type uses the standard request columns.
                 return (
-                    <div className="flex flex-col items-center justify-center p-12 text-muted-foreground">
-                        <div className="bg-muted p-4 rounded-full mb-4">
-                            <Eye className="h-8 w-8 text-muted-foreground" />
-                        </div>
-                        <h3 className="text-lg font-medium text-foreground mb-1">No Data Available</h3>
-                        <p className="text-sm">Details for {serviceTypes.find(s => s.id === activeService)?.label} will be available soon.</p>
-                    </div>
+                    <Table>
+                        <TableHeader>
+                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                                <TableHead className="text-gray-600 font-medium">Room No</TableHead>
+                                <TableHead className="text-gray-600 font-medium">Service Type</TableHead>
+                                <TableHead className="text-gray-600 font-medium">Service Request</TableHead>
+                                <TableHead className="text-gray-600 font-medium">Assigned To</TableHead>
+                                <TableHead className="text-gray-600 font-medium">Date</TableHead>
+                                <TableHead className="text-gray-600 font-medium">Time</TableHead>
+                                <TableHead className="text-gray-600 font-medium">Description</TableHead>
+                                <TableHead className="text-gray-600 font-medium">Status Reason</TableHead>
+                                <TableHead className="text-gray-600 font-medium">Status</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {rows.map((row) => (
+                                <TableRow key={row.id} className="border-b border-gray-200 bg-white hover:bg-muted/50">
+                                    <TableCell className="font-medium text-foreground">{row.roomNo}</TableCell>
+                                    <TableCell>{row.serviceType}</TableCell>
+                                    <TableCell>{row.request}</TableCell>
+                                    <TableCell className="text-muted-foreground">{row.assignedTo}</TableCell>
+                                    <TableCell>{row.date}</TableCell>
+                                    <TableCell>{row.time}</TableCell>
+                                    <TableCell className="text-muted-foreground">{row.description}</TableCell>
+                                    <TableCell className="text-muted-foreground">{row.statusReason}</TableCell>
+                                    <TableCell>{getStatusBadge(row.status)}</TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
                 );
         }
     };
 
     return (
         <div className="space-y-6 animate-fade-in bg-[hsl(220,20%,96%)] min-h-screen -m-6 p-6">
+            <ServiceRequestActionsDialog
+                open={Boolean(actionTarget)}
+                onClose={() => setActionTarget(null)}
+                target={actionTarget}
+                canWrite={mayWriteTracking}
+            />
+
             {/* Page Header */}
             <div className="mb-2">
                 <h1 className="text-2xl font-semibold text-foreground">Dashboard</h1>
@@ -549,7 +560,7 @@ const ServiceTracking = () => {
                             <button
                                 key={card.id}
                                 onClick={() => setActiveService(card.id)}
-                                className={`relative bg-white rounded-xl border-2 border-gray-100 shadow-sm overflow-hidden px-5 pt-5 pb-4 transition-all duration-200 cursor-pointer text-left flex flex-col gap-2 ${card.hoverBorder} ${card.id === activeService ? "ring-2 ring-primary shadow-md" : ""}`}
+                                className={`relative bg-white rounded-xl border-2 border-gray-100 shadow-sm overflow-hidden px-5 pt-5 pb-4 transition-all duration-200 cursor-pointer text-left flex flex-col gap-2 ${card.hoverBorder} ${card.id === selectedTypeId ? "ring-2 ring-primary shadow-md" : ""}`}
                             >
                                 {/* Icon Badge */}
                                 <div className={`w-10 h-10 rounded-full ${card.iconBg} flex items-center justify-center`}>
@@ -648,7 +659,15 @@ const ServiceTracking = () => {
             </div>
 
             <div className="rounded-sm overflow-hidden border border-gray-200 bg-white">
-                {renderTable()}
+                <DataState
+                    isLoading={isLoading}
+                    error={error}
+                    isEmpty={rows.length === 0}
+                    emptyTitle="No service requests for this service type"
+                    loader={<TableLoading columns={10} />}
+                >
+                    {renderTable()}
+                </DataState>
             </div>
             {/* Footer */}
             <div className="flex items-center justify-between mt-4 text-muted-foreground">

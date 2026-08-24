@@ -42,6 +42,22 @@ import {
   ArrowLeft,
   LogIn,
 } from "lucide-react";
+import { DataState, TableLoading } from "@/core/components/DataState";
+import { toast } from "@/hooks/use-toast";
+import { MAX_PAGE_SIZE } from "@/lib/api/types";
+import { useRooms, useStays, useUsers } from "@/lib/api/hooks";
+import { describeApiError } from "@/lib/api/client";
+import {
+  useCancelStay,
+  useCreateUser,
+  useUpdateStay,
+  useCheckInStay,
+  useCheckOutStay,
+  useCreateStay,
+  useExtendStay,
+  useSetStayDocumentApproval,
+} from "@/lib/api/mutations";
+import { useAuth } from "@/core/contexts/AuthContext";
 
 type BookingData = {
   id: string;
@@ -56,154 +72,98 @@ type BookingData = {
   extendCheckOut: boolean;
   bookingDate: string;
   documentsApproval: boolean;
+  /** `stay.status`: pending | active | checkout ... | checked out | cancelled. */
+  status: string;
+  isCheckedIn: boolean;
+  isCheckedOut: boolean;
+  expectedCheckout: string;
+  stayRef: string;
 };
 
-const mockBookings: BookingData[] = [
-  {
-    id: "1",
-    name: "Siva Subramanian N",
-    mobileNumber: "+91 6381332167",
-    email: "sivasubramaniannarayanan@gmail.com",
-    occupants: 1,
-    roomNo: "211",
-    roomType: "Golden Package",
-    noOfRooms: 1,
-    checkIn: "27-12-2025 16:22",
-    extendCheckOut: false,
-    bookingDate: "27-12-2025",
-    documentsApproval: true,
-  },
-  {
-    id: "2",
-    name: "Senra A",
-    mobileNumber: "+91 7397003222",
-    email: "",
-    occupants: 1,
-    roomNo: "",
-    roomType: "Golden Package",
-    noOfRooms: 1,
-    checkIn: "",
-    extendCheckOut: false,
-    bookingDate: "16-10-2025",
-    documentsApproval: true,
-  },
-  {
-    id: "3",
-    name: "cspi cspi",
-    mobileNumber: "+91 8300275378",
-    email: "senthikumaran@gmail.com",
-    occupants: 1,
-    roomNo: "",
-    roomType: "Delux Package",
-    noOfRooms: 1,
-    checkIn: "",
-    extendCheckOut: false,
-    bookingDate: "19-11-2024",
-    documentsApproval: true,
-  },
-  {
-    id: "4",
-    name: "Queen S",
-    mobileNumber: "+91 9090441916",
-    email: "squeenevangelin@gmail.com",
-    occupants: 1,
-    roomNo: "",
-    roomType: "Golden Package",
-    noOfRooms: 1,
-    checkIn: "",
-    extendCheckOut: false,
-    bookingDate: "12-11-2024",
-    documentsApproval: true,
-  },
-  {
-    id: "5",
-    name: "Caleido Pilot",
-    mobileNumber: "+91 8300275377",
-    email: "caleidopilot@gmail.com",
-    occupants: 1,
-    roomNo: "",
-    roomType: "Delux Package",
-    noOfRooms: 1,
-    checkIn: "",
-    extendCheckOut: false,
-    bookingDate: "05-11-2024",
-    documentsApproval: true,
-  },
-  {
-    id: "6",
-    name: "Ganesan K",
-    mobileNumber: "+91 9894014096",
-    email: "",
-    occupants: 1,
-    roomNo: "",
-    roomType: "Golden Package",
-    noOfRooms: 1,
-    checkIn: "",
-    extendCheckOut: false,
-    bookingDate: "22-10-2024",
-    documentsApproval: true,
-  },
-  {
-    id: "7",
-    name: "Yamuna devi",
-    mobileNumber: "+91 9566842991",
-    email: "yamunasakthi78@gmail.com",
-    occupants: 1,
-    roomNo: "",
-    roomType: "Delux Package",
-    noOfRooms: 1,
-    checkIn: "",
-    extendCheckOut: false,
-    bookingDate: "01-07-2023",
-    documentsApproval: true,
-  },
-  {
-    id: "8",
-    name: "John Lewis",
-    mobileNumber: "+91 8529637410",
-    email: "johnlll@gmail.com",
-    occupants: 1,
-    roomNo: "",
-    roomType: "Delux Package",
-    noOfRooms: 1,
-    checkIn: "",
-    extendCheckOut: false,
-    bookingDate: "05-05-2023",
-    documentsApproval: true,
-  },
-  {
-    id: "9",
-    name: "Dayawan Johnson",
-    mobileNumber: "+1 4544732451",
-    email: "dayawan@gmail.com",
-    occupants: 1,
-    roomNo: "",
-    roomType: "Delux Package",
-    noOfRooms: 1,
-    checkIn: "",
-    extendCheckOut: false,
-    bookingDate: "05-05-2023",
-    documentsApproval: true,
-  },
-  {
-    id: "10",
-    name: "Ananthi Vasan",
-    mobileNumber: "+91 9876543213",
-    email: "ananthi123@gmail.com",
-    occupants: 1,
-    roomNo: "",
-    roomType: "Delux Package",
-    noOfRooms: 1,
-    checkIn: "",
-    extendCheckOut: false,
-    bookingDate: "14-03-2023",
-    documentsApproval: true,
-  },
-];
+/**
+ * Bookings, connected to GET /stays.
+ *
+ * THERE IS NO /bookings ENDPOINT AND NO booking TABLE. Phase 2.8 established
+ * that a reservation is a `stay`, so that is what this screen lists -- no
+ * parallel booking API was invented for it.
+ *
+ * Field mapping (all real `stay` columns):
+ *   name          -> booker.name        (the UserRef; there is no guest table)
+ *   occupants     -> no_of_guests
+ *   noOfRooms     -> no_of_rooms
+ *   checkIn       -> actual_checkin_time
+ *   bookingDate   -> created_on
+ *   docsApproval  -> document_approval_status
+ *
+ * NOT AVAILABLE on the stay projection, shown as "-": guest mobile number,
+ * guest email and the allocated room number. `UserRef` is deliberately just
+ * (id, name, emp_id), and rooms come from
+ * GET /stays/{id}/room-allocations one stay at a time.
+ *
+ * Creating a booking, checking in and extending a checkout are write flows
+ * with no endpoint; those controls are disabled.
+ */
 
 type ViewMode = "list" | "add" | "edit";
 
 const Bookings = () => {
+  // --- Live data -----------------------------------------------------------
+  const staysQuery = useStays({ page: 1, page_size: MAX_PAGE_SIZE });
+
+  const mockBookings: BookingData[] = (staysQuery.data?.items ?? []).map((stay) => ({
+    id: stay.id,
+    name: stay.booker?.name ?? "-",
+    // The stay projection carries no guest contact details.
+    mobileNumber: "-",
+    email: "-",
+    occupants: stay.no_of_guests,
+    // Allocated rooms need GET /stays/{id}/room-allocations.
+    roomNo: "",
+    roomType: "-",
+    noOfRooms: stay.no_of_rooms ?? 0,
+    checkIn: stay.actual_checkin_time
+      ? new Date(stay.actual_checkin_time).toLocaleString()
+      : "",
+    extendCheckOut: false,
+    bookingDate: new Date(stay.created_on).toLocaleDateString(),
+    documentsApproval: stay.document_approval_status === "approved",
+    // --- Live workflow state, straight from `stay`.
+    status: stay.status ?? "-",
+    isCheckedIn: stay.is_checked_in,
+    isCheckedOut: Boolean(stay.actual_checkout_time),
+    expectedCheckout: stay.expected_checkout_time,
+    stayRef: stay.internal_stay_ref_number,
+  }));
+
+  // --- Mutations. Each refetches /stays and /occupancy, so the table and the
+  // Occupancy screen agree with the database immediately afterwards.
+  const { canWrite } = useAuth();
+  const mayWrite = canWrite("bookings");
+  const checkIn = useCheckInStay();
+  const checkOut = useCheckOutStay();
+  const extend = useExtendStay();
+  const cancel = useCancelStay();
+  const approveDocs = useSetStayDocumentApproval();
+  const createStay = useCreateStay();
+  const updateStay = useUpdateStay();
+  // A booking needs a booker, and a guest IS an `app_user` with is_staff = 0.
+  const createGuest = useCreateUser({ success: "Guest record created" });
+
+  // Rooms to allocate with the booking; `room_ids` are handled in the same
+  // transaction as the stay, so each becomes Allotted immediately.
+  const roomsQuery = useRooms({ page: 1, page_size: MAX_PAGE_SIZE });
+  const guestsQuery = useUsers({ page: 1, page_size: MAX_PAGE_SIZE, is_staff: 0 });
+
+  /**
+   * Rooms the backend will actually accept for allocation. `amenity_status`
+   * "Available" is the only state POST /stays can allot; Occupied, Allotted and
+   * Unavailable rooms are refused with 409, so offering them would only produce
+   * an avoidable error. The real `status_name` decides -- nothing is hardcoded.
+   */
+  const allocatableRooms = (roomsQuery.data?.items ?? []).filter(
+    (room) => room.status_name === "Available",
+  );
+
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [entriesPerPage, setEntriesPerPage] = useState("10");
   const [searchQuery, setSearchQuery] = useState("");
@@ -215,6 +175,7 @@ const Bookings = () => {
   // Modal states
   const [checkInModalOpen, setCheckInModalOpen] = useState(false);
   const [extendModalOpen, setExtendModalOpen] = useState(false);
+  const [extendUntil, setExtendUntil] = useState("");
   const [selectedBooking, setSelectedBooking] = useState<BookingData | null>(null);
 
   // Form state
@@ -230,7 +191,8 @@ const Bookings = () => {
     arrival: "",
     depart: "",
     guestRoom: "yes",
-    roomPreference: "",
+    /** An `amenity.id` (UUID) -- what POST /stays wants in `room_ids`. */
+    roomId: "",
     subPackages: "",
     noOfPersons: "",
     numberOfRooms: "",
@@ -256,10 +218,9 @@ const Bookings = () => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = () => {
-    console.log("Submitting form:", formData);
-    // Here you would typically send the data to the backend
+  const resetForm = () => {
     setViewMode("list");
+    setEditingBooking(null);
     setFormData({
       firstName: "",
       lastName: "",
@@ -272,7 +233,7 @@ const Bookings = () => {
       arrival: "",
       depart: "",
       guestRoom: "yes",
-      roomPreference: "",
+      roomId: "",
       subPackages: "",
       noOfPersons: "",
       numberOfRooms: "",
@@ -280,6 +241,83 @@ const Bookings = () => {
       bookingReference: "",
       comments: "",
     });
+  };
+
+  /**
+   * Create or update a real reservation.
+   *
+   * Add mode is two steps, because that is how the schema is shaped: a booking
+   * needs a booker, and a guest is an `app_user` row with is_staff = 0. So the
+   * guest is created first (POST /users), then the stay referencing them
+   * (POST /stays) -- which also allocates any rooms chosen, in one transaction.
+   *
+   * Edit mode PATCHes the stay. Guest identity fields are not re-sent, because
+   * editing a booking must not silently rewrite the guest's record.
+   */
+  const handleSubmit = () => {
+    const checkin = formData.arrival ? new Date(formData.arrival) : null;
+    const checkout = formData.depart ? new Date(formData.depart) : null;
+
+    if (viewMode === "edit" && editingBooking) {
+      updateStay.mutate(
+        {
+          id: editingBooking.id,
+          body: {
+            ...(checkin ? { expected_checkin_time: checkin.toISOString() } : {}),
+            ...(checkout ? { expected_checkout_time: checkout.toISOString() } : {}),
+            ...(formData.noOfPersons ? { no_of_guests: Number(formData.noOfPersons) } : {}),
+            ...(formData.gst ? { gst: formData.gst } : {}),
+            ...(formData.comments ? { comments: formData.comments } : {}),
+            ...(formData.bookingReference
+              ? { external_stay_ref_number: formData.bookingReference }
+              : {}),
+          },
+        },
+        { onSuccess: resetForm },
+      );
+      return;
+    }
+
+    if (!checkin || !checkout) {
+      toast({
+        title: "Arrival and departure are required",
+        description: "A stay stores both as NOT NULL timestamps.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    createGuest.mutate(
+      {
+        first_name: formData.firstName,
+        last_name: formData.lastName || null,
+        email: formData.email || null,
+        phone_number: `${formData.countryCode || "+91"}${formData.mobileNumber}`,
+        gender: (formData.gender || null) as "male" | "female" | "other" | null,
+        address: formData.city || null,
+        is_staff: 0,
+      },
+      {
+        onSuccess: (guest) => {
+          createStay.mutate(
+            {
+              booking_user_id: (guest as { id: string }).id,
+              expected_checkin_time: checkin.toISOString(),
+              expected_checkout_time: checkout.toISOString(),
+              no_of_guests: Number(formData.noOfPersons) || 1,
+              ...(formData.gst ? { gst: formData.gst } : {}),
+              ...(formData.comments ? { comments: formData.comments } : {}),
+              ...(formData.bookingReference
+                ? { external_stay_ref_number: formData.bookingReference }
+                : {}),
+              // A real `amenity.id`, straight from GET /rooms.
+              ...(formData.roomId ? { room_ids: [formData.roomId] } : {}),
+            },
+            { onSuccess: resetForm },
+          );
+        },
+      },
+    );
   };
 
   const handleEdit = (booking: BookingData) => {
@@ -297,7 +335,11 @@ const Bookings = () => {
       arrival: booking.checkIn,
       depart: "",
       guestRoom: "yes",
-      roomPreference: booking.roomType,
+      // Left empty on purpose: the row carries a room TYPE NAME, not an
+      // `amenity.id`, and the edit branch of handleSubmit sends no `room_ids`
+      // anyway -- reallocating a room is a separate operation
+      // (PATCH /room-allocations/{id}).
+      roomId: "",
       subPackages: "",
       noOfPersons: booking.occupants.toString(),
       numberOfRooms: booking.noOfRooms.toString(),
@@ -308,19 +350,33 @@ const Bookings = () => {
     setViewMode("edit");
   };
 
+  /**
+   * Cancel, not delete.
+   *
+   * `stay` is referenced by `invoice`, `service_request` and `room_allocation`,
+   * so the row is kept and its status moves to 'cancelled', which also releases
+   * the rooms it held. The backend refuses this with 409 once a guest has
+   * checked in -- they must be checked out instead.
+   */
   const handleDelete = (bookingId: string) => {
-    console.log("Deleting booking:", bookingId);
-    // Here you would typically send delete request to backend
+    cancel.mutate(bookingId);
   };
 
 
+  /**
+   * Bulk upload has no endpoint. `import_job` holds the seeded rows for this
+   * feature but no router exposes it, and there is no multipart upload path
+   * anywhere in the API. The dialog previously logged the filename and then
+   * closed itself, which was indistinguishable from a successful import.
+   */
   const handleBulkUpload = () => {
-    if (selectedFile) {
-      console.log("Uploading file:", selectedFile.name);
-      // Here you would upload the file to backend
-      setBulkUploadOpen(false);
-      setSelectedFile(null);
-    }
+    toast({
+      title: "Bulk upload is not connected yet",
+      description:
+        "Imports are tracked in `import_job`, which no API endpoint exposes, " +
+        "and the API has no file-upload route. Nothing was uploaded.",
+      variant: "destructive",
+    });
   };
 
   const handleCheckInClick = (booking: BookingData) => {
@@ -328,7 +384,17 @@ const Bookings = () => {
     setCheckInModalOpen(true);
   };
 
+  /** Seeds the picker with the current expected check-out, in local time. */
+  const toDateTimeLocal = (iso: string) => {
+    const date = new Date(iso);
+    const pad = (value: number) => String(value).padStart(2, "0");
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(
+      date.getHours(),
+    )}:${pad(date.getMinutes())}`;
+  };
+
   const handleExtendClick = (booking: BookingData) => {
+    setExtendUntil(booking.expectedCheckout ? toDateTimeLocal(booking.expectedCheckout) : "");
     setSelectedBooking(booking);
     setExtendModalOpen(true);
   };
@@ -536,20 +602,46 @@ const Bookings = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-primary">
-                    Room Preference <span className="text-red-500">*</span>
+                    Room <span className="text-red-500">*</span>
                   </Label>
+                  {/* The value submitted as `room_ids` MUST be the room's
+                      `amenity.id`. This select used to offer package-name slugs
+                      ("golden", "delux", ...), which are neither rooms nor UUIDs,
+                      so POST /stays answered
+                      422 room_ids: Input should be a valid UUID.
+                      The label shows the human-readable room name; the value is
+                      the UUID from GET /rooms. */}
                   <Select
-                    value={formData.roomPreference}
-                    onValueChange={(value) => handleFormChange("roomPreference", value)}
+                    value={formData.roomId}
+                    onValueChange={(value) => handleFormChange("roomId", value)}
                   >
                     <SelectTrigger className="h-12 bg-muted/30 border-border/50">
-                      <SelectValue placeholder="Select room preference" />
+                      <SelectValue placeholder="Select room to allocate" />
                     </SelectTrigger>
                     <SelectContent className="bg-popover">
-                      <SelectItem value="golden">Golden Package</SelectItem>
-                      <SelectItem value="delux">Delux Package</SelectItem>
-                      <SelectItem value="premium">Premium Suite</SelectItem>
-                      <SelectItem value="standard">Standard Room</SelectItem>
+                      {roomsQuery.isLoading && (
+                        <div className="px-3 py-2 text-sm text-muted-foreground">
+                          Loading rooms...
+                        </div>
+                      )}
+                      {roomsQuery.error && (
+                        <div className="px-3 py-2 text-sm text-muted-foreground">
+                          {describeApiError(roomsQuery.error)}
+                        </div>
+                      )}
+                      {allocatableRooms.map((room) => (
+                        <SelectItem key={room.id} value={room.id}>
+                          {room.name}
+                          {room.amenity_type_name ? ` - ${room.amenity_type_name}` : ""}
+                        </SelectItem>
+                      ))}
+                      {!roomsQuery.isLoading &&
+                        !roomsQuery.error &&
+                        allocatableRooms.length === 0 && (
+                          <div className="px-3 py-2 text-sm text-muted-foreground">
+                            No room is currently Available
+                          </div>
+                        )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -767,6 +859,21 @@ const Bookings = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
+                {(staysQuery.isLoading || staysQuery.error || filteredBookings.length === 0) && (
+                  <TableRow>
+                    <TableCell colSpan={13} className="py-2">
+                      <DataState
+                        isLoading={staysQuery.isLoading}
+                        error={staysQuery.error}
+                        isEmpty
+                        emptyTitle="No stays found"
+                        loader={<TableLoading columns={11} />}
+                      >
+                        <span />
+                      </DataState>
+                    </TableCell>
+                  </TableRow>
+                )}
                 {filteredBookings.map((booking, index) => (
                   <TableRow
                     key={booking.id}
@@ -781,12 +888,26 @@ const Bookings = () => {
                     <TableCell>{booking.roomType}</TableCell>
                     <TableCell className="text-center">{booking.noOfRooms}</TableCell>
                     <TableCell className="text-center">
+                      {/* One button, two verbs -- driven by `stay.is_checked_in`. */}
                       <Button
                         size="sm"
-                        className="bg-cyan-600 hover:bg-cyan-700 text-white h-8 w-8 p-0 rounded-md"
+                        className="bg-cyan-600 hover:bg-cyan-700 text-white h-8 px-2 rounded-md text-xs"
                         onClick={() => handleCheckInClick(booking)}
+                        disabled={
+                          !mayWrite ||
+                          booking.isCheckedOut ||
+                          booking.status === "cancelled"
+                        }
+                        title={
+                          booking.isCheckedOut
+                            ? "Already checked out"
+                            : booking.isCheckedIn
+                              ? "Check out"
+                              : "Check in"
+                        }
                       >
-                        <LogIn className="h-4 w-4" />
+                        <LogIn className="h-4 w-4 mr-1" />
+                        {booking.isCheckedIn ? "Out" : "In"}
                       </Button>
                     </TableCell>
                     <TableCell className="text-center">
@@ -794,20 +915,39 @@ const Bookings = () => {
                         size="sm"
                         className="bg-cyan-600 hover:bg-cyan-700 text-white h-8 w-8 p-0 rounded-md"
                         onClick={() => handleExtendClick(booking)}
+                        disabled={!mayWrite || booking.isCheckedOut}
+                        title="Extend the expected check-out"
                       >
                         <ChevronRight className="h-4 w-4" />
                       </Button>
                     </TableCell>
                     <TableCell>{booking.bookingDate}</TableCell>
                     <TableCell className="text-center">
-                      <Badge
-                        className={`${booking.documentsApproval
-                          ? "bg-green-500/20 text-green-600 hover:bg-green-500/30"
-                          : "bg-amber-500/20 text-amber-600 hover:bg-amber-500/30"
-                          }`}
+                      {/* `stay.document_approval_status`: pending <-> approved. */}
+                      <button
+                        type="button"
+                        disabled={!mayWrite || approveDocs.isPending}
+                        onClick={() =>
+                          approveDocs.mutate({
+                            id: booking.id,
+                            approved: !booking.documentsApproval,
+                          })
+                        }
+                        title={
+                          booking.documentsApproval
+                            ? "Approved -- click to reset to pending"
+                            : "Pending -- click to approve"
+                        }
                       >
-                        <CheckCircle className="h-4 w-4" />
-                      </Badge>
+                        <Badge
+                          className={`${booking.documentsApproval
+                            ? "bg-green-500/20 text-green-600 hover:bg-green-500/30"
+                            : "bg-amber-500/20 text-amber-600 hover:bg-amber-500/30"
+                            }`}
+                        >
+                          <CheckCircle className="h-4 w-4" />
+                        </Badge>
+                      </button>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center justify-center gap-2">
@@ -822,6 +962,19 @@ const Bookings = () => {
                           size="sm"
                           className="bg-red-500 hover:bg-red-600 text-white h-8 w-8 p-0 rounded-md"
                           onClick={() => handleDelete(booking.id)}
+                          disabled={
+                            !mayWrite ||
+                            booking.isCheckedIn ||
+                            booking.status === "cancelled" ||
+                            cancel.isPending
+                          }
+                          title={
+                            booking.isCheckedIn
+                              ? "Checked in -- check the guest out instead"
+                              : booking.status === "cancelled"
+                                ? "Already cancelled"
+                                : "Cancel this booking and release its rooms"
+                          }
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -985,12 +1138,25 @@ const Bookings = () => {
               </div>
               <div className="space-y-1">
                 <span className="text-muted-foreground text-sm block">Checkin Date :</span>
-                {/* Using bookingDate or a default future date for demo since checkIn might be empty */}
-                <span className="font-medium text-lg">{selectedBooking?.checkIn || "16-10-2025 11:00"}</span>
+                <span className="font-medium text-lg">
+                  {selectedBooking?.checkIn || "Not checked in"}
+                </span>
               </div>
               <div className="space-y-1">
-                <span className="text-muted-foreground text-sm block">Checkout Date :</span>
-                <span className="font-medium text-lg">31-10-2025 13:00</span>
+                <span className="text-muted-foreground text-sm block">Expected Checkout :</span>
+                <span className="font-medium text-lg">
+                  {selectedBooking?.expectedCheckout
+                    ? new Date(selectedBooking.expectedCheckout).toLocaleString()
+                    : "-"}
+                </span>
+              </div>
+              <div className="space-y-1">
+                <span className="text-muted-foreground text-sm block">Stay Reference :</span>
+                <span className="font-medium text-lg">{selectedBooking?.stayRef ?? "-"}</span>
+              </div>
+              <div className="space-y-1">
+                <span className="text-muted-foreground text-sm block">Status :</span>
+                <span className="font-medium text-lg">{selectedBooking?.status ?? "-"}</span>
               </div>
               <div className="space-y-1">
                 <span className="text-muted-foreground text-sm block">No Of Occupants :</span>
@@ -1008,9 +1174,18 @@ const Bookings = () => {
             </Button>
             <Button
               className="bg-cyan-600 hover:bg-cyan-700 text-white px-6"
-              onClick={() => setCheckInModalOpen(false)}
+              disabled={!selectedBooking || checkIn.isPending || checkOut.isPending}
+              onClick={() => {
+                if (!selectedBooking) return;
+                // Room state follows: Occupied on check-in, Available on check-out.
+                const action = selectedBooking.isCheckedIn ? checkOut : checkIn;
+                action.mutate(
+                  { id: selectedBooking.id },
+                  { onSuccess: () => setCheckInModalOpen(false) },
+                );
+              }}
             >
-              Check In
+              {selectedBooking?.isCheckedIn ? "Check Out" : "Check In"}
             </Button>
           </div>
         </DialogContent>
@@ -1026,7 +1201,11 @@ const Bookings = () => {
             <div className="grid grid-cols-[200px_1fr] items-center gap-4">
               <Label className="text-foreground">Check out date & time <span className="text-red-500">*</span></Label>
               <Input
-                value="31-10-2025 13:00"
+                value={
+                  selectedBooking?.expectedCheckout
+                    ? new Date(selectedBooking.expectedCheckout).toLocaleString()
+                    : "-"
+                }
                 readOnly
                 className="bg-transparent border-none text-foreground focus-visible:ring-0 px-0 shadow-none font-medium"
               />
@@ -1035,47 +1214,53 @@ const Bookings = () => {
             <div className="border-t border-border my-2"></div>
 
             <div className="grid grid-cols-[200px_1fr] items-center gap-4">
-              <Label className="text-foreground">Extend check out Date <span className="text-red-500">*</span></Label>
+              <Label className="text-foreground">
+                New check out <span className="text-red-500">*</span>
+              </Label>
+              {/* One datetime-local field: `expected_checkout_time` is a single
+                  timestamptz column, so splitting it into date + HH + MM + AM
+                  controls could only reassemble the same value. */}
               <Input
-                placeholder="31-10-2025"
-                className="bg-white border-gray-200 text-foreground placeholder:text-muted-foreground"
+                type="datetime-local"
+                value={extendUntil}
+                onChange={(event) => setExtendUntil(event.target.value)}
+                className="bg-white border-gray-200 text-foreground"
               />
             </div>
-
-            <div className="grid grid-cols-[200px_1fr] items-center gap-4">
-              <Label className="text-foreground">Extend check out Time <span className="text-red-500">*</span></Label>
-              <div className="flex items-center gap-4">
-                <div className="flex flex-col items-center">
-                  <Button variant="ghost" size="sm" className="h-6 text-cyan-500 hover:bg-cyan-50"><ChevronLeft className="h-4 w-4 rotate-90" /></Button>
-                  <span className="text-muted-foreground text-sm">HH</span>
-                  <Button variant="ghost" size="sm" className="h-6 text-cyan-500 hover:bg-cyan-50"><ChevronRight className="h-4 w-4 rotate-90" /></Button>
-                </div>
-                <span className="text-foreground font-medium">:</span>
-                <div className="flex flex-col items-center">
-                  <Button variant="ghost" size="sm" className="h-6 text-cyan-500 hover:bg-cyan-50"><ChevronLeft className="h-4 w-4 rotate-90" /></Button>
-                  <span className="text-muted-foreground text-sm">MM</span>
-                  <Button variant="ghost" size="sm" className="h-6 text-cyan-500 hover:bg-cyan-50"><ChevronRight className="h-4 w-4 rotate-90" /></Button>
-                </div>
-                <div className="flex items-center ml-2">
-                  <button className="px-3 py-1 border border-cyan-500 text-cyan-500 rounded text-xs hover:bg-cyan-50">AM</button>
-                </div>
-              </div>
-            </div>
+            <p className="text-xs text-muted-foreground">
+              The new time must be later than the current expected check-out; the
+              backend rejects anything earlier.
+            </p>
           </div>
 
           <div className="flex justify-center gap-4 pt-6">
             <Button
               variant="outline"
-              onClick={() => { }}
+              onClick={() => setExtendUntil("")}
               className="border-amber-500 text-amber-500 hover:bg-amber-50 hover:text-amber-500"
             >
               Reset
             </Button>
             <Button
               className="bg-transparent border border-cyan-500 text-cyan-500 hover:bg-cyan-50"
-              onClick={() => setExtendModalOpen(false)}
+              disabled={!selectedBooking || !extendUntil || extend.isPending}
+              onClick={() => {
+                if (!selectedBooking || !extendUntil) return;
+                extend.mutate(
+                  {
+                    id: selectedBooking.id,
+                    until: new Date(extendUntil).toISOString(),
+                  },
+                  {
+                    onSuccess: () => {
+                      setExtendModalOpen(false);
+                      setExtendUntil("");
+                    },
+                  },
+                );
+              }}
             >
-              Check & Extend
+              {extend.isPending ? "Extending..." : "Check & Extend"}
             </Button>
           </div>
         </DialogContent>

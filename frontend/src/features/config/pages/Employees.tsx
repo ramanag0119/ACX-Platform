@@ -21,57 +21,49 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Pencil, Trash2, Eye, EyeOff, X, Edit, ChevronDown } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { DataState, TableLoading } from "@/core/components/DataState";
+import { useAuth } from "@/core/contexts/AuthContext";
+import { useDepartments, useJobFunctions, useRoles, useUsers } from "@/lib/api/hooks";
+import {
+  useCreateDepartment,
+  useCreateJobFunction,
+  useCreateUser,
+  useDeactivateUser,
+  useReactivateUser,
+  useUpdateDepartment,
+  useUpdateJobFunction,
+  useUpdateUser,
+} from "@/lib/api/mutations";
+import { MAX_PAGE_SIZE } from "@/lib/api/types";
 
-// Sample Department Data
-const departmentData = [
-    { id: "1", name: "Admin" },
-    { id: "2", name: "Deputy Housekeeping" },
-    { id: "3", name: "floor house keeper" },
-    { id: "4", name: "Food Service" },
-    { id: "5", name: "Housekeeping" },
-    { id: "6", name: "Housekeeping Manager" },
-    { id: "7", name: "Maintenance" },
-    { id: "8", name: "Room service" },
-];
+/**
+ * Employees, connected to GET /users (module `employees`).
+ *
+ * Departments and job functions have NO endpoint of their own: `department`
+ * and `job_function` are only reachable through the names carried on a user
+ * row. Those two tabs therefore list the DISTINCT values in use, which can
+ * omit a department that currently has no staff -- recorded as a gap rather
+ * than padded out with sample rows.
+ *
+ * The Role column needs GET /roles, which the backend gates on the
+ * `user_roles` module. A Duty Manager has no such grant (by design), so the
+ * column degrades to "-" for them instead of the screen failing.
+ *
+ * NOTHING SENSITIVE IS RENDERED: /users returns no password hash, no token and
+ * no credential. The password field WRITES (POST/PATCH /users hashes it with
+ * bcrypt server-side) but is never read back.
+ *
+ * Phase 3.0 writes:
+ *   Department tab -> POST/PATCH /departments
+ *   Function tab   -> POST/PATCH /job-functions
+ *   Employee tab   -> POST/PATCH /users, plus deactivate/reactivate
+ *
+ * A staff member is retired with `date_of_termination`, never deleted: stays
+ * and service requests reference the row.
+ */
 
-// Sample Function Data
-const functionData = [
-    { id: "1", name: "Admin" },
-    { id: "2", name: "Cleaner" },
-    { id: "3", name: "Electrician" },
-    { id: "4", name: "Food servant" },
-    { id: "5", name: "Housekeeping Manager" },
-    { id: "6", name: "Janitor" },
-    { id: "7", name: "Maid" },
-    { id: "8", name: "Manager" },
-    { id: "9", name: "Plumber" },
-    { id: "10", name: "Room service boy" },
-    { id: "11", name: "Sweeper" },
-    { id: "12", name: "Supervisor" },
-];
-
-// Sample Employee Data
-const employeeData = [
-    { id: "19case068", usrId: "ackshaya", firstName: "Ackshaya", lastName: "K", role: "Maintenance staff", department: "Maintenance", function: "Food servant", email: "ackshaya2004@gmail.com", mobile: "+91 8300824298", status: "InActive" },
-    { id: "A-101", usrId: "alice", firstName: "Alice", lastName: "Konyak", role: "service manager", department: "Housekeeping Manager", function: "Housekeeping Manager", email: "alice@gmail.com", mobile: "+91 9362606433", status: "Active" },
-    { id: "PE00002", usrId: "ashok", firstName: "Ashok", lastName: "g", role: "Room service", department: "Deputy Housekeeping", function: "Cleaner", email: "staffone123@gmail.com", mobile: "+91 9025009918", status: "InActive" },
-    { id: "PF-02", usrId: "balaji", firstName: "Balaji", lastName: "G", role: "Service staff", department: "Housekeeping", function: "Sweeper", email: "balaji123@gmail.com", mobile: "+91 8903140344", status: "Active" },
-    { id: "PE0003", usrId: "bharathy", firstName: "BHARATHY VENKAT", lastName: "KUMAR A", role: "Manager", department: "Housekeeping Manager", function: "Housekeeping Manager", email: "bharathyvld@gmail.com", mobile: "+91 6379961321", status: "InActive" },
-    { id: "PE00015", usrId: "brindha", firstName: "Brindha", lastName: "G", role: "Service staff", department: "Housekeeping", function: "Food servant", email: "brindha123@gmail.com", mobile: "+91 9360180250", status: "Active" },
-    { id: "Tikasse34", usrId: "Client", firstName: "Client", lastName: "D", role: "food service", department: "Room service", function: "Food servant", email: "client@gmail.com", mobile: "+91 9994873645", status: "InActive" },
-    { id: "PE0009", usrId: "staffone", firstName: "CIXI", lastName: "staff", role: "Room service", department: "floor house keeper", function: "Cleaner", email: "cixi0203@gmail.com", mobile: "+91 9789368024", status: "Active" },
-    { id: "9", usrId: "cixi", firstName: "CIXI, TAB", lastName: "fab", role: "Floor Manager", department: "Maintenance", function: "Manager", email: "test@gmail.com", mobile: "+91 8300275377", status: "Active" },
-    { id: "PE0001", usrId: "ganesan", firstName: "Ganesan", lastName: "K", role: "Manager", department: "Maintenance", function: "Supervisor", email: "test123@gmail.com", mobile: "+91 9840014016", status: "Active" },
-];
-
-// Role options
-const roleOptions = ["Manager", "Staff", "Service staff", "Maintenance staff", "Floor Manager", "food service", "service manager", "Room service"];
-
-// Country codes
+// Country codes for the (display-only) add form.
 const countryCodes = ["+91", "+1", "+44", "+971", "+65"];
-
-// Supervisor options
-const supervisorOptions = ["Admin", "Manager", "Floor Manager", "Housekeeping Manager"];
 
 type TabType = "department" | "function" | "employee";
 
@@ -82,7 +74,6 @@ const Employees = () => {
     // Modal states
     const [editDepartmentOpen, setEditDepartmentOpen] = useState(false);
     const [editFunctionOpen, setEditFunctionOpen] = useState(false);
-    const [editEmployeeOpen, setEditEmployeeOpen] = useState(false);
 
     // Department state
     const [departmentName, setDepartmentName] = useState("");
@@ -120,6 +111,69 @@ const Employees = () => {
     });
     const [showPassword, setShowPassword] = useState(false);
 
+    // --- Live data -------------------------------------------------------
+    const { canRead, canWrite } = useAuth();
+    const canReadRoles = canRead("user_roles");
+
+    const usersQuery = useUsers({ page: 1, page_size: MAX_PAGE_SIZE, is_staff: 1 });
+    const rolesQuery = useRoles(canReadRoles ? { page: 1, page_size: MAX_PAGE_SIZE } : undefined);
+    // Phase 3.0 gave `department` and `job_function` their own endpoints, so a
+    // department with no staff assigned is no longer invisible.
+    const departmentsQuery = useDepartments({ page: 1, page_size: MAX_PAGE_SIZE });
+    const functionsQuery = useJobFunctions({ page: 1, page_size: MAX_PAGE_SIZE });
+
+    const users = usersQuery.data?.items ?? [];
+
+    const departmentData = (departmentsQuery.data?.items ?? []).map((row) => ({
+        id: row.id,
+        name: row.department_name,
+    }));
+
+    const functionData = (functionsQuery.data?.items ?? []).map((row) => ({
+        id: row.id,
+        name: row.function_name,
+    }));
+
+    // --- Mutations
+    const mayWrite = canWrite("employees");
+    const createDepartment = useCreateDepartment();
+    const updateDepartmentMutation = useUpdateDepartment();
+    const createFunction = useCreateJobFunction();
+    const updateFunctionMutation = useUpdateJobFunction();
+    const createEmployee = useCreateUser();
+    const updateEmployee = useUpdateUser();
+    const deactivate = useDeactivateUser();
+    const reactivate = useReactivateUser();
+
+    // Which row an edit dialog is working on.
+    const [editingDepartment, setEditingDepartment] = useState<{ id: string; name: string } | null>(null);
+    const [editingFunction, setEditingFunction] = useState<{ id: string; name: string } | null>(null);
+    const [editingEmployee, setEditingEmployeeRow] = useState<(typeof employeeData)[number] | null>(null);
+
+    const roleOptions = (rolesQuery.data?.items ?? []).map((role) => role.name);
+    // `app_user.supervisor` is free text, so the picker offers what is in use.
+    const supervisorOptions = [
+        ...new Set(users.map((user) => user.supervisor).filter(Boolean) as string[]),
+    ].sort();
+
+    const employeeData = users.map((user) => ({
+        /** `app_user.id` -- what every mutation is keyed on. */
+        userId: user.id,
+        id: user.emp_id ?? user.user_uid,
+        usrId: user.user_name ?? "-",
+        firstName: user.first_name,
+        lastName: user.last_name ?? "",
+        // Per-user role names would need /users/{id} for each row; the list
+        // endpoint does not carry them.
+        role: "-",
+        department: user.department_name ?? "-",
+        function: user.job_function_name ?? "-",
+        email: user.email ?? "-",
+        mobile: user.phone_number ?? "-",
+        // `date_of_termination` is what the schema uses to retire an employee.
+        status: user.date_of_termination ? "InActive" : "Active",
+    }));
+
     // Filter department data
     const filteredDepartments = departmentData.filter(item =>
         item.name.toLowerCase().includes(departmentSearch.toLowerCase())
@@ -151,12 +205,63 @@ const Employees = () => {
     const paginatedEmployees = filteredEmployees.slice(employeeStartIndex, employeeEndIndex);
 
     const handleDepartmentReset = () => setDepartmentName("");
-    const handleDepartmentSubmit = () => console.log("Department Submit:", { departmentName });
+
+    const handleDepartmentSubmit = () => {
+        if (!departmentName.trim()) return;
+        createDepartment.mutate(departmentName.trim(), {
+            onSuccess: () => setDepartmentName(""),
+        });
+    };
+
     const handleFunctionReset = () => setFunctionName("");
-    const handleFunctionSubmit = () => console.log("Function Submit:", { functionName });
+
+    const handleFunctionSubmit = () => {
+        if (!functionName.trim()) return;
+        createFunction.mutate(functionName.trim(), {
+            onSuccess: () => setFunctionName(""),
+        });
+    };
+
+    /**
+     * Create or update a staff member.
+     *
+     * A password is optional: it is what makes the account able to sign in, and
+     * it is hashed with bcrypt server-side. Roles are `user_role` rows, so the
+     * selected role is sent as `role_ids`.
+     */
     const handleEmployeeSubmit = () => {
-        console.log("Employee Submit:", newEmployee);
-        setShowAddEmployee(false);
+        const roleId = (rolesQuery.data?.items ?? []).find(
+            (role) => role.name === newEmployee.role,
+        )?.id;
+
+        const body = {
+            first_name: newEmployee.firstName,
+            last_name: newEmployee.lastName || null,
+            phone_number: `${newEmployee.countryCode}${newEmployee.mobile}`,
+            email: newEmployee.email || null,
+            user_name: newEmployee.userId || null,
+            ...(newEmployee.password ? { password: newEmployee.password } : {}),
+            ...(newEmployee.employeeId ? { emp_id: newEmployee.employeeId } : {}),
+            ...(newEmployee.dateOfJoining
+                ? { date_of_joining: new Date(newEmployee.dateOfJoining).toISOString() }
+                : {}),
+            address: newEmployee.address || null,
+            department_id:
+                departmentData.find((d) => d.name === newEmployee.department)?.id ?? null,
+            job_function_id:
+                functionData.find((f) => f.name === newEmployee.function)?.id ?? null,
+            is_staff: 1,
+            ...(roleId ? { role_ids: [roleId] } : {}),
+        };
+
+        if (editingEmployee) {
+            updateEmployee.mutate(
+                { id: editingEmployee.userId, body },
+                { onSuccess: () => { setShowAddEmployee(false); setEditingEmployeeRow(null); } },
+            );
+            return;
+        }
+        createEmployee.mutate(body, { onSuccess: () => setShowAddEmployee(false) });
     };
 
     const generatePassword = () => {
@@ -347,7 +452,7 @@ const Employees = () => {
                                     <TableRow key={item.id} className={`${index % 2 === 0 ? "bg-muted/20" : "bg-background"} hover:bg-muted/40 transition-colors`}>
                                         <TableCell className="text-cyan-600 hover:underline cursor-pointer">{item.name}</TableCell>
                                         <TableCell className="text-center">
-                                            <Button size="sm" className="bg-[#3eb1c8] hover:bg-[#3eb1c8]/90 text-white h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditDepartmentOpen(true)}>
+                                            <Button size="sm" className="bg-[#3eb1c8] hover:bg-[#3eb1c8]/90 text-white h-7 w-7 p-0 rounded-[3px]" disabled={!mayWrite} onClick={() => { setEditingDepartment(item); setEditDepartmentOpen(true); }}>
                                                 <Edit className="h-[14px] w-[14px]" />
                                             </Button>
                                         </TableCell>
@@ -419,7 +524,7 @@ const Employees = () => {
                                     <TableRow key={item.id} className={`${index % 2 === 0 ? "bg-muted/20" : "bg-background"} hover:bg-muted/40 transition-colors`}>
                                         <TableCell className="text-cyan-600 hover:underline cursor-pointer">{item.name}</TableCell>
                                         <TableCell className="text-center">
-                                            <Button size="sm" className="bg-[#3eb1c8] hover:bg-[#3eb1c8]/90 text-white h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditFunctionOpen(true)}>
+                                            <Button size="sm" className="bg-[#3eb1c8] hover:bg-[#3eb1c8]/90 text-white h-7 w-7 p-0 rounded-[3px]" disabled={!mayWrite} onClick={() => { setEditingFunction(item); setEditFunctionOpen(true); }}>
                                                 <Edit className="h-[14px] w-[14px]" />
                                             </Button>
                                         </TableCell>
@@ -494,10 +599,47 @@ const Employees = () => {
                                     <TableCell className={`whitespace-nowrap ${item.status === "Active" ? "text-green-500" : "text-red-500"}`}>{item.status}</TableCell>
                                     <TableCell className="text-center">
                                         <div className="flex justify-center gap-2">
-                                            <Button size="sm" className="bg-[#3eb1c8] hover:bg-[#3eb1c8]/90 text-white h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditEmployeeOpen(true)}>
+                                            <Button
+                                                size="sm"
+                                                className="bg-[#3eb1c8] hover:bg-[#3eb1c8]/90 text-white h-7 w-7 p-0 rounded-[3px]"
+                                                disabled={!mayWrite}
+                                                onClick={() => {
+                                                    setEditingEmployeeRow(item);
+                                                    setNewEmployee({
+                                                        employeeId: item.id,
+                                                        firstName: item.firstName,
+                                                        lastName: item.lastName,
+                                                        dateOfJoining: "",
+                                                        supervisor: "",
+                                                        department: item.department === "-" ? "" : item.department,
+                                                        role: item.role === "-" ? "" : item.role,
+                                                        function: item.function === "-" ? "" : item.function,
+                                                        userId: item.usrId === "-" ? "" : item.usrId,
+                                                        password: "",
+                                                        email: item.email === "-" ? "" : item.email,
+                                                        countryCode: "+91",
+                                                        mobile: item.mobile === "-" ? "" : item.mobile,
+                                                        address: "",
+                                                    });
+                                                    setShowAddEmployee(true);
+                                                }}
+                                            >
                                                 <Edit className="h-[14px] w-[14px]" />
                                             </Button>
-                                            <Button size="sm" className="bg-red-500 hover:bg-red-600 text-white h-7 w-7 p-0 rounded-[3px]">
+                                            {/* Deactivate, not delete: `date_of_termination` is how
+                                                IKANOS retires a staff member, and stays and service
+                                                requests reference the row. */}
+                                            <Button
+                                                size="sm"
+                                                className="bg-red-500 hover:bg-red-600 text-white h-7 w-7 p-0 rounded-[3px]"
+                                                disabled={!mayWrite || deactivate.isPending || reactivate.isPending}
+                                                title={item.status === "Active" ? "Deactivate" : "Reactivate"}
+                                                onClick={() =>
+                                                    item.status === "Active"
+                                                        ? deactivate.mutate(item.userId)
+                                                        : reactivate.mutate(item.userId)
+                                                }
+                                            >
                                                 <Trash2 className="h-[14px] w-[14px]" />
                                             </Button>
                                         </div>
@@ -553,9 +695,17 @@ const Employees = () => {
             </div>
 
             {/* Content */}
-            {activeTab === "department" && renderDepartmentTab()}
-            {activeTab === "function" && renderFunctionTab()}
-            {activeTab === "employee" && renderEmployeeTab()}
+            <DataState
+                isLoading={usersQuery.isLoading}
+                error={usersQuery.error}
+                loader={<TableLoading columns={9} />}
+            >
+                <>
+                    {activeTab === "department" && renderDepartmentTab()}
+                    {activeTab === "function" && renderFunctionTab()}
+                    {activeTab === "employee" && renderEmployeeTab()}
+                </>
+            </DataState>
 
             {/* Edit Department Modal */}
             <Dialog open={editDepartmentOpen} onOpenChange={setEditDepartmentOpen}>
@@ -571,15 +721,32 @@ const Employees = () => {
                             <Label className="text-sm font-medium text-gray-800">Department Name <span className="text-red-500">*</span></Label>
                             <input
                                 type="text"
-                                defaultValue="Deputy Housekeeping"
-                                className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-500 focus:ring-0 px-0 pb-1 text-sm outline-none"
+                                value={editingDepartment?.name ?? ""}
+                                onChange={(event) =>
+                                    setEditingDepartment((current) =>
+                                        current ? { ...current, name: event.target.value } : current,
+                                    )
+                                }
+                                className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-700 focus:ring-0 px-0 pb-1 text-sm outline-none"
                             />
                         </div>
                     </div>
 
                     <div className="flex justify-center gap-4 pb-8">
                         <Button variant="outline" className="text-amber-500 border-amber-500 hover:bg-amber-50 hover:text-amber-600 h-8 px-6 rounded-[3px] font-normal" onClick={() => setEditDepartmentOpen(false)}>Reset</Button>
-                        <Button className="bg-transparent text-[#3eb1c8] border border-[#3eb1c8] hover:bg-cyan-50 h-8 px-6 rounded-[3px] font-normal" onClick={() => setEditDepartmentOpen(false)}>Update</Button>
+                        <Button
+                            className="bg-transparent text-[#3eb1c8] border border-[#3eb1c8] hover:bg-cyan-50 h-8 px-6 rounded-[3px] font-normal"
+                            disabled={!editingDepartment?.name || updateDepartmentMutation.isPending}
+                            onClick={() =>
+                                editingDepartment &&
+                                updateDepartmentMutation.mutate(
+                                    { id: editingDepartment.id, name: editingDepartment.name },
+                                    { onSuccess: () => setEditDepartmentOpen(false) },
+                                )
+                            }
+                        >
+                            Update
+                        </Button>
                     </div>
                 </DialogContent>
             </Dialog>
@@ -598,135 +765,40 @@ const Employees = () => {
                             <Label className="text-sm font-medium text-gray-800">Function Name <span className="text-red-500">*</span></Label>
                             <input
                                 type="text"
-                                defaultValue="Cleaner"
-                                className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-500 focus:ring-0 px-0 pb-1 text-sm outline-none"
+                                value={editingFunction?.name ?? ""}
+                                onChange={(event) =>
+                                    setEditingFunction((current) =>
+                                        current ? { ...current, name: event.target.value } : current,
+                                    )
+                                }
+                                className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-700 focus:ring-0 px-0 pb-1 text-sm outline-none"
                             />
                         </div>
                     </div>
 
                     <div className="flex justify-center gap-4 pb-8">
                         <Button variant="outline" className="text-amber-500 border-amber-500 hover:bg-amber-50 hover:text-amber-600 h-8 px-6 rounded-[3px] font-normal" onClick={() => setEditFunctionOpen(false)}>Reset</Button>
-                        <Button className="bg-transparent text-[#3eb1c8] border border-[#3eb1c8] hover:bg-cyan-50 h-8 px-6 rounded-[3px] font-normal" onClick={() => setEditFunctionOpen(false)}>Update</Button>
-                    </div>
-                </DialogContent>
-            </Dialog>
-
-            {/* Edit Employee Modal */}
-            <Dialog open={editEmployeeOpen} onOpenChange={setEditEmployeeOpen}>
-                <DialogContent className="max-w-[600px] bg-white text-gray-900 border-0 p-0 overflow-hidden flex flex-col hide-close-button shadow-2xl [&>button]:hidden rounded-[4px]">
-                    <div className="flex justify-between items-center p-3 px-5 bg-white border-b border-gray-200">
-                        <h2 className="text-[17px] font-semibold text-gray-800 tracking-wide">Edit Employee</h2>
-                        <Button variant="ghost" className="h-7 w-7 p-0 border-[1.5px] border-gray-300 rounded-[2px] hover:bg-gray-100" onClick={() => setEditEmployeeOpen(false)}>
-                            <X className="h-4 w-4 text-gray-500 stroke-[3]" />
+                        <Button
+                            className="bg-transparent text-[#3eb1c8] border border-[#3eb1c8] hover:bg-cyan-50 h-8 px-6 rounded-[3px] font-normal"
+                            disabled={!editingFunction?.name || updateFunctionMutation.isPending}
+                            onClick={() =>
+                                editingFunction &&
+                                updateFunctionMutation.mutate(
+                                    { id: editingFunction.id, name: editingFunction.name },
+                                    { onSuccess: () => setEditFunctionOpen(false) },
+                                )
+                            }
+                        >
+                            Update
                         </Button>
                     </div>
-                    <div className="p-6 px-10 space-y-5 max-h-[70vh] overflow-y-auto custom-scrollbar">
-                        <div className="grid grid-cols-[160px_1fr] items-center gap-4">
-                            <Label className="text-sm font-medium text-gray-800">Employee ID <span className="text-red-500">*</span></Label>
-                            <input type="text" defaultValue="4563" className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-500 focus:ring-0 px-0 pb-1 text-sm outline-none" />
-                        </div>
-
-                        <div className="grid grid-cols-[160px_1fr] items-center gap-4">
-                            <Label className="text-sm font-medium text-gray-800">First Name <span className="text-red-500">*</span></Label>
-                            <input type="text" defaultValue="Alice" className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-500 focus:ring-0 px-0 pb-1 text-sm outline-none" />
-                        </div>
-
-                        <div className="grid grid-cols-[160px_1fr] items-center gap-4">
-                            <Label className="text-sm font-medium text-gray-800">Last Name <span className="text-red-500">*</span></Label>
-                            <input type="text" defaultValue="Konyak" className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-500 focus:ring-0 px-0 pb-1 text-sm outline-none" />
-                        </div>
-
-                        <div className="grid grid-cols-[160px_1fr] items-center gap-4">
-                            <Label className="text-sm font-medium text-gray-800">Date of Joining <span className="text-red-500">*</span></Label>
-                            <input type="text" defaultValue="20/09/2022" className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-500 focus:ring-0 px-0 pb-1 text-sm outline-none" />
-                        </div>
-
-                        <div className="grid grid-cols-[160px_1fr] items-center gap-4">
-                            <Label className="text-sm font-medium text-gray-800">Supervisor <span className="text-red-500">*</span></Label>
-                            <div className="relative">
-                                <select className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-500 focus:ring-0 px-0 pb-1 text-sm appearance-none outline-none">
-                                    <option>Housekeeping Manager</option>
-                                </select>
-                                <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-[160px_1fr] items-center gap-4">
-                            <Label className="text-sm font-medium text-gray-800">Department <span className="text-red-500">*</span></Label>
-                            <div className="relative">
-                                <select className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-500 focus:ring-0 px-0 pb-1 text-sm appearance-none outline-none">
-                                    <option>Housekeeping Manager</option>
-                                </select>
-                                <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-[160px_1fr] items-center gap-4">
-                            <Label className="text-sm font-medium text-gray-800">Role <span className="text-red-500">*</span></Label>
-                            <div className="relative">
-                                <select className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-500 focus:ring-0 px-0 pb-1 text-sm appearance-none outline-none">
-                                    <option>Housekeeping Manager</option>
-                                </select>
-                                <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-[160px_1fr] items-center gap-4">
-                            <Label className="text-sm font-medium text-gray-800">Function <span className="text-red-500">*</span></Label>
-                            <div className="relative">
-                                <select className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-500 focus:ring-0 px-0 pb-1 text-sm appearance-none outline-none">
-                                    <option>Housekeeping Manager</option>
-                                </select>
-                                <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-[160px_1fr] items-center gap-4 pt-2">
-                            <Label className="text-sm font-medium text-gray-800">Status</Label>
-                            <div className="flex gap-4">
-                                <label className="flex items-center gap-2 text-sm text-gray-600">
-                                    <input type="radio" name="status" checked className="h-4 w-4 border-gray-300 text-cyan-600 focus:ring-cyan-600" onChange={() => { }} /> Active
-                                </label>
-                                <label className="flex items-center gap-2 text-sm text-gray-600">
-                                    <input type="radio" name="status" className="h-4 w-4 border-gray-300 text-cyan-600 focus:ring-cyan-600" onChange={() => { }} /> In Active
-                                </label>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-[160px_1fr] items-center gap-4">
-                            <Label className="text-sm font-medium text-gray-800">Email <span className="text-red-500">*</span></Label>
-                            <input type="text" defaultValue="alice@gmail.com" className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-500 focus:ring-0 px-0 pb-1 text-sm outline-none" />
-                        </div>
-
-                        <div className="grid grid-cols-[160px_1fr] items-center gap-4">
-                            <Label className="text-sm font-medium text-gray-800">Country Code <span className="text-red-500">*</span></Label>
-                            <div className="relative">
-                                <select className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-500 focus:ring-0 px-0 pb-1 text-sm appearance-none outline-none">
-                                    <option>+91</option>
-                                </select>
-                                <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-[160px_1fr] items-center gap-4">
-                            <Label className="text-sm font-medium text-gray-800">Mobile Number <span className="text-red-500">*</span></Label>
-                            <input type="text" defaultValue="9362606433" className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-500 focus:ring-0 px-0 pb-1 text-sm outline-none" />
-                        </div>
-
-                        <div className="grid grid-cols-[160px_1fr] items-start gap-4 h-24 pt-2">
-                            <Label className="text-sm font-medium text-gray-800 pt-1">Address</Label>
-                            <textarea
-                                defaultValue="kerala"
-                                className="w-full h-full bg-transparent border-0 border-b border-gray-300 text-gray-500 focus:ring-0 px-0 text-sm outline-none resize-none pt-1"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="flex justify-center gap-4 pb-6 mt-2 pt-2 border-t border-gray-100">
-                        <Button className="bg-transparent text-[#3eb1c8] border border-[#3eb1c8] hover:bg-cyan-50 h-8 px-8 rounded-[3px] font-normal" onClick={() => setEditEmployeeOpen(false)}>Update</Button>
-                    </div>
                 </DialogContent>
             </Dialog>
+
+            {/* The Edit Employee dialog that used to live here was a second,
+                hardcoded copy of the Add Employee fields. Editing now reuses the
+                real form above (pre-filled from the row), which PATCHes
+                /users/{id} -- one form, one code path, one source of truth. */}
         </div>
     );
 };

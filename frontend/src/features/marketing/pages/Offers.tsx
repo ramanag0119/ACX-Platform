@@ -26,36 +26,75 @@ import {
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Pencil, Trash2, Hourglass } from "lucide-react";
+import { DataState, TableLoading } from "@/core/components/DataState";
+import { useAuth } from "@/core/contexts/AuthContext";
+import { describeApiError } from "@/lib/api/client";
+import { useOffers, useRooms } from "@/lib/api/hooks";
+import { useCreateOffer, useUpdateOffer } from "@/lib/api/mutations";
+import { MAX_PAGE_SIZE } from "@/lib/api/types";
 
 // Sample Offers Data
-const offersData = [
-    { id: "1", offerName: "Pooja Offer", applicableTo: "101, 102, 103, 104, 105...", couponCode: "pooja45", couponDescription: "test", offerBy: "abc", validityFrom: "06-10-2024", validityTo: "17-10-2024", image: "-" },
-    { id: "2", offerName: "Oct 2", applicableTo: "101, 102, 103, 104, 105...", couponCode: "20 on 2", couponDescription: "Test", offerBy: "aaa", validityFrom: "01-10-2024", validityTo: "02-10-2024", image: "-" },
-    { id: "3", offerName: "test", applicableTo: "101, 102, 103, 104, 105...", couponCode: "25", couponDescription: "discount", offerBy: "test", validityFrom: "30-09-2024", validityTo: "02-10-2024", image: "-" },
-    { id: "4", offerName: "ROLEX offer", applicableTo: "101, 102, 103, 104, 105...", couponCode: "ROLEX", couponDescription: "Mr. Test", offerBy: "Mr.test", validityFrom: "27-09-2024", validityTo: "31-10-2024", image: "-" },
-    { id: "5", offerName: "3rd Anniversary Offer", applicableTo: "101, 102, 103, 104, 105...", couponCode: "0101", couponDescription: "", offerBy: "-", validityFrom: "25-09-2024", validityTo: "25-09-2024", image: "-" },
-    { id: "6", offerName: "Test", applicableTo: "101, 102, 103, 104, 105...", couponCode: "10001", couponDescription: "", offerBy: "-", validityFrom: "25-09-2024", validityTo: "28-09-2024", image: "-" },
-    { id: "7", offerName: "Sunday Offer", applicableTo: "101, 102, 103, 104, 105...", couponCode: "050505", couponDescription: "", offerBy: "-", validityFrom: "25-09-2024", validityTo: "29-09-2024", image: "-" },
-    { id: "8", offerName: "Diwali Offer", applicableTo: "101, 102, 103, 104, 105...", couponCode: "DIWALI2024", couponDescription: "Diwali Offer", offerBy: "-", validityFrom: "24-09-2024", validityTo: "30-11-2024", image: "Click here for image" },
-    { id: "9", offerName: "test", applicableTo: "401", couponCode: "123", couponDescription: "Test", offerBy: "test", validityFrom: "18-09-2024", validityTo: "18-09-2024", image: "Click here for image" },
-    { id: "10", offerName: "New year offer", applicableTo: "103", couponCode: "NEWYEAR2002", couponDescription: "", offerBy: "-", validityFrom: "18-05-2023", validityTo: "18-05-2023", image: "-" },
-];
-
-const roomTypes = ["All", "Golden Package", "Delux Package", "Premium Suite", "Standard Room"];
+/**
+ * Offers, connected to GET/POST/PATCH /offers.
+ *
+ * An offer IS a `promo_code` row, and the rooms it applies to are
+ * `promo_code_amenity` rows -- which is why "Applicable To" lists room names.
+ * `discount_percentage`, `max_discount_value` and `min_order_value` are all real
+ * columns; there is no separate discount engine.
+ */
 
 const Offers = () => {
+    const offersQuery = useOffers({ page: 1, page_size: MAX_PAGE_SIZE });
+    const roomsQuery = useRooms({ page: 1, page_size: MAX_PAGE_SIZE });
+    const { canWrite } = useAuth();
+    const mayWrite = canWrite("offers");
+    const createOffer = useCreateOffer();
+    const updateOffer = useUpdateOffer();
+
+    const offersData = (offersQuery.data?.items ?? []).map((offer) => ({
+        id: offer.id,
+        offerName: offer.offer_name ?? "-",
+        applicableTo: offer.room_names.join(", ") || "All rooms",
+        couponCode: offer.promo_code,
+        couponDescription: offer.promo_code_description ?? "-",
+        offerBy: offer.offered_by ?? "-",
+        validityFrom: offer.start_time ? new Date(offer.start_time).toLocaleDateString() : "-",
+        validityTo: offer.expiry_time ? new Date(offer.expiry_time).toLocaleDateString() : "-",
+        image: "-",
+        discount: offer.discount_percentage ?? "-",
+    }));
+    /** One table row. Derived from the mapping above so the two cannot drift. */
+    type OfferRow = (typeof offersData)[number];
+
     const [isModalOpen, setIsModalOpen] = useState(false);
+    /** The Add Offer form. Every field maps to a `promo_code` column. */
+    const [offerForm, setOfferForm] = useState({
+        offerName: "",
+        couponCode: "",
+        description: "",
+        offeredBy: "",
+        discount: "",
+        validFrom: "",
+        validTo: "",
+        roomIds: [] as string[],
+    });
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [entriesPerPage, setEntriesPerPage] = useState("10");
     const [currentPage, setCurrentPage] = useState(1);
 
-    // Form state
-    const [offerName, setOfferName] = useState("");
-    const [selectedRooms, setSelectedRooms] = useState<string[]>([]);
-    const [selectedItemToDelete, setSelectedItemToDelete] = useState<any>(null);
-    const [selectedItemToEdit, setSelectedItemToEdit] = useState<any>(null);
+    const [selectedItemToDelete, setSelectedItemToDelete] = useState<OfferRow | null>(null);
+    const [selectedItemToEdit, setSelectedItemToEdit] = useState<OfferRow | null>(null);
+    /** The Edit Offer form, seeded from the selected `promo_code` row. */
+    const [editForm, setEditForm] = useState({
+        offerName: "",
+        couponCode: "",
+        description: "",
+        offeredBy: "",
+        validFrom: "",
+        validTo: "",
+    });
 
     const filteredData = offersData.filter(item =>
         item.offerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -65,17 +104,41 @@ const Offers = () => {
     const startIndex = (currentPage - 1) * parseInt(entriesPerPage);
     const paginatedData = filteredData.slice(startIndex, startIndex + parseInt(entriesPerPage));
 
+    /** Toggles a real `amenity.id` on the offer being composed. */
     const handleRoomToggle = (roomId: string) => {
-        setSelectedRooms(prev => prev.includes(roomId) ? prev.filter(id => id !== roomId) : [...prev, roomId]);
+        setOfferForm((prev) => ({
+            ...prev,
+            roomIds: prev.roomIds.includes(roomId)
+                ? prev.roomIds.filter((id) => id !== roomId)
+                : [...prev.roomIds, roomId],
+        }));
     };
 
-    const handleWithdrawClick = (item: any) => {
+    const handleWithdrawClick = (item: OfferRow) => {
         setSelectedItemToDelete(item);
         setIsDeleteModalOpen(true);
     };
 
-    const handleEditClick = (item: any) => {
+    /** Copy the chosen row into the edit form. `offersData` rows carry the
+     *  formatted values shown in the table, so dates are converted back to the
+     *  yyyy-mm-dd an <input type="date"> needs. */
+    const seedEditForm = (item: OfferRow) => {
+        const source = (offersQuery.data?.items ?? []).find((row) => row.id === item.id);
+        const toDateInput = (value: string | null | undefined) =>
+            value ? new Date(value).toISOString().slice(0, 10) : "";
+        setEditForm({
+            offerName: source?.offer_name ?? "",
+            couponCode: source?.promo_code ?? "",
+            description: source?.promo_code_description ?? "",
+            offeredBy: source?.offered_by ?? "",
+            validFrom: toDateInput(source?.start_time),
+            validTo: toDateInput(source?.expiry_time),
+        });
+    };
+
+    const handleEditClick = (item: OfferRow) => {
         setSelectedItemToEdit(item);
+        seedEditForm(item);
         setIsEditModalOpen(true);
     };
 
@@ -86,6 +149,7 @@ const Offers = () => {
                 <h1 className="text-2xl font-semibold text-foreground">Offers Management</h1>
                 <Button onClick={() => setIsModalOpen(true)} className="bg-cyan-600 hover:bg-cyan-700 text-white">Add Offers</Button>
             </div>
+
 
             {/* Table Section */}
             <Card className="border-0 shadow-lg rounded-2xl bg-white">
@@ -178,22 +242,84 @@ const Offers = () => {
                     <DialogHeader><DialogTitle>Add New Offer</DialogTitle></DialogHeader>
                     <div className="grid gap-4 py-4">
                         <div className="grid grid-cols-2 gap-4">
+                            {/* Every input binds to `offerForm`, which is what the
+                                Submit button below reads. Offer Name previously wrote
+                                to an unrelated state and Coupon Code had no binding at
+                                all, so `offerForm.couponCode` stayed empty and the
+                                button was permanently disabled. */}
                             <div className="space-y-2">
                                 <Label>Offer Name<span className="text-red-500">*</span></Label>
-                                <Input placeholder="Enter offer name" value={offerName} onChange={(e) => setOfferName(e.target.value)} className="bg-muted/30 border-border/50" />
+                                <Input
+                                    placeholder="Enter offer name"
+                                    value={offerForm.offerName}
+                                    onChange={(e) => setOfferForm((prev) => ({ ...prev, offerName: e.target.value }))}
+                                    className="bg-muted/30 border-border/50"
+                                />
                             </div>
                             <div className="space-y-2">
                                 <Label>Coupon Code<span className="text-red-500">*</span></Label>
-                                <Input placeholder="Enter coupon code" className="bg-muted/30 border-border/50" />
+                                <Input
+                                    placeholder="Enter coupon code"
+                                    value={offerForm.couponCode}
+                                    onChange={(e) => setOfferForm((prev) => ({ ...prev, couponCode: e.target.value }))}
+                                    className="bg-muted/30 border-border/50"
+                                />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Coupon Description</Label>
+                                <Input
+                                    placeholder="Enter description"
+                                    value={offerForm.description}
+                                    onChange={(e) => setOfferForm((prev) => ({ ...prev, description: e.target.value }))}
+                                    className="bg-muted/30 border-border/50"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Offer By</Label>
+                                <Input
+                                    placeholder="Enter offered by"
+                                    value={offerForm.offeredBy}
+                                    onChange={(e) => setOfferForm((prev) => ({ ...prev, offeredBy: e.target.value }))}
+                                    className="bg-muted/30 border-border/50"
+                                />
                             </div>
                         </div>
                         <div className="space-y-2">
+                            <Label>Discount %</Label>
+                            <Input
+                                type="number"
+                                placeholder="Enter discount percentage"
+                                value={offerForm.discount}
+                                onChange={(e) => setOfferForm((prev) => ({ ...prev, discount: e.target.value }))}
+                                className="bg-muted/30 border-border/50"
+                            />
+                        </div>
+                        <div className="space-y-2">
                             <Label>Applicable Rooms</Label>
-                            <div className="grid grid-cols-3 gap-2">
-                                {roomTypes.map((room) => (
-                                    <div key={room} className="flex items-center space-x-2">
-                                        <Checkbox id={room} checked={selectedRooms.includes(room)} onCheckedChange={() => handleRoomToggle(room)} />
-                                        <label htmlFor={room} className="text-sm">{room}</label>
+                            {/* Real amenities from GET /rooms. A promo_code applies to
+                                `promo_code_amenity` rows, so these are rooms -- not the
+                                package names the previous hardcoded list showed. */}
+                            <div className="grid grid-cols-3 gap-2 max-h-[180px] overflow-y-auto">
+                                {roomsQuery.isLoading && (
+                                    <p className="text-sm text-muted-foreground col-span-3">Loading rooms...</p>
+                                )}
+                                {roomsQuery.error && (
+                                    <p className="text-sm text-muted-foreground col-span-3">
+                                        {describeApiError(roomsQuery.error)}
+                                    </p>
+                                )}
+                                {(roomsQuery.data?.items ?? []).map((room) => (
+                                    <div key={room.id} className="flex items-center space-x-2">
+                                        <Checkbox
+                                            id={`room-${room.id}`}
+                                            checked={offerForm.roomIds.includes(room.id)}
+                                            onCheckedChange={() => handleRoomToggle(room.id)}
+                                        />
+                                        <label htmlFor={`room-${room.id}`} className="text-sm">
+                                            {room.name}
+                                        </label>
                                     </div>
                                 ))}
                             </div>
@@ -201,16 +327,67 @@ const Offers = () => {
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label>Validity From<span className="text-red-500">*</span></Label>
-                                <Input type="date" className="bg-muted/30 border-border/50" />
+                                <Input
+                                    type="date"
+                                    value={offerForm.validFrom}
+                                    onChange={(e) => setOfferForm((prev) => ({ ...prev, validFrom: e.target.value }))}
+                                    className="bg-muted/30 border-border/50"
+                                />
                             </div>
                             <div className="space-y-2">
                                 <Label>Validity To<span className="text-red-500">*</span></Label>
-                                <Input type="date" className="bg-muted/30 border-border/50" />
+                                <Input
+                                    type="date"
+                                    value={offerForm.validTo}
+                                    onChange={(e) => setOfferForm((prev) => ({ ...prev, validTo: e.target.value }))}
+                                    className="bg-muted/30 border-border/50"
+                                />
                             </div>
                         </div>
                         <div className="flex justify-center gap-4 pt-4">
-                            <Button variant="outline" onClick={() => setIsModalOpen(false)} className="px-8">Reset</Button>
-                            <Button onClick={() => setIsModalOpen(false)} className="bg-cyan-600 hover:bg-cyan-700 text-white px-8">Submit</Button>
+                            <Button
+                                variant="outline"
+                                className="px-8"
+                                onClick={() =>
+                                    setOfferForm({
+                                        offerName: "",
+                                        couponCode: "",
+                                        description: "",
+                                        offeredBy: "",
+                                        discount: "",
+                                        validFrom: "",
+                                        validTo: "",
+                                        roomIds: [],
+                                    })
+                                }
+                            >
+                                Reset
+                            </Button>
+                            <Button
+                                className="bg-cyan-600 hover:bg-cyan-700 text-white px-8"
+                                disabled={!mayWrite || !offerForm.couponCode.trim() || createOffer.isPending}
+                                onClick={() =>
+                                    createOffer.mutate(
+                                        {
+                                            promo_code: offerForm.couponCode.trim(),
+                                            offer_name: offerForm.offerName || null,
+                                            promo_code_description: offerForm.description || null,
+                                            offered_by: offerForm.offeredBy || null,
+                                            discount_percentage: offerForm.discount || null,
+                                            start_time: offerForm.validFrom
+                                                ? new Date(offerForm.validFrom).toISOString()
+                                                : null,
+                                            expiry_time: offerForm.validTo
+                                                ? new Date(offerForm.validTo).toISOString()
+                                                : null,
+                                            amenity_ids: offerForm.roomIds,
+                                        },
+                                        { onSuccess: () => setIsModalOpen(false) },
+                                    )
+                                }
+                            >
+                                {createOffer.isPending ? "Saving..." : "Submit"}
+                            </Button>
                         </div>
                     </div>
                 </DialogContent>
@@ -247,47 +424,83 @@ const Offers = () => {
                     </div>
 
                     <div className="px-10 py-8 space-y-6 overflow-y-auto max-h-[85vh]">
+                        {/* Bound to the selected `promo_code` row. Every field in this
+                            dialog was hardcoded ("Pooja Offer", "pooja45", rooms
+                            101-103) and read-only, and Update had no handler, so the
+                            edit could never reach the API. */}
                         <div className="grid grid-cols-[200px_1fr] gap-6 items-center">
                             <Label className="text-sm font-medium text-gray-700">Offer Name <span className="text-red-500">*</span></Label>
-                            <div className="text-sm font-medium text-gray-900 border-b border-gray-300 pb-1 w-full max-w-2xl h-8 pt-1.5">Pooja Offer</div>
+                            <Input
+                                value={editForm.offerName}
+                                onChange={(e) => setEditForm((prev) => ({ ...prev, offerName: e.target.value }))}
+                                className="bg-transparent border-0 border-b border-gray-300 rounded-none text-foreground focus-visible:ring-0 px-0 h-8 max-w-2xl font-medium"
+                            />
                         </div>
 
                         <div className="grid grid-cols-[200px_1fr] gap-6 items-center">
                             <Label className="text-sm font-medium text-gray-700">Applicable To <span className="text-red-500">*</span></Label>
+                            {/* The offer's real `promo_code_amenity` rooms. */}
                             <div className="border border-gray-300 rounded-sm p-1.5 flex flex-wrap gap-2 items-center bg-white min-h-[36px] max-w-2xl">
-                                {[101, 102, 103].map(room => (
-                                    <div key={room} className="bg-[#3eb1c8] text-white text-xs px-2 py-0.5 rounded-sm flex items-center">
-                                        {room} <span className="ml-1 cursor-pointer hover:text-white/80">×</span>
-                                    </div>
-                                ))}
-                                <div className="text-xs text-gray-500 ml-auto">+36</div>
-                                <div className="border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[6px] border-t-gray-400 ml-1"></div>
+                                {selectedItemToEdit?.applicableTo &&
+                                selectedItemToEdit.applicableTo !== "All rooms" ? (
+                                    selectedItemToEdit.applicableTo
+                                        .split(", ")
+                                        .map((room: string) => (
+                                            <div key={room} className="bg-[#3eb1c8] text-white text-xs px-2 py-0.5 rounded-sm">
+                                                {room}
+                                            </div>
+                                        ))
+                                ) : (
+                                    <span className="text-xs text-gray-500">All rooms</span>
+                                )}
                             </div>
                         </div>
 
                         <div className="grid grid-cols-[200px_1fr] gap-6 items-center pt-2">
                             <Label className="text-sm font-medium text-gray-700">Coupon Code <span className="text-red-500">*</span></Label>
-                            <Input value="pooja45" readOnly className="bg-transparent border-0 border-b border-gray-300 rounded-none text-foreground focus-visible:ring-0 px-0 h-8 max-w-2xl font-medium" />
+                            <Input
+                                value={editForm.couponCode}
+                                onChange={(e) => setEditForm((prev) => ({ ...prev, couponCode: e.target.value }))}
+                                className="bg-transparent border-0 border-b border-gray-300 rounded-none text-foreground focus-visible:ring-0 px-0 h-8 max-w-2xl font-medium"
+                            />
                         </div>
 
                         <div className="grid grid-cols-[200px_1fr] gap-6 items-center pt-2">
                             <Label className="text-sm font-medium text-gray-700">Coupon Description</Label>
-                            <Input value="test" readOnly className="bg-transparent border-0 border-b border-gray-300 rounded-none text-foreground focus-visible:ring-0 px-0 h-8 max-w-2xl font-medium" />
+                            <Input
+                                value={editForm.description}
+                                onChange={(e) => setEditForm((prev) => ({ ...prev, description: e.target.value }))}
+                                className="bg-transparent border-0 border-b border-gray-300 rounded-none text-foreground focus-visible:ring-0 px-0 h-8 max-w-2xl font-medium"
+                            />
                         </div>
 
                         <div className="grid grid-cols-[200px_1fr] gap-6 items-center pt-2">
                             <Label className="text-sm font-medium text-gray-700">Offer By</Label>
-                            <Input value="abc" readOnly className="bg-transparent border-0 border-b border-gray-300 rounded-none text-foreground focus-visible:ring-0 px-0 h-8 max-w-2xl font-medium" />
+                            <Input
+                                value={editForm.offeredBy}
+                                onChange={(e) => setEditForm((prev) => ({ ...prev, offeredBy: e.target.value }))}
+                                className="bg-transparent border-0 border-b border-gray-300 rounded-none text-foreground focus-visible:ring-0 px-0 h-8 max-w-2xl font-medium"
+                            />
                         </div>
 
                         <div className="grid grid-cols-[200px_1fr] gap-6 items-center pt-4">
                             <Label className="text-sm font-medium text-gray-700">Validity From <span className="text-red-500">*</span></Label>
-                            <Input type="text" value="06-10-2024" readOnly className="bg-white text-foreground border border-gray-300 rounded-sm h-9 max-w-[calc(100%-400px)] px-3 font-medium" />
+                            <Input
+                                type="date"
+                                value={editForm.validFrom}
+                                onChange={(e) => setEditForm((prev) => ({ ...prev, validFrom: e.target.value }))}
+                                className="bg-white text-foreground border border-gray-300 rounded-sm h-9 max-w-[calc(100%-400px)] px-3 font-medium"
+                            />
                         </div>
 
                         <div className="grid grid-cols-[200px_1fr] gap-6 items-center pt-2">
                             <Label className="text-sm font-medium text-gray-700">Validity To <span className="text-red-500">*</span></Label>
-                            <Input type="text" value="17-10-2024" readOnly className="bg-white text-foreground border border-gray-300 rounded-sm h-9 max-w-[calc(100%-400px)] px-3 font-medium" />
+                            <Input
+                                type="date"
+                                value={editForm.validTo}
+                                onChange={(e) => setEditForm((prev) => ({ ...prev, validTo: e.target.value }))}
+                                className="bg-white text-foreground border border-gray-300 rounded-sm h-9 max-w-[calc(100%-400px)] px-3 font-medium"
+                            />
                         </div>
 
                         <div className="grid grid-cols-[200px_1fr] gap-6 items-center pt-4">
@@ -299,8 +512,44 @@ const Offers = () => {
                         </div>
 
                         <div className="flex justify-center mt-10 gap-4">
-                            <Button variant="outline" className="bg-white hover:bg-gray-50 text-gray-600 border-gray-300 h-9 px-8 rounded-sm font-medium transition-colors">Reset</Button>
-                            <Button className="bg-cyan-600 hover:bg-cyan-700 text-white border-transparent h-9 px-8 rounded-sm font-medium transition-colors">Update</Button>
+                            <Button
+                                variant="outline"
+                                className="bg-white hover:bg-gray-50 text-gray-600 border-gray-300 h-9 px-8 rounded-sm font-medium transition-colors"
+                                onClick={() => selectedItemToEdit && seedEditForm(selectedItemToEdit)}
+                            >
+                                Reset
+                            </Button>
+                            <Button
+                                className="bg-cyan-600 hover:bg-cyan-700 text-white border-transparent h-9 px-8 rounded-sm font-medium transition-colors"
+                                disabled={
+                                    !mayWrite ||
+                                    !selectedItemToEdit ||
+                                    !editForm.couponCode.trim() ||
+                                    updateOffer.isPending
+                                }
+                                onClick={() =>
+                                    updateOffer.mutate(
+                                        {
+                                            id: selectedItemToEdit.id,
+                                            body: {
+                                                promo_code: editForm.couponCode.trim(),
+                                                offer_name: editForm.offerName.trim() || null,
+                                                promo_code_description: editForm.description.trim() || null,
+                                                offered_by: editForm.offeredBy.trim() || null,
+                                                start_time: editForm.validFrom
+                                                    ? new Date(editForm.validFrom).toISOString()
+                                                    : null,
+                                                expiry_time: editForm.validTo
+                                                    ? new Date(editForm.validTo).toISOString()
+                                                    : null,
+                                            },
+                                        },
+                                        { onSuccess: () => setIsEditModalOpen(false) },
+                                    )
+                                }
+                            >
+                                {updateOffer.isPending ? "Updating..." : "Update"}
+                            </Button>
                         </div>
                     </div>
                 </DialogContent>

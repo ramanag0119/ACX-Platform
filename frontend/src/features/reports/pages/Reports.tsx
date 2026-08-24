@@ -11,6 +11,33 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { DataState, TableLoading } from "@/core/components/DataState";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useDevices, useEnergyStats, useRooms } from "@/lib/api/hooks";
+import { MAX_PAGE_SIZE } from "@/lib/api/types";
+
+/**
+ * Reports.
+ *
+ * THERE IS NO REPORT-GENERATION OR EXPORT ENDPOINT. Every "Generate Report"
+ * button is therefore disabled: producing a file is a backend capability that
+ * Phase 2.x does not deliver, and a client-side approximation would not be the
+ * same report.
+ *
+ * What IS connected:
+ *   - The Room No and device pickers list real rooms (GET /rooms) and devices
+ *     (GET /devices) instead of hardcoded numbers.
+ *   - The Energy Report shows the real `energy_stat` rows for the chosen date
+ *     range via GET /energy-stats. Values carry NO UNIT, because the table
+ *     stores none, and nothing is costed or carbon-weighted.
+ */
 
 const reportTabs = [
   { id: "occupancy", label: "Occupancy Report" },
@@ -32,6 +59,19 @@ const EnergyReportContent = () => {
   const [dateTo, setDateTo] = useState("");
   const [roomNo, setRoomNo] = useState("");
   const [mkds, setMkds] = useState("");
+
+  // --- Live data -----------------------------------------------------------
+  const roomsQuery = useRooms({ page: 1, page_size: MAX_PAGE_SIZE });
+  const devicesQuery = useDevices({ page: 1, page_size: MAX_PAGE_SIZE });
+  const energyQuery = useEnergyStats({
+    page: 1,
+    page_size: MAX_PAGE_SIZE,
+    ...(roomNo ? { amenity_id: roomNo } : {}),
+    ...(mkds ? { device_name: mkds } : {}),
+    ...(dateFrom ? { timestamp_from: new Date(`${dateFrom}T00:00:00Z`).toISOString() } : {}),
+    ...(dateTo ? { timestamp_to: new Date(`${dateTo}T23:59:59Z`).toISOString() } : {}),
+  });
+  const energyRows = energyQuery.data?.items ?? [];
 
   const mainTabs = [
     { id: "room-based", label: "Room Based" },
@@ -144,12 +184,9 @@ const EnergyReportContent = () => {
                   <SelectValue placeholder="Select Room Number" />
                 </SelectTrigger>
                 <SelectContent className="bg-white">
-                  <SelectItem value="101">Room 101</SelectItem>
-                  <SelectItem value="102">Room 102</SelectItem>
-                  <SelectItem value="103">Room 103</SelectItem>
-                  <SelectItem value="201">Room 201</SelectItem>
-                  <SelectItem value="202">Room 202</SelectItem>
-                  <SelectItem value="301">Room 301</SelectItem>
+                  {(roomsQuery.data?.items ?? []).map((room) => (
+                    <SelectItem key={room.id} value={room.id}>{room.name}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -165,21 +202,70 @@ const EnergyReportContent = () => {
                     <SelectValue placeholder="Select MKDS" />
                   </SelectTrigger>
                   <SelectContent className="bg-white">
-                    <SelectItem value="mkds1">MKDS 1</SelectItem>
-                    <SelectItem value="mkds2">MKDS 2</SelectItem>
-                    <SelectItem value="mkds3">MKDS 3</SelectItem>
-                    <SelectItem value="mkds4">MKDS 4</SelectItem>
+                    {(devicesQuery.data?.items ?? [])
+                      .filter((device) => device.device_name)
+                      .map((device) => (
+                        <SelectItem key={device.id} value={device.device_name as string}>
+                          {device.device_name}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
             )}
 
-            {/* Submit Button */}
-            <div className="flex justify-center pt-4">
-              <Button className="px-8 h-11 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-200">
+            {/* Export needs a backend report endpoint, which does not exist.
+                The stored rows are listed below instead. */}
+            <div className="flex flex-col items-center gap-2 pt-4">
+              <Button
+                className="px-8 h-11 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow-md"
+                disabled
+                title="No report export endpoint exists"
+              >
                 <Download className="h-4 w-4 mr-2" />
                 Generate Report
               </Button>
+              <p className="text-xs text-muted-foreground">
+                File export is not available: the API exposes no report-generation
+                endpoint. The stored readings are shown below.
+              </p>
+            </div>
+
+            {/* Live energy_stat rows for the current filters. */}
+            <div className="rounded-xl border border-gray-200 overflow-hidden">
+              <DataState
+                isLoading={energyQuery.isLoading}
+                error={energyQuery.error}
+                isEmpty={energyRows.length === 0}
+                emptyTitle="No energy readings for this selection"
+                loader={<TableLoading columns={5} />}
+              >
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-gray-50">
+                      <TableHead>Room</TableHead>
+                      <TableHead>Device</TableHead>
+                      <TableHead>Hour (UTC)</TableHead>
+                      <TableHead className="text-right">Energy consumed</TableHead>
+                      <TableHead>Unit</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {energyRows.slice(0, 50).map((row) => (
+                      <TableRow key={`${row.device_name}-${row.amenity_id}-${row.hour}`}>
+                        <TableCell>{row.amenity_name ?? "-"}</TableCell>
+                        <TableCell>{row.device_name}</TableCell>
+                        <TableCell>{new Date(row.hour_timestamp).toLocaleString()}</TableCell>
+                        <TableCell className="text-right">{row.energy_consumed}</TableCell>
+                        {/* Always null: energy_stat stores no unit. */}
+                        <TableCell className="text-muted-foreground">
+                          {row.energy_unit ?? "not recorded"}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </DataState>
             </div>
           </div>
         </div>
@@ -252,10 +338,19 @@ const StandardReportContent = ({ reportName, singleDateOnly = false }: { reportN
             </>
           )}
 
-          <Button className="h-11 px-8 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-200">
-            <Download className="h-4 w-4 mr-2" />
-            Generate Report
-          </Button>
+          <div className="flex flex-col gap-1">
+            <Button
+              className="h-11 px-8 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow-md"
+              disabled
+              title="No report export endpoint exists"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Generate Report
+            </Button>
+            <p className="text-xs text-muted-foreground max-w-xs">
+              Report generation is a backend capability the API does not expose.
+            </p>
+          </div>
         </div>
       </CardContent>
     </Card>

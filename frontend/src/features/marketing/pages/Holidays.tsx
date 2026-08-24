@@ -21,31 +21,53 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Pencil, Trash2, X, Edit } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { DataState, TableLoading } from "@/core/components/DataState";
+import { useAuth } from "@/core/contexts/AuthContext";
+import { useHolidays, useOccasionTypes } from "@/lib/api/hooks";
+import { useCreateHoliday, useUpdateHoliday } from "@/lib/api/mutations";
+import { MAX_PAGE_SIZE } from "@/lib/api/types";
 
 // Sample holidays data
-const initialHolidaysData = [
-    { id: "1", startDate: "28-10-2024", endDate: "05-11-2024", lockMessage: "Diwali Holiday", description: "test test test" },
-    { id: "2", startDate: "15-08-2024", endDate: "18-08-2024", lockMessage: "test1", description: "test1" },
-    { id: "3", startDate: "01-08-2024", endDate: "07-08-2024", lockMessage: "test", description: "test" },
-    { id: "4", startDate: "11-05-2023", endDate: "28-05-2023", lockMessage: "Happy Holidays", description: "Vacation leave" },
-    { id: "5", startDate: "20-04-2023", endDate: "30-04-2023", lockMessage: "holidays", description: "holiday" },
-    { id: "6", startDate: "15-02-2023", endDate: "16-02-2023", lockMessage: "we are closed", description: "testing" },
-];
+/**
+ * Holidays, connected to GET/POST/PATCH /holidays (`occasion`).
+ *
+ * `occasion_type` is the seeded lookup (Birthday, Festival, Holiday, Marriage
+ * anniversary). `month` and `day_of_month` are NOT NULL and are derived from the
+ * start date by the backend, which is what makes a repeatable occasion recur --
+ * so the form asks for the date once.
+ */
 
 const Holidays = () => {
+    const holidaysQuery = useHolidays({ page: 1, page_size: MAX_PAGE_SIZE });
+    const typesQuery = useOccasionTypes();
+    const { canWrite } = useAuth();
+    const mayWrite = canWrite("holidays");
+    const createHoliday = useCreateHoliday();
+    const updateHoliday = useUpdateHoliday();
+
+    const initialHolidaysData = (holidaysQuery.data?.items ?? []).map((row) => ({
+        id: row.id,
+        startDate: row.occasion_start_date,
+        endDate: row.occasion_end_date ?? "-",
+        lockMessage: row.occasion_name ?? row.occasion_type_name ?? "-",
+        description: row.occasion_type_name ?? "-",
+    }));
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
     const [lockMessage, setLockMessage] = useState("");
     const [description, setDescription] = useState("");
     const [editingId, setEditingId] = useState<string | null>(null);
     const [errors, setErrors] = useState<{ startDate?: string; endDate?: string; lockMessage?: string; description?: string; }>({});
-    const [holidaysData, setHolidaysData] = useState(initialHolidaysData);
+    // Rows come straight from the API; there is no local copy to drift.
+    const holidaysData = initialHolidaysData;
     const [search, setSearch] = useState("");
     const [entriesPerPage, setEntriesPerPage] = useState("10");
     const [currentPage, setCurrentPage] = useState(1);
 
     const [editModalOpen, setEditModalOpen] = useState(false);
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    /** Which `occasion` the delete dialog is about to retire. */
+    const [deletingId, setDeletingId] = useState<string | null>(null);
 
     const validateForm = () => {
         const newErrors: typeof errors = {};
@@ -63,30 +85,55 @@ const Holidays = () => {
         return `${String(date.getDate()).padStart(2, '0')}-${String(date.getMonth() + 1).padStart(2, '0')}-${date.getFullYear()}`;
     };
 
+    /**
+     * Create or update an `occasion`.
+     *
+     * The type comes from the `occasion_type` lookup -- the Description field is
+     * that choice, so it is matched against the real type names. `month` and
+     * `day_of_month` are derived server-side from the start date.
+     */
     const handleSubmit = () => {
         if (!validateForm()) return;
+
+        const types = typesQuery.data ?? [];
+        const occasionType =
+            types.find((type) => type.name.toLowerCase() === description.trim().toLowerCase())
+            ?? types.find((type) => type.name === "Holiday")
+            ?? types[0];
+        if (!occasionType) return;
+
+        const body = {
+            occasion_type: occasionType.id,
+            occasion_name: lockMessage.trim(),
+            occasion_start_date: startDate,
+            occasion_end_date: endDate || null,
+        };
+
         if (editingId) {
-            setHolidaysData(prev => prev.map(item => item.id === editingId ? { ...item, startDate: formatDate(startDate), endDate: formatDate(endDate), lockMessage, description } : item));
-            setEditingId(null);
-        } else {
-            setHolidaysData(prev => [{ id: String(Date.now()), startDate: formatDate(startDate), endDate: formatDate(endDate), lockMessage, description }, ...prev]);
+            updateHoliday.mutate({ id: editingId, body }, { onSuccess: handleReset });
+            return;
         }
-        handleReset();
+        createHoliday.mutate(body, { onSuccess: handleReset });
     };
 
     const handleReset = () => { setStartDate(""); setEndDate(""); setLockMessage(""); setDescription(""); setErrors({}); setEditingId(null); };
 
     const handleEdit = (item: typeof initialHolidaysData[0]) => {
         setEditingId(item.id);
-        const [d, m, y] = item.startDate.split('-');
-        setStartDate(`${y}-${m}-${d}`);
-        const [ed, em, ey] = item.endDate.split('-');
-        setEndDate(`${ey}-${em}-${ed}`);
+        // The API returns ISO dates, which is what the date inputs want.
+        setStartDate(item.startDate);
+        setEndDate(item.endDate === "-" ? "" : item.endDate);
         setLockMessage(item.lockMessage);
         setDescription(item.description);
     };
 
-    const handleDelete = (id: string) => { setHolidaysData(prev => prev.filter(item => item.id !== id)); };
+    /**
+     * Deactivate rather than delete: `occasion` has a `status` column and no
+     * delete endpoint, because a past occasion is a record, not a mistake.
+     */
+    const handleDelete = (id: string) => {
+        updateHoliday.mutate({ id, body: { status: 0 } });
+    };
 
     const filteredData = holidaysData.filter(item => item.lockMessage.toLowerCase().includes(search.toLowerCase()) || item.description.toLowerCase().includes(search.toLowerCase()));
     const totalPages = Math.ceil(filteredData.length / parseInt(entriesPerPage));
@@ -99,6 +146,7 @@ const Holidays = () => {
             <div className="mb-2">
                 <h1 className="text-2xl font-semibold text-foreground">Holidays Management</h1>
             </div>
+
 
             {/* Add Form */}
             <Card className="border-0 shadow-lg rounded-2xl bg-white">
@@ -128,7 +176,17 @@ const Holidays = () => {
                     </div>
                     <div className="flex justify-center gap-4 mt-6">
                         <Button variant="outline" onClick={handleReset} className="px-8">Reset</Button>
-                        <Button onClick={handleSubmit} className="bg-cyan-600 hover:bg-cyan-700 text-white px-8">{editingId ? "Update" : "Submit"}</Button>
+                        <Button
+                            onClick={handleSubmit}
+                            disabled={!mayWrite || createHoliday.isPending || updateHoliday.isPending}
+                            className="bg-cyan-600 hover:bg-cyan-700 text-white px-8"
+                        >
+                            {createHoliday.isPending || updateHoliday.isPending
+                                ? "Saving..."
+                                : editingId
+                                    ? "Update"
+                                    : "Submit"}
+                        </Button>
                     </div>
                 </CardContent>
             </Card>
@@ -177,7 +235,18 @@ const Holidays = () => {
                                                 <Button size="sm" className="bg-[#3eb1c8] hover:bg-[#3eb1c8]/90 text-white h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditModalOpen(true)}>
                                                     <Edit className="h-[14px] w-[14px]" />
                                                 </Button>
-                                                <Button size="sm" className="bg-[#d33] hover:bg-[#bd2d2d] text-white h-7 w-7 p-0 rounded-[3px]" onClick={() => setDeleteModalOpen(true)}>
+                                                {/* Record WHICH occasion is being retired.
+                                                    Previously the dialog opened without an id,
+                                                    so the confirm button had nothing to act on. */}
+                                                <Button
+                                                    size="sm"
+                                                    className="bg-[#d33] hover:bg-[#bd2d2d] text-white h-7 w-7 p-0 rounded-[3px]"
+                                                    disabled={!mayWrite}
+                                                    onClick={() => {
+                                                        setDeletingId(item.id);
+                                                        setDeleteModalOpen(true);
+                                                    }}
+                                                >
                                                     <Trash2 className="h-[14px] w-[14px]" />
                                                 </Button>
                                             </div>
@@ -269,7 +338,19 @@ const Holidays = () => {
                         </div>
 
                         <div className="flex gap-2.5 justify-center pt-2">
-                            <Button className="bg-[#3085d6] hover:bg-[#2b78c1] text-white text-[15px] font-medium px-4 py-2 rounded-[4px] h-[40px]" onClick={() => setDeleteModalOpen(false)}>Yes, delete it!</Button>
+                            {/* Actually performs the retirement via PATCH status=0. */}
+                            <Button
+                                className="bg-[#3085d6] hover:bg-[#2b78c1] text-white text-[15px] font-medium px-4 py-2 rounded-[4px] h-[40px]"
+                                disabled={!mayWrite || !deletingId || updateHoliday.isPending}
+                                onClick={() => {
+                                    if (!deletingId) return;
+                                    handleDelete(deletingId);
+                                    setDeletingId(null);
+                                    setDeleteModalOpen(false);
+                                }}
+                            >
+                                {updateHoliday.isPending ? "Removing..." : "Yes, delete it!"}
+                            </Button>
                             <Button className="bg-[#d33] hover:bg-[#bd2d2d] text-white text-[15px] font-medium px-4 py-2 rounded-[4px] h-[40px]" onClick={() => setDeleteModalOpen(false)}>Cancel</Button>
                         </div>
                     </div>

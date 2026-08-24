@@ -23,373 +23,72 @@ import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Search, ChevronLeft, ChevronRight, Eye, Edit, Check, X, ChevronDown, ChevronUp } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/core/contexts/AuthContext";
+import { DataState, TableLoading } from "@/core/components/DataState";
+import { describeApiError } from "@/lib/api/client";
+import {
+    useDepartments,
+    useMaintenanceRequests,
+    useRooms,
+    useServiceCategories,
+    useServiceTypes,
+    useUsers,
+} from "@/lib/api/hooks";
+import {
+    useCreateMaintenanceRequest,
+    useRemoveMaintenanceRequest,
+} from "@/lib/api/mutations";
+import { MAX_PAGE_SIZE } from "@/lib/api/types";
+import type { MaintenanceRequestWrite } from "@/lib/api/writes";
 
 type TabType = "scheduled" | "maintenance" | "disinfection";
 
-// Scheduled Services Data
-const scheduledServicesData = [
-    {
-        id: "1",
-        facilityServices: "Room Cleaning",
-        serviceType: "Housekeeping",
-        department: "Housekeeping",
-        assignTo: "View staff",
-        date: "27-12-2024",
-        startTime: "14:00",
-        endTime: "18:00",
-        roomNo: "View rooms",
-    },
-    {
-        id: "2",
-        facilityServices: "Room Cleaning",
-        serviceType: "Cleaning",
-        department: "Housekeeping",
-        assignTo: "View staff",
-        date: "08-12-2024",
-        startTime: "14:00",
-        endTime: "19:00",
-        roomNo: "View rooms",
-    },
-    {
-        id: "3",
-        facilityServices: "Room Cleaning",
-        serviceType: "Cleaning",
-        department: "Housekeeping",
-        assignTo: "View staff",
-        date: "02-12-2024",
-        startTime: "12:00",
-        endTime: "14:04",
-        roomNo: "View rooms",
-    },
-    {
-        id: "4",
-        facilityServices: "Room Cleaning",
-        serviceType: "Cleaning",
-        department: "Housekeeping",
-        assignTo: "View staff",
-        date: "27-11-2024",
-        startTime: "12:48",
-        endTime: "19:00",
-        roomNo: "View rooms",
-    },
-    {
-        id: "5",
-        facilityServices: "Room Cleaning",
-        serviceType: "Cleaning",
-        department: "Housekeeping",
-        assignTo: "View staff",
-        date: "08-11-2024",
-        startTime: "17:30",
-        endTime: "14:00",
-        roomNo: "View rooms",
-    },
-    {
-        id: "6",
-        facilityServices: "Room Cleaning",
-        serviceType: "Housekeeping",
-        department: "Housekeeping",
-        assignTo: "View staff",
-        date: "16-11-2024",
-        startTime: "14:16",
-        endTime: "19:00",
-        roomNo: "View rooms",
-    },
-    {
-        id: "7",
-        facilityServices: "Room Cleaning",
-        serviceType: "Cleaning",
-        department: "Housekeeping",
-        assignTo: "View staff",
-        date: "08-11-2024",
-        startTime: "18:16",
-        endTime: "17:00",
-        roomNo: "View rooms",
-    },
-    {
-        id: "8",
-        facilityServices: "Room Cleaning",
-        serviceType: "Cleaning",
-        department: "Housekeeping",
-        assignTo: "View staff",
-        date: "08-11-2024",
-        startTime: "11:48",
-        endTime: "12:00",
-        roomNo: "View rooms",
-    },
-    {
-        id: "9",
-        facilityServices: "Room Cleaning",
-        serviceType: "Housekeeping",
-        department: "Housekeeping",
-        assignTo: "View staff",
-        date: "29-10-2024",
-        startTime: "17:00",
-        endTime: "17:04",
-        roomNo: "View rooms",
-    },
-    {
-        id: "10",
-        facilityServices: "Room Cleaning",
-        serviceType: "Cleaning",
-        department: "Housekeeping",
-        assignTo: "View staff",
-        date: "29-10-2024",
-        startTime: "14:10",
-        endTime: "16:00",
-        roomNo: "View rooms",
-    },
-];
-
-// Plan Maintenance Data
-const planMaintenanceData = [
-    {
-        id: "1",
-        facilityServices: "Caleido Network Maintenance",
-        serviceType: "Networking Maintenance",
-        department: "Housekeeping",
-        assignTo: "View staff",
-        fromDate: "26-03-2025",
-        toDate: "26-03-2025",
-        startTime: "10:00",
-        endTime: "19:00",
-        roomNo: "View rooms",
-        underMaintenance: "Yes",
-    },
-    {
-        id: "2",
-        facilityServices: "Caleido Network Maintenance",
-        serviceType: "Networking Maintenance",
-        department: "Housekeeping",
-        assignTo: "View staff",
-        fromDate: "27-03-2025",
-        toDate: "27-07-2025",
-        startTime: "13:00",
-        endTime: "13:00",
-        roomNo: "View rooms",
-        underMaintenance: "Yes",
-    },
-    {
-        id: "3",
-        facilityServices: "Caleido Network Maintenance",
-        serviceType: "Networking Maintenance",
-        department: "NONE",
-        assignTo: "View staff",
-        fromDate: "16-09-2026",
-        toDate: "16-09-2026",
-        startTime: "13:04",
-        endTime: "42:00",
-        roomNo: "View rooms",
-        underMaintenance: "No",
-    },
-    {
-        id: "4",
-        facilityServices: "Plumbing",
-        serviceType: "water works",
-        department: "floor house keeper",
-        assignTo: "View staff",
-        fromDate: "16-09-2026",
-        toDate: "16-09-2026",
-        startTime: "12:41",
-        endTime: "12:42",
-        roomNo: "View rooms",
-        underMaintenance: "No",
-    },
-    {
-        id: "5",
-        facilityServices: "Electrical",
-        serviceType: "Installing",
-        department: "Room service",
-        assignTo: "View staff",
-        fromDate: "16-09-2025",
-        toDate: "16-09-2025",
-        startTime: "14:16",
-        endTime: "14:20",
-        roomNo: "View rooms",
-        underMaintenance: "No",
-    },
-    {
-        id: "6",
-        facilityServices: "Caleido Network Maintenance",
-        serviceType: "Networking Maintenance",
-        department: "Maintenance",
-        assignTo: "View staff",
-        fromDate: "29-01-2025",
-        toDate: "29-01-2025",
-        startTime: "13:00",
-        endTime: "17:00",
-        roomNo: "View rooms",
-        underMaintenance: "Yes",
-    },
-    {
-        id: "7",
-        facilityServices: "Electrical",
-        serviceType: "Installing",
-        department: "Maintenance",
-        assignTo: "View staff",
-        fromDate: "18-12-2024",
-        toDate: "06-12-2024",
-        startTime: "12:14",
-        endTime: "16:00",
-        roomNo: "View rooms",
-        underMaintenance: "Yes",
-    },
-    {
-        id: "8",
-        facilityServices: "Room Cleaning",
-        serviceType: "Cleaning",
-        department: "Housekeeping",
-        assignTo: "View staff",
-        fromDate: "27-11-2024",
-        toDate: "21-11-2024",
-        startTime: "11:00",
-        endTime: "13:00",
-        roomNo: "View rooms",
-        underMaintenance: "Yes",
-    },
-    {
-        id: "9",
-        facilityServices: "Electrical",
-        serviceType: "Installing",
-        department: "Maintenance",
-        assignTo: "View staff",
-        fromDate: "21-11-2024",
-        toDate: "21-11-2024",
-        startTime: "13:19",
-        endTime: "18:00",
-        roomNo: "View rooms",
-        underMaintenance: "Yes",
-    },
-    {
-        id: "10",
-        facilityServices: "Electrical",
-        serviceType: "Installing",
-        department: "Maintenance",
-        assignTo: "View staff",
-        fromDate: "21-11-2024",
-        toDate: "21-11-2024",
-        startTime: "13:11",
-        endTime: "16:10",
-        roomNo: "View rooms",
-        underMaintenance: "Yes",
-    },
-];
-
-// Disinfection Schedule Data
-const disinfectionScheduleData = [
-    {
-        id: "1",
-        sanitizerServices: "UVHVDUI",
-        serviceType: "Level Room sanitizer",
-        department: "Housekeeping",
-        assignTo: "View staff",
-        date: "27-12-2025",
-        startTime: "16:01",
-        endTime: "17:05",
-        roomNo: "9 Rooms (All)",
-    },
-    {
-        id: "2",
-        sanitizerServices: "Sanitation",
-        serviceType: "Guest Room sanitizer",
-        department: "Housekeeping",
-        assignTo: "View staff",
-        date: "27-12-2025",
-        startTime: "16:05",
-        endTime: "17:00",
-        roomNo: "9 Rooms (All)",
-    },
-    {
-        id: "3",
-        sanitizerServices: "Sanitation",
-        serviceType: "Guest Room sanitizer",
-        department: "Admin",
-        assignTo: "View staff",
-        date: "27-12-2025",
-        startTime: "11:01",
-        endTime: "05:00",
-        roomNo: "9 Rooms (All)",
-    },
-    {
-        id: "4",
-        sanitizerServices: "UVHVDUI",
-        serviceType: "Level Room sanitizer",
-        department: "BOSS-BOSS",
-        assignTo: "View staff",
-        date: "27-12-2025",
-        startTime: "06:00",
-        endTime: "24:00",
-        roomNo: "9 Rooms (All)",
-    },
-    {
-        id: "5",
-        sanitizerServices: "UVHVDUI",
-        serviceType: "Level Room sanitizer",
-        department: "Housekeeping",
-        assignTo: "View staff",
-        date: "27-12-2024",
-        startTime: "02:17",
-        endTime: "09:00",
-        roomNo: "9 Rooms (All)",
-    },
-    {
-        id: "6",
-        sanitizerServices: "Sanitation",
-        serviceType: "Guest Room sanitizer",
-        department: "Housekeeping",
-        assignTo: "View staff",
-        date: "08-12-2024",
-        startTime: "14:42",
-        endTime: "14:00",
-        roomNo: "9 Rooms (All)",
-    },
-    {
-        id: "7",
-        sanitizerServices: "Sanitation",
-        serviceType: "Guest Room sanitizer",
-        department: "Housekeeping",
-        assignTo: "View staff",
-        date: "02-12-2024",
-        startTime: "12:51",
-        endTime: "14:00",
-        roomNo: "9 Rooms (All)",
-    },
-    {
-        id: "8",
-        sanitizerServices: "UVHVDUI",
-        serviceType: "Level Room sanitizer",
-        department: "Housekeeping",
-        assignTo: "View staff",
-        date: "27-11-2024",
-        startTime: "12:41",
-        endTime: "14:00",
-        roomNo: "9 Rooms (All)",
-    },
-    {
-        id: "9",
-        sanitizerServices: "UVHVDUI",
-        serviceType: "Level Room sanitizer",
-        department: "Housekeeping",
-        assignTo: "View staff",
-        date: "26-11-2024",
-        startTime: "11:44",
-        endTime: "14:00",
-        roomNo: "9 Rooms (All)",
-    },
-    {
-        id: "10",
-        sanitizerServices: "Sanitation",
-        serviceType: "Guest Room sanitizer",
-        department: "Housekeeping",
-        assignTo: "View staff",
-        date: "16-11-2024",
-        startTime: "17:01",
-        endTime: "14:00",
-        roomNo: "9 Rooms (All)",
-    },
-];
+/**
+ * Services Planning, connected to the maintenance APIs.
+ *
+ *   GET    /maintenance-requests?request_type=  the tab's rows
+ *   POST   /maintenance-requests               create (rooms + staff + rule)
+ *   DELETE /maintenance-requests/{id}          soft delete (status = 0)
+ *
+ * The three tabs are the `maintenance_request_type` enum -- `scheduled`,
+ * `planned` and `disinfection` -- one table, not three. Rooms come from
+ * `maintenance_request_amenity`, assignees from `maintenance_request_assignee`
+ * and the weekly rule from `maintenance_request_recurrence`.
+ *
+ * "Services Type" is NOT stored on the request: the schema reaches it through
+ * `category_id` -> `service_category.service_type`, so the picker filters the
+ * Facility Services list rather than being submitted.
+ */
 
 const ServicePlanning = () => {
+    // --- Live data. Every picker below is populated from a real endpoint, and
+    // every option's VALUE is the row's UUID; only the label is human-readable.
+    const { canWrite } = useAuth();
+    const mayWrite = canWrite("service_planning");
+
+    const categoriesQuery = useServiceCategories({ page: 1, page_size: MAX_PAGE_SIZE });
+    const serviceTypesQuery = useServiceTypes({ page: 1, page_size: MAX_PAGE_SIZE });
+    const departmentsQuery = useDepartments({ page: 1, page_size: MAX_PAGE_SIZE });
+    const roomsQuery = useRooms({ page: 1, page_size: MAX_PAGE_SIZE });
+    // Assignment is to STAFF -- the backend refuses a guest.
+    const staffQuery = useUsers({ page: 1, page_size: MAX_PAGE_SIZE, is_staff: 1 });
+
+    const createPlan = useCreateMaintenanceRequest();
+    const removePlan = useRemoveMaintenanceRequest();
+
     const [activeTab, setActiveTab] = useState<TabType>("scheduled");
+    // The tab's own rows, filtered BY THE BACKEND on request_type.
+    const plansQuery = useMaintenanceRequests({
+        page: 1,
+        page_size: MAX_PAGE_SIZE,
+        request_type:
+            activeTab === "scheduled"
+                ? "scheduled"
+                : activeTab === "maintenance"
+                  ? "planned"
+                  : "disinfection",
+    });
     const [entriesPerPage, setEntriesPerPage] = useState("10");
     const [searchQuery, setSearchQuery] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
@@ -444,10 +143,240 @@ const ServicePlanning = () => {
         { id: "disinfection" as TabType, label: "Disinfection Schedule" },
     ];
 
+    const todayIso = new Date().toISOString().slice(0, 10);
+
+    /** The service type chosen on whichever tab is in view. */
+    const currentFormServiceType = () =>
+        activeTab === "scheduled"
+            ? scheduledForm.serviceType
+            : activeTab === "maintenance"
+              ? maintenanceForm.serviceType
+              : disinfectionForm.serviceType;
+
+    // --- Option lists, straight from the APIs. `id` is what gets submitted.
+    type Option = { id: string; label: string };
+
+    const serviceTypeOptions: Option[] = (serviceTypesQuery.data?.items ?? []).map((row) => ({
+        id: String(row.id),
+        label: row.name,
+    }));
+
+    /**
+     * `maintenance_request` has NO service-type column -- the link is
+     * `category_id` -> `service_category.service_type`. So "Services Type" is
+     * not submitted; it narrows the Facility Services list through that real FK.
+     */
+    const selectedServiceType = currentFormServiceType();
+    const categoryOptions: Option[] = (categoriesQuery.data?.items ?? [])
+        .filter(
+            (row) =>
+                !selectedServiceType || String(row.service_type) === selectedServiceType,
+        )
+        .map((row) => ({
+            id: row.id,
+            label: [row.category_name ?? "-", row.service_type_name]
+                .filter(Boolean)
+                .join(" - "),
+        }));
+    const departmentOptions: Option[] = (departmentsQuery.data?.items ?? []).map((row) => ({
+        id: row.id,
+        label: row.department_name,
+    }));
+    const staffOptions: Option[] = (staffQuery.data?.items ?? []).map((row) => ({
+        id: row.id,
+        label: [row.first_name, row.last_name].filter(Boolean).join(" ") || row.user_name || "-",
+    }));
+    const roomOptions: Option[] = (roomsQuery.data?.items ?? []).map((row) => ({
+        id: row.id,
+        label: row.amenity_type_name ? `${row.name} - ${row.amenity_type_name}` : row.name,
+    }));
+
+    /** Format a stored timestamptz as the HH:mm the table columns show. */
+    const asTime = (value: string | null) =>
+        value ? new Date(value).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "-";
+
+    /**
+     * The tab's rows, mapped onto the existing column keys so the table markup
+     * is untouched. Rooms and assignees are joined for display; the row keeps
+     * its `id` so Remove can act on the real record.
+     */
+    const planRows = (plansQuery.data?.items ?? []).map((row) => ({
+        id: row.id,
+        facilityServices: row.category_name ?? "-",
+        sanitizerServices: row.category_name ?? "-",
+        serviceType: row.service_type_name ?? "-",
+        department: row.department_name ?? "-",
+        assignTo: row.assignees.map((person) => person.name).join(", ") || "-",
+        date: row.maintenance_start_date ?? "-",
+        fromDate: row.maintenance_start_date ?? "-",
+        toDate: row.maintenance_end_date ?? "-",
+        startTime: asTime(row.maintenance_start_time),
+        endTime: asTime(row.maintenance_end_time),
+        roomNo: row.rooms.map((room) => room.room_name).filter(Boolean).join(", ")
+            || row.non_room_comments
+            || "-",
+        underMaintenance: row.under_maintenance ? "Yes" : "No",
+        status: row.status_name ?? "-",
+    }));
+
+    /** One table row, derived from the live payload rather than declared twice. */
+    type PlanRow = (typeof planRows)[number];
+
+    // --- Search and pagination, both driven by the rows actually fetched.
+    // The whole tab is fetched in one page (`MAX_PAGE_SIZE` above), so the
+    // Search box and the "Show N entries" picker narrow that list here instead
+    // of re-querying. Previously neither control did anything and the footer
+    // printed fixed numbers, which made the table look paginated when it was not.
+    const searchTerm = searchQuery.trim().toLowerCase();
+    const filteredRows = searchTerm
+        ? planRows.filter((row) =>
+              [row.facilityServices, row.serviceType, row.roomNo].some((field) =>
+                  field.toLowerCase().includes(searchTerm),
+              ),
+          )
+        : planRows;
+
+    const pageSize = Math.max(1, parseInt(entriesPerPage, 10) || 10);
+    const totalRows = filteredRows.length;
+    const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
+    // A tab switch, a search or a smaller page size can leave `currentPage`
+    // past the end; clamp on render so the table never shows a blank page.
+    const activePage = Math.min(currentPage, totalPages);
+    const startIndex = (activePage - 1) * pageSize;
+    const paginatedRows = filteredRows.slice(startIndex, startIndex + pageSize);
+
+    /** Up to five page buttons, centred on the current page. */
+    const pageNumbers = (() => {
+        const span = Math.min(5, totalPages);
+        const first = Math.max(1, Math.min(activePage - Math.floor(span / 2), totalPages - span + 1));
+        return Array.from({ length: span }, (_, offset) => first + offset);
+    })();
+
+    /** Render a picker's options, with honest loading/error/empty states. */
+    const renderOptions = (
+        options: Option[],
+        query: { isLoading: boolean; error: unknown },
+        emptyLabel: string,
+    ) => {
+        if (query.isLoading) {
+            return (
+                <div className="px-3 py-2 text-sm text-muted-foreground">Loading...</div>
+            );
+        }
+        if (query.error) {
+            return (
+                <div className="px-3 py-2 text-sm text-muted-foreground">
+                    {describeApiError(query.error)}
+                </div>
+            );
+        }
+        if (options.length === 0) {
+            return (
+                <div className="px-3 py-2 text-sm text-muted-foreground">{emptyLabel}</div>
+            );
+        }
+        return options.map((option) => (
+            <SelectItem key={option.id} value={option.id}>
+                {option.label}
+            </SelectItem>
+        ));
+    };
+
     const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
+    /** The tab IS the `maintenance_request_type` enum value. */
+    const REQUEST_TYPE: Record<TabType, MaintenanceRequestWrite["maintenance_request_type"]> = {
+        scheduled: "scheduled",
+        maintenance: "planned",
+        disinfection: "disinfection",
+    };
+
+    /** The form for whichever tab is in view. */
+    const currentForm =
+        activeTab === "scheduled"
+            ? scheduledForm
+            : activeTab === "maintenance"
+              ? maintenanceForm
+              : disinfectionForm;
+
+    /**
+     * Combine a date with the form's `HH:mm` into an ISO timestamp.
+     * `maintenance_start_time` is a real timestamptz, not a VARCHAR.
+     */
+    const toTimestamp = (day: string, time: string) =>
+        day && time ? new Date(`${day}T${time}`).toISOString() : null;
+
+    /**
+     * Create the planned service.
+     *
+     * Every id sent is a real UUID chosen from the pickers above -- the
+     * category, the department, the assignee and the room. The recurrence rule
+     * goes as `day_labels`, which the backend encodes into the stored bitmask.
+     */
     const handleSubmit = () => {
-        console.log("Submitting form for tab:", activeTab);
+        const form = currentForm as typeof scheduledForm & typeof maintenanceForm &
+            typeof disinfectionForm;
+        const categoryId = (form.facilityServices || form.sanitizerServices || "").trim();
+        // Plan Maintenance has its own from/to; the other tabs are single-day.
+        const startDay = (form.fromDate || "").trim() || todayIso;
+        const endDay = (form.toDate || "").trim() || startDay;
+
+        if (!categoryId) {
+            toast({
+                title: "Facility service is required",
+                description: "Pick the service category this plan covers.",
+                variant: "destructive",
+            });
+            return;
+        }
+        const roomIds = form.roomNo ? [form.roomNo] : [];
+        if (form.rooms === "rooms" && roomIds.length === 0) {
+            toast({
+                title: "Select a room",
+                description:
+                    "A room plan needs at least one room, or switch to Non Rooms " +
+                    "and describe the area instead.",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        const body: MaintenanceRequestWrite = {
+            maintenance_request_type: REQUEST_TYPE[activeTab],
+            maintenance_start_date: startDay,
+            maintenance_end_date: endDay,
+            maintenance_start_time: toTimestamp(startDay, form.startTime),
+            maintenance_end_time: toTimestamp(endDay, form.endTime),
+            department_id: form.department || null,
+            category_id: categoryId,
+            amenity_ids: roomIds,
+            assignee_ids: form.assignTo ? [form.assignTo] : [],
+            ...(form.rooms === "rooms"
+                ? {}
+                  // The form has no free-text field for a non-room area, so the
+                  // area is recorded from the chosen mode. `non_room_comments`
+                  // is the only column the schema offers for it.
+                  : { non_room_comments: "Non-room area" }),
+            ...(activeTab === "maintenance"
+                ? { under_maintenance: Boolean(form.underMaintenance) }
+                : {}),
+            // `is_recurring` is derived server-side from the rule's presence.
+            ...(form.repeatWeekly && form.frequency?.length
+                ? {
+                      recurrence: {
+                          recurrence_type: "weekly" as const,
+                          day_labels: form.frequency,
+                      },
+                  }
+                : {}),
+        };
+
+        createPlan.mutate(body, { onSuccess: handleReset });
+    };
+
+    /** Retire a plan -- the project's soft delete (`status = 0`). */
+    const handleRemove = (id: string) => {
+        removePlan.mutate({ id, comments: "Removed from Service Planning" });
     };
 
     const handleReset = () => {
@@ -528,9 +457,7 @@ const ServicePlanning = () => {
                             <SelectValue placeholder="Select Facility Services" />
                         </SelectTrigger>
                         <SelectContent className="bg-popover">
-                            <SelectItem value="room-cleaning">Room Cleaning</SelectItem>
-                            <SelectItem value="laundry">Laundry</SelectItem>
-                            <SelectItem value="maintenance">Maintenance</SelectItem>
+                            {renderOptions(categoryOptions, categoriesQuery, "No service category")}
                         </SelectContent>
                     </Select>
                 </div>
@@ -547,9 +474,7 @@ const ServicePlanning = () => {
                             <SelectValue placeholder="Select Service Type" />
                         </SelectTrigger>
                         <SelectContent className="bg-popover">
-                            <SelectItem value="housekeeping">Housekeeping</SelectItem>
-                            <SelectItem value="cleaning">Cleaning</SelectItem>
-                            <SelectItem value="maintenance">Maintenance</SelectItem>
+                            {renderOptions(serviceTypeOptions, serviceTypesQuery, "No service type")}
                         </SelectContent>
                     </Select>
                 </div>
@@ -564,9 +489,7 @@ const ServicePlanning = () => {
                             <SelectValue placeholder="Select Department" />
                         </SelectTrigger>
                         <SelectContent className="bg-popover">
-                            <SelectItem value="housekeeping">Housekeeping</SelectItem>
-                            <SelectItem value="maintenance">Maintenance</SelectItem>
-                            <SelectItem value="admin">Admin</SelectItem>
+                            {renderOptions(departmentOptions, departmentsQuery, "No department")}
                         </SelectContent>
                     </Select>
                 </div>
@@ -581,9 +504,7 @@ const ServicePlanning = () => {
                             <SelectValue placeholder="Select Employee" />
                         </SelectTrigger>
                         <SelectContent className="bg-popover">
-                            <SelectItem value="emp1">Employee 1</SelectItem>
-                            <SelectItem value="emp2">Employee 2</SelectItem>
-                            <SelectItem value="emp3">Employee 3</SelectItem>
+                            {renderOptions(staffOptions, staffQuery, "No staff on record")}
                         </SelectContent>
                     </Select>
                 </div>
@@ -669,10 +590,7 @@ const ServicePlanning = () => {
                             <SelectValue placeholder="Select Room" />
                         </SelectTrigger>
                         <SelectContent className="bg-popover">
-                            <SelectItem value="101">Room 101</SelectItem>
-                            <SelectItem value="102">Room 102</SelectItem>
-                            <SelectItem value="201">Room 201</SelectItem>
-                            <SelectItem value="202">Room 202</SelectItem>
+                            {renderOptions(roomOptions, roomsQuery, "No room")}
                         </SelectContent>
                     </Select>
                 </div>
@@ -722,9 +640,7 @@ const ServicePlanning = () => {
                             <SelectValue placeholder="Select Facility Services" />
                         </SelectTrigger>
                         <SelectContent className="bg-popover">
-                            <SelectItem value="network">Caleido Network Maintenance</SelectItem>
-                            <SelectItem value="electrical">Electrical</SelectItem>
-                            <SelectItem value="plumbing">Plumbing</SelectItem>
+                            {renderOptions(categoryOptions, categoriesQuery, "No service category")}
                         </SelectContent>
                     </Select>
                 </div>
@@ -741,9 +657,7 @@ const ServicePlanning = () => {
                             <SelectValue placeholder="Select Service Type" />
                         </SelectTrigger>
                         <SelectContent className="bg-popover">
-                            <SelectItem value="networking">Networking Maintenance</SelectItem>
-                            <SelectItem value="installing">Installing</SelectItem>
-                            <SelectItem value="water-works">Water Works</SelectItem>
+                            {renderOptions(serviceTypeOptions, serviceTypesQuery, "No service type")}
                         </SelectContent>
                     </Select>
                 </div>
@@ -760,9 +674,7 @@ const ServicePlanning = () => {
                             <SelectValue placeholder="Select Department" />
                         </SelectTrigger>
                         <SelectContent className="bg-popover">
-                            <SelectItem value="housekeeping">Housekeeping</SelectItem>
-                            <SelectItem value="maintenance">Maintenance</SelectItem>
-                            <SelectItem value="admin">Admin</SelectItem>
+                            {renderOptions(departmentOptions, departmentsQuery, "No department")}
                         </SelectContent>
                     </Select>
                 </div>
@@ -777,8 +689,7 @@ const ServicePlanning = () => {
                             <SelectValue placeholder="Select Employee" />
                         </SelectTrigger>
                         <SelectContent className="bg-popover">
-                            <SelectItem value="emp1">Employee 1</SelectItem>
-                            <SelectItem value="emp2">Employee 2</SelectItem>
+                            {renderOptions(staffOptions, staffQuery, "No staff on record")}
                         </SelectContent>
                     </Select>
                 </div>
@@ -876,8 +787,7 @@ const ServicePlanning = () => {
                             <SelectValue placeholder="Select Room" />
                         </SelectTrigger>
                         <SelectContent className="bg-popover">
-                            <SelectItem value="101">Room 101</SelectItem>
-                            <SelectItem value="102">Room 102</SelectItem>
+                            {renderOptions(roomOptions, roomsQuery, "No room")}
                         </SelectContent>
                     </Select>
                 </div>
@@ -909,8 +819,7 @@ const ServicePlanning = () => {
                             <SelectValue placeholder="Select Sanitizer Services" />
                         </SelectTrigger>
                         <SelectContent className="bg-popover">
-                            <SelectItem value="uvhvdui">UVHVDUI</SelectItem>
-                            <SelectItem value="sanitation">Sanitation</SelectItem>
+                            {renderOptions(categoryOptions, categoriesQuery, "No service category")}
                         </SelectContent>
                     </Select>
                 </div>
@@ -927,8 +836,7 @@ const ServicePlanning = () => {
                             <SelectValue placeholder="Select Service Type" />
                         </SelectTrigger>
                         <SelectContent className="bg-popover">
-                            <SelectItem value="level-room">Level Room sanitizer</SelectItem>
-                            <SelectItem value="guest-room">Guest Room sanitizer</SelectItem>
+                            {renderOptions(serviceTypeOptions, serviceTypesQuery, "No service type")}
                         </SelectContent>
                     </Select>
                 </div>
@@ -943,8 +851,7 @@ const ServicePlanning = () => {
                             <SelectValue placeholder="Select Department" />
                         </SelectTrigger>
                         <SelectContent className="bg-popover">
-                            <SelectItem value="housekeeping">Housekeeping</SelectItem>
-                            <SelectItem value="admin">Admin</SelectItem>
+                            {renderOptions(departmentOptions, departmentsQuery, "No department")}
                         </SelectContent>
                     </Select>
                 </div>
@@ -959,8 +866,7 @@ const ServicePlanning = () => {
                             <SelectValue placeholder="Select Employee" />
                         </SelectTrigger>
                         <SelectContent className="bg-popover">
-                            <SelectItem value="emp1">Employee 1</SelectItem>
-                            <SelectItem value="emp2">Employee 2</SelectItem>
+                            {renderOptions(staffOptions, staffQuery, "No staff on record")}
                         </SelectContent>
                     </Select>
                 </div>
@@ -1038,8 +944,7 @@ const ServicePlanning = () => {
                             <SelectValue placeholder="Select Room" />
                         </SelectTrigger>
                         <SelectContent className="bg-popover">
-                            <SelectItem value="101">Room 101</SelectItem>
-                            <SelectItem value="102">Room 102</SelectItem>
+                            {renderOptions(roomOptions, roomsQuery, "No room")}
                         </SelectContent>
                     </Select>
                 </div>
@@ -1076,11 +981,12 @@ const ServicePlanning = () => {
     );
 
     const renderTable = () => {
-        let data: any[] = [];
-        let columns: { key: string; label: string }[] = [];
+        // Every tab renders the same rows; only the column set differs, because
+        // all three are one `maintenance_request` table filtered by request_type.
+        const data: PlanRow[] = paginatedRows;
+        let columns: { key: keyof PlanRow; label: string }[] = [];
 
         if (activeTab === "scheduled") {
-            data = scheduledServicesData;
             columns = [
                 { key: "facilityServices", label: "Facility Services" },
                 { key: "serviceType", label: "Service Type" },
@@ -1092,7 +998,6 @@ const ServicePlanning = () => {
                 { key: "roomNo", label: "Room No" },
             ];
         } else if (activeTab === "maintenance") {
-            data = planMaintenanceData;
             columns = [
                 { key: "facilityServices", label: "Facility Services" },
                 { key: "serviceType", label: "Service Type" },
@@ -1106,7 +1011,6 @@ const ServicePlanning = () => {
                 { key: "underMaintenance", label: "Under Maintenance" },
             ];
         } else {
-            data = disinfectionScheduleData;
             columns = [
                 { key: "sanitizerServices", label: "Sanitizer Services" },
                 { key: "serviceType", label: "Service Type" },
@@ -1133,7 +1037,33 @@ const ServicePlanning = () => {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {data.map((row, index) => (
+                        {/* One shared loading / error / empty state, so a failing
+                            list never renders as an empty table. */}
+                        {plansQuery.isLoading || plansQuery.error || data.length === 0 ? (
+                            <TableRow>
+                                <TableCell colSpan={columns.length + 1} className="py-2">
+                                    <DataState
+                                        isLoading={plansQuery.isLoading}
+                                        error={plansQuery.error}
+                                        isEmpty
+                                        emptyTitle={
+                                            searchTerm
+                                                ? "No planned services match that search"
+                                                : "No planned services yet"
+                                        }
+                                        emptyDescription={
+                                            searchTerm
+                                                ? "Clear the search box to see the whole list."
+                                                : "Create one with the form above."
+                                        }
+                                        loader={<TableLoading columns={columns.length + 1} />}
+                                    >
+                                        <span />
+                                    </DataState>
+                                </TableCell>
+                            </TableRow>
+                        ) : (
+                        data.map((row, index) => (
                             <TableRow
                                 key={row.id}
                                 className={`${index % 2 === 0 ? "bg-muted/20" : "bg-background"
@@ -1169,10 +1099,25 @@ const ServicePlanning = () => {
                                         >
                                             <Edit className="h-[14px] w-[14px]" />
                                         </Button>
+                                        {/* Soft delete -- DELETE sets status = 0 and
+                                            retires the room/assignee links with it. */}
+                                        <Button
+                                            size="sm"
+                                            className="bg-[#d33] hover:bg-[#bd2d2d] text-white h-7 w-7 p-0 rounded-[3px]"
+                                            disabled={!mayWrite || removePlan.isPending}
+                                            title={
+                                                mayWrite
+                                                    ? "Remove this planned service"
+                                                    : "Your role cannot change service planning"
+                                            }
+                                            onClick={() => handleRemove(row.id)}
+                                        >
+                                            <X className="h-[14px] w-[14px]" />
+                                        </Button>
                                     </div>
                                 </TableCell>
                             </TableRow>
-                        ))}
+                        )))}
                     </TableBody>
                 </Table>
             </div>
@@ -1191,7 +1136,12 @@ const ServicePlanning = () => {
                 {tabs.map((tab) => (
                     <button
                         key={tab.id}
-                        onClick={() => setActiveTab(tab.id)}
+                        onClick={() => {
+                            setActiveTab(tab.id);
+                            // Each tab is its own query; page 3 of one tab is
+                            // meaningless in the next.
+                            setCurrentPage(1);
+                        }}
                         className={`relative px-1 pb-3 text-sm font-medium transition-all duration-200 ${activeTab === tab.id
                             ? "text-foreground"
                             : "text-muted-foreground hover:text-foreground"
@@ -1223,9 +1173,15 @@ const ServicePlanning = () => {
                         </Button>
                         <Button
                             onClick={handleSubmit}
+                            disabled={!mayWrite || createPlan.isPending}
+                            title={
+                                mayWrite
+                                    ? "Create this planned service"
+                                    : "Your role cannot change service planning"
+                            }
                             className="h-10 px-8 bg-amber-500 hover:bg-amber-600 text-white"
                         >
-                            Submit
+                            {createPlan.isPending ? "Saving..." : "Submit"}
                         </Button>
                     </div>
                 </CardContent>
@@ -1238,7 +1194,13 @@ const ServicePlanning = () => {
                     <div className="flex items-center justify-between mb-6">
                         <div className="flex items-center gap-2">
                             <span className="text-muted-foreground text-sm">Show</span>
-                            <Select value={entriesPerPage} onValueChange={setEntriesPerPage}>
+                            <Select
+                                value={entriesPerPage}
+                                onValueChange={(value) => {
+                                    setEntriesPerPage(value);
+                                    setCurrentPage(1);
+                                }}
+                            >
                                 <SelectTrigger className="w-20 h-9 bg-muted/30 border-border/50">
                                     <SelectValue />
                                 </SelectTrigger>
@@ -1259,7 +1221,10 @@ const ServicePlanning = () => {
                                 <Input
                                     placeholder="Facility services, Service type, Room No"
                                     value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    onChange={(e) => {
+                                        setSearchQuery(e.target.value);
+                                        setCurrentPage(1);
+                                    }}
                                     className="pl-10 w-80 h-9 bg-muted/30 border-border/50"
                                 />
                             </div>
@@ -1271,8 +1236,11 @@ const ServicePlanning = () => {
 
                     {/* Footer */}
                     <div className="flex items-center justify-between mt-6">
+                        {/* Counts come from the rows actually fetched, so the
+                            footer cannot disagree with the table above it. */}
                         <span className="text-muted-foreground text-sm">
-                            Showing 1 to 10 of 136 entries
+                            Showing {totalRows === 0 ? 0 : startIndex + 1} to{" "}
+                            {Math.min(startIndex + pageSize, totalRows)} of {totalRows} entries
                         </span>
 
                         <div className="flex items-center gap-1">
@@ -1281,7 +1249,7 @@ const ServicePlanning = () => {
                                 size="sm"
                                 className="text-muted-foreground hover:text-foreground"
                                 onClick={() => setCurrentPage(1)}
-                                disabled={currentPage === 1}
+                                disabled={activePage === 1}
                             >
                                 First
                             </Button>
@@ -1289,18 +1257,18 @@ const ServicePlanning = () => {
                                 variant="ghost"
                                 size="sm"
                                 className="text-muted-foreground hover:text-foreground"
-                                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                                disabled={currentPage === 1}
+                                onClick={() => setCurrentPage(Math.max(1, activePage - 1))}
+                                disabled={activePage === 1}
                             >
                                 <ChevronLeft className="h-4 w-4 mr-1" />
                                 Previous
                             </Button>
-                            {[1, 2, 3, 4, 5].map((page) => (
+                            {pageNumbers.map((page) => (
                                 <Button
                                     key={page}
-                                    variant={currentPage === page ? "default" : "ghost"}
+                                    variant={activePage === page ? "default" : "ghost"}
                                     size="sm"
-                                    className={`w-9 h-9 p-0 ${currentPage === page
+                                    className={`w-9 h-9 p-0 ${activePage === page
                                         ? "bg-primary text-white"
                                         : "text-muted-foreground hover:text-foreground"
                                         }`}
@@ -1309,12 +1277,15 @@ const ServicePlanning = () => {
                                     {page}
                                 </Button>
                             ))}
-                            <span className="text-muted-foreground px-2">...</span>
+                            {pageNumbers[pageNumbers.length - 1] < totalPages && (
+                                <span className="text-muted-foreground px-2">...</span>
+                            )}
                             <Button
                                 variant="ghost"
                                 size="sm"
                                 className="text-muted-foreground hover:text-foreground"
-                                onClick={() => setCurrentPage(Math.min(14, currentPage + 1))}
+                                onClick={() => setCurrentPage(Math.min(totalPages, activePage + 1))}
+                                disabled={activePage >= totalPages}
                             >
                                 Next
                                 <ChevronRight className="h-4 w-4 ml-1" />
@@ -1323,7 +1294,8 @@ const ServicePlanning = () => {
                                 variant="ghost"
                                 size="sm"
                                 className="text-muted-foreground hover:text-foreground"
-                                onClick={() => setCurrentPage(14)}
+                                onClick={() => setCurrentPage(totalPages)}
+                                disabled={activePage >= totalPages}
                             >
                                 Last
                             </Button>

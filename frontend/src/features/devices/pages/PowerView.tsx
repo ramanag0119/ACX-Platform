@@ -9,6 +9,15 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { DataState } from "@/core/components/DataState";
+import {
+    useBuildings,
+    useDeviceStats,
+    useDevices,
+    useFloors,
+    useOccupancy,
+} from "@/lib/api/hooks";
+import { MAX_PAGE_SIZE } from "@/lib/api/types";
 
 interface Room {
     id: string;
@@ -21,95 +30,35 @@ interface Room {
         value?: number;
     }[];
     powerUsage: number;
-    status: "occupied" | "vacant" | "maintenance";
+    /**
+     * The room's real `amenity_status` name -- all FOUR of Available, Occupied,
+     * Unavailable and Allotted, as stored. The previous three-value local union
+     * folded Allotted (a room held by a stay that has not checked in) into
+     * "vacant", which is a different thing.
+     */
+    status: string;
 }
 
-const mockRooms: Room[] = [
-    {
-        id: "101",
-        name: "Room 101",
-        zone: "Room 01",
-        floor: "Floor 1",
-        devices: [
-            { type: "ac", status: "on", value: 22 },
-            { type: "light", status: "on" },
-            { type: "fan", status: "off" },
-            { type: "power", status: "standby" },
-        ],
-        powerUsage: 2.4,
-        status: "occupied",
-    },
-    {
-        id: "102",
-        name: "Room 102",
-        zone: "Room 01",
-        floor: "Floor 1",
-        devices: [
-            { type: "ac", status: "off" },
-            { type: "light", status: "off" },
-            { type: "fan", status: "off" },
-            { type: "power", status: "off" },
-        ],
-        powerUsage: 0.1,
-        status: "vacant",
-    },
-    {
-        id: "103",
-        name: "Room 103",
-        zone: "Room 01",
-        floor: "Floor 1",
-        devices: [
-            { type: "ac", status: "on", value: 24 },
-            { type: "light", status: "on" },
-            { type: "fan", status: "on" },
-            { type: "power", status: "on" },
-        ],
-        powerUsage: 3.8,
-        status: "occupied",
-    },
-    {
-        id: "201",
-        name: "Room 201",
-        zone: "Room 02",
-        floor: "Floor 2",
-        devices: [
-            { type: "ac", status: "standby" },
-            { type: "light", status: "off" },
-            { type: "fan", status: "off" },
-            { type: "power", status: "standby" },
-        ],
-        powerUsage: 0.5,
-        status: "maintenance",
-    },
-    {
-        id: "202",
-        name: "Room 202",
-        zone: "Room 02",
-        floor: "Floor 2",
-        devices: [
-            { type: "ac", status: "on", value: 21 },
-            { type: "light", status: "on" },
-            { type: "fan", status: "off" },
-            { type: "power", status: "on" },
-        ],
-        powerUsage: 2.9,
-        status: "occupied",
-    },
-    {
-        id: "203",
-        name: "Room 203",
-        zone: "Room 02",
-        floor: "Floor 2",
-        devices: [
-            { type: "ac", status: "off" },
-            { type: "light", status: "off" },
-            { type: "fan", status: "off" },
-            { type: "power", status: "off" },
-        ],
-        powerUsage: 0.0,
-        status: "vacant",
-    },
-];
+/** Border/label colour per real amenity_status name. */
+const STATUS_STYLES: Record<string, { border: string; text: string }> = {
+    Occupied: { border: "border-l-primary", text: "text-primary" },
+    Available: { border: "border-l-success", text: "text-success" },
+    Allotted: { border: "border-l-warning", text: "text-warning" },
+    Unavailable: { border: "border-l-destructive", text: "text-destructive" },
+};
+
+/**
+ * Power View, connected to the Phase 2.6 / 2.9 APIs.
+ *
+ *   Rooms/status -> GET /occupancy
+ *   Power        -> GET /device-stats?param_name=active_power
+ *                   (`device_param.unit` for that parameter really is KW)
+ *   Power state  -> GET /devices, `is_power_off`
+ *   Filters      -> GET /buildings, GET /floors
+ *
+ * The AC / Light / Fan tiles stay switched off: the schema stores no
+ * per-appliance state, and none is guessed. Only the Power tile has a source.
+ */
 
 const DeviceIcon = ({
     type,
@@ -137,7 +86,9 @@ const DeviceIcon = ({
                 status === "standby" && "bg-warning/20 text-warning",
                 status === "off" && "bg-muted text-muted-foreground"
             )}
-            title={`${type}: ${status}${value ? ` (${value}°C)` : ""}`}
+            // The unit is whatever `device_param` records for the parameter
+            // (KW for active_power), so none is appended here.
+            title={`${type}: ${status}${value ? ` (${value})` : ""}`}
         >
             <Icon className="h-4 w-4" />
             {value && (
@@ -150,17 +101,13 @@ const DeviceIcon = ({
 };
 
 const RoomCard = ({ room }: { room: Room }) => {
-    const statusColors = {
-        occupied: "border-l-primary",
-        vacant: "border-l-success",
-        maintenance: "border-l-warning",
-    };
+    const style = STATUS_STYLES[room.status];
 
     return (
         <div
             className={cn(
                 "bg-card rounded-lg border border-border/50 p-4 hover:shadow-md transition-all cursor-pointer border-l-4",
-                statusColors[room.status]
+                style?.border ?? "border-l-muted"
             )}
         >
             <div className="flex justify-between items-start mb-3">
@@ -173,9 +120,7 @@ const RoomCard = ({ room }: { room: Room }) => {
                     <span
                         className={cn(
                             "text-[10px] uppercase font-medium",
-                            room.status === "occupied" && "text-primary",
-                            room.status === "vacant" && "text-success",
-                            room.status === "maintenance" && "text-warning"
+                            style?.text ?? "text-muted-foreground"
                         )}
                     >
                         {room.status}
@@ -201,18 +146,74 @@ const PowerView = () => {
     const [selectedFloor, setSelectedFloor] = useState("all");
     const [selectedRoom, setSelectedRoom] = useState("all");
 
-    const filteredRooms = mockRooms.filter((room) => {
-        if (selectedFloor !== "all" && room.floor !== selectedFloor) return false;
-        if (selectedRoom !== "all" && room.zone !== selectedRoom) return false;
-        return true;
+    // --- Live data ---------------------------------------------------------
+    const buildingsQuery = useBuildings({ page: 1, page_size: MAX_PAGE_SIZE });
+    const floorsQuery = useFloors({
+        page: 1,
+        page_size: MAX_PAGE_SIZE,
+        ...(selectedBuilding !== "all" ? { building_id: selectedBuilding } : {}),
+    });
+
+    const scope = {
+        ...(selectedBuilding !== "all" ? { building_id: selectedBuilding } : {}),
+        ...(selectedFloor !== "all" ? { floor_id: selectedFloor } : {}),
+        ...(selectedRoom !== "all" ? { amenity_id: selectedRoom } : {}),
+    };
+
+    const occupancyQuery = useOccupancy({ page: 1, page_size: MAX_PAGE_SIZE, ...scope });
+    const devicesQuery = useDevices({ page: 1, page_size: MAX_PAGE_SIZE, ...scope });
+    const powerQuery = useDeviceStats({
+        page: 1,
+        page_size: MAX_PAGE_SIZE,
+        param_name: "active_power",
+        ...scope,
+    });
+
+    const isLoading = occupancyQuery.isLoading || devicesQuery.isLoading || powerQuery.isLoading;
+    const error = occupancyQuery.error ?? devicesQuery.error ?? powerQuery.error;
+
+    // Latest active_power reading per room, exactly as stored.
+    const powerByAmenity = new Map<string, number>();
+    for (const stat of powerQuery.data?.items ?? []) {
+        if (!stat.amenity_id || powerByAmenity.has(stat.amenity_id)) continue;
+        const value = Number(stat.device_param_value);
+        if (!Number.isNaN(value)) powerByAmenity.set(stat.amenity_id, value);
+    }
+
+    const poweredAmenities = new Set(
+        (devicesQuery.data?.items ?? [])
+            .filter((device) => device.is_power_off === false)
+            .map((device) => device.amenity_id),
+    );
+
+    const filteredRooms: Room[] = (occupancyQuery.data?.items ?? []).map((room) => {
+        const powerUsage = powerByAmenity.get(room.amenity_id) ?? 0;
+        return {
+            id: room.amenity_id,
+            name: room.room_name,
+            zone: room.building_name ?? "-",
+            floor: room.floor_name ?? "-",
+            devices: [
+                // Only the power tile has a source in the schema.
+                { type: "ac" as const, status: "off" as const },
+                { type: "light" as const, status: "off" as const },
+                { type: "fan" as const, status: "off" as const },
+                {
+                    type: "power" as const,
+                    status: poweredAmenities.has(room.amenity_id) ? ("on" as const) : ("off" as const),
+                    value: powerUsage,
+                },
+            ],
+            powerUsage,
+            status: room.status_name ?? "-",
+        };
     });
 
     const totalPower = filteredRooms.reduce((sum, room) => sum + room.powerUsage, 0);
-    const occupiedRooms = filteredRooms.filter((r) => r.status === "occupied").length;
-    const activeDevices = filteredRooms.reduce(
-        (sum, room) => sum + room.devices.filter((d) => d.status === "on").length,
-        0
-    );
+    const occupiedRooms = filteredRooms.filter((r) => r.status === "Occupied").length;
+    const activeDevices = (devicesQuery.data?.items ?? []).filter(
+        (device) => device.is_power_off === false,
+    ).length;
 
     return (
         <div className="space-y-6 animate-fade-in bg-[hsl(220,20%,96%)] min-h-screen -m-6 p-6">
@@ -251,9 +252,9 @@ const PowerView = () => {
                                     </SelectTrigger>
                                     <SelectContent className="bg-white">
                                         <SelectItem value="all">All Floors</SelectItem>
-                                        <SelectItem value="Floor 1">Floor 1</SelectItem>
-                                        <SelectItem value="Floor 2">Floor 2</SelectItem>
-                                        <SelectItem value="Floor 3">Floor 3</SelectItem>
+                                        {(floorsQuery.data?.items ?? []).map((floor) => (
+                                            <SelectItem key={floor.id} value={floor.id}>{floor.name}</SelectItem>
+                                        ))}
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -265,11 +266,11 @@ const PowerView = () => {
                                     </SelectTrigger>
                                     <SelectContent className="bg-white">
                                         <SelectItem value="all">All Rooms</SelectItem>
-                                        <SelectItem value="Room 01">Room 01</SelectItem>
-                                        <SelectItem value="Room 02">Room 02</SelectItem>
-                                        <SelectItem value="Room 03">Room 03</SelectItem>
-                                        <SelectItem value="Room 04">Room 04</SelectItem>
-                                        <SelectItem value="Room 05">Room 05</SelectItem>
+                                        {(occupancyQuery.data?.items ?? []).map((room) => (
+                                            <SelectItem key={room.amenity_id} value={room.amenity_id}>
+                                                {room.room_name}
+                                            </SelectItem>
+                                        ))}
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -351,11 +352,18 @@ const PowerView = () => {
                     <CardTitle className="text-lg">Room Grid</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                        {filteredRooms.map((room) => (
-                            <RoomCard key={room.id} room={room} />
-                        ))}
-                    </div>
+                    <DataState
+                        isLoading={isLoading}
+                        error={error}
+                        isEmpty={filteredRooms.length === 0}
+                        emptyTitle="No rooms match this selection"
+                    >
+                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                            {filteredRooms.map((room) => (
+                                <RoomCard key={room.id} room={room} />
+                            ))}
+                        </div>
+                    </DataState>
                 </CardContent>
             </Card>
         </div>

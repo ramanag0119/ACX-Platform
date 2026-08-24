@@ -21,23 +21,56 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Pencil, Trash2, X, Edit, ChevronUp, ChevronDown } from "lucide-react";
+import { DataState, TableLoading } from "@/core/components/DataState";
+import { useAuth } from "@/core/contexts/AuthContext";
+import { useEvents } from "@/lib/api/hooks";
+import { useCreateEvent, useUpdateEvent } from "@/lib/api/mutations";
+import { MAX_PAGE_SIZE } from "@/lib/api/types";
 
 // Sample Events Data
-const eventsData = [
-    { id: "1", eventName: "Marriage", description: "", venue: "Venue 5", chiefGuests: "Binitha", startDateTime: "05-11-2024 13:51", endDateTime: "05-11-2024 21:00", attendees: 500, interestedGuests: 0, image: "Click here" },
-    { id: "2", eventName: "Marriage", description: "", venue: "Venue 8", chiefGuests: "Binitha", startDateTime: "09-11-2024 15:22", endDateTime: "09-11-2024 17:00", attendees: 50, interestedGuests: 0, image: "Click here" },
-    { id: "3", eventName: "test", description: "", venue: "Ground", chiefGuests: "dave", startDateTime: "10-09-2024 15:45", endDateTime: "10-09-2024 18:45", attendees: 25, interestedGuests: 1, image: "Click here" },
-    { id: "4", eventName: "Test with Niru", description: "", venue: "Ground", chiefGuests: "Mr.K", startDateTime: "27-09-2024 13:00", endDateTime: "27-09-2024 14:00", attendees: 50, interestedGuests: 1, image: "Click here" },
-    { id: "5", eventName: "BirthDay", description: "", venue: "Venue 5", chiefGuests: "Binitha.G", startDateTime: "25-08-2024 19:00", endDateTime: "31-08-2024 21:00", attendees: 150, interestedGuests: 0, image: "Click here" },
-    { id: "6", eventName: "Diwali Event", description: "test test test", venue: "Venue A", chiefGuests: "Mr.Test", startDateTime: "22-09-2024 10:00", endDateTime: "25-11-2024 18:00", attendees: 100, interestedGuests: 15, image: "Click here" },
-    { id: "7", eventName: "Test", description: "", venue: "Venue D", chiefGuests: "Mr.K", startDateTime: "18-09-2024 13:00", endDateTime: "18-09-2024 13:30", attendees: 50, interestedGuests: 1, image: "Click here" },
-    { id: "8", eventName: "food", description: "", venue: "Venue D", chiefGuests: "prachi", startDateTime: "15-09-2023 15:20", endDateTime: "29-09-2023 15:51", attendees: 100, interestedGuests: 0, image: "Click here" },
-    { id: "9", eventName: "marriage", description: "marriage function", venue: "Marriage Hall", chiefGuests: "Oscar", startDateTime: "02-05-2023 15:47", endDateTime: "03-05-2023 15:49", attendees: 500, interestedGuests: 0, image: "Click here" },
-    { id: "10", eventName: "test Event", description: "Test", venue: "Venue A", chiefGuests: "Sandy", startDateTime: "30-04-2023 12:00", endDateTime: "30-04-2023 15:00", attendees: 50, interestedGuests: 0, image: "Click here" },
-];
+interface EventRow {
+    id: string;
+    eventName: string;
+    description: string;
+    venue: string;
+    chiefGuests: string;
+    startDateTime: string;
+    endDateTime: string;
+    attendees: number;
+    interestedGuests: number;
+    image: string;
+}
+
+/**
+ * Events, connected to GET/POST/PATCH /events (`facility_event`).
+ *
+ * `interested_attendees` is read-only here: it is a guest-app counter, not an
+ * operator field, so the API refuses to accept it.
+ */
 
 const Events = () => {
+    const eventsQuery = useEvents({ page: 1, page_size: MAX_PAGE_SIZE });
+    const { canWrite } = useAuth();
+    const mayWrite = canWrite("events");
+    const createEvent = useCreateEvent();
+    const updateEvent = useUpdateEvent();
+
+    const eventsData: EventRow[] = (eventsQuery.data?.items ?? []).map((event) => ({
+        id: event.id,
+        eventName: event.name,
+        description: event.description ?? "",
+        venue: event.venue ?? "-",
+        chiefGuests: event.chief_guests ?? "-",
+        startDateTime: event.start_date_time
+            ? new Date(event.start_date_time).toLocaleString()
+            : "-",
+        endDateTime: event.end_date_time ? new Date(event.end_date_time).toLocaleString() : "-",
+        attendees: event.expected_attendees ?? 0,
+        interestedGuests: event.interested_attendees ?? 0,
+        image: "-",
+    }));
     const [isAddEventOpen, setIsAddEventOpen] = useState(false);
+    const [cancellingEventId, setCancellingEventId] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [entriesPerPage, setEntriesPerPage] = useState("10");
     const [currentPage, setCurrentPage] = useState(1);
@@ -46,7 +79,7 @@ const Events = () => {
     const [editEventOpen, setEditEventOpen] = useState(false);
     const [cancelEventOpen, setCancelEventOpen] = useState(false);
 
-    // Form state
+    /** The Add Event form; every field maps to a `facility_event` column. */
     const [eventName, setEventName] = useState("");
     const [venue, setVenue] = useState("");
     const [chiefGuests, setChiefGuests] = useState("");
@@ -69,6 +102,7 @@ const Events = () => {
                 <h1 className="text-2xl font-semibold text-foreground">Events Management</h1>
                 <Button onClick={() => setIsAddEventOpen(true)} className="bg-cyan-600 hover:bg-cyan-700 text-white">Add Events</Button>
             </div>
+
 
             {/* Table Section */}
             <Card className="border-0 shadow-lg rounded-2xl bg-white">
@@ -128,7 +162,13 @@ const Events = () => {
                                                 <Button size="sm" className="bg-[#3eb1c8] hover:bg-[#3eb1c8]/90 text-white h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditEventOpen(true)}>
                                                     <Edit className="h-[14px] w-[14px]" />
                                                 </Button>
-                                                <Button size="sm" className="bg-red-500 hover:bg-red-600 text-white h-7 w-7 p-0 rounded-[3px]" onClick={() => setCancelEventOpen(true)}>
+                                                <Button
+                                                    size="sm"
+                                                    className="bg-red-500 hover:bg-red-600 text-white h-7 w-7 p-0 rounded-[3px]"
+                                                    disabled={!mayWrite}
+                                                    title="Cancel this event"
+                                                    onClick={() => { setCancellingEventId(item.id); setCancelEventOpen(true); }}
+                                                >
                                                     <Trash2 className="h-[14px] w-[14px]" />
                                                 </Button>
                                             </div>
@@ -199,7 +239,42 @@ const Events = () => {
                         </div>
                         <div className="flex justify-center gap-4 pt-4">
                             <Button variant="outline" onClick={handleReset} className="px-8">Reset</Button>
-                            <Button onClick={() => setIsAddEventOpen(false)} className="bg-cyan-600 hover:bg-cyan-700 text-white px-8">Submit</Button>
+                            <Button
+                                className="bg-cyan-600 hover:bg-cyan-700 text-white px-8"
+                                /* Reads the state the inputs above actually bind to.
+                                   This previously read an `eventForm` object that
+                                   nothing ever populated, so the button was
+                                   permanently disabled and the form could not be
+                                   submitted at all. */
+                                disabled={!mayWrite || !eventName.trim() || createEvent.isPending}
+                                onClick={() =>
+                                    createEvent.mutate(
+                                        {
+                                            name: eventName.trim(),
+                                            venue: venue.trim() || null,
+                                            chief_guests: chiefGuests.trim() || null,
+                                            description: description.trim() || null,
+                                            expected_attendees: attendees.trim()
+                                                ? Number(attendees)
+                                                : null,
+                                            start_date_time: startDate
+                                                ? new Date(startDate).toISOString()
+                                                : null,
+                                            end_date_time: endDate
+                                                ? new Date(endDate).toISOString()
+                                                : null,
+                                        },
+                                        {
+                                            onSuccess: () => {
+                                                handleReset();
+                                                setIsAddEventOpen(false);
+                                            },
+                                        },
+                                    )
+                                }
+                            >
+                                {createEvent.isPending ? "Saving..." : "Submit"}
+                            </Button>
                         </div>
                     </div>
                 </DialogContent>
@@ -317,7 +392,25 @@ const Events = () => {
                     </div>
 
                     <div className="flex justify-center gap-4 pb-8">
-                        <Button className="bg-[#3eb1c8] hover:bg-cyan-600 text-white h-8 px-6 rounded-[3px] font-normal" onClick={() => setCancelEventOpen(false)}>Submit</Button>
+                        <Button
+                            className="bg-[#3eb1c8] hover:bg-cyan-600 text-white h-8 px-6 rounded-[3px] font-normal"
+                            disabled={!mayWrite || !cancellingEventId || updateEvent.isPending}
+                            onClick={() =>
+                                cancellingEventId &&
+                                updateEvent.mutate(
+                                    {
+                                        id: cancellingEventId,
+                                        body: {
+                                            // `facility_event` stores the reason and a status flag.
+                                            status: 0,
+                                        },
+                                    },
+                                    { onSuccess: () => setCancelEventOpen(false) },
+                                )
+                            }
+                        >
+                            {updateEvent.isPending ? "Cancelling..." : "Submit"}
+                        </Button>
                     </div>
                 </DialogContent>
             </Dialog>

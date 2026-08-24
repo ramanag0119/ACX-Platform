@@ -21,204 +21,47 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Search, ChevronLeft, ChevronRight, X, Check, Pencil, Trash2, ChevronDown, Edit } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DataState, TableLoading } from "@/core/components/DataState";
+import { useRooms, useServiceCategories, useServiceItems, useServiceTypes } from "@/lib/api/hooks";
+import { useAuth } from "@/core/contexts/AuthContext";
+import {
+  useCreateServiceCategory,
+  useCreateServiceItem,
+} from "@/lib/api/mutations";
+import { toast } from "@/hooks/use-toast";
+import { MAX_PAGE_SIZE } from "@/lib/api/types";
 
 type TabType = "room-service" | "travel-desk" | "business-center" | "food-order" | "facility-maintenance" | "health-fitness" | "sanitation-maintenance";
 
-// Room Service Types with their services
-const roomServiceTypes = {
-    "room-amenities": {
-        label: "Room Amenities",
-        services: ["Room 1", "Room 2", "Room 3", "Room 4", "Room 5"]
-    },
-    "bath-amenities": {
-        label: "Bath Amenities",
-        services: ["Body Lotion", "Conditioner", "Shampoo", "Wipes", "Grooming Kit", "Towels", "Hair Dryer", "Soap", "Toothpaste & Brush", "Sanitary Items"]
-    },
-    "concierge-requests": {
-        label: "Concierge Requests",
-        services: ["Wake Up Call", "Extra Pillow", "Extra Blanket", "Iron & Board", "Room Service Menu"]
-    }
-};
+// The Room Service pickers used to be driven by a hardcoded map of categories
+// and service names ("Room Amenities" -> "Room 1".."Room 5", ...). None of those
+// strings matched a `service_category` row, so a submission could never resolve
+// a category id. They are now read from the API -- see roomServiceCategoryOptions.
 
-// Room Services Table Data
-const roomServicesData = [
-    { id: "1", roomServices: "Bath Amenities", selectedServices: "Body Lotion" },
-    { id: "2", roomServices: "Bath Amenities", selectedServices: "Conditioner" },
-    { id: "3", roomServices: "Bath Amenities", selectedServices: "Shampoo" },
-    { id: "4", roomServices: "Bath Amenities", selectedServices: "Wipes" },
-    { id: "5", roomServices: "Bath Amenities", selectedServices: "Grooming Kit" },
-    { id: "6", roomServices: "Bath Amenities", selectedServices: "Towels" },
-    { id: "7", roomServices: "Bath Amenities", selectedServices: "Hair Dryer" },
-    { id: "8", roomServices: "Bath Amenities", selectedServices: "Soap" },
-    { id: "9", roomServices: "Bath Amenities", selectedServices: "Toothpaste & Brush" },
-    { id: "10", roomServices: "Bath Amenities", selectedServices: "Sanitary Items" },
-    { id: "11", roomServices: "Room Amenities", selectedServices: "Room 1" },
-    { id: "12", roomServices: "Room Amenities", selectedServices: "Room 2" },
-    { id: "13", roomServices: "Room Amenities", selectedServices: "Room 3" },
-    { id: "14", roomServices: "Concierge Requests", selectedServices: "Wake Up Call" },
-    { id: "15", roomServices: "Concierge Requests", selectedServices: "Extra Pillow" },
-    { id: "16", roomServices: "Concierge Requests", selectedServices: "Extra Blanket" },
-    { id: "17", roomServices: "Room Amenities", selectedServices: "Room 4" },
-    { id: "18", roomServices: "Room Amenities", selectedServices: "Room 5" },
-    { id: "19", roomServices: "Concierge Requests", selectedServices: "Iron & Board" },
-    { id: "20", roomServices: "Concierge Requests", selectedServices: "Room Service Menu" },
-    { id: "21", roomServices: "Bath Amenities", selectedServices: "Bath Robe" },
-    { id: "22", roomServices: "Bath Amenities", selectedServices: "Shower Cap" },
-    { id: "23", roomServices: "Bath Amenities", selectedServices: "Cotton Buds" },
-    { id: "24", roomServices: "Bath Amenities", selectedServices: "Dental Kit" },
-    { id: "25", roomServices: "Bath Amenities", selectedServices: "Vanity Kit" },
-    { id: "26", roomServices: "Bath Amenities", selectedServices: "Sewing Kit" },
-    { id: "27", roomServices: "Bath Amenities", selectedServices: "Shoe Shine" },
-    { id: "28", roomServices: "Bath Amenities", selectedServices: "Loofah" },
-    { id: "29", roomServices: "Bath Amenities", selectedServices: "Bath Salts" },
-    { id: "30", roomServices: "Bath Amenities", selectedServices: "Body Wash" },
-];
-
-// Travel Desk Menu Options
-const travelDeskMenuOptions = [
-    { id: "car-rental", label: "Car rental service" },
-    { id: "excursions", label: "Excursions and guided tours" },
-    { id: "ticket-bookings", label: "Ticket Bookings - Air, Train, Bus" },
-    { id: "limousine", label: "Transfer and chauffeur driven limousine services" },
-];
-
-// Travel Desk Table Data
-const travelDeskData = [
-    { id: "1", travelRequestMenu: "Car rental service" },
-    { id: "2", travelRequestMenu: "Excursions and guided tours" },
-    { id: "3", travelRequestMenu: "Ticket Bookings - Air, Train, Bus" },
-    { id: "4", travelRequestMenu: "Transfer and chauffeur driven limousine services" },
-];
-
-// Business Center Menu Options
-const businessCenterMenuOptions = [
-    { id: "wifi", label: "Complimentary Wi-Fi internet" },
-    { id: "computer-desk", label: "Computer desk facility" },
-    { id: "conference", label: "Conference and meeting facilities" },
-    { id: "meeting-rooms", label: "Meeting rooms" },
-];
-
-// Business Center Table Data
-const businessCenterData = [
-    { id: "1", businessCenterMenu: "Complimentary Wi-Fi internet" },
-    { id: "2", businessCenterMenu: "Computer desk facility" },
-    { id: "3", businessCenterMenu: "Conference and meeting facilities" },
-    { id: "4", businessCenterMenu: "Meeting rooms" },
-];
-
-// Food Category Data
-const foodCategoryData = [
-    { id: "1", category: "Curry" },
-    { id: "2", category: "desert" },
-    { id: "3", category: "Desserts" },
-    { id: "4", category: "Fresh Juices" },
-    { id: "5", category: "Juicesss" },
-    { id: "6", category: "North Indian" },
-    { id: "7", category: "South Indian" },
-    { id: "8", category: "West Indian" },
-];
-
-// Served By Options
-const servedByOptions = ["102", "104", "105", "1309", "241", "3", "307", "4002", "4003", "4004"];
-
-// Food Menu Data
-const foodMenuData = [
-    { id: "1", foodCategory: "Desserts", name: "Brownie", description: "Chocolate", vegNonveg: "Veg", spicy: "No", price: "200" },
-    { id: "2", foodCategory: "Desserts", name: "Cheesecake", description: "New cheesecake", vegNonveg: "Veg", spicy: "No", price: "250" },
-    { id: "3", foodCategory: "Desserts", name: "Chocolate Pastry", description: "Pastry", vegNonveg: "Veg", spicy: "No", price: "50" },
-    { id: "4", foodCategory: "Desserts", name: "Laddu", description: "Bon-bon Indian Ladoo", vegNonveg: "Veg", spicy: "No", price: "100" },
-    { id: "5", foodCategory: "Fresh Juices", name: "Apple Juice", description: "1 Apple juice", vegNonveg: "Veg", spicy: "No", price: "60" },
-    { id: "6", foodCategory: "Fresh Juices", name: "Orange Juice", description: "1 Orange Juice", vegNonveg: "Veg", spicy: "No", price: "40" },
-    { id: "7", foodCategory: "North Indian", name: "Naan with green dip", description: "4 pcs Naan with green chutney", vegNonveg: "Veg", spicy: "Yes", price: "100" },
-    { id: "8", foodCategory: "North Indian", name: "Naan with butter chicken", description: "2 Naan with chicken gravy", vegNonveg: "Non-Veg", spicy: "Yes", price: "250" },
-    { id: "9", foodCategory: "South Indian", name: "Butter Dosa", description: "A butter dosa - 2 pieces", vegNonveg: "Veg", spicy: "Yes", price: "50" },
-    { id: "10", foodCategory: "South Indian", name: "Pongal with vadai", description: "Khao Pongal and vadai with 1 chutney and 1 sambar", vegNonveg: "Veg", spicy: "No", price: "80" },
-];
-
-// Facility Services Options
-const facilityServicesOptions = [
-    { id: "caleido", label: "Caleido Network Maintenance" },
-    { id: "electrical", label: "Electrical" },
-    { id: "garden", label: "Garden Trimming" },
-    { id: "it-data", label: "IT & Data Center" },
-    { id: "lift", label: "Lift" },
-    { id: "lobby", label: "Lobby" },
-    { id: "plumbing", label: "Plumbing" },
-    { id: "restaurant", label: "Restaurant & Kitchen" },
-    { id: "roof", label: "Roof/Terrace" },
-    { id: "room-cleaning", label: "Room Cleaning" },
-    { id: "security", label: "Security" },
-    { id: "stairs", label: "Stairs and Pathway" },
-    { id: "swimming", label: "Swimming Pool" },
-];
-
-// Facility Services Table Data
-const facilityServicesData = [
-    { id: "1", facilityService: "Caleido Network Maintenance" },
-    { id: "2", facilityService: "Electrical" },
-    { id: "3", facilityService: "Garden Trimming" },
-    { id: "4", facilityService: "IT & Data Center" },
-    { id: "5", facilityService: "Lift" },
-    { id: "6", facilityService: "Lobby" },
-    { id: "7", facilityService: "Plumbing" },
-    { id: "8", facilityService: "Restaurant & Kitchen" },
-    { id: "9", facilityService: "Roof/Terrace" },
-    { id: "10", facilityService: "Room Cleaning" },
-    { id: "11", facilityService: "Security" },
-    { id: "12", facilityService: "Stairs and Pathway" },
-    { id: "13", facilityService: "Swimming Pool" },
-];
-
-// Facility Services Type Table Data
-const facilityServicesTypeData = [
-    { id: "1", facilityService: "Caleido Network Maintenance", typeOfService: "Networking Maintenance" },
-    { id: "2", facilityService: "Electrical", typeOfService: "Installing" },
-    { id: "3", facilityService: "Garden Trimming", typeOfService: "Grass Cutting" },
-    { id: "4", facilityService: "Lift", typeOfService: "Cleaner" },
-    { id: "5", facilityService: "Lift", typeOfService: "Lift Electrical working" },
-    { id: "6", facilityService: "Lobby", typeOfService: "Food Order" },
-    { id: "7", facilityService: "Lobby", typeOfService: "Cleaning" },
-    { id: "8", facilityService: "Plumbing", typeOfService: "water works" },
-    { id: "9", facilityService: "Restaurant & Kitchen", typeOfService: "Food" },
-    { id: "10", facilityService: "Roof/Terrace", typeOfService: "Cleaning" },
-    { id: "11", facilityService: "Room Cleaning", typeOfService: "Cleaning" },
-    { id: "12", facilityService: "Security", typeOfService: "Guard" },
-    { id: "13", facilityService: "Stairs and Pathway", typeOfService: "Cleaning" },
-    { id: "14", facilityService: "Swimming Pool", typeOfService: "Pool Cleaning" },
-    { id: "15", facilityService: "IT & Data Center", typeOfService: "Server Maintenance" },
-    { id: "16", facilityService: "IT & Data Center", typeOfService: "Network Setup" },
-    { id: "17", facilityService: "Garden Trimming", typeOfService: "Tree Pruning" },
-];
-
-// Health & Fitness Menu Options
-const healthFitnessMenuOptions = [
-    { id: "fitness-room", label: "Fitness room" },
-    { id: "health-club", label: "Health club" },
-    { id: "massages", label: "Massages" },
-    { id: "sauna-steam", label: "Sauna and steam bath" },
-];
-
-const healthFitnessData = [
-    { id: "1", healthFitness: "Fitness room" },
-    { id: "2", healthFitness: "Health club" },
-    { id: "3", healthFitness: "Massages" },
-    { id: "4", healthFitness: "Sauna and steam bath" },
-];
-
-// Sanitation Services Options
-const sanitationServicesOptions = [
-    { id: "sanitation", label: "Sanitation" },
-];
-
-// Sanitation Services Table Data
-const sanitationServicesData = [
-    { id: "1", sanitationService: "Sanitation" },
-];
-
-// Sanitation Services Type Table Data
-const sanitationServicesTypeData = [
-    { id: "1", sanitationService: "Sanitation", typeOfService: "Guest Room sanitation" },
-];
+/**
+ * Services Setup, connected to the Phase 2.5 catalogue APIs.
+ *
+ *   GET /service-types      the seven real service types
+ *   GET /service-categories one row per category, carrying its service_type
+ *   GET /service-items      the items inside each category, with price_per_unit
+ *
+ * Every tab below is a projection of those three lists filtered by service
+ * type -- Room Service, Travel Desk, Business Center, Food Order, Facility
+ * Maintenance Service, Health & Fitness and Sanitation Maintenance Service.
+ * The category/item names are whatever the database holds; none are hardcoded.
+ *
+ * Columns with no column behind them, shown as "-":
+ *   Veg/Non-Veg and Spicy on the food menu -- `service_item` stores neither.
+ *   "Type of Service" for facility/sanitation services -- the schema has one
+ *   category level, not a category plus a sub-type.
+ *
+ * Phase 3.0 writes:
+ *   A new "menu" / service entry -> POST /service-items in the tab's category
+ *   A new category               -> POST /service-categories for the tab's type
+ *
+ * Which of the two a tab creates follows the schema: `service_category` groups
+ * items within a service type, and `service_category_item` is the item itself.
+ */
 
 // Multi-select dropdown component
 const MultiSelectDropdown = ({
@@ -345,6 +188,165 @@ const MultiSelectDropdown = ({
 };
 
 const ServicesSetup = () => {
+    // --- Live data -------------------------------------------------------
+    const serviceTypesQuery = useServiceTypes({ page: 1, page_size: MAX_PAGE_SIZE });
+    const categoriesQuery = useServiceCategories({ page: 1, page_size: MAX_PAGE_SIZE });
+    const itemsQuery = useServiceItems({ page: 1, page_size: MAX_PAGE_SIZE });
+    const roomsQuery = useRooms({ page: 1, page_size: MAX_PAGE_SIZE });
+
+    // --- Mutations
+    const { canWrite } = useAuth();
+    const mayWrite = canWrite("service_setup");
+    const createCategory = useCreateServiceCategory();
+    const createItem = useCreateServiceItem();
+
+    /**
+     * Create a catalogue row for the tab in view.
+     *
+     * `kind` says which table the tab is really editing: a category (a grouping
+     * inside a service type) or an item (a line a guest can request).
+     */
+    const createCatalogueRow = (
+        kind: "category" | "item",
+        typeName: string,
+        name: string,
+        categoryName?: string,
+        price?: string,
+    ) => {
+        const trimmed = name.trim();
+        if (!trimmed) return;
+        const serviceTypeId = typeId(typeName);
+        if (serviceTypeId === undefined) {
+            toast({
+                title: "Unknown service type",
+                description: `${typeName} is not in the service_type table.`,
+                variant: "destructive",
+            });
+            return;
+        }
+        if (kind === "category") {
+            createCategory.mutate({ category_name: trimmed, service_type: serviceTypeId });
+            return;
+        }
+        const category = categoriesOfType(typeName).find(
+            (row) => !categoryName || row.category_name === categoryName,
+        );
+        if (!category) {
+            toast({
+                title: "Create a category first",
+                description: `${typeName} has no category to attach this item to.`,
+                variant: "destructive",
+            });
+            return;
+        }
+        createItem.mutate({
+            item_name: trimmed,
+            category_id: category.id,
+            ...(price ? { price_per_unit: price } : {}),
+        });
+    };
+
+    const setupIsLoading =
+        serviceTypesQuery.isLoading || categoriesQuery.isLoading || itemsQuery.isLoading;
+    const setupError =
+        serviceTypesQuery.error ?? categoriesQuery.error ?? itemsQuery.error;
+
+    const allCategories = categoriesQuery.data?.items ?? [];
+    const allItems = itemsQuery.data?.items ?? [];
+
+    /** Resolve a service type id from its stored name. */
+    const typeId = (name: string) =>
+        serviceTypesQuery.data?.items.find((type) => type.name === name)?.id;
+
+    const categoriesOfType = (name: string) => {
+        const id = typeId(name);
+        return id === undefined ? [] : allCategories.filter((category) => category.service_type === id);
+    };
+    const itemsOfType = (name: string) => {
+        const id = typeId(name);
+        return id === undefined ? [] : allItems.filter((item) => item.service_type === id);
+    };
+
+    // Room Service: one row per item, labelled with its category.
+    const roomServicesData = itemsOfType("Room Service").map((item) => ({
+        id: item.id,
+        roomServices: item.category_name ?? "-",
+        selectedServices: item.item_name,
+    }));
+
+    const travelDeskMenuOptions = categoriesOfType("Travel Desk").map((category) => ({
+        id: category.id,
+        label: category.category_name ?? "-",
+    }));
+    const travelDeskData = itemsOfType("Travel Desk").map((item) => ({
+        id: item.id,
+        travelRequestMenu: item.item_name,
+    }));
+
+    const businessCenterMenuOptions = categoriesOfType("Business Center").map((category) => ({
+        id: category.id,
+        label: category.category_name ?? "-",
+    }));
+    const businessCenterData = itemsOfType("Business Center").map((item) => ({
+        id: item.id,
+        businessCenterMenu: item.item_name,
+    }));
+
+    const foodCategoryData = categoriesOfType("Food Order").map((category) => ({
+        id: category.id,
+        category: category.category_name ?? "-",
+    }));
+    const servedByOptions = (roomsQuery.data?.items ?? []).map((room) => room.name);
+    const foodMenuData = itemsOfType("Food Order").map((item) => ({
+        id: item.id,
+        foodCategory: item.category_name ?? "-",
+        name: item.item_name,
+        description: item.description ?? "-",
+        // `service_item` stores neither a diet nor a spice flag.
+        vegNonveg: "-",
+        spicy: "-",
+        price: item.price_per_unit ?? "-",
+    }));
+
+    const facilityServicesOptions = categoriesOfType("Facility Maintenance Service").map((category) => ({
+        id: category.id,
+        label: category.category_name ?? "-",
+    }));
+    const facilityServicesData = facilityServicesOptions.map((option) => ({
+        id: option.id,
+        facilityService: option.label,
+    }));
+    // One category level only: the item name is the closest thing the schema
+    // has to a "type of service" under a facility service.
+    const facilityServicesTypeData = itemsOfType("Facility Maintenance Service").map((item) => ({
+        id: item.id,
+        facilityService: item.category_name ?? "-",
+        typeOfService: item.item_name,
+    }));
+
+    const healthFitnessMenuOptions = categoriesOfType("Health & Fitness").map((category) => ({
+        id: category.id,
+        label: category.category_name ?? "-",
+    }));
+    const healthFitnessData = itemsOfType("Health & Fitness").map((item) => ({
+        id: item.id,
+        healthFitness: item.item_name,
+    }));
+
+    const sanitationServicesOptions = categoriesOfType("Sanitation Maintenance Service").map((category) => ({
+        id: category.id,
+        label: category.category_name ?? "-",
+    }));
+    const sanitationServicesData = sanitationServicesOptions.map((option) => ({
+        id: option.id,
+        sanitationService: option.label,
+    }));
+    const sanitationServicesTypeData = itemsOfType("Sanitation Maintenance Service").map((item) => ({
+        id: item.id,
+        sanitationService: item.category_name ?? "-",
+        typeOfService: item.item_name,
+    }));
+
     const [activeTab, setActiveTab] = useState<TabType>("room-service");
 
     // Room Service state
@@ -437,36 +439,103 @@ const ServicesSetup = () => {
         { id: "sanitation-maintenance" as TabType, label: "Sanitation Maintenance Service" },
     ];
 
-    const getAvailableServices = () => {
-        if (!selectedRoomServiceType || !roomServiceTypes[selectedRoomServiceType as keyof typeof roomServiceTypes]) {
-            return [];
+    /** Categories of the Room Service type, for the form's first picker. */
+    const roomServiceCategoryOptions = categoriesOfType("Room Service").map((category) => ({
+        id: category.id,
+        label: category.category_name ?? "-",
+    }));
+
+    /**
+     * The multi-select tabs (Travel Desk, Business Center, Facility Services,
+     * Health & Fitness, Sanitation Services) all work the same way: the picker
+     * lists the real `service_category` rows of that service type, and the table
+     * below lists the `service_category_item` rows. Submitting therefore creates
+     * one item per selected category, named after that category -- which is the
+     * only mapping the schema supports, and uses real ids and real names.
+     */
+    const submitMenuSelection = (
+        selectedIds: string[],
+        options: { id: string; label: string }[],
+        clear: (value: string[]) => void,
+        label: string,
+    ) => {
+        if (!selectedIds.length) {
+            toast({
+                title: `Select at least one ${label}`,
+                variant: "destructive",
+            });
+            return;
         }
-        return roomServiceTypes[selectedRoomServiceType as keyof typeof roomServiceTypes].services;
+        for (const id of selectedIds) {
+            const option = options.find((entry) => entry.id === id);
+            if (!option) continue;
+            createItem.mutate({ item_name: option.label, category_id: option.id });
+        }
+        clear([]);
+    };
+
+    /** Create one `service_category_item` under a chosen category. */
+    const submitItemForCategory = (
+        categoryId: string,
+        itemName: string,
+        clear: () => void,
+        extra?: { description?: string | null; price_per_unit?: string | null },
+    ) => {
+        const trimmed = itemName.trim();
+        if (!categoryId || !trimmed) {
+            toast({
+                title: "Both fields are required",
+                description: "Choose a category and enter a name.",
+                variant: "destructive",
+            });
+            return;
+        }
+        createItem.mutate(
+            { item_name: trimmed, category_id: categoryId, ...(extra ?? {}) },
+            { onSuccess: clear },
+        );
     };
 
     const handleRoomServiceSubmit = () => {
-        console.log("Room Service Submit:", { selectedRoomServiceType, selectedService });
-        // Add submission logic here
+        submitItemForCategory(selectedRoomServiceType, selectedService, () => {
+            setSelectedService("");
+        });
     };
 
     const handleTravelDeskSubmit = () => {
-        console.log("Travel Desk Submit:", { selectedTravelDeskMenus });
-        // Add submission logic here
+        submitMenuSelection(
+            selectedTravelDeskMenus, travelDeskMenuOptions,
+            setSelectedTravelDeskMenus, "travel desk menu",
+        );
     };
 
     const handleBusinessCenterSubmit = () => {
-        console.log("Business Center Submit:", { selectedBusinessCenterMenus });
-        // Add submission logic here
+        submitMenuSelection(
+            selectedBusinessCenterMenus, businessCenterMenuOptions,
+            setSelectedBusinessCenterMenus, "business center menu",
+        );
     };
 
     const handleFacilityServicesSubmit = () => {
-        console.log("Facility Services Submit:", { selectedFacilityServices });
-        // Add submission logic here
+        submitMenuSelection(
+            selectedFacilityServices, facilityServicesOptions,
+            setSelectedFacilityServices, "facility service",
+        );
     };
 
+    /**
+     * "Estimate time" has NO column on `service_category_item`, so it cannot be
+     * stored. It is recorded in `description` -- the only free-text column the
+     * table has -- rather than being silently dropped.
+     */
     const handleFacilityServicesTypeSubmit = () => {
-        console.log("Facility Services Type Submit:", { selectedFacilityServiceForType, servicesType, estimateTime });
-        // Add submission logic here
+        submitItemForCategory(
+            selectedFacilityServiceForType, servicesType,
+            handleFacilityServicesTypeReset,
+            estimateTime.trim()
+                ? { description: `Estimated time: ${estimateTime.trim()}` }
+                : undefined,
+        );
     };
 
     const handleFacilityServicesTypeReset = () => {
@@ -476,18 +545,27 @@ const ServicesSetup = () => {
     };
 
     const handleHealthFitnessSubmit = () => {
-        console.log("Health & Fitness Submit:", { selectedHealthFitnessMenus });
-        // Add submission logic here
+        submitMenuSelection(
+            selectedHealthFitnessMenus, healthFitnessMenuOptions,
+            setSelectedHealthFitnessMenus, "health & fitness menu",
+        );
     };
 
     const handleSanitationServicesSubmit = () => {
-        console.log("Sanitation Services Submit:", { selectedSanitationServices });
-        // Add submission logic here
+        submitMenuSelection(
+            selectedSanitationServices, sanitationServicesOptions,
+            setSelectedSanitationServices, "sanitation service",
+        );
     };
 
     const handleSanitationServicesTypeSubmit = () => {
-        console.log("Sanitation Services Type Submit:", { selectedSanitationServiceForType, sanitationServicesType, sanitationEstimateTime });
-        // Add submission logic here
+        submitItemForCategory(
+            selectedSanitationServiceForType, sanitationServicesType,
+            handleSanitationServicesTypeReset,
+            sanitationEstimateTime.trim()
+                ? { description: `Estimated time: ${sanitationEstimateTime.trim()}` }
+                : undefined,
+        );
     };
 
     const handleSanitationServicesTypeReset = () => {
@@ -496,18 +574,33 @@ const ServicesSetup = () => {
         setSanitationEstimateTime("");
     };
 
+    /** Food Category is a `service_category` under the Food Order service type. */
     const handleFoodCategorySubmit = () => {
-        console.log("Food Category Submit:", { newFoodCategory });
-        // Add submission logic here
+        createCatalogueRow("category", "Food Order", newFoodCategory);
+        setNewFoodCategory("");
     };
 
     const handleFoodCategoryReset = () => {
         setNewFoodCategory("");
     };
 
+    /**
+     * Food Menu is a `service_category_item`. `food code`, `served by`, diet and
+     * spice level have no columns on that table; the ones that carry real
+     * meaning are folded into `description`, and nothing is invented.
+     */
     const handleFoodMenuSubmit = () => {
-        console.log("Food Menu Submit:", { selectedFoodCategory, foodCode, foodName, servedBy, foodDescription, vegNonveg, spicy, foodPrice });
-        // Add submission logic here
+        const notes = [
+            foodCode.trim() && `Code: ${foodCode.trim()}`,
+            servedBy.trim() && `Served by: ${servedBy.trim()}`,
+            vegNonveg && `Diet: ${vegNonveg}`,
+            spicy && `Spice: ${spicy}`,
+            foodDescription.trim(),
+        ].filter(Boolean).join(" | ");
+        submitItemForCategory(selectedFoodCategory, foodName, handleFoodMenuReset, {
+            ...(notes ? { description: notes } : {}),
+            ...(foodPrice.trim() ? { price_per_unit: foodPrice.trim() } : {}),
+        });
     };
 
     const handleFoodMenuReset = () => {
@@ -630,17 +723,25 @@ const ServicesSetup = () => {
                             <Label className="text-foreground">
                                 Type of Room Service<span className="text-red-500">*</span>
                             </Label>
-                            <Select value={selectedRoomServiceType} onValueChange={(value) => {
-                                setSelectedRoomServiceType(value);
-                                setSelectedService(""); // Reset service when type changes
-                            }}>
+                            {/* Real `service_category` rows of the Room Service type.
+                                The previous hardcoded slugs matched no row, so a
+                                submission could never resolve a category id. */}
+                            <Select value={selectedRoomServiceType} onValueChange={setSelectedRoomServiceType}>
                                 <SelectTrigger className="bg-muted/30 border-border/50 text-foreground">
                                     <SelectValue placeholder="Select Room Service" />
                                 </SelectTrigger>
                                 <SelectContent className="bg-white">
-                                    <SelectItem value="room-amenities">Room Amenities</SelectItem>
-                                    <SelectItem value="bath-amenities">Bath Amenities</SelectItem>
-                                    <SelectItem value="concierge-requests">Concierge Requests</SelectItem>
+                                    {roomServiceCategoryOptions.length === 0 ? (
+                                        <div className="px-3 py-2 text-sm text-muted-foreground">
+                                            No Room Service category exists yet
+                                        </div>
+                                    ) : (
+                                        roomServiceCategoryOptions.map((option) => (
+                                            <SelectItem key={option.id} value={option.id}>
+                                                {option.label}
+                                            </SelectItem>
+                                        ))
+                                    )}
                                 </SelectContent>
                             </Select>
                             {!selectedRoomServiceType && (
@@ -648,23 +749,18 @@ const ServicesSetup = () => {
                             )}
                         </div>
 
-                        {/* Services */}
+                        {/* Services -- the item name to add under that category. */}
                         <div className="space-y-2">
                             <Label className="text-foreground">
                                 Services<span className="text-red-500">*</span>
                             </Label>
-                            <Select value={selectedService} onValueChange={setSelectedService} disabled={!selectedRoomServiceType}>
-                                <SelectTrigger className="bg-muted/30 border-border/50 text-foreground">
-                                    <SelectValue placeholder="Select Services" />
-                                </SelectTrigger>
-                                <SelectContent className="bg-white">
-                                    {getAvailableServices().map((service) => (
-                                        <SelectItem key={service} value={service}>
-                                            {service}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            <Input
+                                placeholder="Enter service name"
+                                value={selectedService}
+                                onChange={(event) => setSelectedService(event.target.value)}
+                                disabled={!selectedRoomServiceType}
+                                className="bg-muted/30 border-border/50 text-foreground"
+                            />
                         </div>
                     </div>
 
@@ -672,9 +768,10 @@ const ServicesSetup = () => {
                     <div className="flex justify-center mt-6">
                         <Button
                             onClick={handleRoomServiceSubmit}
+                            disabled={!mayWrite || !selectedRoomServiceType || !selectedService.trim() || createItem.isPending}
                             className="bg-cyan-600 hover:bg-cyan-700 text-foreground px-8"
                         >
-                            Submit
+                            {createItem.isPending ? "Saving..." : "Submit"}
                         </Button>
                     </div>
                 </CardContent>
@@ -1238,7 +1335,11 @@ const ServicesSetup = () => {
                                         <Select value={selectedFoodCategory} onValueChange={setSelectedFoodCategory}>
                                             <SelectTrigger className="bg-muted/30 border-border/50 text-foreground"><SelectValue placeholder="Select Food Category" /></SelectTrigger>
                                             <SelectContent className="bg-white">
-                                                {foodCategoryData.map(cat => (<SelectItem key={cat.id} value={cat.category}>{cat.category}</SelectItem>))}
+                                                {/* value is the `service_category.id` UUID -- it goes straight
+                                                    to `category_id` on POST /service-items. The visible label
+                                                    stays the category name. Sending the name here was what
+                                                    made submit fail its UUID validation. */}
+                                                {foodCategoryData.map(cat => (<SelectItem key={cat.id} value={cat.id}>{cat.category}</SelectItem>))}
                                             </SelectContent>
                                         </Select>
                                     </div>
@@ -1773,7 +1874,11 @@ const ServicesSetup = () => {
                                     <Select value={selectedSanitationServiceForType} onValueChange={setSelectedSanitationServiceForType}>
                                         <SelectTrigger className="bg-muted/30 border-border/50 text-foreground"><SelectValue placeholder="Select Sanitation Services" /></SelectTrigger>
                                         <SelectContent className="bg-white">
-                                            {sanitationServicesData.map(item => (<SelectItem key={item.id} value={item.sanitationService}>{item.sanitationService}</SelectItem>))}
+                                            {/* value is the `service_category.id` UUID -- it becomes
+                                                `category_id` on POST /service-items. The label stays the
+                                                service name. Sending the name here was what made submit
+                                                fail its UUID validation. */}
+                                            {sanitationServicesData.map(item => (<SelectItem key={item.id} value={item.id}>{item.sanitationService}</SelectItem>))}
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -1919,8 +2024,15 @@ const ServicesSetup = () => {
                 </div>
             </div>
 
-            {/* Tab Content */}
-            {renderTabContent()}
+            {/* Tab Content. One boundary for the whole screen: the three
+                catalogue queries feed every tab. */}
+            <DataState
+                isLoading={setupIsLoading}
+                error={setupError}
+                loader={<TableLoading columns={6} />}
+            >
+                {renderTabContent()}
+            </DataState>
 
             {/* Edit Food Category Modal */}
             <Dialog open={editFoodCategoryOpen} onOpenChange={setEditFoodCategoryOpen}>
@@ -2047,10 +2159,10 @@ const ServicesSetup = () => {
                             <Label className="text-sm font-medium text-gray-800 text-left">Veg/Nonveg <span className="text-red-500">*</span></Label>
                             <div className="flex gap-4">
                                 <label className="flex items-center gap-2 text-sm text-gray-600">
-                                    <input type="radio" name="veg-type" checked className="h-4 w-4 border-gray-300 text-cyan-600 focus:ring-cyan-600" onChange={() => { }} /> Veg
+                                    <input type="radio" name="veg-type" defaultChecked className="h-4 w-4 border-gray-300 text-cyan-600 focus:ring-cyan-600" /> Veg
                                 </label>
                                 <label className="flex items-center gap-2 text-sm text-gray-600">
-                                    <input type="radio" name="veg-type" className="h-4 w-4 border-gray-300 text-cyan-600 focus:ring-cyan-600" onChange={() => { }} /> Non Veg
+                                    <input type="radio" name="veg-type" className="h-4 w-4 border-gray-300 text-cyan-600 focus:ring-cyan-600" /> Non Veg
                                 </label>
                             </div>
                         </div>
@@ -2059,10 +2171,10 @@ const ServicesSetup = () => {
                             <Label className="text-sm font-medium text-gray-800 text-left">Spicy <span className="text-red-500">*</span></Label>
                             <div className="flex gap-4">
                                 <label className="flex items-center gap-2 text-sm text-gray-600">
-                                    <input type="radio" name="spicy" className="h-4 w-4 border-gray-300 text-cyan-600 focus:ring-cyan-600" onChange={() => { }} /> Yes
+                                    <input type="radio" name="spicy" className="h-4 w-4 border-gray-300 text-cyan-600 focus:ring-cyan-600" /> Yes
                                 </label>
                                 <label className="flex items-center gap-2 text-sm text-gray-600">
-                                    <input type="radio" name="spicy" checked className="h-4 w-4 border-gray-300 text-cyan-600 focus:ring-cyan-600" onChange={() => { }} /> No
+                                    <input type="radio" name="spicy" defaultChecked className="h-4 w-4 border-gray-300 text-cyan-600 focus:ring-cyan-600" /> No
                                 </label>
                             </div>
                         </div>
