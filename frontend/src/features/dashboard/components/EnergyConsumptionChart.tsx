@@ -1,19 +1,55 @@
+import { useMemo, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { useTheme } from "@/core/contexts/ThemeContext";
+import { DataState } from "@/core/components/DataState";
+import { useEnergySummary } from "@/lib/api/hooks";
 
-const data = [
-  { name: "Mon", avgEnergy: 0.2, perRoom: 0.3 },
-  { name: "Tue", avgEnergy: 0.4, perRoom: 0.5 },
-  { name: "Wed", avgEnergy: 0.3, perRoom: 0.4 },
-  { name: "Thu", avgEnergy: 0.6, perRoom: 0.7 },
-  { name: "Fri", avgEnergy: 0.5, perRoom: 0.6 },
-  { name: "Sat", avgEnergy: 0.4, perRoom: 0.5 },
-  { name: "Sun", avgEnergy: 0.3, perRoom: 0.4 },
-];
+/**
+ * Real `energy_stat` values via GET /energy-stats/summary.
+ *
+ * The backend performs SUM and COUNT only. Two series are plotted:
+ *   - "Total energy (all rooms)"  = the stored SUM for the bucket
+ *   - "Average per reading"       = that SUM / the stored COUNT
+ *
+ * The second is a frontend presentation division of two real aggregates. The
+ * original mock legends ("Average energy (all rooms)" / "per room") were
+ * renamed to describe exactly what is plotted rather than imply a per-room
+ * figure the API does not provide.
+ *
+ * NO UNIT IS SHOWN: `energy_stat` stores none and the API returns
+ * `energy_unit: null`. These values must not be labelled kWh. Nothing here is
+ * converted, costed or carbon-weighted.
+ */
+
+const GROUPINGS: Record<string, "hour" | "day"> = {
+  Today: "hour",
+  Week: "day",
+  Month: "day",
+};
 
 export const EnergyConsumptionChart = () => {
   const { isDark } = useTheme();
+  const [range, setRange] = useState<keyof typeof GROUPINGS>("Week");
+  const groupBy = GROUPINGS[range];
+
+  const query = useEnergySummary({ group_by: groupBy });
+
+  const data = useMemo(() => {
+    const buckets = query.data?.buckets ?? [];
+    const recent = buckets.slice(-(range === "Month" ? 30 : range === "Week" ? 7 : 24));
+    return recent.map((bucket) => ({
+      name:
+        groupBy === "hour"
+          ? new Date(bucket.bucket).toLocaleTimeString([], { hour: "2-digit" })
+          : bucket.bucket,
+      totalEnergy: Number(bucket.total_energy_consumed.toFixed(3)),
+      avgPerReading:
+        bucket.reading_count > 0
+          ? Number((bucket.total_energy_consumed / bucket.reading_count).toFixed(3))
+          : 0,
+    }));
+  }, [query.data, groupBy, range]);
 
   const cardBg = isDark
     ? "linear-gradient(180deg, #1e2233, #1a1e30)"
@@ -38,47 +74,64 @@ export const EnergyConsumptionChart = () => {
           <select
             className="text-sm px-3 py-1.5 rounded border-none outline-none transition-colors"
             style={{ background: selectBg, color: titleColor, border: selectBorder }}
+            value={range}
+            onChange={(event) => setRange(event.target.value as keyof typeof GROUPINGS)}
           >
             <option>Today</option>
             <option>Week</option>
             <option>Month</option>
           </select>
-          <button className="transition-colors" style={{ color: mutedColor }}>
+          <button
+            className="transition-colors"
+            style={{ color: mutedColor }}
+            onClick={() => query.refetch()}
+            title="Refresh"
+          >
             <RefreshCw className="h-4 w-4" />
           </button>
         </div>
       </div>
 
-      <div className="flex items-center justify-center gap-6 mb-4">
+      <div className="flex items-center justify-center gap-6 mb-2">
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 bg-[hsl(35,90%,50%)] rounded-sm" />
-          <span className="text-xs" style={{ color: mutedColor }}>Average energy (all rooms)</span>
+          <span className="text-xs" style={{ color: mutedColor }}>Total energy (all rooms)</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 bg-[hsl(145,70%,45%)] rounded-sm" />
-          <span className="text-xs" style={{ color: mutedColor }}>Energy consumption (per room)</span>
+          <span className="text-xs" style={{ color: mutedColor }}>Average per reading</span>
         </div>
       </div>
+      <p className="text-center text-[10px] mb-2" style={{ color: mutedColor }}>
+        Stored values, no unit recorded in the database
+      </p>
 
       <div className="h-[180px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} barGap={2}>
-            <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} vertical={false} />
-            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: mutedColor, fontSize: 11 }} />
-            <YAxis axisLine={false} tickLine={false} tick={{ fill: mutedColor, fontSize: 11 }} domain={[0, 1]} ticks={[0, 0.2, 0.4, 0.6, 0.8, 1.0]} />
-            <Tooltip
-              contentStyle={{
-                background: tooltipBg,
-                border: tooltipBorder,
-                borderRadius: "8px",
-                color: titleColor,
-                boxShadow: "0 8px 24px rgba(17,12,46,0.12)"
-              }}
-            />
-            <Bar dataKey="avgEnergy" fill="hsl(35,90%,50%)" radius={[2, 2, 0, 0]} />
-            <Bar dataKey="perRoom" fill="hsl(145,70%,45%)" radius={[2, 2, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
+        <DataState
+          isLoading={query.isLoading}
+          error={query.error}
+          isEmpty={data.length === 0}
+          emptyTitle="No energy statistics recorded"
+        >
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={data} barGap={2}>
+              <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} vertical={false} />
+              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: mutedColor, fontSize: 11 }} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fill: mutedColor, fontSize: 11 }} />
+              <Tooltip
+                contentStyle={{
+                  background: tooltipBg,
+                  border: tooltipBorder,
+                  borderRadius: "8px",
+                  color: titleColor,
+                  boxShadow: "0 8px 24px rgba(17,12,46,0.12)"
+                }}
+              />
+              <Bar dataKey="totalEnergy" name="Total energy" fill="hsl(35,90%,50%)" radius={[2, 2, 0, 0]} />
+              <Bar dataKey="avgPerReading" name="Average per reading" fill="hsl(145,70%,45%)" radius={[2, 2, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </DataState>
       </div>
     </div>
   );
