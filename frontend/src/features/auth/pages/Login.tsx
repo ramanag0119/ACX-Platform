@@ -1,16 +1,22 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/core/contexts/AuthContext";
+import { ApiError } from "@/lib/api/client";
 
 const Login = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+
+  // A live session should never sit on the login screen.
+  useEffect(() => {
+    if (isAuthenticated) navigate("/dashboard", { replace: true });
+  }, [isAuthenticated, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,7 +27,16 @@ const Login = () => {
       await login(username, password);
       navigate("/dashboard");
     } catch (err) {
-      setError("Invalid username or password");
+      // The backend distinguishes bad credentials (401) from an account that
+      // exists but belongs to a mobile platform (403). Both messages come from
+      // the API; neither reveals whether the username exists.
+      if (err instanceof ApiError && err.isForbidden) {
+        setError(err.message || "This account cannot sign in to HMS Web.");
+      } else if (err instanceof ApiError && (err.isNetworkError || err.isServerError)) {
+        setError("Cannot reach the HMS API. Please try again shortly.");
+      } else {
+        setError("Invalid username or password");
+      }
     } finally {
       setIsLoading(false);
     }

@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bell, User, LogOut, Check, Trash2, X, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/core/contexts/AuthContext";
 import { useTheme } from "@/core/contexts/ThemeContext";
+import { useNotifications } from "@/lib/api/hooks";
+import { describeApiError } from "@/lib/api/client";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,59 +20,55 @@ interface Notification {
   message: string;
   timestamp: string;
   read: boolean;
-  type: "info" | "warning" | "success" | "error";
 }
-
-const mockNotifications: Notification[] = [
-  {
-    id: "1",
-    message: "Room 301 check-in completed successfully",
-    timestamp: "2 minutes ago",
-    read: false,
-    type: "success",
-  },
-  {
-    id: "2",
-    message: "Firmware update available for MIKOS devices",
-    timestamp: "15 minutes ago",
-    read: false,
-    type: "info",
-  },
-  {
-    id: "3",
-    message: "High energy consumption detected in Zone B",
-    timestamp: "1 hour ago",
-    read: false,
-    type: "warning",
-  },
-  {
-    id: "4",
-    message: "Maintenance ticket #1234 has been resolved",
-    timestamp: "2 hours ago",
-    read: true,
-    type: "success",
-  },
-  {
-    id: "5",
-    message: "New booking request for Conference Room A",
-    timestamp: "3 hours ago",
-    read: true,
-    type: "info",
-  },
-];
 
 interface AppHeaderProps {
   sidebarCollapsed: boolean;
 }
 
+/**
+ * The panel shows notification DELIVERY METADATA only -- template name and
+ * status. The backend deliberately withholds the rendered body and params,
+ * which carry OTPs and keypad keys for some templates, so there is no message
+ * text to display and none is invented here.
+ *
+ * Read/unread is local presentation state: the schema stores no per-user read
+ * flag for `notification`, and Phase 2.10 adds no writes.
+ */
 export const AppHeader = ({ sidebarCollapsed }: AppHeaderProps) => {
-  const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
   const [showNotifications, setShowNotifications] = useState(false);
-  const { logout } = useAuth();
+  const [readIds, setReadIds] = useState<Set<string>>(new Set());
+  const [dismissed, setDismissed] = useState(false);
+  const { logout, user, canRead } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
+  // /notifications is gated on the `dashboard` module by the backend.
+  const notificationsQuery = useNotifications(
+    canRead("dashboard") ? { page: 1, page_size: 20 } : undefined,
+  );
+  const canSeeNotifications = canRead("dashboard");
+
+  const notifications = useMemo<Notification[]>(() => {
+    if (dismissed || !canSeeNotifications) return [];
+    return (notificationsQuery.data?.items ?? []).map((item) => ({
+      id: String(item.id),
+      message: `${item.template_name ?? "Notification"} - ${item.status}`,
+      timestamp: new Date(item.created_on).toLocaleString(),
+      read: readIds.has(String(item.id)),
+    }));
+  }, [notificationsQuery.data, readIds, dismissed, canSeeNotifications]);
+
+  // A fresh page of notifications is unread again.
+  useEffect(() => {
+    setDismissed(false);
+  }, [notificationsQuery.dataUpdatedAt]);
+
   const unreadCount = notifications.filter((n) => !n.read).length;
+
+  const displayName = user
+    ? [user.first_name, user.last_name].filter(Boolean).join(" ") || user.user_name || ""
+    : "";
 
   const handleLogout = () => {
     logout();
@@ -78,15 +76,15 @@ export const AppHeader = ({ sidebarCollapsed }: AppHeaderProps) => {
   };
 
   const markAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    setReadIds(new Set(notifications.map((n) => n.id)));
   };
 
   const markAllAsUnread = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: false })));
+    setReadIds(new Set());
   };
 
   const clearAll = () => {
-    setNotifications([]);
+    setDismissed(true);
   };
 
   return (
@@ -147,11 +145,18 @@ export const AppHeader = ({ sidebarCollapsed }: AppHeaderProps) => {
                 </div>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 rounded-xl shadow-lg border">
-              <DropdownMenuItem className="cursor-pointer rounded-lg">
-                <User className="mr-2 h-4 w-4" />
-                Profile
-              </DropdownMenuItem>
+            <DropdownMenuContent align="end" className="w-56 rounded-xl shadow-lg border">
+              <div className="px-3 py-2">
+                <p className="text-sm font-medium truncate">{displayName || "Signed in"}</p>
+                {user?.email && (
+                  <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                )}
+                {user?.roles?.length ? (
+                  <p className="mt-1 text-xs text-muted-foreground truncate">
+                    {user.roles.map((role) => role.role_name).join(", ")}
+                  </p>
+                ) : null}
+              </div>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={handleLogout}
@@ -220,7 +225,16 @@ export const AppHeader = ({ sidebarCollapsed }: AppHeaderProps) => {
 
             {/* Notification List */}
             <div className="overflow-y-auto h-[calc(100vh-8rem)] scrollbar-thin">
-              {notifications.length === 0 ? (
+              {notificationsQuery.isLoading ? (
+                <div className="flex flex-col items-center justify-center h-48 text-muted-foreground">
+                  <p className="text-sm">Loading notifications...</p>
+                </div>
+              ) : notificationsQuery.error ? (
+                <div className="flex flex-col items-center justify-center h-48 px-6 text-center text-muted-foreground">
+                  <Bell className="h-12 w-12 mb-3 opacity-20" />
+                  <p className="text-sm">{describeApiError(notificationsQuery.error)}</p>
+                </div>
+              ) : notifications.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-48 text-muted-foreground">
                   <Bell className="h-12 w-12 mb-3 opacity-20" />
                   <p>No notifications</p>

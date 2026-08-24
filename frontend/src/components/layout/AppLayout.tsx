@@ -4,6 +4,7 @@ import { AppSidebar } from "./AppSidebar";
 import { AppHeader } from "./AppHeader";
 import { cn } from "@/lib/utils";
 import { ThemeProvider, useTheme } from "@/core/contexts/ThemeContext";
+import { ModuleGuard } from "@/core/components/ModuleGuard";
 
 const AppLayoutInner = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -80,7 +81,9 @@ const AppLayoutInner = () => {
         style={{ marginLeft: "16px" }}
       >
         <div className="p-6 flex-1">
-          <Outlet />
+          <ModuleGuard>
+            <Outlet />
+          </ModuleGuard>
         </div>
         <footer className="flex justify-between items-center px-6 py-4 text-[10px] text-muted-foreground opacity-65">
           <div>

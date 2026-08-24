@@ -30,6 +30,8 @@ import {
   ShieldAlert,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/core/contexts/AuthContext";
+import { moduleForPath } from "@/core/rbac/modules";
 
 interface NavItemProps {
   to: string;
@@ -118,7 +120,9 @@ interface AppSidebarProps {
 }
 
 export const AppSidebar = ({ collapsed, onToggle }: AppSidebarProps) => {
-  const navItems = [
+  const { canRead } = useAuth();
+
+  const allNavItems = [
     { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
     { to: "/occupancy", icon: Users, label: "Occupancy" },
     { to: "/bookings", icon: Calendar, label: "Bookings" },
@@ -163,6 +167,23 @@ export const AppSidebar = ({ collapsed, onToggle }: AppSidebarProps) => {
     { to: "/room-view", icon: Home, label: "Room View" },
     { to: "/key-settings", icon: Key, label: "Default Key Settings" },
   ];
+
+  // Hide what the signed-in user has no read grant for. A parent with
+  // sub-items survives as long as at least one child is permitted, and its
+  // sub-items are filtered to match. Purely cosmetic -- the API is the
+  // authority, and it will still answer 403 on anything not granted.
+  const isPermitted = (to: string) => {
+    const moduleName = moduleForPath(to);
+    return moduleName ? canRead(moduleName) : true;
+  };
+
+  const navItems = allNavItems
+    .map((item) => {
+      if (!item.subItems) return isPermitted(item.to) ? item : null;
+      const subItems = item.subItems.filter((sub) => isPermitted(sub.to));
+      return subItems.length ? { ...item, subItems } : null;
+    })
+    .filter(Boolean) as typeof allNavItems;
 
   return (
     <aside
