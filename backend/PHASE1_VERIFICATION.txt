@@ -1,0 +1,252 @@
+==============================================================================
+HMS PHASE 1 — DATABASE FOUNDATION VERIFICATION
+==============================================================================
+Database          : hms_db
+Schema            : public
+PostgreSQL        : 16.12
+Alembic revision  : 8a8456154f0e
+Tables created    : 39
+
+------------------------------------------------------------------------------
+1. DOCUMENTED ENTITY COVERAGE (36 from brief)
+------------------------------------------------------------------------------
+  [OK ] user                     -> app_user  <- renamed
+  [OK ] userRole                 -> user_role
+  [OK ] facility                 -> facility
+  [OK ] amenity                  -> amenity
+  [OK ] package                  -> package
+  [OK ] booking                  -> booking
+  [OK ] stay                     -> stay
+  [OK ] occupant                 -> occupant
+  [OK ] employee                 -> employee
+  [OK ] department               -> department
+  [OK ] function                 -> job_function  <- renamed
+  [OK ] serviceRequest           -> service_request
+  [OK ] foodCategory             -> food_category
+  [OK ] foodMenu                 -> food_menu
+  [OK ] event                    -> event
+  [OK ] offer                    -> offer
+  [OK ] holiday                  -> holiday
+  [OK ] propertyType             -> property_type
+  [OK ] invoice                  -> invoice
+  [OK ] device                   -> device
+  [OK ] firmware                 -> firmware
+  [OK ] jobOrder                 -> job_order
+  [OK ] deviceIncident           -> device_incident
+  [OK ] valueAlerts              -> value_alerts
+  [OK ] limitConfig              -> limit_config
+  [OK ] alertType                -> alert_type
+  [OK ] currentIncidentStatus    -> current_incident_status
+  [OK ] notification             -> notification
+  [OK ] fcmToken                 -> fcm_token
+  [OK ] maintenanceSchedule      -> maintenance_schedule
+  [OK ] scheduledTask            -> scheduled_task
+  [OK ] energyData               -> energy_data
+  [OK ] sensorReading            -> sensor_reading
+  [OK ] energyAggregate          -> energy_aggregate
+  [OK ] deviceHealthLog          -> device_health_log
+  [OK ] deviceUptime             -> device_uptime
+
+  Documented entities present: 36/36
+
+------------------------------------------------------------------------------
+2. SUPPORTING TABLES (beyond the 36)
+------------------------------------------------------------------------------
+  [OK ] amenity_type
+        Documented in FACILITI_MANAGER §12 (id, name, image); not in the 36-entity brief. Required by package.amenityType.
+  [OK ] app_user_user_role
+        Junction for documented user.userRoles array.
+  [OK ] job_order_device
+        Junction for documented jobOrder.devices array.
+
+------------------------------------------------------------------------------
+3. PRIMARY KEYS
+------------------------------------------------------------------------------
+  alert_type                   PK(id)
+  amenity                      PK(id)
+  amenity_type                 PK(id)
+  app_user                     PK(id)
+  app_user_user_role           PK(app_user_id, user_role_id)
+  booking                      PK(id)
+  current_incident_status      PK(id)
+  department                   PK(id)
+  device                       PK(id)
+  device_health_log            PK(id)
+  device_incident              PK(id)
+  device_uptime                PK(id)
+  employee                     PK(id)
+  energy_aggregate             PK(id)
+  energy_data                  PK(id)
+  event                        PK(id)
+  facility                     PK(id)
+  fcm_token                    PK(id)
+  firmware                     PK(id)
+  food_category                PK(id)
+  food_menu                    PK(id)
+  holiday                      PK(id)
+  invoice                      PK(id)
+  job_function                 PK(id)
+  job_order                    PK(id)
+  job_order_device             PK(job_order_id, device_id)
+  limit_config                 PK(id)
+  maintenance_schedule         PK(id)
+  notification                 PK(id)
+  occupant                     PK(id)
+  offer                        PK(id)
+  package                      PK(id)
+  property_type                PK(id)
+  scheduled_task               PK(id)
+  sensor_reading               PK(id)
+  service_request              PK(id)
+  stay                         PK(id)
+  user_role                    PK(id)
+  value_alerts                 PK(id)
+
+  Tables with a primary key: 39/39
+
+------------------------------------------------------------------------------
+4. FOREIGN KEYS
+------------------------------------------------------------------------------
+  amenity.facility_id -> facility.id  ON DELETE CASCADE
+  amenity.package_id -> package.id  ON DELETE SET NULL
+  amenity.property_type_id -> property_type.id  ON DELETE SET NULL
+  amenity_type.facility_id -> facility.id  ON DELETE CASCADE
+  app_user.facility_id -> facility.id  ON DELETE CASCADE
+  app_user_user_role.app_user_id -> app_user.id  ON DELETE CASCADE
+  app_user_user_role.user_role_id -> user_role.id  ON DELETE CASCADE
+  booking.facility_id -> facility.id  ON DELETE CASCADE
+  booking.package_id -> package.id  ON DELETE RESTRICT
+  department.facility_id -> facility.id  ON DELETE CASCADE
+  device.amenity_id -> amenity.id  ON DELETE SET NULL
+  device.facility_id -> facility.id  ON DELETE CASCADE
+  device.hub_id -> device.id  ON DELETE SET NULL
+  device_health_log.device_id -> device.id  ON DELETE CASCADE
+  device_health_log.facility_id -> facility.id  ON DELETE CASCADE
+  device_incident.assigned_to -> employee.id  ON DELETE SET NULL
+  device_incident.device_id -> device.id  ON DELETE CASCADE
+  device_incident.facility_id -> facility.id  ON DELETE CASCADE
+  device_uptime.device_id -> device.id  ON DELETE CASCADE
+  device_uptime.facility_id -> facility.id  ON DELETE CASCADE
+  employee.department_id -> department.id  ON DELETE SET NULL
+  employee.facility_id -> facility.id  ON DELETE CASCADE
+  employee.job_function_id -> job_function.id  ON DELETE SET NULL
+  employee.user_role_id -> user_role.id  ON DELETE SET NULL
+  energy_aggregate.device_id -> device.id  ON DELETE CASCADE
+  energy_aggregate.facility_id -> facility.id  ON DELETE CASCADE
+  energy_aggregate.room_id -> amenity.id  ON DELETE SET NULL
+  energy_data.device_id -> device.id  ON DELETE CASCADE
+  energy_data.facility_id -> facility.id  ON DELETE CASCADE
+  event.facility_id -> facility.id  ON DELETE CASCADE
+  fcm_token.facility_id -> facility.id  ON DELETE CASCADE
+  fcm_token.user_id -> app_user.id  ON DELETE CASCADE
+  firmware.facility_id -> facility.id  ON DELETE CASCADE
+  food_category.facility_id -> facility.id  ON DELETE CASCADE
+  food_menu.category_id -> food_category.id  ON DELETE SET NULL
+  food_menu.facility_id -> facility.id  ON DELETE CASCADE
+  holiday.facility_id -> facility.id  ON DELETE CASCADE
+  invoice.facility_id -> facility.id  ON DELETE CASCADE
+  invoice.stay_id -> stay.id  ON DELETE CASCADE
+  job_function.department_id -> department.id  ON DELETE CASCADE
+  job_order.amenity_id -> amenity.id  ON DELETE SET NULL
+  job_order.assigned_to -> employee.id  ON DELETE SET NULL
+  job_order.facility_id -> facility.id  ON DELETE CASCADE
+  job_order_device.device_id -> device.id  ON DELETE CASCADE
+  job_order_device.job_order_id -> job_order.id  ON DELETE CASCADE
+  limit_config.device_id -> device.id  ON DELETE CASCADE
+  limit_config.facility_id -> facility.id  ON DELETE CASCADE
+  maintenance_schedule.amenity_id -> amenity.id  ON DELETE CASCADE
+  maintenance_schedule.assigned_to -> employee.id  ON DELETE SET NULL
+  maintenance_schedule.department_id -> department.id  ON DELETE SET NULL
+  maintenance_schedule.facility_id -> facility.id  ON DELETE CASCADE
+  notification.facility_id -> facility.id  ON DELETE CASCADE
+  notification.user_id -> app_user.id  ON DELETE CASCADE
+  occupant.booking_id -> booking.id  ON DELETE CASCADE
+  offer.facility_id -> facility.id  ON DELETE CASCADE
+  package.amenity_type_id -> amenity_type.id  ON DELETE SET NULL
+  package.facility_id -> facility.id  ON DELETE CASCADE
+  property_type.facility_id -> facility.id  ON DELETE CASCADE
+  scheduled_task.facility_id -> facility.id  ON DELETE CASCADE
+  sensor_reading.device_id -> device.id  ON DELETE CASCADE
+  sensor_reading.facility_id -> facility.id  ON DELETE CASCADE
+  service_request.assigned_to -> employee.id  ON DELETE SET NULL
+  service_request.facility_id -> facility.id  ON DELETE CASCADE
+  service_request.guest_id -> app_user.id  ON DELETE SET NULL
+  service_request.room_id -> amenity.id  ON DELETE SET NULL
+  stay.amenity_id -> amenity.id  ON DELETE SET NULL
+  stay.booking_id -> booking.id  ON DELETE CASCADE
+  stay.facility_id -> facility.id  ON DELETE CASCADE
+  user_role.facility_id -> facility.id  ON DELETE CASCADE
+  value_alerts.device_id -> device.id  ON DELETE CASCADE
+  value_alerts.facility_id -> facility.id  ON DELETE CASCADE
+
+  Total foreign keys: 71
+
+------------------------------------------------------------------------------
+5. INDEXES AND UNIQUE CONSTRAINTS
+------------------------------------------------------------------------------
+  amenity                      INDEX ix_amenity_facility_id_status (facility_id, status)
+  amenity                      INDEX UNIQUE uq_amenity_facility_id_name (facility_id, name)
+  amenity                      UNIQUE uq_amenity_facility_id_name (facility_id, name)
+  amenity_type                 INDEX UNIQUE uq_amenity_type_facility_id_name (facility_id, name)
+  amenity_type                 UNIQUE uq_amenity_type_facility_id_name (facility_id, name)
+  app_user                     INDEX UNIQUE uq_app_user_facility_id_email (facility_id, email)
+  app_user                     UNIQUE uq_app_user_facility_id_email (facility_id, email)
+  booking                      INDEX ix_booking_facility_id_checkin_date (facility_id, checkin_date)
+  department                   INDEX UNIQUE uq_department_facility_id_name (facility_id, name)
+  department                   UNIQUE uq_department_facility_id_name (facility_id, name)
+  device                       INDEX ix_device_facility_id_status (facility_id, status)
+  device                       INDEX UNIQUE uq_device_facility_id_name (facility_id, name)
+  device                       UNIQUE uq_device_facility_id_name (facility_id, name)
+  device_health_log            INDEX ix_device_health_log_device_id_timestamp (device_id, timestamp)
+  device_incident              INDEX ix_device_incident_assigned_to_status (assigned_to, status)
+  device_incident              INDEX ix_device_incident_facility_id_created_on (facility_id, created_on)
+  device_uptime                INDEX UNIQUE uq_device_uptime_device_id_date (device_id, date)
+  device_uptime                UNIQUE uq_device_uptime_device_id_date (device_id, date)
+  employee                     INDEX UNIQUE uq_employee_facility_id_email (facility_id, email)
+  employee                     UNIQUE uq_employee_facility_id_email (facility_id, email)
+  energy_aggregate             INDEX ix_energy_aggregate_device_id_interval_timestamp (device_id, interval, timestamp)
+  energy_data                  INDEX ix_energy_data_device_id_timestamp (device_id, timestamp)
+  fcm_token                    INDEX ix_fcm_token_user_id (user_id)
+  firmware                     INDEX UNIQUE uq_firmware_facility_id_device_type_version (facility_id, device_type, version)
+  firmware                     UNIQUE uq_firmware_facility_id_device_type_version (facility_id, device_type, version)
+  food_category                INDEX UNIQUE uq_food_category_facility_id_name (facility_id, name)
+  food_category                UNIQUE uq_food_category_facility_id_name (facility_id, name)
+  job_order                    INDEX ix_job_order_facility_id_status (facility_id, status)
+  limit_config                 INDEX UNIQUE uq_limit_config_device_id_parameter (device_id, parameter)
+  limit_config                 UNIQUE uq_limit_config_device_id_parameter (device_id, parameter)
+  maintenance_schedule         INDEX ix_maintenance_schedule_facility_id_is_active (facility_id, is_active)
+  notification                 INDEX ix_notification_facility_id_created_on (facility_id, created_on)
+  notification                 INDEX ix_notification_user_id_is_read (user_id, is_read)
+  package                      INDEX UNIQUE uq_package_facility_id_name (facility_id, name)
+  package                      UNIQUE uq_package_facility_id_name (facility_id, name)
+  property_type                INDEX UNIQUE uq_property_type_facility_id_name (facility_id, name)
+  property_type                UNIQUE uq_property_type_facility_id_name (facility_id, name)
+  scheduled_task               INDEX ix_scheduled_task_facility_id_scheduled_at_status (facility_id, scheduled_at, status)
+  sensor_reading               INDEX ix_sensor_reading_device_id_timestamp (device_id, timestamp)
+  service_request              INDEX ix_service_request_assigned_to_status (assigned_to, status)
+  service_request              INDEX ix_service_request_facility_id_status (facility_id, status)
+  stay                         INDEX ix_stay_facility_id_status (facility_id, status)
+  user_role                    INDEX UNIQUE uq_user_role_facility_id_name (facility_id, name)
+  user_role                    UNIQUE uq_user_role_facility_id_name (facility_id, name)
+  value_alerts                 INDEX ix_value_alerts_device_id_timestamp (device_id, timestamp)
+  value_alerts                 INDEX ix_value_alerts_facility_id_status (facility_id, status)
+
+  Total indexes: 33 | Total unique constraints: 13
+
+------------------------------------------------------------------------------
+6. CIRCULAR DEPENDENCY CHECK
+------------------------------------------------------------------------------
+  No circular dependencies.
+  Self-referential (intentional, not a cycle): device
+
+------------------------------------------------------------------------------
+7. MODEL <-> DATABASE PARITY
+------------------------------------------------------------------------------
+  Tables defined in models : 39
+  Tables present in DB     : 39
+  In models but not in DB  : none
+  In DB but not in models  : none
+
+==============================================================================
+RESULT: PASS
+==============================================================================
