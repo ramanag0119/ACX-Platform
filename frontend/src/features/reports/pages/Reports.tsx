@@ -132,7 +132,7 @@ const EnergyReportContent = () => {
                   key={tab.id}
                   onClick={() => setSubTab(tab.id)}
                   className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${subTab === tab.id
-                    ? "bg-blue-600 text-white shadow-sm"
+                    ? "bg-[#5865F2] text-white shadow-sm"
                     : "text-muted-foreground hover:text-foreground hover:bg-white/50"
                     }`}
                 >
@@ -144,46 +144,47 @@ const EnergyReportContent = () => {
         )}
 
         {/* Form Fields */}
-        <div className="bg-muted/10 rounded-xl p-6 border border-border/30">
-          <div className="max-w-2xl mx-auto space-y-5">
-            {/* From Date */}
-            <div className="flex items-center gap-4">
-              <Label className="text-sm font-medium text-foreground w-32 text-right">
-                From Date <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                placeholder="dd-mm-yyyy"
-                className="flex-1 h-11 bg-white border-gray-200 rounded-lg focus:border-blue-500 focus:ring-blue-500"
-              />
-            </div>
+        <div className="max-w-2xl">
+          <div className="space-y-4">
+            {/* Date Range */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-foreground">
+                  Date From
+                </Label>
+                <Input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  placeholder="dd / mm / yyyy"
+                  className="h-11 bg-white border-gray-200 rounded-lg focus:border-[#5865F2] focus:ring-[#5865F2]"
+                />
+              </div>
 
-            {/* To Date */}
-            <div className="flex items-center gap-4">
-              <Label className="text-sm font-medium text-foreground w-32 text-right">
-                To Date <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                placeholder="dd-mm-yyyy"
-                className="flex-1 h-11 bg-white border-gray-200 rounded-lg focus:border-blue-500 focus:ring-blue-500"
-              />
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-foreground">
+                  Date To
+                </Label>
+                <Input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  placeholder="dd / mm / yyyy"
+                  className="h-11 bg-white border-gray-200 rounded-lg focus:border-[#5865F2] focus:ring-[#5865F2]"
+                />
+              </div>
             </div>
 
             {/* Room No */}
             <div className="flex items-center gap-4">
               <Label className="text-sm font-medium text-foreground w-32 text-right">
-                Room No <span className="text-red-500">*</span>
+                Room No
               </Label>
               <Select value={roomNo} onValueChange={setRoomNo}>
-                <SelectTrigger className="flex-1 h-11 bg-white border-gray-200 rounded-lg focus:border-blue-500 focus:ring-blue-500">
-                  <SelectValue placeholder="Select Room Number" />
+                <SelectTrigger className="flex-1 h-11 bg-white border-gray-200 rounded-lg focus:border-[#5865F2] focus:ring-[#5865F2]">
+                  <SelectValue placeholder="Select Room No" />
                 </SelectTrigger>
-                <SelectContent className="bg-white">
+                <SelectContent className="bg-popover text-popover-foreground border-border">
                   {(roomsQuery.data?.items ?? []).map((room) => (
                     <SelectItem key={room.id} value={room.id}>{room.name}</SelectItem>
                   ))}
@@ -191,17 +192,17 @@ const EnergyReportContent = () => {
               </Select>
             </div>
 
-            {/* MKDS - Only for Device Based and Multiple Device Based */}
+            {/* MKDS (Conditional) */}
             {showMkdsField && (
               <div className="flex items-center gap-4">
                 <Label className="text-sm font-medium text-foreground w-32 text-right">
                   MKDS
                 </Label>
                 <Select value={mkds} onValueChange={setMkds}>
-                  <SelectTrigger className="flex-1 h-11 bg-white border-gray-200 rounded-lg focus:border-blue-500 focus:ring-blue-500">
+                  <SelectTrigger className="flex-1 h-11 bg-white border-gray-200 rounded-lg focus:border-[#5865F2] focus:ring-[#5865F2]">
                     <SelectValue placeholder="Select MKDS" />
                   </SelectTrigger>
-                  <SelectContent className="bg-white">
+                  <SelectContent className="bg-popover text-popover-foreground border-border">
                     {(devicesQuery.data?.items ?? [])
                       .filter((device) => device.device_name)
                       .map((device) => (
@@ -218,7 +219,7 @@ const EnergyReportContent = () => {
                 The stored rows are listed below instead. */}
             <div className="flex flex-col items-center gap-2 pt-4">
               <Button
-                className="px-8 h-11 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow-md"
+                className="h-11 px-8 min-w-[160px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
                 disabled
                 title="No report export endpoint exists"
               >
@@ -285,8 +286,8 @@ const StandardReportContent = ({ reportName, singleDateOnly = false }: { reportN
       <CardContent className="p-8">
         {/* Report Title */}
         <div className="flex items-center gap-3 mb-8">
-          <div className="p-2 bg-blue-50 rounded-lg">
-            <FileText className="h-5 w-5 text-blue-600" />
+          <div className="p-2 bg-[#5865F2]/10 rounded-lg">
+            <FileText className="h-5 w-5 text-[#5865F2]" />
           </div>
           <h2 className="text-lg font-semibold text-foreground">{reportName}</h2>
         </div>
@@ -304,7 +305,7 @@ const StandardReportContent = ({ reportName, singleDateOnly = false }: { reportN
                 value={singleDate}
                 onChange={(e) => setSingleDate(e.target.value)}
                 placeholder="dd / mm / yyyy"
-                className="w-56 h-11 bg-white border-gray-200 rounded-lg focus:border-blue-500 focus:ring-blue-500"
+                className="w-56 h-11 bg-white border-gray-200 rounded-lg focus:border-[#5865F2] focus:ring-[#5865F2]"
               />
             </div>
           ) : (
@@ -319,7 +320,7 @@ const StandardReportContent = ({ reportName, singleDateOnly = false }: { reportN
                   value={dateFrom}
                   onChange={(e) => setDateFrom(e.target.value)}
                   placeholder="dd / mm / yyyy"
-                  className="w-56 h-11 bg-white border-gray-200 rounded-lg focus:border-blue-500 focus:ring-blue-500"
+                  className="w-56 h-11 bg-white border-gray-200 rounded-lg focus:border-[#5865F2] focus:ring-[#5865F2]"
                 />
               </div>
 
@@ -332,7 +333,7 @@ const StandardReportContent = ({ reportName, singleDateOnly = false }: { reportN
                   value={dateTo}
                   onChange={(e) => setDateTo(e.target.value)}
                   placeholder="dd / mm / yyyy"
-                  className="w-56 h-11 bg-white border-gray-200 rounded-lg focus:border-blue-500 focus:ring-blue-500"
+                  className="w-56 h-11 bg-white border-gray-200 rounded-lg focus:border-[#5865F2] focus:ring-[#5865F2]"
                 />
               </div>
             </>
@@ -340,7 +341,7 @@ const StandardReportContent = ({ reportName, singleDateOnly = false }: { reportN
 
           <div className="flex flex-col gap-1">
             <Button
-              className="h-11 px-8 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow-md"
+              className="h-11 px-8 min-w-[160px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
               disabled
               title="No report export endpoint exists"
             >
@@ -373,20 +374,20 @@ const Reports = () => {
       </div>
 
       {/* Tabs Navigation */}
-      <div className="border-b border-gray-200">
-        <div className="flex flex-wrap gap-x-6">
+      <div className="border-b border-gray-200 overflow-x-auto no-scrollbar">
+        <div className="flex items-center gap-6 min-w-max pb-px">
           {reportTabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`relative px-1 pb-3 text-sm font-medium transition-all duration-200 ${activeTab === tab.id
-                ? "text-foreground"
+              className={`relative px-2 pb-3.5 text-sm font-medium transition-all duration-200 whitespace-nowrap ${activeTab === tab.id
+                ? "text-foreground font-semibold"
                 : "text-muted-foreground hover:text-foreground"
                 }`}
             >
               {tab.label}
               {activeTab === tab.id && (
-                <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-purple-600 rounded-t-full" />
+                <span className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-[#5865F2] rounded-t-full shadow-sm" />
               )}
             </button>
           ))}

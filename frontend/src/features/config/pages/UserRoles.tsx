@@ -208,7 +208,7 @@ const UserRoles = () => {
                                         <SelectTrigger className="h-10 bg-muted/30 border-border/50">
                                             <SelectValue placeholder="Select Role type" />
                                         </SelectTrigger>
-                                        <SelectContent className="bg-white">
+                                        <SelectContent className="bg-popover text-popover-foreground border-border">
                                             <SelectItem value="staff">Staff</SelectItem>
                                             <SelectItem value="manager">Manager</SelectItem>
                                         </SelectContent>
@@ -268,10 +268,10 @@ const UserRoles = () => {
                             </div>
 
                             <div className="flex justify-center gap-4 pt-6 mt-6 border-t border-border/30">
-                                <Button onClick={handleReset} className="h-10 px-8 bg-cyan-600 text-white hover:bg-cyan-700">Reset</Button>
+                                <Button onClick={handleReset} className="h-10 px-8 min-w-[120px] rounded-xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all">Reset</Button>
                                 <Button
                                     onClick={handleSubmit}
-                                    className="h-10 px-8 bg-amber-500 hover:bg-amber-600 text-white"
+                                    className="h-10 px-8 min-w-[120px] rounded-xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
                                     disabled={!mayWrite || !roleName.trim() || !roleType || createRole.isPending}
                                     title={mayWrite ? "Create this role" : "Your role cannot manage roles"}
                                 >
@@ -291,7 +291,7 @@ const UserRoles = () => {
                                         <SelectTrigger className="w-20 h-9 bg-muted/30 border-border/50">
                                             <SelectValue />
                                         </SelectTrigger>
-                                        <SelectContent className="bg-white">
+                                        <SelectContent className="bg-popover text-popover-foreground border-border">
                                             <SelectItem value="10">10</SelectItem>
                                             <SelectItem value="25">25</SelectItem>
                                             <SelectItem value="50">50</SelectItem>
@@ -310,7 +310,7 @@ const UserRoles = () => {
                                 </div>
                             </div>
 
-                            <div className="rounded-xl overflow-hidden border border-gray-200">
+                            <div className="rounded-lg overflow-hidden border border-border/80 dark:border-slate-800 overflow-x-auto scrollbar-thin">
                               <DataState
                                 isLoading={rolesQuery.isLoading}
                                 error={rolesQuery.error}
@@ -329,7 +329,7 @@ const UserRoles = () => {
                                     </TableHeader>
                                     <TableBody>
                                         {currentEntries.map((role, index) => (
-                                            <TableRow key={role.id} className={`${index % 2 === 0 ? "bg-muted/20" : "bg-white"} hover:bg-muted/40`}>
+                                            <TableRow key={role.id} className={`${index % 2 === 0 ? "bg-card dark:bg-[#101526]/80" : "bg-muted/10 dark:bg-[#0d1120]/80"} hover:bg-muted/30 dark:hover:bg-slate-800/50 border-b border-border/50 dark:border-slate-800/70 transition-colors`}>
                                                 <TableCell className="text-cyan-600 font-medium">{role.userRole}</TableCell>
                                                 <TableCell>{role.roleType}</TableCell>
                                                 <TableCell className="text-cyan-600">{role.notifications}</TableCell>
@@ -386,7 +386,7 @@ const UserRoles = () => {
                                     <SelectTrigger className="h-10 bg-muted/30 border-border/50">
                                         <SelectValue placeholder="Select a role" />
                                     </SelectTrigger>
-                                    <SelectContent className="bg-white">
+                                    <SelectContent className="bg-popover text-popover-foreground border-border">
                                         {sampleRoles.map((role) => (
                                             <SelectItem key={role.id} value={role.id}>{role.userRole}</SelectItem>
                                         ))}
@@ -394,7 +394,7 @@ const UserRoles = () => {
                                 </Select>
                             </div>
 
-                            <div className="rounded-xl overflow-hidden border border-gray-200">
+                            <div className="rounded-lg overflow-hidden border border-border/80 dark:border-slate-800 overflow-x-auto scrollbar-thin">
                               <DataState
                                 isLoading={Boolean(selectedRole) && permissionsQuery.isLoading}
                                 error={permissionsQuery.error}
@@ -412,8 +412,8 @@ const UserRoles = () => {
                                     </TableHeader>
                                     <TableBody>
                                         {modulePermissions.map((module, index) => (
-                                            <TableRow key={module.id} className={`${index % 2 === 0 ? "bg-muted/20" : "bg-white"} hover:bg-muted/40`}>
-                                                <TableCell className="font-medium">{module.name}</TableCell>
+                                            <TableRow key={module.id} className={`${index % 2 === 0 ? "bg-card dark:bg-[#101526]/80" : "bg-muted/10 dark:bg-[#0d1120]/80"} hover:bg-muted/30 dark:hover:bg-slate-800/50 border-b border-border/50 dark:border-slate-800/70 transition-colors`}>
+                                                <TableCell className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">{module.name}</TableCell>
                                                 <TableCell className="text-center">
                                                     <Checkbox
                                                         checked={module.view}
@@ -446,14 +446,14 @@ const UserRoles = () => {
                             <div className="flex flex-col items-center gap-2 p-6">
                                 <div className="flex justify-center gap-4">
                                     <Button
-                                        className="h-10 px-8 bg-cyan-600 text-white hover:bg-cyan-700"
+                                        className="h-10 px-8 min-w-[120px] rounded-xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all"
                                         onClick={() => setMatrixEdits({})}
                                         disabled={Object.keys(matrixEdits).length === 0}
                                     >
                                         Reset
                                     </Button>
                                     <Button
-                                        className="h-10 px-8 bg-amber-500 hover:bg-amber-600 text-white"
+                                        className="h-10 px-8 min-w-[120px] rounded-xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
                                         disabled={!mayWrite || !selectedRole || savePermissions.isPending}
                                         onClick={() =>
                                             savePermissions.mutate(
@@ -539,9 +539,9 @@ const UserRoles = () => {
                     </div>
 
                     <div className="flex justify-center gap-4 pb-8">
-                        <Button variant="outline" className="text-amber-500 border-amber-500 hover:bg-amber-50 hover:text-amber-600 h-8 px-6 rounded-[3px] font-normal" onClick={() => setEditModalOpen(false)}>Reset</Button>
+                        <Button variant="outline" className="h-10 px-8 min-w-[110px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all" onClick={() => setEditModalOpen(false)}>Reset</Button>
                         <Button
-                            className="bg-transparent text-[#3eb1c8] border border-[#3eb1c8] hover:bg-cyan-50 h-8 px-6 rounded-[3px] font-normal"
+                            className="h-10 px-8 min-w-[110px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
                             disabled={!editingRole?.name || updateRole.isPending}
                             onClick={() =>
                                 editingRole &&

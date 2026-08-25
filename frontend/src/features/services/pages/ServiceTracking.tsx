@@ -272,7 +272,7 @@ const ServiceTracking = () => {
                         </TableHeader>
                         <TableBody>
                             {rows.map((row) => (
-                                <TableRow key={row.id} className="border-b border-gray-200 bg-white hover:bg-muted/50">
+                                <TableRow key={row.id} className="border-b border-border/50 dark:border-slate-800/70 bg-card dark:bg-[#101526]/80 hover:bg-muted/30 dark:hover:bg-slate-800/50 transition-colors">
                                     <TableCell className="font-medium text-foreground">{row.roomNo}</TableCell>
                                     <TableCell>{row.serviceType}</TableCell>
                                     <TableCell>{row.request}</TableCell>
@@ -318,7 +318,7 @@ const ServiceTracking = () => {
                         </TableHeader>
                         <TableBody>
                             {rows.map((row) => (
-                                <TableRow key={row.id} className="border-b border-gray-200 bg-white hover:bg-muted/50">
+                                <TableRow key={row.id} className="border-b border-border/50 dark:border-slate-800/70 bg-card dark:bg-[#101526]/80 hover:bg-muted/30 dark:hover:bg-slate-800/50 transition-colors">
                                     <TableCell className="font-medium text-foreground">{row.roomNo}</TableCell>
                                     <TableCell>{row.serviceType}</TableCell>
                                     <TableCell>{row.request}</TableCell>
@@ -355,7 +355,7 @@ const ServiceTracking = () => {
                         </TableHeader>
                         <TableBody>
                             {rows.map((row) => (
-                                <TableRow key={row.id} className="border-b border-gray-200 bg-white hover:bg-muted/50">
+                                <TableRow key={row.id} className="border-b border-border/50 dark:border-slate-800/70 bg-card dark:bg-[#101526]/80 hover:bg-muted/30 dark:hover:bg-slate-800/50 transition-colors">
                                     <TableCell className="font-medium text-foreground">{row.roomNo}</TableCell>
                                     <TableCell>{row.serviceType}</TableCell>
                                     <TableCell>{row.request}</TableCell>
@@ -391,7 +391,7 @@ const ServiceTracking = () => {
                         </TableHeader>
                         <TableBody>
                             {rows.map((row) => (
-                                <TableRow key={row.id} className="border-b border-gray-200 bg-white hover:bg-muted/50">
+                                <TableRow key={row.id} className="border-b border-border/50 dark:border-slate-800/70 bg-card dark:bg-[#101526]/80 hover:bg-muted/30 dark:hover:bg-slate-800/50 transition-colors">
                                     <TableCell className="font-medium text-foreground">{row.roomNo}</TableCell>
                                     <TableCell>
                                         <Badge
@@ -438,7 +438,7 @@ const ServiceTracking = () => {
                         </TableHeader>
                         <TableBody>
                             {rows.map((row) => (
-                                <TableRow key={row.id} className="border-b border-gray-200 bg-white hover:bg-muted/50">
+                                <TableRow key={row.id} className="border-b border-border/50 dark:border-slate-800/70 bg-card dark:bg-[#101526]/80 hover:bg-muted/30 dark:hover:bg-slate-800/50 transition-colors">
                                     <TableCell>{row.management}</TableCell>
                                     <TableCell>{row.category}</TableCell>
                                     <TableCell>{row.type}</TableCell>
@@ -480,7 +480,7 @@ const ServiceTracking = () => {
                         </TableHeader>
                         <TableBody>
                             {rows.map((row) => (
-                                <TableRow key={row.id} className="border-b border-gray-200 bg-white hover:bg-muted/50">
+                                <TableRow key={row.id} className="border-b border-border/50 dark:border-slate-800/70 bg-card dark:bg-[#101526]/80 hover:bg-muted/30 dark:hover:bg-slate-800/50 transition-colors">
                                     <TableCell>{row.management}</TableCell>
                                     <TableCell>{row.category}</TableCell>
                                     <TableCell>{row.type}</TableCell>
@@ -519,7 +519,7 @@ const ServiceTracking = () => {
                         </TableHeader>
                         <TableBody>
                             {rows.map((row) => (
-                                <TableRow key={row.id} className="border-b border-gray-200 bg-white hover:bg-muted/50">
+                                <TableRow key={row.id} className="border-b border-border/50 dark:border-slate-800/70 bg-card dark:bg-[#101526]/80 hover:bg-muted/30 dark:hover:bg-slate-800/50 transition-colors">
                                     <TableCell className="font-medium text-foreground">{row.roomNo}</TableCell>
                                     <TableCell>{row.serviceType}</TableCell>
                                     <TableCell>{row.request}</TableCell>
@@ -637,7 +637,7 @@ const ServiceTracking = () => {
                         <SelectTrigger className="w-16 h-8 bg-white text-foreground border border-gray-200">
                             <SelectValue />
                         </SelectTrigger>
-                        <SelectContent className="bg-white">
+                        <SelectContent className="bg-popover text-popover-foreground border-border">
                             <SelectItem value="10">10</SelectItem>
                             <SelectItem value="25">25</SelectItem>
                             <SelectItem value="50">50</SelectItem>

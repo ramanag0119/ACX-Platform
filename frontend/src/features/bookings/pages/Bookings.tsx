@@ -1237,12 +1237,12 @@ const Bookings = () => {
             <Button
               variant="outline"
               onClick={() => setExtendUntil("")}
-              className="border-amber-500 text-amber-500 hover:bg-amber-50 hover:text-amber-500"
+              className="h-10 px-8 min-w-[110px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all"
             >
               Reset
             </Button>
             <Button
-              className="bg-transparent border border-cyan-500 text-cyan-500 hover:bg-cyan-50"
+              className="h-10 px-8 min-w-[110px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
               disabled={!selectedBooking || !extendUntil || extend.isPending}
               onClick={() => {
                 if (!selectedBooking || !extendUntil) return;

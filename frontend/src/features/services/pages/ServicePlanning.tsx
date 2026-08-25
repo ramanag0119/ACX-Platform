@@ -1024,7 +1024,7 @@ const ServicePlanning = () => {
         }
 
         return (
-            <div className="rounded-xl overflow-hidden border border-gray-200">
+            <div className="rounded-lg overflow-hidden border border-border/80 dark:border-slate-800 overflow-x-auto scrollbar-thin">
                 <Table>
                     <TableHeader>
                         <TableRow className="bg-gray-50 hover:bg-gray-50 border-b border-gray-200">
@@ -1179,7 +1179,7 @@ const ServicePlanning = () => {
                                     ? "Create this planned service"
                                     : "Your role cannot change service planning"
                             }
-                            className="h-10 px-8 bg-amber-500 hover:bg-amber-600 text-white"
+                            className="h-10 px-8 min-w-[120px] rounded-xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
                         >
                             {createPlan.isPending ? "Saving..." : "Submit"}
                         </Button>
@@ -1441,8 +1441,8 @@ const ServicePlanning = () => {
                         </div>
 
                         <div className="flex justify-center gap-4 pt-4">
-                            <Button variant="outline" className="text-amber-500 border-amber-500 hover:bg-amber-50 hover:text-amber-600 h-8 px-6 rounded-[3px] font-normal" onClick={() => setEditModalOpen(false)}>Reset</Button>
-                            <Button className="bg-transparent text-[#3eb1c8] border border-[#3eb1c8] hover:bg-cyan-50 h-8 px-6 rounded-[3px] font-normal" onClick={() => setEditModalOpen(false)}>Submit</Button>
+                            <Button variant="outline" className="h-10 px-8 min-w-[110px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all" onClick={() => setEditModalOpen(false)}>Reset</Button>
+                            <Button className="h-10 px-8 min-w-[110px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all" onClick={() => setEditModalOpen(false)}>Submit</Button>
                         </div>
                     </div>
                 </DialogContent>

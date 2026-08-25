@@ -96,7 +96,7 @@ export function RoomDetailsModal({
                     <div className="py-6 space-y-8">
                         {/* Room Details Section */}
                         <section>
-                            <h3 className="text-sm font-medium text-muted-foreground mb-4">
+                            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
                                 Room Details
                             </h3>
                             <DataState isLoading={occupancyQuery.isLoading} error={occupancyQuery.error}>
@@ -105,13 +105,13 @@ export function RoomDetailsModal({
                                         <span className="text-muted-foreground block text-xs uppercase tracking-wider">
                                             Room Allotted :
                                         </span>
-                                        <span className="font-medium">{occupancy?.room_name ?? roomNo}</span>
+                                        <span className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">{occupancy?.room_name ?? roomNo}</span>
                                     </div>
                                     <div className="space-y-1">
                                         <span className="text-muted-foreground block text-xs uppercase tracking-wider">
                                             Room Category :
                                         </span>
-                                        <span className="font-medium">
+                                        <span className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">
                                             {occupancy?.amenity_type_name ?? roomType}
                                         </span>
                                     </div>
@@ -119,7 +119,7 @@ export function RoomDetailsModal({
                                         <span className="text-muted-foreground block text-xs uppercase tracking-wider">
                                             Floor :
                                         </span>
-                                        <span className="font-medium">
+                                        <span className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">
                                             {[occupancy?.building_name, occupancy?.floor_name]
                                                 .filter(Boolean)
                                                 .join(" - ") || "-"}
@@ -129,7 +129,7 @@ export function RoomDetailsModal({
                                         <span className="text-muted-foreground block text-xs uppercase tracking-wider">
                                             Checkin Date :
                                         </span>
-                                        <span className="font-medium">
+                                        <span className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">
                                             {formatDateTime(stay?.actual_checkin_time)}
                                         </span>
                                     </div>
@@ -137,7 +137,7 @@ export function RoomDetailsModal({
                                         <span className="text-muted-foreground block text-xs uppercase tracking-wider">
                                             Checkout Date :
                                         </span>
-                                        <span className="font-medium">
+                                        <span className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">
                                             {formatDateTime(stay?.expected_checkout_time)}
                                         </span>
                                     </div>
@@ -147,7 +147,7 @@ export function RoomDetailsModal({
 
                         {/* Occupants Details Section */}
                         <section>
-                            <h3 className="text-sm font-medium text-muted-foreground mb-4">
+                            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
                                 Occupants Details
                             </h3>
                             <DataState
@@ -166,21 +166,21 @@ export function RoomDetailsModal({
                                         </div>
                                         <div className="flex flex-col gap-1">
                                             <span className="text-xs text-muted-foreground uppercase tracking-wider">Stay Reference</span>
-                                            <span className="font-medium">
+                                            <span className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">
                                                 {stay?.internal_stay_ref_number ?? "-"}
                                             </span>
                                         </div>
                                         <div className="flex flex-col gap-1">
                                             <span className="text-xs text-muted-foreground uppercase tracking-wider">Stay Status</span>
-                                            <span className="font-medium">{stay?.status ?? "-"}</span>
+                                            <span className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">{stay?.status ?? "-"}</span>
                                         </div>
                                         <div className="flex flex-col gap-1">
                                             <span className="text-xs text-muted-foreground uppercase tracking-wider">Guests</span>
-                                            <span className="font-medium">{stay?.no_of_guests ?? "-"}</span>
+                                            <span className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">{stay?.no_of_guests ?? "-"}</span>
                                         </div>
                                         <div className="flex flex-col gap-1 md:col-span-2">
                                             <span className="text-xs text-muted-foreground uppercase tracking-wider">Occupants</span>
-                                            <span className="font-medium">
+                                            <span className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">
                                                 {occupants.length
                                                     ? occupants.map((occupant) => occupant.guest.name).join(", ")
                                                     : "-"}
@@ -193,10 +193,10 @@ export function RoomDetailsModal({
 
                         {/* Device Details Section */}
                         <section>
-                            <h3 className="text-sm font-medium text-muted-foreground mb-4">
+                            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
                                 Device Details
                             </h3>
-                            <div className="rounded-md border border-border">
+                            <div className="rounded-lg overflow-hidden border border-border/80 dark:border-slate-800">
                                 <DataState
                                     isLoading={devicesQuery.isLoading}
                                     error={devicesQuery.error}
@@ -204,22 +204,22 @@ export function RoomDetailsModal({
                                     emptyTitle="No devices installed in this room"
                                 >
                                     <Table>
-                                        <TableHeader className="bg-muted/50">
+                                        <TableHeader className="bg-muted/40 dark:bg-[#0e1322]">
                                             <TableRow>
-                                                <TableHead className="w-[50px] font-medium">
+                                                <TableHead className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3 w-[50px]">
                                                     S.No
                                                 </TableHead>
-                                                <TableHead className="font-medium">Device Type</TableHead>
-                                                <TableHead className="font-medium">
+                                                <TableHead className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">Device Type</TableHead>
+                                                <TableHead className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">
                                                     Occupancy No
                                                 </TableHead>
-                                                <TableHead className="font-medium">Name/Tag</TableHead>
-                                                <TableHead className="font-medium">Device UID</TableHead>
-                                                <TableHead className="font-medium">Config Status</TableHead>
-                                                <TableHead className="font-medium text-center">
+                                                <TableHead className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">Name/Tag</TableHead>
+                                                <TableHead className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">Device UID</TableHead>
+                                                <TableHead className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">Config Status</TableHead>
+                                                <TableHead className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3 text-center">
                                                     Health
                                                 </TableHead>
-                                                <TableHead className="font-medium text-right">
+                                                <TableHead className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3 text-right">
                                                     Installed On
                                                 </TableHead>
                                             </TableRow>
@@ -227,7 +227,7 @@ export function RoomDetailsModal({
                                         <TableBody>
                                             {devices.map((device, index) => (
                                                 <TableRow key={device.id} className="hover:bg-muted/5">
-                                                    <TableCell className="font-medium">
+                                                    <TableCell className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">
                                                         {index + 1}
                                                     </TableCell>
                                                     <TableCell>{device.device_type_name ?? "-"}</TableCell>
@@ -270,10 +270,10 @@ export function RoomDetailsModal({
                         {/* Service Requests Section (see the file header: the
                             maintenance_request table has no endpoint) */}
                         <section>
-                            <h3 className="text-sm font-medium text-muted-foreground mb-4">
+                            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
                                 Service Requests
                             </h3>
-                            <div className="rounded-md border border-border">
+                            <div className="rounded-lg overflow-hidden border border-border/80 dark:border-slate-800">
                                 <DataState
                                     isLoading={requestsQuery.isLoading}
                                     error={requestsQuery.error}
@@ -281,22 +281,22 @@ export function RoomDetailsModal({
                                     emptyTitle="No service requests recorded for this room"
                                 >
                                     <Table>
-                                        <TableHeader className="bg-muted/50">
+                                        <TableHeader className="bg-muted/40 dark:bg-[#0e1322]">
                                             <TableRow>
-                                                <TableHead className="font-medium">
+                                                <TableHead className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">
                                                     Service Category
                                                 </TableHead>
-                                                <TableHead className="font-medium">
+                                                <TableHead className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">
                                                     Services Type
                                                 </TableHead>
-                                                <TableHead className="font-medium">Requested On</TableHead>
-                                                <TableHead className="font-medium">Expected</TableHead>
-                                                <TableHead className="font-medium">Completed</TableHead>
-                                                <TableHead className="font-medium">Department</TableHead>
-                                                <TableHead className="font-medium">
+                                                <TableHead className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">Requested On</TableHead>
+                                                <TableHead className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">Expected</TableHead>
+                                                <TableHead className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">Completed</TableHead>
+                                                <TableHead className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">Department</TableHead>
+                                                <TableHead className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">
                                                     Emp ID/Name
                                                 </TableHead>
-                                                <TableHead className="font-medium text-right">
+                                                <TableHead className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3 text-right">
                                                     Status
                                                 </TableHead>
                                             </TableRow>

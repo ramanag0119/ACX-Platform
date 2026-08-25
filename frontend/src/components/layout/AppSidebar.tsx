@@ -116,10 +116,9 @@ const NavItem = ({ to, icon: Icon, label, collapsed, subItems }: NavItemProps) =
 
 interface AppSidebarProps {
   collapsed: boolean;
-  onToggle: () => void;
 }
 
-export const AppSidebar = ({ collapsed, onToggle }: AppSidebarProps) => {
+export const AppSidebar = ({ collapsed }: AppSidebarProps) => {
   const { canRead } = useAuth();
 
   const allNavItems = [
@@ -188,53 +187,14 @@ export const AppSidebar = ({ collapsed, onToggle }: AppSidebarProps) => {
   return (
     <aside
       className={cn(
-        "sidebar-futuristic fixed left-0 top-0 h-screen z-40 flex flex-col",
+        "sidebar-futuristic fixed left-0 top-[48px] bottom-[28px] z-40 flex flex-col",
         "transition-all duration-300 ease-out",
-        collapsed ? "w-[68px] sidebar-collapsed" : "w-[260px]"
+        collapsed ? "w-[64px] sidebar-collapsed" : "w-[240px]"
       )}
+      style={{ height: "calc(100vh - 48px - 28px)" }}
     >
-      {/* Logo & Brand */}
-      <div className={cn(
-        "sidebar-brand min-h-[64px]",
-        collapsed ? "flex items-center justify-center" : ""
-      )}>
-        {collapsed ? (
-          <button
-            onClick={onToggle}
-            className="sidebar-hamburger-btn"
-            aria-label="Expand sidebar"
-          >
-            <span className="hamburger-line"></span>
-            <span className="hamburger-line"></span>
-            <span className="hamburger-line"></span>
-          </button>
-        ) : (
-          <>
-            {/* X close button (far left) */}
-            <button
-              onClick={onToggle}
-              className="sidebar-close-btn"
-              aria-label="Collapse sidebar"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg>
-            </button>
-            {/* Logo icon */}
-            <img
-              src="/ikanos-app-icon.png"
-              alt="Ikanos Logo"
-              className="!w-[48px] !h-[48px] !max-w-none !max-h-none shrink-0 object-contain drop-shadow-md"
-            />
-            {/* Brand title */}
-            <span className="sidebar-brand-text">IKANOS</span>
-          </>
-        )}
-      </div>
-
       {/* Navigation */}
-      <nav className="sidebar-nav flex-1 overflow-y-auto scrollbar-thin py-2 space-y-0.5">
+      <nav className="sidebar-nav flex-1 overflow-y-auto scrollbar-thin py-2 pb-6 space-y-0.5">
         {navItems.map((item) => (
           <NavItem
             key={item.to}
@@ -246,18 +206,6 @@ export const AppSidebar = ({ collapsed, onToggle }: AppSidebarProps) => {
           />
         ))}
       </nav>
-
-      {/* Divider */}
-      {!collapsed && <div className="sidebar-divider" />}
-
-      {/* Footer */}
-      {!collapsed && (
-        <div className="sidebar-footer">
-          <p className="sidebar-footer-text">
-            © 2026 IKANOS Portal
-          </p>
-        </div>
-      )}
     </aside>
   );
 };

@@ -193,55 +193,55 @@ const Occupancy = () => {
     const lowerCondition = condition.toLowerCase();
     if (lowerCondition.includes("maintenance")) {
       return (
-        <span key={condition} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-orange-200 bg-orange-50 text-orange-700 dark:border-amber-800/60 dark:bg-amber-950/70 dark:text-amber-300 text-xs font-semibold uppercase tracking-wide">
-          <Wrench className="h-3.5 w-3.5 text-orange-600 dark:text-amber-300" />
+        <span key={condition} className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-500/40 dark:bg-orange-950/60 dark:text-orange-400 text-[11.5px] font-medium">
+          <Wrench className="h-3 w-3 text-orange-600 dark:text-orange-400" />
           {condition}
         </span>
       );
     }
     if (lowerCondition.includes("sanitation")) {
       return (
-        <span key={condition} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-green-200 bg-green-50 text-green-700 dark:border-emerald-800/60 dark:bg-emerald-950/70 dark:text-emerald-300 text-xs font-semibold uppercase tracking-wide">
-          <ShieldCheck className="h-3.5 w-3.5 text-green-600 dark:text-emerald-300" />
+        <span key={condition} className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-950/60 dark:text-emerald-400 text-[11.5px] font-medium">
+          <ShieldCheck className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
           {condition}
         </span>
       );
     }
     if (lowerCondition.includes("low battery")) {
       return (
-        <span key={condition} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-red-200 bg-red-50 text-red-700 dark:border-rose-800/60 dark:bg-rose-950/70 dark:text-rose-300 text-xs font-semibold uppercase tracking-wide">
-          <BatteryLow className="h-3.5 w-3.5 text-red-600 dark:text-rose-300" />
+        <span key={condition} className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/40 dark:bg-rose-950/60 dark:text-rose-400 text-[11.5px] font-medium">
+          <BatteryLow className="h-3 w-3 text-rose-600 dark:text-rose-400" />
           {condition}
         </span>
       );
     }
     if (lowerCondition.includes("vip")) {
       return (
-        <span key={condition} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-purple-200 bg-purple-50 text-purple-700 dark:border-purple-800/60 dark:bg-purple-950/70 dark:text-purple-300 text-xs font-semibold uppercase tracking-wide">
-          <Star className="h-3.5 w-3.5 text-purple-600 dark:text-purple-300" />
+        <span key={condition} className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-purple-200 bg-purple-50 text-purple-700 dark:border-purple-500/40 dark:bg-purple-950/60 dark:text-purple-300 text-[11.5px] font-medium">
+          <Star className="h-3 w-3 text-purple-600 dark:text-purple-300" />
           {condition}
         </span>
       );
     }
     if (lowerCondition.includes("occupied")) {
       return (
-        <span key={condition} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800/60 dark:bg-blue-950/70 dark:text-blue-300 text-xs font-semibold uppercase tracking-wide">
-          <UserCheck className="h-3.5 w-3.5 text-blue-600 dark:text-blue-300" />
+        <span key={condition} className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/40 dark:bg-amber-950/60 dark:text-amber-300 text-[11.5px] font-medium">
+          <UserCheck className="h-3 w-3 text-amber-600 dark:text-amber-300" />
           {condition}
         </span>
       );
     }
     if (lowerCondition.includes("late checkout")) {
       return (
-        <span key={condition} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800/60 dark:bg-amber-950/70 dark:text-amber-300 text-xs font-semibold uppercase tracking-wide">
-          <Clock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-300" />
+        <span key={condition} className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/40 dark:bg-amber-950/60 dark:text-amber-400 text-[11.5px] font-medium">
+          <Clock className="h-3 w-3 text-amber-600 dark:text-amber-400" />
           {condition}
         </span>
       );
     }
     return (
-      <span key={condition} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-gray-200 bg-gray-50 text-gray-500 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400 text-xs font-semibold uppercase tracking-wide">
-        <Minus className="h-3.5 w-3.5" />
+      <span key={condition} className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-700/60 dark:bg-slate-800/60 dark:text-slate-400 text-[11.5px] font-medium">
+        <Minus className="h-3 w-3" />
         {condition}
       </span>
     );
@@ -263,14 +263,14 @@ const Occupancy = () => {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in bg-background min-h-screen -m-6 p-6 text-foreground">
+    <div className="space-y-5 animate-fade-in text-foreground">
       {/* Header */}
       <div className="mb-2">
-        <h1 className="text-2xl font-semibold text-foreground">Occupancy Management</h1>
+        <h1 className="text-xl font-semibold text-foreground tracking-tight">Occupancy Management</h1>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-6 border-b border-gray-200 dark:border-slate-800">
+      <div className="flex gap-6 border-b border-border dark:border-slate-800">
         <button
           onClick={() => switchTab("guest")}
           className={`relative px-1 pb-3 text-sm font-medium transition-all duration-200 ${activeTab === "guest"
@@ -280,7 +280,7 @@ const Occupancy = () => {
         >
           Guest
           {activeTab === "guest" && (
-            <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-purple-600 rounded-t-full" />
+            <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-primary rounded-t-full" />
           )}
         </button>
         <button
@@ -292,16 +292,16 @@ const Occupancy = () => {
         >
           Non Guest
           {activeTab === "nonGuest" && (
-            <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-purple-600 rounded-t-full" />
+            <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-primary rounded-t-full" />
           )}
         </button>
       </div>
 
       {/* Table Container */}
-      <Card className="border border-border/60 dark:border-slate-800/80 shadow-lg rounded-2xl bg-card text-card-foreground">
-        <CardContent className="p-6">
+      <Card className="border border-border/80 dark:border-slate-800 shadow-xl rounded-xl bg-card text-card-foreground overflow-hidden">
+        <CardContent className="p-5">
           {/* Controls */}
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground text-sm">Show</span>
               <Select
@@ -314,17 +314,17 @@ const Occupancy = () => {
                 <SelectTrigger className="w-20 h-9 bg-muted/30 border-border/50 dark:border-slate-700">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-popover text-popover-foreground border-border">
+                <SelectContent className="bg-popover text-popover-foreground border-border text-xs">
                   <SelectItem value="10">10</SelectItem>
                   <SelectItem value="25">25</SelectItem>
                   <SelectItem value="50">50</SelectItem>
                   <SelectItem value="100">100</SelectItem>
                 </SelectContent>
               </Select>
-              <span className="text-muted-foreground text-sm">entries</span>
+              <span className="text-muted-foreground text-xs font-medium">entries</span>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-4">
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground text-sm">Filter By</span>
                 <Select
@@ -337,7 +337,7 @@ const Occupancy = () => {
                   <SelectTrigger className="w-36 h-9 bg-muted/30 border-border/50 dark:border-slate-700">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-popover text-popover-foreground border-border">
+                  <SelectContent className="bg-popover text-popover-foreground border-border text-xs">
                     <SelectItem value="all">Show All</SelectItem>
                     {statuses.map((status) => (
                       <SelectItem key={status.id} value={status.amenity_status_name}>
@@ -349,12 +349,12 @@ const Occupancy = () => {
               </div>
 
               <div className="flex items-center gap-2">
-                <span className="text-muted-foreground text-sm">Search:</span>
+                <span className="text-muted-foreground text-xs font-medium">Search:</span>
                 <Input
                   placeholder="Room no, Room type, Guest name"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-64 h-9 bg-muted/30 border-border/50 dark:border-slate-700"
+                  className="w-56 md:w-64 h-8 text-xs bg-muted/20 border-border dark:border-slate-700/80 rounded-md placeholder:text-muted-foreground/60"
                 />
               </div>
             </div>
@@ -513,7 +513,7 @@ const Occupancy = () => {
                   key={page}
                   variant={currentPage === page ? "default" : "ghost"}
                   size="sm"
-                  className={`w-9 h-9 p-0 ${currentPage === page ? "bg-cyan-600 text-white" : "text-muted-foreground"}`}
+                  className={`h-8 w-8 p-0 text-xs rounded-xl ${currentPage === page ? "bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
                   onClick={() => setCurrentPage(page)}
                 >
                   {page}

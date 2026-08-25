@@ -226,7 +226,7 @@ const Tickets = () => {
                   <SelectTrigger className={`bg-muted/30 border-border/50 ${errors.roomNo ? 'border-red-500' : ''}`}>
                     <SelectValue placeholder="Select Room No" />
                   </SelectTrigger>
-                  <SelectContent className="bg-white">
+                  <SelectContent className="bg-popover text-popover-foreground border-border">
                     {roomNumbers.map((room) => (
                       <SelectItem key={room} value={room}>{room}</SelectItem>
                     ))}
@@ -247,7 +247,7 @@ const Tickets = () => {
                   <SelectTrigger className={`bg-muted/30 border-border/50 ${errors.serviceType ? 'border-red-500' : ''}`}>
                     <SelectValue placeholder="Select Service Type" />
                   </SelectTrigger>
-                  <SelectContent className="bg-white">
+                  <SelectContent className="bg-popover text-popover-foreground border-border">
                     {serviceTypes.map((type) => (
                       <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
                     ))}
@@ -268,7 +268,7 @@ const Tickets = () => {
                   <SelectTrigger className={`bg-muted/30 border-border/50 ${errors.department ? 'border-red-500' : ''}`}>
                     <SelectValue placeholder="Select Department" />
                   </SelectTrigger>
-                  <SelectContent className="bg-white">
+                  <SelectContent className="bg-popover text-popover-foreground border-border">
                     {departments.map((dept) => (
                       <SelectItem key={dept.value} value={dept.value}>{dept.label}</SelectItem>
                     ))}
@@ -289,7 +289,7 @@ const Tickets = () => {
                   <SelectTrigger className={`bg-muted/30 border-border/50 ${errors.assignTo ? 'border-red-500' : ''}`}>
                     <SelectValue placeholder="Select Assign to" />
                   </SelectTrigger>
-                  <SelectContent className="bg-white">
+                  <SelectContent className="bg-popover text-popover-foreground border-border">
                     {staffMembers.map((staff) => (
                       <SelectItem key={staff.value} value={staff.value}>{staff.label}</SelectItem>
                     ))}
@@ -321,7 +321,7 @@ const Tickets = () => {
                   <SelectTrigger className="w-20 bg-muted/30 border-border/50">
                     <SelectValue placeholder="HH" />
                   </SelectTrigger>
-                  <SelectContent className="bg-white">
+                  <SelectContent className="bg-popover text-popover-foreground border-border">
                     {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0')).map((h) => (
                       <SelectItem key={h} value={h}>{h}</SelectItem>
                     ))}
@@ -331,7 +331,7 @@ const Tickets = () => {
                   <SelectTrigger className="w-20 bg-muted/30 border-border/50">
                     <SelectValue placeholder="MM" />
                   </SelectTrigger>
-                  <SelectContent className="bg-white">
+                  <SelectContent className="bg-popover text-popover-foreground border-border">
                     {Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0')).map((m) => (
                       <SelectItem key={m} value={m}>{m}</SelectItem>
                     ))}
@@ -341,7 +341,7 @@ const Tickets = () => {
                   <SelectTrigger className="w-20 bg-muted/30 border-border/50">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-white">
+                  <SelectContent className="bg-popover text-popover-foreground border-border">
                     <SelectItem value="AM">AM</SelectItem>
                     <SelectItem value="PM">PM</SelectItem>
                   </SelectContent>
@@ -385,7 +385,7 @@ const Tickets = () => {
                 <SelectTrigger className="w-20 h-9 bg-muted/30 border-border/50">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-white">
+                <SelectContent className="bg-popover text-popover-foreground border-border">
                   <SelectItem value="10">10</SelectItem>
                   <SelectItem value="25">25</SelectItem>
                   <SelectItem value="50">50</SelectItem>
@@ -440,7 +440,7 @@ const Tickets = () => {
                   </TableRow>
                 )}
                 {filteredTickets.map((ticket, index) => (
-                  <TableRow key={ticket.id} className={`${index % 2 === 0 ? "bg-muted/20" : "bg-white"} hover:bg-muted/40`}>
+                  <TableRow key={ticket.id} className={`${index % 2 === 0 ? "bg-card dark:bg-[#101526]/80" : "bg-muted/10 dark:bg-[#0d1120]/80"} hover:bg-muted/30 dark:hover:bg-slate-800/50 border-b border-border/50 dark:border-slate-800/70 transition-colors`}>
                     <TableCell className="text-cyan-600 whitespace-nowrap">{ticket.serviceType}</TableCell>
                     <TableCell className="whitespace-nowrap">{ticket.serviceCategory}</TableCell>
                     <TableCell className={ticket.serviceRequest === "Items" ? "text-amber-500" : "text-cyan-600"}>{ticket.serviceRequest}</TableCell>

@@ -100,7 +100,7 @@ const Events = () => {
             {/* Header */}
             <div className="flex items-center justify-between mb-2">
                 <h1 className="text-2xl font-semibold text-foreground">Events Management</h1>
-                <Button onClick={() => setIsAddEventOpen(true)} className="bg-cyan-600 hover:bg-cyan-700 text-white">Add Events</Button>
+                <Button onClick={() => setIsAddEventOpen(true)} className="rounded-xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">Add Events</Button>
             </div>
 
 
@@ -112,7 +112,7 @@ const Events = () => {
                             <span className="text-muted-foreground text-sm">Show</span>
                             <Select value={entriesPerPage} onValueChange={setEntriesPerPage}>
                                 <SelectTrigger className="w-20 h-9 bg-muted/30 border-border/50"><SelectValue /></SelectTrigger>
-                                <SelectContent className="bg-white">
+                                <SelectContent className="bg-popover text-popover-foreground border-border">
                                     <SelectItem value="10">10</SelectItem>
                                     <SelectItem value="25">25</SelectItem>
                                 </SelectContent>
@@ -145,7 +145,7 @@ const Events = () => {
                             </TableHeader>
                             <TableBody>
                                 {paginatedData.map((item, index) => (
-                                    <TableRow key={item.id} className={`${index % 2 === 0 ? "bg-muted/20" : "bg-white"} hover:bg-muted/40`}>
+                                    <TableRow key={item.id} className={`${index % 2 === 0 ? "bg-card dark:bg-[#101526]/80" : "bg-muted/10 dark:bg-[#0d1120]/80"} hover:bg-muted/30 dark:hover:bg-slate-800/50 border-b border-border/50 dark:border-slate-800/70 transition-colors`}>
                                         <TableCell className="text-cyan-600 whitespace-nowrap">{item.eventName}</TableCell>
                                         <TableCell>{item.id}</TableCell>
                                         <TableCell>{item.description || "-"}</TableCell>
@@ -240,7 +240,7 @@ const Events = () => {
                         <div className="flex justify-center gap-4 pt-4">
                             <Button variant="outline" onClick={handleReset} className="px-8">Reset</Button>
                             <Button
-                                className="bg-cyan-600 hover:bg-cyan-700 text-white px-8"
+                                className="h-10 px-8 min-w-[160px] rounded-xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
                                 /* Reads the state the inputs above actually bind to.
                                    This previously read an `eventForm` object that
                                    nothing ever populated, so the button was

@@ -282,15 +282,15 @@ const Employees = () => {
     // Add Employee Form
     if (showAddEmployee) {
         return (
-            <div className="space-y-6 animate-fade-in bg-[hsl(220,20%,96%)] min-h-screen -m-6 p-6">
+            <div className="space-y-6 animate-fade-in text-foreground">
                 <div className="flex items-center justify-between mb-2">
-                    <h1 className="text-2xl font-semibold text-foreground">Employee Management</h1>
-                    <Button onClick={() => setShowAddEmployee(false)} className="bg-red-500 hover:bg-red-600 text-white">
+                    <h1 className="text-xl font-semibold text-foreground tracking-tight">Employee Management</h1>
+                    <Button onClick={() => setShowAddEmployee(false)} variant="destructive" className="h-9 px-4 text-xs font-semibold rounded-xl shadow-sm">
                         Cancel
                     </Button>
                 </div>
 
-                <Card className="border-0 shadow-lg rounded-2xl bg-white">
+                <Card className="border border-border/80 dark:border-slate-800 shadow-xl rounded-xl bg-card text-card-foreground">
                     <CardContent className="p-8">
                         <div className="max-w-3xl mx-auto space-y-4">
                             <div className="grid grid-cols-3 gap-4 items-center">
@@ -363,7 +363,7 @@ const Employees = () => {
                                 <Label className="text-sm font-medium text-right">Password</Label>
                                 <div className="col-span-2 flex gap-2">
                                     <Input type={showPassword ? "text" : "password"} placeholder="Enter Password" value={newEmployee.password} onChange={(e) => setNewEmployee({ ...newEmployee, password: e.target.value })} className="bg-muted/30 border-border/50 flex-1" />
-                                    <Button onClick={generatePassword} className="bg-cyan-600 hover:bg-cyan-700 text-white">Generate</Button>
+                                    <Button onClick={generatePassword} className="rounded-xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">Generate</Button>
                                     <Button onClick={() => setShowPassword(!showPassword)} className="bg-amber-500 hover:bg-amber-600 text-white p-2">
                                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                     </Button>
@@ -396,8 +396,8 @@ const Employees = () => {
                                     <Textarea placeholder="Enter Address of the Employee" value={newEmployee.address} onChange={(e) => setNewEmployee({ ...newEmployee, address: e.target.value })} className="bg-muted/30 border-border/50 min-h-[100px]" />
                                 </div>
                             </div>
-                            <div className="flex justify-center pt-6">
-                                <Button onClick={handleEmployeeSubmit} className="bg-cyan-600 hover:bg-cyan-700 text-white px-12">Submit</Button>
+                            <div className="flex justify-center pt-6 border-t border-border/30">
+                                <Button onClick={handleEmployeeSubmit} className="h-11 px-12 min-w-[140px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">Submit</Button>
                             </div>
                         </div>
                     </CardContent>
@@ -415,9 +415,9 @@ const Employees = () => {
                             <Label className="text-sm font-medium text-right">Department Name<span className="text-red-500">*</span></Label>
                             <Input placeholder="Enter Department Name" value={departmentName} onChange={(e) => setDepartmentName(e.target.value)} className="bg-muted/30 border-border/50" />
                         </div>
-                        <div className="flex justify-center gap-4">
-                            <Button onClick={handleDepartmentReset} className="bg-cyan-600 hover:bg-cyan-700 text-white px-8">Reset</Button>
-                            <Button onClick={handleDepartmentSubmit} variant="outline" className="border-border/50 px-8">Submit</Button>
+                        <div className="flex justify-center gap-4 pt-6 border-t border-border/30">
+                            <Button onClick={handleDepartmentReset} variant="outline" className="h-11 px-8 min-w-[120px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all">Reset</Button>
+                            <Button onClick={handleDepartmentSubmit} className="h-11 px-8 min-w-[120px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">Submit</Button>
                         </div>
                     </div>
                 </CardContent>
@@ -439,7 +439,7 @@ const Employees = () => {
                             <Input placeholder="Department name" value={departmentSearch} onChange={(e) => setDepartmentSearch(e.target.value)} className="w-48 h-9 bg-muted/30 border-border/50" />
                         </div>
                     </div>
-                    <div className="rounded-xl overflow-hidden border border-gray-200">
+                    <div className="rounded-lg overflow-hidden border border-border/80 dark:border-slate-800 overflow-x-auto scrollbar-thin">
                         <Table>
                             <TableHeader>
                                 <TableRow className="bg-gray-50 hover:bg-gray-50 border-b border-gray-200">
@@ -449,7 +449,7 @@ const Employees = () => {
                             </TableHeader>
                             <TableBody>
                                 {paginatedDepartments.map((item, index) => (
-                                    <TableRow key={item.id} className={`${index % 2 === 0 ? "bg-muted/20" : "bg-background"} hover:bg-muted/40 transition-colors`}>
+                                    <TableRow key={item.id} className={`${index % 2 === 0 ? "bg-card dark:bg-[#101526]/80" : "bg-muted/10 dark:bg-[#0d1120]/80"} hover:bg-muted/30 dark:hover:bg-slate-800/50 border-b border-border/50 dark:border-slate-800/70 transition-colors`}>
                                         <TableCell className="text-cyan-600 hover:underline cursor-pointer">{item.name}</TableCell>
                                         <TableCell className="text-center">
                                             <Button size="sm" className="bg-[#3eb1c8] hover:bg-[#3eb1c8]/90 text-white h-7 w-7 p-0 rounded-[3px]" disabled={!mayWrite} onClick={() => { setEditingDepartment(item); setEditDepartmentOpen(true); }}>
@@ -487,9 +487,9 @@ const Employees = () => {
                             <Label className="text-sm font-medium text-right">Function Name<span className="text-red-500">*</span></Label>
                             <Input placeholder="Enter Function Name" value={functionName} onChange={(e) => setFunctionName(e.target.value)} className="bg-muted/30 border-border/50" />
                         </div>
-                        <div className="flex justify-center gap-4">
-                            <Button onClick={handleFunctionReset} className="bg-cyan-600 hover:bg-cyan-700 text-white px-8">Reset</Button>
-                            <Button onClick={handleFunctionSubmit} variant="outline" className="border-border/50 px-8">Submit</Button>
+                        <div className="flex justify-center gap-4 pt-6 border-t border-border/30">
+                            <Button onClick={handleFunctionReset} variant="outline" className="h-11 px-8 min-w-[120px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all">Reset</Button>
+                            <Button onClick={handleFunctionSubmit} className="h-11 px-8 min-w-[120px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">Submit</Button>
                         </div>
                     </div>
                 </CardContent>
@@ -511,7 +511,7 @@ const Employees = () => {
                             <Input placeholder="Function name" value={functionSearch} onChange={(e) => setFunctionSearch(e.target.value)} className="w-48 h-9 bg-muted/30 border-border/50" />
                         </div>
                     </div>
-                    <div className="rounded-xl overflow-hidden border border-gray-200">
+                    <div className="rounded-lg overflow-hidden border border-border/80 dark:border-slate-800 overflow-x-auto scrollbar-thin">
                         <Table>
                             <TableHeader>
                                 <TableRow className="bg-gray-50 hover:bg-gray-50 border-b border-gray-200">
@@ -521,7 +521,7 @@ const Employees = () => {
                             </TableHeader>
                             <TableBody>
                                 {paginatedFunctions.map((item, index) => (
-                                    <TableRow key={item.id} className={`${index % 2 === 0 ? "bg-muted/20" : "bg-background"} hover:bg-muted/40 transition-colors`}>
+                                    <TableRow key={item.id} className={`${index % 2 === 0 ? "bg-card dark:bg-[#101526]/80" : "bg-muted/10 dark:bg-[#0d1120]/80"} hover:bg-muted/30 dark:hover:bg-slate-800/50 border-b border-border/50 dark:border-slate-800/70 transition-colors`}>
                                         <TableCell className="text-cyan-600 hover:underline cursor-pointer">{item.name}</TableCell>
                                         <TableCell className="text-center">
                                             <Button size="sm" className="bg-[#3eb1c8] hover:bg-[#3eb1c8]/90 text-white h-7 w-7 p-0 rounded-[3px]" disabled={!mayWrite} onClick={() => { setEditingFunction(item); setEditFunctionOpen(true); }}>
@@ -539,7 +539,7 @@ const Employees = () => {
                             <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setFunctionCurrentPage(1)} disabled={functionCurrentPage === 1}>First</Button>
                             <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setFunctionCurrentPage(Math.max(1, functionCurrentPage - 1))} disabled={functionCurrentPage === 1}>Previous</Button>
                             {Array.from({ length: Math.min(3, functionTotalPages) }, (_, i) => i + 1).map((page) => (
-                                <Button key={page} variant={functionCurrentPage === page ? "default" : "ghost"} size="sm" className={`w-9 h-9 p-0 ${functionCurrentPage === page ? "bg-primary text-white" : "text-muted-foreground"}`} onClick={() => setFunctionCurrentPage(page)}>{page}</Button>
+                                <Button key={page} variant={functionCurrentPage === page ? "default" : "ghost"} size="sm" className={`w-9 h-9 p-0 rounded-xl ${functionCurrentPage === page ? "bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold shadow-sm" : "text-muted-foreground"}`} onClick={() => setFunctionCurrentPage(page)}>{page}</Button>
                             ))}
                             <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setFunctionCurrentPage(Math.min(functionTotalPages, functionCurrentPage + 1))} disabled={functionCurrentPage === functionTotalPages}>Next</Button>
                             <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setFunctionCurrentPage(functionTotalPages)} disabled={functionCurrentPage === functionTotalPages}>Last</Button>
@@ -586,7 +586,7 @@ const Employees = () => {
                         </TableHeader>
                         <TableBody>
                             {paginatedEmployees.map((item, index) => (
-                                <TableRow key={item.id} className={`${index % 2 === 0 ? "bg-muted/20" : "bg-background"} hover:bg-muted/40 transition-colors`}>
+                                <TableRow key={item.id} className={`${index % 2 === 0 ? "bg-card dark:bg-[#101526]/80" : "bg-muted/10 dark:bg-[#0d1120]/80"} hover:bg-muted/30 dark:hover:bg-slate-800/50 border-b border-border/50 dark:border-slate-800/70 transition-colors`}>
                                     <TableCell className="text-cyan-600 hover:underline cursor-pointer whitespace-nowrap">{item.id}</TableCell>
                                     <TableCell className="text-cyan-600 whitespace-nowrap">{item.usrId}</TableCell>
                                     <TableCell className="text-cyan-600 whitespace-nowrap">{item.firstName}</TableCell>
@@ -655,7 +655,7 @@ const Employees = () => {
                         <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setEmployeeCurrentPage(1)} disabled={employeeCurrentPage === 1}>First</Button>
                         <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setEmployeeCurrentPage(Math.max(1, employeeCurrentPage - 1))} disabled={employeeCurrentPage === 1}>Previous</Button>
                         {Array.from({ length: Math.min(4, employeeTotalPages) }, (_, i) => i + 1).map((page) => (
-                            <Button key={page} variant={employeeCurrentPage === page ? "default" : "ghost"} size="sm" className={`w-9 h-9 p-0 ${employeeCurrentPage === page ? "bg-primary text-white" : "text-muted-foreground"}`} onClick={() => setEmployeeCurrentPage(page)}>{page}</Button>
+                            <Button key={page} variant={employeeCurrentPage === page ? "default" : "ghost"} size="sm" className={`w-9 h-9 p-0 rounded-xl ${employeeCurrentPage === page ? "bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold shadow-sm" : "text-muted-foreground"}`} onClick={() => setEmployeeCurrentPage(page)}>{page}</Button>
                         ))}
                         <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setEmployeeCurrentPage(Math.min(employeeTotalPages, employeeCurrentPage + 1))} disabled={employeeCurrentPage === employeeTotalPages}>Next</Button>
                         <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setEmployeeCurrentPage(employeeTotalPages)} disabled={employeeCurrentPage === employeeTotalPages}>Last</Button>
@@ -666,29 +666,29 @@ const Employees = () => {
     );
 
     return (
-        <div className="space-y-6 animate-fade-in bg-[hsl(220,20%,96%)] min-h-screen -m-6 p-6">
+        <div className="space-y-6 animate-fade-in text-foreground">
             {/* Header */}
             <div className="flex items-center justify-between mb-2">
-                <h1 className="text-2xl font-semibold text-foreground">Employee Management</h1>
-                <Button onClick={() => setShowAddEmployee(true)} className="bg-cyan-600 hover:bg-cyan-700 text-white">
+                <h1 className="text-xl font-semibold text-foreground tracking-tight">Employee Management</h1>
+                <Button onClick={() => setShowAddEmployee(true)} className="h-9 px-4 text-xs font-semibold rounded-xl bg-[#5865F2] hover:bg-[#4752c4] text-white shadow-md hover:shadow-lg transition-all">
                     Add Employee
                 </Button>
             </div>
 
             {/* Tabs */}
-            <div className="flex gap-6 border-b border-gray-200">
+            <div className="flex gap-6 border-b border-border dark:border-slate-800">
                 {tabs.map((tab) => (
                     <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
-                        className={`relative px-1 pb-3 text-sm font-medium transition-all duration-200 ${activeTab === tab.id
+                        className={`relative px-1 pb-3 text-xs font-semibold uppercase tracking-wider transition-all duration-200 ${activeTab === tab.id
                             ? "text-foreground"
                             : "text-muted-foreground hover:text-foreground"
                             }`}
                     >
                         {tab.label}
                         {activeTab === tab.id && (
-                            <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-purple-600 rounded-t-full" />
+                            <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-primary rounded-t-full" />
                         )}
                     </button>
                 ))}
@@ -733,9 +733,9 @@ const Employees = () => {
                     </div>
 
                     <div className="flex justify-center gap-4 pb-8">
-                        <Button variant="outline" className="text-amber-500 border-amber-500 hover:bg-amber-50 hover:text-amber-600 h-8 px-6 rounded-[3px] font-normal" onClick={() => setEditDepartmentOpen(false)}>Reset</Button>
+                        <Button variant="outline" className="h-10 px-8 min-w-[110px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all" onClick={() => setEditDepartmentOpen(false)}>Reset</Button>
                         <Button
-                            className="bg-transparent text-[#3eb1c8] border border-[#3eb1c8] hover:bg-cyan-50 h-8 px-6 rounded-[3px] font-normal"
+                            className="h-10 px-8 min-w-[110px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
                             disabled={!editingDepartment?.name || updateDepartmentMutation.isPending}
                             onClick={() =>
                                 editingDepartment &&
@@ -777,9 +777,9 @@ const Employees = () => {
                     </div>
 
                     <div className="flex justify-center gap-4 pb-8">
-                        <Button variant="outline" className="text-amber-500 border-amber-500 hover:bg-amber-50 hover:text-amber-600 h-8 px-6 rounded-[3px] font-normal" onClick={() => setEditFunctionOpen(false)}>Reset</Button>
+                        <Button variant="outline" className="h-10 px-8 min-w-[110px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all" onClick={() => setEditFunctionOpen(false)}>Reset</Button>
                         <Button
-                            className="bg-transparent text-[#3eb1c8] border border-[#3eb1c8] hover:bg-cyan-50 h-8 px-6 rounded-[3px] font-normal"
+                            className="h-10 px-8 min-w-[110px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
                             disabled={!editingFunction?.name || updateFunctionMutation.isPending}
                             onClick={() =>
                                 editingFunction &&

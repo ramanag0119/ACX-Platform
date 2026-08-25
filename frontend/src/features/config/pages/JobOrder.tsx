@@ -545,7 +545,7 @@ const JobOrder = () => {
                                 <Button
                                     onClick={handleAddRoom}
                                     disabled={!selectedRoom || !selectedCaleidoNetwork}
-                                    className="bg-cyan-600 hover:bg-cyan-700 text-white px-8"
+                                    className="h-10 px-8 min-w-[160px] rounded-xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
                                 >
                                     Add
                                 </Button>
@@ -557,7 +557,7 @@ const JobOrder = () => {
                 {/* Added Rooms Table */}
                 <Card className="border-0 shadow-lg rounded-2xl bg-white">
                     <CardContent className="p-6">
-                        <div className="rounded-xl overflow-hidden border border-gray-200">
+                        <div className="rounded-lg overflow-hidden border border-border/80 dark:border-slate-800 overflow-x-auto scrollbar-thin">
                             <Table>
                                 <TableHeader>
                                     <TableRow className="bg-gray-50 hover:bg-gray-50 border-b border-gray-200">
@@ -575,7 +575,7 @@ const JobOrder = () => {
                                         </TableRow>
                                     ) : (
                                         addedRooms.map((item, index) => (
-                                            <TableRow key={`${item.amenityId}-${item.deviceTypeId}`} className={`${index % 2 === 0 ? "bg-muted/20" : "bg-background"} hover:bg-muted/40 transition-colors`}>
+                                            <TableRow key={`${item.amenityId}-${item.deviceTypeId}`} className={`${index % 2 === 0 ? "bg-card dark:bg-[#101526]/80" : "bg-muted/10 dark:bg-[#0d1120]/80"} hover:bg-muted/30 dark:hover:bg-slate-800/50 border-b border-border/50 dark:border-slate-800/70 transition-colors`}>
                                                 <TableCell>{item.roomName}</TableCell>
                                                 <TableCell>
                                                     {item.deviceTypeName}
@@ -621,30 +621,30 @@ const JobOrder = () => {
     };
 
     const renderJobOrdersTab = () => (
-        <Card className="border-0 shadow-lg rounded-2xl bg-white">
-            <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-6">
+        <Card className="border border-border/80 dark:border-slate-800 shadow-xl rounded-xl bg-card text-card-foreground overflow-hidden">
+            <CardContent className="p-5">
+                <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
                     <div className="flex items-center gap-2">
-                        <span className="text-muted-foreground text-sm">Show</span>
-                        <Select value={entriesPerPage} onValueChange={setEntriesPerPage}>
-                            <SelectTrigger className="w-20 h-9 bg-muted/30 border-border/50">
+                        <span className="text-muted-foreground text-xs font-medium">Show</span>
+                        <Select value={entriesPerPage} onValueChange={(val) => { setEntriesPerPage(val); setCurrentPage(1); }}>
+                            <SelectTrigger className="w-18 h-8 text-xs bg-muted/20 border-border dark:border-slate-700/80 rounded-md">
                                 <SelectValue />
                             </SelectTrigger>
-                            <SelectContent className="bg-popover">
+                            <SelectContent className="bg-popover text-popover-foreground border-border text-xs">
                                 <SelectItem value="10">10</SelectItem>
                                 <SelectItem value="25">25</SelectItem>
                                 <SelectItem value="50">50</SelectItem>
                             </SelectContent>
                         </Select>
-                        <span className="text-muted-foreground text-sm">entries</span>
+                        <span className="text-muted-foreground text-xs font-medium">entries</span>
                     </div>
                     <div className="flex items-center gap-2">
-                        <span className="text-muted-foreground text-sm">Search:</span>
+                        <span className="text-muted-foreground text-xs font-medium">Search:</span>
                         <Input
                             placeholder="Work/Purchase order, description, room no"
                             value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-80 h-9 bg-muted/30 border-border/50"
+                            onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                            className="w-72 h-8 text-xs bg-muted/20 border-border dark:border-slate-700/80 rounded-md placeholder:text-muted-foreground/60"
                         />
                     </div>
                 </div>
@@ -678,7 +678,7 @@ const JobOrder = () => {
                             </TableHeader>
                             <TableBody>
                                 {paginatedJobOrders.map((job, index) => (
-                                    <TableRow key={job.id} className={`${index % 2 === 0 ? "bg-muted/20" : "bg-background"} hover:bg-muted/40 transition-colors`}>
+                                    <TableRow key={job.id} className={`${index % 2 === 0 ? "bg-card dark:bg-[#101526]/80" : "bg-muted/10 dark:bg-[#0d1120]/80"} hover:bg-muted/30 dark:hover:bg-slate-800/50 border-b border-border/50 dark:border-slate-800/70 transition-colors`}>
                                         {/* `job_order` has one human reference; the row's own id
                                             is a UUID, shortened here with the full value on hover. */}
                                         <TableCell className="text-cyan-600 whitespace-nowrap" title={job.id}>
@@ -753,26 +753,26 @@ const JobOrder = () => {
     );
 
     return (
-        <div className="space-y-6 animate-fade-in bg-[hsl(220,20%,96%)] min-h-screen -m-6 p-6">
+        <div className="space-y-6 animate-fade-in text-foreground">
             {/* Header */}
             <div className="mb-2">
-                <h1 className="text-2xl font-semibold text-foreground">Job Order Management</h1>
+                <h1 className="text-xl font-semibold text-foreground tracking-tight">Job Order Management</h1>
             </div>
 
             {/* Tabs */}
-            <div className="flex gap-6 border-b border-gray-200">
+            <div className="flex gap-6 border-b border-border dark:border-slate-800">
                 {tabs.map((tab) => (
                     <button
                         key={tab.id}
-                        onClick={() => setActiveTab(tab.id)}
-                        className={`relative px-1 pb-3 text-sm font-medium transition-all duration-200 ${activeTab === tab.id
+                        onClick={() => { setActiveTab(tab.id); setCurrentPage(1); }}
+                        className={`relative px-1 pb-3 text-xs font-semibold uppercase tracking-wider transition-all duration-200 ${activeTab === tab.id
                             ? "text-foreground"
                             : "text-muted-foreground hover:text-foreground"
                             }`}
                     >
                         {tab.label}
                         {activeTab === tab.id && (
-                            <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-purple-600 rounded-t-full" />
+                            <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-primary rounded-t-full" />
                         )}
                     </button>
                 ))}

@@ -179,7 +179,7 @@ const Holidays = () => {
                         <Button
                             onClick={handleSubmit}
                             disabled={!mayWrite || createHoliday.isPending || updateHoliday.isPending}
-                            className="bg-cyan-600 hover:bg-cyan-700 text-white px-8"
+                            className="h-10 px-8 min-w-[160px] rounded-xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
                         >
                             {createHoliday.isPending || updateHoliday.isPending
                                 ? "Saving..."
@@ -199,7 +199,7 @@ const Holidays = () => {
                             <span className="text-muted-foreground text-sm">Show</span>
                             <Select value={entriesPerPage} onValueChange={setEntriesPerPage}>
                                 <SelectTrigger className="w-20 h-9 bg-muted/30 border-border/50"><SelectValue /></SelectTrigger>
-                                <SelectContent className="bg-white">
+                                <SelectContent className="bg-popover text-popover-foreground border-border">
                                     <SelectItem value="10">10</SelectItem>
                                     <SelectItem value="25">25</SelectItem>
                                 </SelectContent>
@@ -212,7 +212,7 @@ const Holidays = () => {
                         </div>
                     </div>
 
-                    <div className="rounded-xl overflow-hidden border border-gray-200">
+                    <div className="rounded-lg overflow-hidden border border-border/80 dark:border-slate-800 overflow-x-auto scrollbar-thin">
                         <Table>
                             <TableHeader>
                                 <TableRow className="bg-gray-50 hover:bg-gray-50 border-b border-gray-200">
@@ -225,7 +225,7 @@ const Holidays = () => {
                             </TableHeader>
                             <TableBody>
                                 {paginatedData.map((item, index) => (
-                                    <TableRow key={item.id} className={`${index % 2 === 0 ? "bg-muted/20" : "bg-white"} hover:bg-muted/40`}>
+                                    <TableRow key={item.id} className={`${index % 2 === 0 ? "bg-card dark:bg-[#101526]/80" : "bg-muted/10 dark:bg-[#0d1120]/80"} hover:bg-muted/30 dark:hover:bg-slate-800/50 border-b border-border/50 dark:border-slate-800/70 transition-colors`}>
                                         <TableCell>{item.startDate}</TableCell>
                                         <TableCell>{item.endDate}</TableCell>
                                         <TableCell className="text-cyan-600">{item.lockMessage}</TableCell>
@@ -319,8 +319,8 @@ const Holidays = () => {
                     </div>
 
                     <div className="flex justify-center gap-4 pb-8">
-                        <Button variant="outline" className="text-amber-500 border-amber-500 hover:bg-amber-50 hover:text-amber-600 h-8 px-6 rounded-[3px] font-normal" onClick={() => setEditModalOpen(false)}>Reset</Button>
-                        <Button className="bg-transparent text-[#3eb1c8] border border-[#3eb1c8] hover:bg-cyan-50 h-8 px-6 rounded-[3px] font-normal" onClick={() => setEditModalOpen(false)}>Submit</Button>
+                        <Button variant="outline" className="h-10 px-8 min-w-[110px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all" onClick={() => setEditModalOpen(false)}>Reset</Button>
+                        <Button className="h-10 px-8 min-w-[110px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all" onClick={() => setEditModalOpen(false)}>Submit</Button>
                     </div>
                 </DialogContent>
             </Dialog>
