@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import { Download, FileText } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ChevronLeft, ChevronRight, Download, FileSpreadsheet, Loader2 } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -11,7 +12,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { DataState, TableLoading } from "@/core/components/DataState";
 import {
   Table,
   TableBody,
@@ -20,388 +20,584 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useDevices, useEnergyStats, useRooms } from "@/lib/api/hooks";
+import { DataState, TableLoading } from "@/core/components/DataState";
+import { useAuth } from "@/core/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { apiClient, describeApiError, type QueryParams } from "@/lib/api/client";
+import { useReport, useReportDefinitions } from "@/lib/api/hooks";
+import { downloadReportXlsx, type ReportColumn, type ReportFilterSpec } from "@/lib/api/reports";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
+import { useQuery } from "@tanstack/react-query";
 
 /**
- * Reports.
+ * Reports, connected to GET /api/v1/reports.
  *
- * THERE IS NO REPORT-GENERATION OR EXPORT ENDPOINT. Every "Generate Report"
- * button is therefore disabled: producing a file is a backend capability that
- * Phase 2.x does not deliver, and a client-side approximation would not be the
- * same report.
+ * The nine reports and their columns and filters are DECLARED BY THE BACKEND
+ * (`app/services/reports.py`) and rendered from that declaration. Nothing about
+ * a report's shape is restated here, which is what stops this screen and the
+ * Excel export from disagreeing.
  *
- * What IS connected:
- *   - The Room No and device pickers list real rooms (GET /rooms) and devices
- *     (GET /devices) instead of hardcoded numbers.
- *   - The Energy Report shows the real `energy_stat` rows for the chosen date
- *     range via GET /energy-stats. Values carry NO UNIT, because the table
- *     stores none, and nothing is costed or carbon-weighted.
+ *   GET /reports                    the definitions -> tabs, columns, filters
+ *   GET /reports/{key}              a page of rows for the chosen filters
+ *   GET /reports/{key}/export.xlsx  the same rows, every page, as a workbook
+ *
+ * Each report reads through the service that already backs its module, so a row
+ * created, edited or soft deleted anywhere in the app appears here on the next
+ * Generate.
+ *
+ * PDF is not offered yet: the layout is being taken from a reference document,
+ * and a button that produced a different layout would have to be redone. Excel
+ * carries the same rows in the meantime.
  */
 
-const reportTabs = [
-  { id: "occupancy", label: "Occupancy Report" },
-  { id: "employee", label: "Employee Report" },
-  { id: "room-status", label: "Room Status Report" },
-  { id: "booking", label: "Booking Report" },
-  { id: "ticket", label: "Ticket Report" },
-  { id: "housekeeping", label: "Housekeeping Report" },
-  { id: "sanitization", label: "Sanitization Report" },
-  { id: "alert", label: "Alert Report" },
-  { id: "energy", label: "Energy Report" },
+/** Rows per page. Capped at the backend's limit so a choice can never 422. */
+const PAGE_SIZES = ["10", "25", "50", "100"] as const;
+
+/**
+ * The label field differs per lookup table -- `category_name`, `department_name`,
+ * `device_name` and so on -- so the first present key wins rather than a
+ * per-endpoint special case.
+ */
+const LABEL_KEYS = [
+  "name", "category_name", "department_name", "function_name", "device_name",
+  "room_name", "title", "param_name", "user_name", "feature_name",
 ];
 
-// Energy Report Component
-const EnergyReportContent = () => {
-  const [mainTab, setMainTab] = useState("room-based");
-  const [subTab, setSubTab] = useState("guest-rooms");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-  const [roomNo, setRoomNo] = useState("");
-  const [mkds, setMkds] = useState("");
+interface Option {
+  value: string;
+  label: string;
+}
 
-  // --- Live data -----------------------------------------------------------
-  const roomsQuery = useRooms({ page: 1, page_size: MAX_PAGE_SIZE });
-  const devicesQuery = useDevices({ page: 1, page_size: MAX_PAGE_SIZE });
-  const energyQuery = useEnergyStats({
-    page: 1,
-    page_size: MAX_PAGE_SIZE,
-    ...(roomNo ? { amenity_id: roomNo } : {}),
-    ...(mkds ? { device_name: mkds } : {}),
-    ...(dateFrom ? { timestamp_from: new Date(`${dateFrom}T00:00:00Z`).toISOString() } : {}),
-    ...(dateTo ? { timestamp_to: new Date(`${dateTo}T23:59:59Z`).toISOString() } : {}),
+function toOption(row: Record<string, unknown>): Option | null {
+  const id = row.id ?? row.value;
+  if (id === undefined || id === null) return null;
+  for (const key of LABEL_KEYS) {
+    const candidate = row[key];
+    if (typeof candidate === "string" && candidate.trim()) {
+      return { value: String(id), label: candidate };
+    }
+  }
+  // `app_user` has no single name column.
+  const full = [row.first_name, row.last_name].filter(Boolean).join(" ");
+  return { value: String(id), label: full || String(id) };
+}
+
+/**
+ * Options for a `select` filter, from the real list endpoint the backend named.
+ * No option list is hardcoded: a filter the schema cannot populate shows as
+ * empty rather than inventing values.
+ */
+function useFilterOptions(path: string | null) {
+  return useQuery({
+    queryKey: ["report-filter-options", path],
+    enabled: Boolean(path),
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const body = await apiClient.get<unknown>(path as string, {
+        page: 1,
+        page_size: MAX_PAGE_SIZE,
+      });
+      // Lookup endpoints return a bare array; paged ones return {items}.
+      const rows = Array.isArray(body)
+        ? body
+        : ((body as { items?: unknown[] })?.items ?? []);
+      return rows
+        .map((row) => toOption(row as Record<string, unknown>))
+        .filter((o): o is Option => o !== null);
+    },
   });
-  const energyRows = energyQuery.data?.items ?? [];
+}
 
-  const mainTabs = [
-    { id: "room-based", label: "Room Based" },
-    { id: "device-based", label: "Device Based" },
-    { id: "multiple-room-based", label: "Multiple Room Based" },
-  ];
+/** One filter control, rendered from the backend's description of it. */
+const FilterField = ({
+  spec,
+  value,
+  onChange,
+}: {
+  spec: ReportFilterSpec;
+  value: string;
+  onChange: (next: string) => void;
+}) => {
+  const options = useFilterOptions(spec.kind === "select" ? spec.options_from : null);
 
-  const subTabs = [
-    { id: "guest-rooms", label: "Guest Rooms" },
-    { id: "non-guest-rooms", label: "Non Guest Rooms" },
-    { id: "multiple-device-based", label: "Multiple Device Based" },
-  ];
+  if (spec.kind === "date") {
+    return (
+      <div className="space-y-1.5">
+        <Label className="text-xs text-muted-foreground">{spec.label}</Label>
+        <Input
+          type="date"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="h-9 bg-muted/20 border-border dark:border-slate-700/80"
+        />
+      </div>
+    );
+  }
 
-  // Determine which fields to show based on tab selection
-  const showMkdsField = mainTab === "device-based" ||
-    (mainTab === "multiple-room-based" && subTab === "multiple-device-based");
+  if (spec.kind === "boolean") {
+    return (
+      <div className="space-y-1.5">
+        <Label className="text-xs text-muted-foreground">{spec.label}</Label>
+        <Select value={value || "any"} onValueChange={(v) => onChange(v === "any" ? "" : v)}>
+          <SelectTrigger className="h-9 bg-muted/20 border-border dark:border-slate-700/80">
+            <SelectValue placeholder="Any" />
+          </SelectTrigger>
+          <SelectContent className="bg-popover text-popover-foreground border-border">
+            <SelectItem value="any">Any</SelectItem>
+            <SelectItem value="true">Yes</SelectItem>
+            <SelectItem value="false">No</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+    );
+  }
 
-  return (
-    <Card className="border-0 shadow-lg">
-      <CardContent className="p-8">
-        {/* Report Title */}
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-2 bg-blue-50 rounded-lg">
-            <FileText className="h-5 w-5 text-blue-600" />
-          </div>
-          <h2 className="text-lg font-semibold text-foreground">Energy Report</h2>
-        </div>
-
-        {/* Main Tabs */}
-        <div className="bg-muted/30 p-1 rounded-xl w-fit mb-4">
-          <div className="flex gap-1">
-            {mainTabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => {
-                  setMainTab(tab.id);
-                  if (tab.id === "multiple-room-based") {
-                    setSubTab("guest-rooms");
-                  }
-                }}
-                className={`px-4 py-2.5 text-sm font-medium transition-all duration-200 rounded-lg ${mainTab === tab.id
-                  ? "bg-white text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground hover:bg-white/50"
-                  }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Sub Tabs (only for Multiple Room Based) */}
-        {mainTab === "multiple-room-based" && (
-          <div className="bg-muted/20 p-1 rounded-lg w-fit mb-6 ml-2">
-            <div className="flex gap-1">
-              {subTabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setSubTab(tab.id)}
-                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${subTab === tab.id
-                    ? "bg-[#5865F2] text-white shadow-sm"
-                    : "text-muted-foreground hover:text-foreground hover:bg-white/50"
-                    }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Form Fields */}
-        <div className="max-w-2xl">
-          <div className="space-y-4">
-            {/* Date Range */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-foreground">
-                  Date From
-                </Label>
-                <Input
-                  type="date"
-                  value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
-                  placeholder="dd / mm / yyyy"
-                  className="h-11 bg-white border-gray-200 rounded-lg focus:border-[#5865F2] focus:ring-[#5865F2]"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-foreground">
-                  Date To
-                </Label>
-                <Input
-                  type="date"
-                  value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
-                  placeholder="dd / mm / yyyy"
-                  className="h-11 bg-white border-gray-200 rounded-lg focus:border-[#5865F2] focus:ring-[#5865F2]"
-                />
-              </div>
-            </div>
-
-            {/* Room No */}
-            <div className="flex items-center gap-4">
-              <Label className="text-sm font-medium text-foreground w-32 text-right">
-                Room No
-              </Label>
-              <Select value={roomNo} onValueChange={setRoomNo}>
-                <SelectTrigger className="flex-1 h-11 bg-white border-gray-200 rounded-lg focus:border-[#5865F2] focus:ring-[#5865F2]">
-                  <SelectValue placeholder="Select Room No" />
-                </SelectTrigger>
-                <SelectContent className="bg-popover text-popover-foreground border-border">
-                  {(roomsQuery.data?.items ?? []).map((room) => (
-                    <SelectItem key={room.id} value={room.id}>{room.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* MKDS (Conditional) */}
-            {showMkdsField && (
-              <div className="flex items-center gap-4">
-                <Label className="text-sm font-medium text-foreground w-32 text-right">
-                  MKDS
-                </Label>
-                <Select value={mkds} onValueChange={setMkds}>
-                  <SelectTrigger className="flex-1 h-11 bg-white border-gray-200 rounded-lg focus:border-[#5865F2] focus:ring-[#5865F2]">
-                    <SelectValue placeholder="Select MKDS" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover text-popover-foreground border-border">
-                    {(devicesQuery.data?.items ?? [])
-                      .filter((device) => device.device_name)
-                      .map((device) => (
-                        <SelectItem key={device.id} value={device.device_name as string}>
-                          {device.device_name}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
+  if (spec.kind === "select") {
+    return (
+      <div className="space-y-1.5">
+        <Label className="text-xs text-muted-foreground">{spec.label}</Label>
+        <Select value={value || "all"} onValueChange={(v) => onChange(v === "all" ? "" : v)}>
+          <SelectTrigger className="h-9 bg-muted/20 border-border dark:border-slate-700/80">
+            <SelectValue placeholder={`All ${spec.label.toLowerCase()}`} />
+          </SelectTrigger>
+          <SelectContent className="bg-popover text-popover-foreground border-border max-h-72">
+            <SelectItem value="all">All</SelectItem>
+            {options.isLoading && (
+              <div className="px-3 py-2 text-sm text-muted-foreground">Loading...</div>
+            )}
+            {options.error && (
+              <div className="px-3 py-2 text-sm text-muted-foreground">
+                {describeApiError(options.error)}
               </div>
             )}
+            {(options.data ?? []).map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    );
+  }
 
-            {/* Export needs a backend report endpoint, which does not exist.
-                The stored rows are listed below instead. */}
-            <div className="flex flex-col items-center gap-2 pt-4">
-              <Button
-                className="h-11 px-8 min-w-[160px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
-                disabled
-                title="No report export endpoint exists"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Generate Report
-              </Button>
-              <p className="text-xs text-muted-foreground">
-                File export is not available: the API exposes no report-generation
-                endpoint. The stored readings are shown below.
-              </p>
-            </div>
-
-            {/* Live energy_stat rows for the current filters. */}
-            <div className="rounded-xl border border-gray-200 overflow-hidden">
-              <DataState
-                isLoading={energyQuery.isLoading}
-                error={energyQuery.error}
-                isEmpty={energyRows.length === 0}
-                emptyTitle="No energy readings for this selection"
-                loader={<TableLoading columns={5} />}
-              >
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-gray-50">
-                      <TableHead>Room</TableHead>
-                      <TableHead>Device</TableHead>
-                      <TableHead>Hour (UTC)</TableHead>
-                      <TableHead className="text-right">Energy consumed</TableHead>
-                      <TableHead>Unit</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {energyRows.slice(0, 50).map((row) => (
-                      <TableRow key={`${row.device_name}-${row.amenity_id}-${row.hour}`}>
-                        <TableCell>{row.amenity_name ?? "-"}</TableCell>
-                        <TableCell>{row.device_name}</TableCell>
-                        <TableCell>{new Date(row.hour_timestamp).toLocaleString()}</TableCell>
-                        <TableCell className="text-right">{row.energy_consumed}</TableCell>
-                        {/* Always null: energy_stat stores no unit. */}
-                        <TableCell className="text-muted-foreground">
-                          {row.energy_unit ?? "not recorded"}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </DataState>
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
-
-// Standard Report Content Component
-const StandardReportContent = ({ reportName, singleDateOnly = false }: { reportName: string; singleDateOnly?: boolean }) => {
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-  const [singleDate, setSingleDate] = useState("");
-
+  // Plain text -- a stay status, a request source, a severity.
   return (
-    <Card className="border-0 shadow-lg">
-      <CardContent className="p-8">
-        {/* Report Title */}
-        <div className="flex items-center gap-3 mb-8">
-          <div className="p-2 bg-[#5865F2]/10 rounded-lg">
-            <FileText className="h-5 w-5 text-[#5865F2]" />
-          </div>
-          <h2 className="text-lg font-semibold text-foreground">{reportName}</h2>
-        </div>
-
-        {/* Date Filters and Generate Button */}
-        <div className="flex flex-wrap items-end gap-6">
-          {singleDateOnly ? (
-            /* Single Date Only - for Housekeeping and Sanitization Reports */
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-foreground">
-                Date
-              </Label>
-              <Input
-                type="date"
-                value={singleDate}
-                onChange={(e) => setSingleDate(e.target.value)}
-                placeholder="dd / mm / yyyy"
-                className="w-56 h-11 bg-white border-gray-200 rounded-lg focus:border-[#5865F2] focus:ring-[#5865F2]"
-              />
-            </div>
-          ) : (
-            /* Date Range - From Date and To Date */
-            <>
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-foreground">
-                  From Date
-                </Label>
-                <Input
-                  type="date"
-                  value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
-                  placeholder="dd / mm / yyyy"
-                  className="w-56 h-11 bg-white border-gray-200 rounded-lg focus:border-[#5865F2] focus:ring-[#5865F2]"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-foreground">
-                  To Date
-                </Label>
-                <Input
-                  type="date"
-                  value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
-                  placeholder="dd / mm / yyyy"
-                  className="w-56 h-11 bg-white border-gray-200 rounded-lg focus:border-[#5865F2] focus:ring-[#5865F2]"
-                />
-              </div>
-            </>
-          )}
-
-          <div className="flex flex-col gap-1">
-            <Button
-              className="h-11 px-8 min-w-[160px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
-              disabled
-              title="No report export endpoint exists"
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Generate Report
-            </Button>
-            <p className="text-xs text-muted-foreground max-w-xs">
-              Report generation is a backend capability the API does not expose.
-            </p>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="space-y-1.5">
+      <Label className="text-xs text-muted-foreground">{spec.label}</Label>
+      <Input
+        value={value}
+        placeholder="Any"
+        onChange={(e) => onChange(e.target.value)}
+        className="h-9 bg-muted/20 border-border dark:border-slate-700/80"
+      />
+    </div>
   );
 };
+
+/** Render one cell according to the column kind the backend declared. */
+function formatCell(value: unknown, kind: ReportColumn["kind"]): string {
+  if (value === null || value === undefined || value === "") return "-";
+  if (kind === "boolean") {
+    if (typeof value === "boolean") return value ? "Yes" : "No";
+    if (typeof value === "number") return value ? "Yes" : "No";
+    return String(value);
+  }
+  if (kind === "date" || kind === "datetime") {
+    const parsed = new Date(String(value));
+    if (Number.isNaN(parsed.getTime())) return String(value);
+    return kind === "date"
+      ? parsed.toLocaleDateString()
+      : parsed.toLocaleString();
+  }
+  if (kind === "number") {
+    return typeof value === "number" ? value.toLocaleString() : String(value);
+  }
+  return String(value);
+}
 
 const Reports = () => {
-  const [activeTab, setActiveTab] = useState("occupancy");
+  const { canRead } = useAuth();
+  const mayRead = canRead("reports");
+  const { toast } = useToast();
 
-  const activeReport = reportTabs.find((tab) => tab.id === activeTab);
+  const definitionsQuery = useReportDefinitions();
+  // Memoised: a fresh [] each render would retrigger the effect below.
+  const definitions = useMemo(
+    () => definitionsQuery.data ?? [],
+    [definitionsQuery.data],
+  );
+
+  const [activeKey, setActiveKey] = useState<string>("");
+  // Filter values per report, so switching tabs does not lose what was typed.
+  const [filterState, setFilterState] = useState<Record<string, Record<string, string>>>({});
+  const [generatedKeys, setGeneratedKeys] = useState<Record<string, boolean>>({});
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<string>("25");
+  const [exporting, setExporting] = useState(false);
+
+  // Land on the first report the backend declares rather than a hardcoded tab.
+  useEffect(() => {
+    if (!activeKey && definitions.length) setActiveKey(definitions[0].key);
+  }, [activeKey, definitions]);
+
+  const definition = definitions.find((d) => d.key === activeKey);
+  const filters = useMemo(
+    () => filterState[activeKey] ?? {},
+    [filterState, activeKey],
+  );
+  const generated = Boolean(generatedKeys[activeKey]);
+
+  /** Only non-empty filters travel; the backend ignores what it does not declare. */
+  const activeFilters = useMemo<QueryParams>(() => {
+    const out: QueryParams = {};
+    for (const [name, value] of Object.entries(filters)) {
+      if (value !== "" && value !== undefined) out[name] = value;
+    }
+    return out;
+  }, [filters]);
+
+  const queryParams = useMemo<QueryParams>(
+    () => ({ ...activeFilters, page, page_size: Number(pageSize) }),
+    [activeFilters, page, pageSize],
+  );
+
+  const reportQuery = useReport(activeKey || undefined, queryParams, generated);
+  const report = reportQuery.data;
+  const columns = report?.columns ?? definition?.columns ?? [];
+  const rows = report?.items ?? [];
+  const total = report?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / Number(pageSize)));
+
+  const setFilter = (name: string, value: string) => {
+    setFilterState((prev) => ({
+      ...prev,
+      [activeKey]: { ...(prev[activeKey] ?? {}), [name]: value },
+    }));
+    // A changed filter means page 1; staying on page 7 of a narrower result
+    // would show an empty table.
+    setPage(1);
+  };
+
+  const selectTab = (key: string) => {
+    setActiveKey(key);
+    setPage(1);
+  };
+
+  const generate = () => {
+    setPage(1);
+    setGeneratedKeys((prev) => ({ ...prev, [activeKey]: true }));
+    // Already generated once: pick up any filter change immediately.
+    if (generated) void reportQuery.refetch();
+  };
+
+  const resetFilters = () => {
+    setFilterState((prev) => ({ ...prev, [activeKey]: {} }));
+    setPage(1);
+  };
+
+  const exportExcel = async () => {
+    if (!definition) return;
+    setExporting(true);
+    try {
+      const filename = await downloadReportXlsx(definition.key, activeFilters);
+      toast({ title: "Report downloaded", description: filename });
+    } catch (error) {
+      toast({
+        title: "Download failed",
+        description: describeApiError(error),
+        variant: "destructive",
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  if (!mayRead) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <h1 className="text-xl font-semibold text-foreground tracking-tight">Reports</h1>
+        <Card className="border border-border/80 dark:border-slate-800 shadow-xl rounded-xl bg-card">
+          <CardContent className="p-10 text-center text-sm text-muted-foreground">
+            Your role does not grant access to reports.
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Reports</h1>
-        <p className="text-muted-foreground mt-1">
-          Generate and download various operational reports
+    <div className="space-y-6 animate-fade-in text-foreground">
+      <div className="mb-2">
+        <h1 className="text-xl font-semibold text-foreground tracking-tight">Reports</h1>
+        <p className="text-xs text-muted-foreground mt-1">
+          Every report reads the live HMS database through the module that owns
+          the data, so it always reflects the latest records.
         </p>
       </div>
 
-      {/* Tabs Navigation */}
-      <div className="border-b border-gray-200 overflow-x-auto no-scrollbar">
-        <div className="flex items-center gap-6 min-w-max pb-px">
-          {reportTabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`relative px-2 pb-3.5 text-sm font-medium transition-all duration-200 whitespace-nowrap ${activeTab === tab.id
-                ? "text-foreground font-semibold"
+      {/* Tabs come from the backend's report list, not a local array. */}
+      <div className="flex gap-1 flex-wrap border-b border-border/70 dark:border-slate-800">
+        {definitionsQuery.isLoading && (
+          <div className="flex items-center gap-2 py-3 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" /> Loading reports...
+          </div>
+        )}
+        {definitionsQuery.error && (
+          <div className="py-3 text-sm text-muted-foreground">
+            {describeApiError(definitionsQuery.error)}
+          </div>
+        )}
+        {definitions.map((report) => (
+          <button
+            key={report.key}
+            onClick={() => selectTab(report.key)}
+            className={`relative px-3 pb-3 pt-1 text-sm font-medium transition-colors ${
+              activeKey === report.key
+                ? "text-foreground"
                 : "text-muted-foreground hover:text-foreground"
-                }`}
-            >
-              {tab.label}
-              {activeTab === tab.id && (
-                <span className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-[#5865F2] rounded-t-full shadow-sm" />
-              )}
-            </button>
-          ))}
-        </div>
+            }`}
+          >
+            {report.title}
+            {activeKey === report.key && (
+              <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#5865F2] rounded-full" />
+            )}
+          </button>
+        ))}
       </div>
 
-      {/* Report Content */}
-      {activeTab === "energy" ? (
-        <EnergyReportContent />
-      ) : (
-        <StandardReportContent
-          reportName={activeReport?.label || ""}
-          singleDateOnly={activeTab === "housekeeping" || activeTab === "sanitization"}
-        />
+      {definition && (
+        <Card className="border border-border/80 dark:border-slate-800 shadow-xl rounded-xl bg-card">
+          <CardContent className="p-6 space-y-6">
+            <div>
+              <h2 className="text-base font-semibold text-foreground">{definition.title}</h2>
+              <p className="text-xs text-muted-foreground mt-1">{definition.description}</p>
+              <p className="text-[11px] text-muted-foreground/80 mt-1 font-mono">
+                Source: {definition.source}
+              </p>
+            </div>
+
+            {/* Filters, rendered from what this report declares it accepts. */}
+            {definition.filters.length > 0 && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {definition.filters.map((spec) => (
+                  <FilterField
+                    key={spec.name}
+                    spec={spec}
+                    value={filters[spec.name] ?? ""}
+                    onChange={(next) => setFilter(spec.name, next)}
+                  />
+                ))}
+              </div>
+            )}
+
+            <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-border/40">
+              <Button
+                onClick={generate}
+                disabled={reportQuery.isFetching}
+                className="h-10 px-8 min-w-[170px] rounded-xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
+              >
+                {reportQuery.isFetching ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Generating...
+                  </>
+                ) : (
+                  "Generate Report"
+                )}
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={exportExcel}
+                disabled={!generated || exporting || total === 0}
+                title={
+                  total === 0
+                    ? "Generate a report with at least one row first"
+                    : "Download every matching row as .xlsx"
+                }
+                className="h-10 px-6 rounded-xl border-border hover:bg-muted font-medium text-sm"
+              >
+                {exporting ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />
+                )}
+                Excel (.xlsx)
+              </Button>
+
+              <Button
+                variant="ghost"
+                onClick={resetFilters}
+                className="h-10 px-4 text-muted-foreground hover:text-foreground text-sm"
+              >
+                Reset filters
+              </Button>
+
+              {generated && (
+                <span className="text-xs text-muted-foreground ml-auto">
+                  {total.toLocaleString()} row{total === 1 ? "" : "s"}
+                </span>
+              )}
+            </div>
+
+            {/* What the backend actually applied -- not what was typed. */}
+            {generated && report && Object.keys(report.filters_applied).length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(report.filters_applied).map(([name, value]) => {
+                  const label =
+                    definition.filters.find((f) => f.name === name)?.label ?? name;
+                  return (
+                    <Badge key={name} variant="outline" className="text-[11px] font-normal">
+                      {label}: {value}
+                    </Badge>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Results */}
+            {!generated ? (
+              <div className="rounded-lg border border-dashed border-border/80 dark:border-slate-800 py-12 text-center">
+                <Download className="h-6 w-6 mx-auto text-muted-foreground/60 mb-3" />
+                <p className="text-sm text-muted-foreground">
+                  Choose your filters, then select Generate Report.
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="rounded-lg overflow-hidden border border-border/80 dark:border-slate-800 overflow-x-auto">
+                  <Table>
+                    <TableHeader className="bg-muted/40 dark:bg-[#0e1322]">
+                      <TableRow className="border-b border-border dark:border-slate-800">
+                        {columns.map((column) => (
+                          <TableHead
+                            key={column.key}
+                            className={`text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3 whitespace-nowrap ${
+                              column.kind === "number" ? "text-right" : ""
+                            }`}
+                          >
+                            {column.header}
+                          </TableHead>
+                        ))}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {reportQuery.isLoading || reportQuery.error || rows.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={Math.max(columns.length, 1)} className="py-2">
+                            <DataState
+                              isLoading={reportQuery.isLoading}
+                              error={reportQuery.error}
+                              isEmpty
+                              emptyTitle="No rows matched this report"
+                              emptyDescription="Widen the date range or clear a filter."
+                              loader={<TableLoading columns={Math.max(columns.length, 1)} />}
+                            >
+                              <span />
+                            </DataState>
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        rows.map((row, index) => (
+                          <TableRow
+                            key={index}
+                            className={`${
+                              index % 2 === 0
+                                ? "bg-card dark:bg-[#101526]/80"
+                                : "bg-muted/10 dark:bg-[#0d1120]/80"
+                            } hover:bg-muted/30 dark:hover:bg-slate-800/50 border-b border-border/50 dark:border-slate-800/70 transition-colors`}
+                          >
+                            {columns.map((column) => (
+                              <TableCell
+                                key={column.key}
+                                className={`text-xs py-2.5 px-3 text-foreground/90 ${
+                                  column.kind === "number" ? "text-right" : ""
+                                }`}
+                              >
+                                {formatCell(row[column.key], column.kind)}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Show</span>
+                    <Select
+                      value={pageSize}
+                      onValueChange={(value) => {
+                        setPageSize(value);
+                        setPage(1);
+                      }}
+                    >
+                      <SelectTrigger className="w-20 h-8 bg-muted/20 border-border dark:border-slate-700/80 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover text-popover-foreground border-border">
+                        {PAGE_SIZES.map((size) => (
+                          <SelectItem key={size} value={size}>
+                            {size}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <span className="text-xs text-muted-foreground">
+                      of {total.toLocaleString()} entries
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground"
+                      onClick={() => setPage(1)}
+                      disabled={page === 1}
+                    >
+                      First
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground"
+                      onClick={() => setPage(Math.max(1, page - 1))}
+                      disabled={page === 1}
+                    >
+                      <ChevronLeft className="h-3.5 w-3.5 mr-1" />
+                      Previous
+                    </Button>
+                    <span className="text-xs text-muted-foreground px-2">
+                      Page {Math.min(page, totalPages)} of {totalPages}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground"
+                      onClick={() => setPage(Math.min(totalPages, page + 1))}
+                      disabled={page >= totalPages}
+                    >
+                      Next
+                      <ChevronRight className="h-3.5 w-3.5 ml-1" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground"
+                      onClick={() => setPage(totalPages)}
+                      disabled={page >= totalPages}
+                    >
+                      Last
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
       )}
     </div>
   );

@@ -136,6 +136,10 @@ def list_maintenance_requests(
     page: int,
     page_size: int,
     request_type: str | None = None,
+    #: Several tabs at once, e.g. the Housekeeping report covers `scheduled`
+    #: and `planned` together. Narrows the same column as `request_type`, which
+    #: still takes precedence when both are supplied.
+    request_types: list[str] | None = None,
     facility_id: uuid.UUID | None = None,
     department_id: uuid.UUID | None = None,
     category_id: uuid.UUID | None = None,
@@ -157,6 +161,10 @@ def list_maintenance_requests(
         stmt = stmt.where(MaintenanceRequest.status == 1)
     if request_type:
         stmt = stmt.where(MaintenanceRequest.maintenance_request_type == request_type)
+    elif request_types:
+        stmt = stmt.where(
+            MaintenanceRequest.maintenance_request_type.in_(request_types)
+        )
     if facility_id:
         stmt = stmt.where(MaintenanceRequest.facility_id == facility_id)
     if department_id:

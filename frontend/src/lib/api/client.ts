@@ -193,9 +193,68 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   return (await response.json()) as T;
 }
 
+/**
+ * Fetch a file (a report export) rather than JSON.
+ *
+ * Goes through the same base URL, bearer token and error envelope as every
+ * other call, so a 401 still signs the user out and a 403 still reads as a
+ * missing module grant. The filename comes from Content-Disposition, because
+ * the backend owns the naming.
+ */
+async function download(
+  path: string,
+  params?: QueryParams,
+): Promise<{ blob: Blob; filename: string }> {
+  const headers: Record<string, string> = {};
+  const token = getToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}${buildQuery(params)}`, { headers });
+  } catch {
+    throw new ApiError(0, {
+      code: "network_error",
+      message: "The HMS API could not be reached.",
+    });
+  }
+
+  if (!response.ok) {
+    const error = await toApiError(response);
+    if (error.isUnauthorized) {
+      window.dispatchEvent(new CustomEvent(UNAUTHORIZED_EVENT));
+    }
+    throw error;
+  }
+
+  // `attachment; filename="occupancy-report-20260825.xlsx"`
+  const disposition = response.headers.get("Content-Disposition") ?? "";
+  const matched = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(disposition);
+  const fallback = path.split("/").pop() || "report";
+  return {
+    blob: await response.blob(),
+    filename: matched ? decodeURIComponent(matched[1]) : fallback,
+  };
+}
+
+/** Hand a fetched blob to the browser as a download. */
+export function saveBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  // Revoking immediately can cancel the download in some browsers.
+  window.setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
 export const apiClient = {
   get: <T>(path: string, params?: QueryParams, signal?: AbortSignal) =>
     request<T>(path, { params, signal }),
+  /** Binary GET for exports; see `download` above. */
+  download,
   post: <T>(path: string, body?: unknown, options?: Omit<RequestOptions, "method" | "body">) =>
     request<T>(path, { ...options, method: "POST", body }),
   /** Partial update: only the fields sent are written. */

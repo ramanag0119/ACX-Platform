@@ -10,6 +10,7 @@ import { useQueries, useQuery, type UseQueryOptions } from "@tanstack/react-quer
 
 import { ApiError, type QueryParams } from "./client";
 import * as api from "./endpoints";
+import * as reportApi from "./reports";
 import * as writeApi from "./writes";
 import { MAX_PAGE_SIZE, type Page } from "./types";
 
@@ -290,3 +291,29 @@ export const useJobOrder = (id: string | undefined) =>
   useApiQuery(["job-orders", id], () => writeApi.getJobOrder(id as string), {
     enabled: Boolean(id),
   });
+
+// --- Reports ---------------------------------------------------------------
+// The backend owns each report's columns and filters, so the screen renders
+// from the definition rather than restating it.
+
+/** The nine report definitions. Static for a session, so cached longer. */
+export const useReportDefinitions = () =>
+  useApiQuery(["reports", "definitions"], () => reportApi.listReports(), {
+    staleTime: 5 * 60_000,
+  });
+
+/**
+ * Run one report. `enabled` is how the Generate Report button works: nothing
+ * is fetched until the user asks for it, so opening a tab does not silently
+ * query nine reports.
+ */
+export const useReport = (
+  key: string | undefined,
+  params: QueryParams,
+  enabled: boolean,
+) =>
+  useApiQuery(
+    ["reports", key, params],
+    () => reportApi.runReport(key as string, params),
+    { enabled: Boolean(key) && enabled },
+  );

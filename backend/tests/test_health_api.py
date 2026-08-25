@@ -371,6 +371,11 @@ DELIVERED_PATHS = {
     f"{V1}/maintenance-requests",
     f"{V1}/maintenance-requests/{{request_id}}",
     f"{V1}/maintenance-requests/{{request_id}}/cancel",
+    # Reporting -- the nine reports, plus the Excel export of each. These are
+    # read projections over the modules above; they add no tables of their own.
+    f"{V1}/reports",
+    f"{V1}/reports/{{report_key}}",
+    f"{V1}/reports/{{report_key}}/export.xlsx",
 }
 
 

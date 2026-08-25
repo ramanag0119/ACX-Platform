@@ -11,7 +11,7 @@ from fastapi import APIRouter
 from app.api.v1.endpoints import (
     access, access_write, alerts, auth, devices, devices_write, energy,
     facilities, facility_write, health, job_orders, maintenance, notifications,
-    occupancy, services, services_write, stays, stays_write, telemetry,
+    occupancy, reports, services, services_write, stays, stays_write, telemetry,
 )
 
 api_router = APIRouter()
@@ -58,6 +58,9 @@ api_router.include_router(maintenance.maintenance_requests_write_router)
 # Job Order Management -- job_order + job_order_amenity / job_order_device.
 api_router.include_router(job_orders.job_orders_router)
 api_router.include_router(job_orders.job_orders_write_router)
+
+# Reporting -- read-only projections over the modules above, plus export.
+api_router.include_router(reports.reports_router)
 
 # Phase 3.0 -- stay lifecycle, allocation, occupants and room state writes.
 api_router.include_router(stays_write.stays_write_router)
