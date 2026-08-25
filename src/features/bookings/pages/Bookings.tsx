@@ -203,8 +203,30 @@ const mockBookings: BookingData[] = [
 
 type ViewMode = "list" | "add" | "edit";
 
+const EMPTY_FORM = {
+  firstName: "",
+  lastName: "",
+  email: "",
+  countryCode: "",
+  mobileNumber: "",
+  gender: "",
+  city: "",
+  nationality: "",
+  arrival: "",
+  depart: "",
+  guestRoom: "yes",
+  roomPreference: "",
+  subPackages: "",
+  noOfPersons: "",
+  numberOfRooms: "",
+  gst: "",
+  bookingReference: "",
+  comments: "",
+};
+
 const Bookings = () => {
   const [viewMode, setViewMode] = useState<ViewMode>("list");
+  const [bookings, setBookings] = useState<BookingData[]>(mockBookings);
   const [entriesPerPage, setEntriesPerPage] = useState("10");
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -218,28 +240,9 @@ const Bookings = () => {
   const [selectedBooking, setSelectedBooking] = useState<BookingData | null>(null);
 
   // Form state
-  const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    countryCode: "",
-    mobileNumber: "",
-    gender: "",
-    city: "",
-    nationality: "",
-    arrival: "",
-    depart: "",
-    guestRoom: "yes",
-    roomPreference: "",
-    subPackages: "",
-    noOfPersons: "",
-    numberOfRooms: "",
-    gst: "",
-    bookingReference: "",
-    comments: "",
-  });
+  const [formData, setFormData] = useState(EMPTY_FORM);
 
-  const filteredBookings = mockBookings.filter((booking) => {
+  const matchesSearch = (booking: BookingData) => {
     const query = searchQuery.toLowerCase();
     return (
       booking.name.toLowerCase().includes(query) ||
@@ -247,7 +250,9 @@ const Bookings = () => {
       booking.email.toLowerCase().includes(query) ||
       booking.roomType.toLowerCase().includes(query)
     );
-  });
+  };
+
+  const filteredBookings = bookings.filter(matchesSearch);
 
   const totalEntries = filteredBookings.length;
   const pageSize = parseInt(entriesPerPage) || 10;
@@ -260,30 +265,39 @@ const Bookings = () => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = () => {
-    console.log("Submitting form:", formData);
-    // Here you would typically send the data to the backend
+  const closeForm = () => {
     setViewMode("list");
-    setFormData({
-      firstName: "",
-      lastName: "",
-      email: "",
-      countryCode: "",
-      mobileNumber: "",
-      gender: "",
-      city: "",
-      nationality: "",
-      arrival: "",
-      depart: "",
-      guestRoom: "yes",
-      roomPreference: "",
-      subPackages: "",
-      noOfPersons: "",
-      numberOfRooms: "",
-      gst: "",
-      bookingReference: "",
-      comments: "",
-    });
+    setEditingBooking(null);
+    setFormData(EMPTY_FORM);
+  };
+
+  /**
+   * Folds the form values into a table row. Passing the row being edited keeps
+   * the fields the form does not collect (room number, approvals, booking date).
+   */
+  const formToBooking = (base?: BookingData): BookingData => ({
+    id: base?.id ?? String(Date.now()),
+    name: [formData.firstName, formData.lastName].filter(Boolean).join(" "),
+    mobileNumber: [formData.countryCode, formData.mobileNumber].filter(Boolean).join(" "),
+    email: formData.email,
+    occupants: Number(formData.noOfPersons) || base?.occupants || 1,
+    roomNo: base?.roomNo ?? "",
+    roomType: formData.roomPreference || base?.roomType || "",
+    noOfRooms: Number(formData.numberOfRooms) || base?.noOfRooms || 1,
+    checkIn: formData.arrival || base?.checkIn || "",
+    extendCheckOut: base?.extendCheckOut ?? false,
+    bookingDate: base?.bookingDate ?? new Date().toLocaleDateString("en-GB").replace(/\//g, "-"),
+    documentsApproval: base?.documentsApproval ?? false,
+  });
+
+  const handleSubmit = () => {
+    if (editingBooking) {
+      const updated = formToBooking(editingBooking);
+      setBookings((prev) => prev.map((booking) => (booking.id === editingBooking.id ? updated : booking)));
+    } else {
+      setBookings((prev) => [formToBooking(), ...prev]);
+    }
+    closeForm();
   };
 
   const handleEdit = (booking: BookingData) => {
@@ -313,8 +327,12 @@ const Bookings = () => {
   };
 
   const handleDelete = (bookingId: string) => {
-    console.log("Deleting booking:", bookingId);
-    // Here you would typically send delete request to backend
+    const remaining = bookings.filter((booking) => booking.id !== bookingId);
+    setBookings(remaining);
+    // Removing the last row on a page would otherwise leave the table blank.
+    const lastPage = Math.max(1, Math.ceil(remaining.filter(matchesSearch).length / pageSize));
+    setCurrentPage((page) => Math.min(page, lastPage));
+    if (editingBooking?.id === bookingId) closeForm();
   };
 
 
@@ -348,7 +366,7 @@ const Bookings = () => {
               variant="ghost"
               size="icon"
               className="hover:bg-muted"
-              onClick={() => setViewMode("list")}
+              onClick={closeForm}
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
@@ -359,7 +377,7 @@ const Bookings = () => {
           <Button
             variant="ghost"
             className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
-            onClick={() => setViewMode("list")}
+            onClick={closeForm}
           >
             Cancel
           </Button>
@@ -700,7 +718,7 @@ const Bookings = () => {
         <h1 className="text-xl font-semibold text-foreground tracking-tight">Booking Management</h1>
         <div className="flex items-center gap-3">
           <Button
-            onClick={() => setViewMode("add")}
+            onClick={() => { setEditingBooking(null); setFormData(EMPTY_FORM); setViewMode("add"); }}
             className="bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold px-5 h-10 rounded-xl shadow-md hover:shadow-lg transition-all"
           >
             <Plus className="h-4 w-4 mr-2 stroke-[2.5]" />
