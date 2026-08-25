@@ -75,6 +75,36 @@ export default {
           ring: "hsl(var(--sidebar-ring))",
           muted: "hsl(var(--sidebar-muted))",
         },
+        /**
+         * Energy View / Power View meter cards. These deliberately keep a fixed
+         * light palette in both themes so the card grid matches the metering
+         * hardware dashboards it mirrors; `ring` tracks the primary action
+         * colour used by Submit buttons.
+         */
+        meter: {
+          card: "#ffffff",
+          "card-hover": "#f5f5f7",
+          divider: "#dcdce1",
+          value: "#111114",
+          accent: "#f0616f",
+          alert: "#d32f2f",
+          footer: "#ededff",
+          "footer-hover": "#e1e2fb",
+          "footer-border": "#c9c7ff",
+          "footer-text": "#4a4fe3",
+          ring: "#5865f2",
+          strip: "#7a7a7a",
+          online: "#4ade80",
+          offline: "#ffb74d",
+          limit: "#ffc400",
+          load: "#ff5252",
+          panel: "#4b4b52",
+          "panel-head": "#3c3c43",
+          "panel-row": "#45454d",
+          "panel-row-hover": "#50505a",
+          "panel-border": "#5f5f68",
+          "panel-muted": "#6b6b73",
+        },
       },
       borderRadius: {
         '2xl': '1rem',

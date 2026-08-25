@@ -1,4 +1,4 @@
-import { type EnergyNode, type RoomOccupancy, nodeLabel } from "../data/meters";
+import { type MeterNode, type RoomOccupancy, nodeLabel } from "../data/meters";
 
 /**
  * Power View room board: one tile per room in the current scope, with a
@@ -8,6 +8,9 @@ import { type EnergyNode, type RoomOccupancy, nodeLabel } from "../data/meters";
 
 const STATUS_ORDER: RoomOccupancy[] = ["available", "occupied", "maintenance", "non-smart"];
 
+/** A room with no reported housekeeping state is treated as non-smart. */
+const FALLBACK_STATUS: RoomOccupancy = "non-smart";
+
 const STATUS_LABEL: Record<RoomOccupancy, string> = {
   available: "Available",
   occupied: "Occupied",
@@ -16,17 +19,18 @@ const STATUS_LABEL: Record<RoomOccupancy, string> = {
 };
 
 interface RoomStatusPanelProps {
-  rooms: EnergyNode[];
-  onSelectRoom: (room: EnergyNode) => void;
+  rooms: MeterNode[];
+  onSelectRoom: (room: MeterNode) => void;
 }
 
 export const RoomStatusPanel = ({ rooms, onSelectRoom }: RoomStatusPanelProps) => {
-  const counts = STATUS_ORDER.reduce<Record<RoomOccupancy, number>>(
-    (totals, status) => ({
-      ...totals,
-      [status]: rooms.filter((room) => room.occupancy === status).length,
-    }),
-    {} as Record<RoomOccupancy, number>,
+  const counts = rooms.reduce<Record<RoomOccupancy, number>>(
+    (totals, room) => {
+      const status = room.occupancy ?? FALLBACK_STATUS;
+      totals[status] += 1;
+      return totals;
+    },
+    { available: 0, occupied: 0, maintenance: 0, "non-smart": 0 },
   );
 
   return (
@@ -52,24 +56,24 @@ export const RoomStatusPanel = ({ rooms, onSelectRoom }: RoomStatusPanelProps) =
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
           {rooms.map((room) => {
-            const status = room.occupancy ?? "non-smart";
+            const status = room.occupancy ?? FALLBACK_STATUS;
             return (
               <button
                 key={room.id}
                 type="button"
                 onClick={() => onSelectRoom(room)}
                 title={`${nodeLabel(room)} - ${STATUS_LABEL[status]}`}
-                className="flex items-center justify-between gap-2 rounded-[2px] border border-[#C9C7FF] bg-[#EDEDFF] px-3 py-2.5 text-left text-[#4A4FE3] transition-colors hover:bg-[#E1E2FB] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#5865F2] focus-visible:ring-offset-1"
+                className="flex items-center justify-between gap-2 rounded-[2px] border border-meter-footer-border bg-meter-footer px-3 py-2.5 text-left text-meter-footer-text transition-colors hover:bg-meter-footer-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-meter-ring focus-visible:ring-offset-1"
               >
                 <span className="min-w-0">
                   <span className="block truncate text-[13px] font-bold leading-none">
                     {room.code ?? room.name}
                   </span>
-                  <span className="mt-1 block truncate text-[9px] font-medium leading-none text-[#4A4FE3]/70">
+                  <span className="mt-1 block truncate text-[9px] font-medium leading-none text-meter-footer-text/70">
                     {room.name}
                   </span>
                 </span>
-                <span className="shrink-0 text-[9px] font-semibold leading-none text-[#4A4FE3]/70">
+                <span className="shrink-0 text-[9px] font-semibold leading-none text-meter-footer-text/70">
                   {STATUS_LABEL[status]}
                 </span>
               </button>

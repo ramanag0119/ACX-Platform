@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { MeterNodeCard } from "./MeterNodeCard";
 import { RoomStatusPanel } from "./RoomStatusPanel";
 import { AppliancesEnergyModal } from "./AppliancesEnergyModal";
-import { type EnergyNode, energyTree, findNode, flattenRooms } from "../data/meters";
+import { type MeterNode, meterTree, findNode, flattenRooms } from "../data/meters";
 
 const SectionGrid = ({
   title,
@@ -28,8 +28,6 @@ interface MeterHierarchyViewProps {
   title: string;
   /** Drives the bold figure on each card and the total in the title strip. */
   metric: "energy" | "power";
-  /** Renders the room status board underneath the room cards. */
-  showRoomStatus?: boolean;
 }
 
 /**
@@ -37,25 +35,25 @@ interface MeterHierarchyViewProps {
  * Clicking a card's top section opens the next level down; clicking its footer
  * opens the appliance level meter readings for that node.
  */
-export const MeterHierarchyView = ({ title, metric, showRoomStatus = false }: MeterHierarchyViewProps) => {
+export const MeterHierarchyView = ({ title, metric }: MeterHierarchyViewProps) => {
   const [buildingId, setBuildingId] = useState<string | null>(null);
   const [floorId, setFloorId] = useState<string | null>(null);
-  const [applianceNode, setApplianceNode] = useState<EnergyNode | null>(null);
+  const [applianceNode, setApplianceNode] = useState<MeterNode | null>(null);
 
   const isPower = metric === "power";
-  const building = buildingId ? findNode(energyTree, buildingId) : undefined;
-  const floor = floorId ? findNode(energyTree, floorId) : undefined;
+  const building = buildingId ? findNode(meterTree, buildingId) : undefined;
+  const floor = floorId ? findNode(meterTree, floorId) : undefined;
 
   // Rooms narrow down as the user drills in: whole site -> building -> floor.
   const rooms = useMemo(() => {
     if (floor) return floor.children;
     if (building) return flattenRooms(building.children);
-    return flattenRooms(energyTree);
+    return flattenRooms(meterTree);
   }, [building, floor]);
 
   const summary = useMemo(() => {
     const scope = floor ?? building;
-    const scopedRooms = scope ? flattenRooms([scope]) : flattenRooms(energyTree);
+    const scopedRooms = scope ? flattenRooms([scope]) : flattenRooms(meterTree);
     const total = scopedRooms.reduce((sum, room) => sum + (isPower ? room.liveKw : room.energyKwh), 0);
     return {
       total: Math.round(total * 100) / 100,
@@ -65,7 +63,7 @@ export const MeterHierarchyView = ({ title, metric, showRoomStatus = false }: Me
     };
   }, [building, floor, isPower]);
 
-  const handleDrillDown = (node: EnergyNode) => {
+  const handleDrillDown = (node: MeterNode) => {
     if (node.kind === "building") {
       // Clicking the open building again collapses it.
       setBuildingId(node.id === buildingId ? null : node.id);
@@ -88,16 +86,18 @@ export const MeterHierarchyView = ({ title, metric, showRoomStatus = false }: Me
   };
 
   return (
+    // The negative margin cancels AppLayout's p-5 so the title strip runs
+    // full width; 76px is that layout's pt-[48px] + pb-[28px].
     <div className="-m-5 min-h-[calc(100vh-76px)] bg-background">
       {/* Grey title strip with the live status legend */}
-      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 bg-[#7a7a7a] px-5 py-2">
+      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 bg-meter-strip px-5 py-2">
         <h1 className="text-[13px] font-bold text-white">{title}</h1>
         <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-semibold">
-          <span className="text-[#4ade80]">Online ({summary.online})</span>
+          <span className="text-meter-online">Online ({summary.online})</span>
           <span className="text-white/50">|</span>
-          <span className="text-[#ffb74d]">Offline ({summary.offline})</span>
+          <span className="text-meter-offline">Offline ({summary.offline})</span>
           <span className="text-white/50">|</span>
-          <span className="text-[#ff5252]">Alerts Active ({summary.alerts})</span>
+          <span className="text-meter-load">Alerts Active ({summary.alerts})</span>
           <span className="text-white/50">|</span>
           <span className="text-white">
             {isPower ? `Power In ${summary.total} KW` : `Energy In ${summary.total} kWh`}
@@ -140,14 +140,14 @@ export const MeterHierarchyView = ({ title, metric, showRoomStatus = false }: Me
             </>
           )}
           <span className="ml-auto text-[10px] font-medium text-muted-foreground">
-            Card figures: <span className="text-[#f0616f]">live kW</span> |{" "}
+            Card figures: <span className="text-meter-accent">live kW</span> |{" "}
             {isPower ? "peak demand today (kW)" : "energy from midnight (kWh)"}
           </span>
         </nav>
 
         {/* Level 1: buildings */}
-        <SectionGrid title="Building" count={energyTree.length}>
-          {energyTree.map((node) => (
+        <SectionGrid title="Building" count={meterTree.length}>
+          {meterTree.map((node) => (
             <MeterNodeCard
               key={node.id}
               node={node}
@@ -205,7 +205,7 @@ export const MeterHierarchyView = ({ title, metric, showRoomStatus = false }: Me
         </SectionGrid>
 
         {/* Room status board for the current scope */}
-        {showRoomStatus && <RoomStatusPanel rooms={rooms} onSelectRoom={setApplianceNode} />}
+        <RoomStatusPanel rooms={rooms} onSelectRoom={setApplianceNode} />
       </div>
 
       <AppliancesEnergyModal node={applianceNode} onClose={() => setApplianceNode(null)} />

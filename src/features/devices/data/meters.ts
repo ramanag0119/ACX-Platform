@@ -7,7 +7,7 @@
  * numbers on a Building card always reconcile with its floors and rooms.
  */
 
-export type EnergyNodeKind = "building" | "floor" | "room";
+export type MeterNodeKind = "building" | "floor" | "room";
 
 /** Housekeeping state of a room, shown as a colour tile in Power View. */
 export type RoomOccupancy = "available" | "occupied" | "maintenance" | "non-smart";
@@ -28,9 +28,9 @@ export interface ApplianceReading {
   loadExceeded: boolean;
 }
 
-export interface EnergyNode {
+export interface MeterNode {
   id: string;
-  kind: EnergyNodeKind;
+  kind: MeterNodeKind;
   name: string;
   /** Room/unit number rendered after the name, e.g. "Restaurant - 102". */
   code?: string;
@@ -49,7 +49,7 @@ export interface EnergyNode {
   /** Rooms only - drives the Power View room status tiles. */
   occupancy?: RoomOccupancy;
   appliances: ApplianceReading[];
-  children: EnergyNode[];
+  children: MeterNode[];
 }
 
 /* ------------------------------------------------------------------ */
@@ -233,11 +233,11 @@ const slug = (value: string) =>
     .replace(/(^-|-$)/g, "");
 
 type AggregateInput = Omit<
-  EnergyNode,
+  MeterNode,
   "liveKw" | "energyKwh" | "peakKw" | "deviceCount" | "alerts" | "status"
 >;
 
-const aggregate = (node: AggregateInput): EnergyNode => {
+const aggregate = (node: AggregateInput): MeterNode => {
   const { children } = node;
   return {
     ...node,
@@ -259,14 +259,14 @@ const aggregate = (node: AggregateInput): EnergyNode => {
   };
 };
 
-const buildTree = (): EnergyNode[] =>
+const buildTree = (): MeterNode[] =>
   BUILDING_SEEDS.map((building) => {
     const buildingId = slug(building.name);
 
     const floors = building.floors.map((floor) => {
       const floorId = `${buildingId}--${slug(floor.name)}`;
 
-      const rooms: EnergyNode[] = floor.rooms.map((room) => {
+      const rooms: MeterNode[] = floor.rooms.map((room) => {
         const roomId = `${floorId}--${slug(`${room.name}-${room.code}`)}`;
         const appliances = buildAppliances(roomId, Boolean(room.offline));
         const liveKw = round(
@@ -327,16 +327,16 @@ const buildTree = (): EnergyNode[] =>
     });
   });
 
-export const energyTree: EnergyNode[] = buildTree();
+export const meterTree: MeterNode[] = buildTree();
 
 /* ------------------------------------------------------------------ */
 /* Selectors                                                          */
 /* ------------------------------------------------------------------ */
 
-export const flattenRooms = (nodes: EnergyNode[]): EnergyNode[] =>
+export const flattenRooms = (nodes: MeterNode[]): MeterNode[] =>
   nodes.flatMap((node) => (node.kind === "room" ? [node] : flattenRooms(node.children)));
 
-export const findNode = (nodes: EnergyNode[], id: string): EnergyNode | undefined => {
+export const findNode = (nodes: MeterNode[], id: string): MeterNode | undefined => {
   for (const node of nodes) {
     if (node.id === id) return node;
     const match = findNode(node.children, id);
@@ -345,9 +345,9 @@ export const findNode = (nodes: EnergyNode[], id: string): EnergyNode | undefine
   return undefined;
 };
 
-export const nodeLabel = (node: EnergyNode) => (node.code ? `${node.name} - ${node.code}` : node.name);
+export const nodeLabel = (node: MeterNode) => (node.code ? `${node.name} - ${node.code}` : node.name);
 
-export const KIND_LABEL: Record<EnergyNodeKind, string> = {
+export const KIND_LABEL: Record<MeterNodeKind, string> = {
   building: "Building",
   floor: "Floor",
   room: "Room",
