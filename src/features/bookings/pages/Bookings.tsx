@@ -53,6 +53,8 @@ type BookingData = {
   roomType: string;
   noOfRooms: number;
   checkIn: string;
+  /** Scheduled checkout, shown in the check in and extend dialogs. */
+  checkOut: string;
   extendCheckOut: boolean;
   bookingDate: string;
   documentsApproval: boolean;
@@ -69,6 +71,7 @@ const mockBookings: BookingData[] = [
     roomType: "Golden Package",
     noOfRooms: 1,
     checkIn: "27-12-2025 16:22",
+    checkOut: "29-12-2025 13:00",
     extendCheckOut: false,
     bookingDate: "27-12-2025",
     documentsApproval: true,
@@ -83,6 +86,7 @@ const mockBookings: BookingData[] = [
     roomType: "Golden Package",
     noOfRooms: 1,
     checkIn: "",
+    checkOut: "18-10-2025 13:00",
     extendCheckOut: false,
     bookingDate: "16-10-2025",
     documentsApproval: true,
@@ -97,6 +101,7 @@ const mockBookings: BookingData[] = [
     roomType: "Delux Package",
     noOfRooms: 1,
     checkIn: "",
+    checkOut: "21-11-2024 13:00",
     extendCheckOut: false,
     bookingDate: "19-11-2024",
     documentsApproval: true,
@@ -111,6 +116,7 @@ const mockBookings: BookingData[] = [
     roomType: "Golden Package",
     noOfRooms: 1,
     checkIn: "",
+    checkOut: "14-11-2024 13:00",
     extendCheckOut: false,
     bookingDate: "12-11-2024",
     documentsApproval: true,
@@ -125,6 +131,7 @@ const mockBookings: BookingData[] = [
     roomType: "Delux Package",
     noOfRooms: 1,
     checkIn: "",
+    checkOut: "07-11-2024 13:00",
     extendCheckOut: false,
     bookingDate: "05-11-2024",
     documentsApproval: true,
@@ -139,6 +146,7 @@ const mockBookings: BookingData[] = [
     roomType: "Golden Package",
     noOfRooms: 1,
     checkIn: "",
+    checkOut: "24-10-2024 13:00",
     extendCheckOut: false,
     bookingDate: "22-10-2024",
     documentsApproval: true,
@@ -153,6 +161,7 @@ const mockBookings: BookingData[] = [
     roomType: "Delux Package",
     noOfRooms: 1,
     checkIn: "",
+    checkOut: "03-07-2023 13:00",
     extendCheckOut: false,
     bookingDate: "01-07-2023",
     documentsApproval: true,
@@ -167,6 +176,7 @@ const mockBookings: BookingData[] = [
     roomType: "Delux Package",
     noOfRooms: 1,
     checkIn: "",
+    checkOut: "07-05-2023 13:00",
     extendCheckOut: false,
     bookingDate: "05-05-2023",
     documentsApproval: true,
@@ -181,6 +191,7 @@ const mockBookings: BookingData[] = [
     roomType: "Delux Package",
     noOfRooms: 1,
     checkIn: "",
+    checkOut: "07-05-2023 13:00",
     extendCheckOut: false,
     bookingDate: "05-05-2023",
     documentsApproval: true,
@@ -195,6 +206,7 @@ const mockBookings: BookingData[] = [
     roomType: "Delux Package",
     noOfRooms: 1,
     checkIn: "",
+    checkOut: "16-03-2023 13:00",
     extendCheckOut: false,
     bookingDate: "14-03-2023",
     documentsApproval: true,
@@ -238,6 +250,7 @@ const Bookings = () => {
   const [checkInModalOpen, setCheckInModalOpen] = useState(false);
   const [extendModalOpen, setExtendModalOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<BookingData | null>(null);
+  const [extendDate, setExtendDate] = useState("");
 
   // Form state
   const [formData, setFormData] = useState(EMPTY_FORM);
@@ -285,6 +298,7 @@ const Bookings = () => {
     roomType: formData.roomPreference || base?.roomType || "",
     noOfRooms: Number(formData.numberOfRooms) || base?.noOfRooms || 1,
     checkIn: formData.arrival || base?.checkIn || "",
+    checkOut: formData.depart || base?.checkOut || "",
     extendCheckOut: base?.extendCheckOut ?? false,
     bookingDate: base?.bookingDate ?? new Date().toLocaleDateString("en-GB").replace(/\//g, "-"),
     documentsApproval: base?.documentsApproval ?? false,
@@ -345,6 +359,33 @@ const Bookings = () => {
     }
   };
 
+  /** dd-mm-yyyy hh:mm, matching the format the mock rows already use. */
+  const nowStamp = () => {
+    const now = new Date();
+    const date = now.toLocaleDateString("en-GB").replace(/\//g, "-");
+    return `${date} ${now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`;
+  };
+
+  const updateBooking = (id: string, changes: Partial<BookingData>) => {
+    setBookings((prev) => prev.map((booking) => (booking.id === id ? { ...booking, ...changes } : booking)));
+  };
+
+  const handleCheckInConfirm = () => {
+    if (selectedBooking) updateBooking(selectedBooking.id, { checkIn: selectedBooking.checkIn || nowStamp() });
+    setCheckInModalOpen(false);
+  };
+
+  const handleExtendConfirm = () => {
+    if (selectedBooking) {
+      updateBooking(selectedBooking.id, {
+        checkOut: extendDate.trim() || selectedBooking.checkOut,
+        extendCheckOut: true,
+      });
+    }
+    setExtendModalOpen(false);
+    setExtendDate("");
+  };
+
   const handleCheckInClick = (booking: BookingData) => {
     setSelectedBooking(booking);
     setCheckInModalOpen(true);
@@ -352,6 +393,7 @@ const Bookings = () => {
 
   const handleExtendClick = (booking: BookingData) => {
     setSelectedBooking(booking);
+    setExtendDate("");
     setExtendModalOpen(true);
   };
 
@@ -719,14 +761,14 @@ const Bookings = () => {
         <div className="flex items-center gap-3">
           <Button
             onClick={() => { setEditingBooking(null); setFormData(EMPTY_FORM); setViewMode("add"); }}
-            className="bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold px-5 h-10 rounded-xl shadow-md hover:shadow-lg transition-all"
+            className="bg-brand hover:bg-brand-hover text-white font-semibold px-5 h-10 rounded-xl shadow-md hover:shadow-lg transition-all"
           >
             <Plus className="h-4 w-4 mr-2 stroke-[2.5]" />
             Add Bookings
           </Button>
           <Button
             onClick={() => setBulkUploadOpen(true)}
-            className="bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold px-5 h-10 rounded-xl shadow-md hover:shadow-lg transition-all"
+            className="bg-brand hover:bg-brand-hover text-white font-semibold px-5 h-10 rounded-xl shadow-md hover:shadow-lg transition-all"
           >
             <Upload className="h-4 w-4 mr-2 stroke-[2.5]" />
             Bulk Upload
@@ -895,7 +937,7 @@ const Bookings = () => {
                   variant={currentPage === page ? "default" : "ghost"}
                   size="sm"
                   className={`h-8 w-8 p-0 text-xs rounded-xl ${currentPage === page
-                    ? "bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold shadow-sm"
+                    ? "bg-brand hover:bg-brand-hover text-white font-semibold shadow-sm"
                     : "text-muted-foreground hover:text-foreground"
                     }`}
                   onClick={() => setCurrentPage(page)}
@@ -936,7 +978,7 @@ const Bookings = () => {
           <div className="space-y-6 py-4">
             <div className="flex items-center gap-4">
               <Button
-                className="bg-[#5865F2] hover:bg-[#4752c4] text-white font-medium px-5 h-10 rounded-xl shadow-sm"
+                className="bg-brand hover:bg-brand-hover text-white font-medium px-5 h-10 rounded-xl shadow-sm"
               >
                 <Download className="h-4 w-4 mr-2" />
                 Sample Template
@@ -984,7 +1026,7 @@ const Bookings = () => {
               <Button
                 onClick={handleBulkUpload}
                 disabled={!selectedFile}
-                className="h-10 px-6 bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold rounded-lg"
+                className="h-10 px-6 bg-brand hover:bg-brand-hover text-white font-semibold rounded-lg"
               >
                 Submit
               </Button>
@@ -1014,12 +1056,11 @@ const Bookings = () => {
               </div>
               <div className="space-y-1">
                 <span className="text-muted-foreground text-sm block">Checkin Date :</span>
-                {/* Using bookingDate or a default future date for demo since checkIn might be empty */}
-                <span className="font-medium text-lg">{selectedBooking?.checkIn || "16-10-2025 11:00"}</span>
+                <span className="font-medium text-lg">{selectedBooking?.checkIn || "-"}</span>
               </div>
               <div className="space-y-1">
                 <span className="text-muted-foreground text-sm block">Checkout Date :</span>
-                <span className="font-medium text-lg">31-10-2025 13:00</span>
+                <span className="font-medium text-lg">{selectedBooking?.checkOut || "-"}</span>
               </div>
               <div className="space-y-1">
                 <span className="text-muted-foreground text-sm block">No Of Occupants :</span>
@@ -1037,7 +1078,7 @@ const Bookings = () => {
             </Button>
             <Button
               className="bg-cyan-600 hover:bg-cyan-700 text-white px-6"
-              onClick={() => setCheckInModalOpen(false)}
+              onClick={handleCheckInConfirm}
             >
               Check In
             </Button>
@@ -1055,7 +1096,7 @@ const Bookings = () => {
             <div className="grid grid-cols-[200px_1fr] items-center gap-4">
               <Label className="text-foreground">Check out date & time <span className="text-red-500">*</span></Label>
               <Input
-                value="31-10-2025 13:00"
+                value={selectedBooking?.checkOut ?? ""}
                 readOnly
                 className="bg-transparent border-none text-foreground focus-visible:ring-0 px-0 shadow-none font-medium"
               />
@@ -1067,6 +1108,8 @@ const Bookings = () => {
               <Label className="text-foreground">Extend check out Date <span className="text-red-500">*</span></Label>
               <Input
                 placeholder="31-10-2025"
+                value={extendDate}
+                onChange={(e) => setExtendDate(e.target.value)}
                 className="bg-white border-gray-200 text-foreground placeholder:text-muted-foreground"
               />
             </div>
@@ -1081,12 +1124,12 @@ const Bookings = () => {
                 </div>
                 <span className="text-foreground font-medium">:</span>
                 <div className="flex flex-col items-center">
-                  <Button variant="ghost" size="sm" className="h-6 text-[#5865F2] hover:bg-[#5865F2]/10"><ChevronLeft className="h-4 w-4 rotate-90" /></Button>
+                  <Button variant="ghost" size="sm" className="h-6 text-brand hover:bg-brand/10"><ChevronLeft className="h-4 w-4 rotate-90" /></Button>
                   <span className="text-muted-foreground text-sm">MM</span>
-                  <Button variant="ghost" size="sm" className="h-6 text-[#5865F2] hover:bg-[#5865F2]/10"><ChevronRight className="h-4 w-4 rotate-90" /></Button>
+                  <Button variant="ghost" size="sm" className="h-6 text-brand hover:bg-brand/10"><ChevronRight className="h-4 w-4 rotate-90" /></Button>
                 </div>
                 <div className="flex items-center ml-2">
-                  <button className="px-3.5 py-1 bg-[#5865F2] hover:bg-[#4752c4] text-white rounded-xl text-xs font-semibold shadow-sm transition-all">AM</button>
+                  <button className="px-3.5 py-1 bg-brand hover:bg-brand-hover text-white rounded-xl text-xs font-semibold shadow-sm transition-all">AM</button>
                 </div>
               </div>
             </div>
@@ -1095,14 +1138,14 @@ const Bookings = () => {
           <div className="flex justify-center gap-4 pt-6 border-t border-border/30">
             <Button
               variant="outline"
-              onClick={() => { }}
+              onClick={() => setExtendDate("")}
               className="h-10 px-8 min-w-[110px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all"
             >
               Reset
             </Button>
             <Button
-              className="h-10 px-8 min-w-[110px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
-              onClick={() => setExtendModalOpen(false)}
+              className="h-10 px-8 min-w-[110px] rounded-2xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
+              onClick={handleExtendConfirm}
             >
               Check & Extend
             </Button>
