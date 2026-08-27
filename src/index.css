@@ -1544,42 +1544,44 @@ html:not(.dark) .bg-muted\/30.p-1.rounded-xl.w-fit button[data-state="active"] {
 }
 
 /* Global Typography overrides: black in light mode, white in dark mode (except table headings, badges, and button contents) */
-html:not(.dark) main h1,
-html:not(.dark) main h2,
-html:not(.dark) main h3,
-html:not(.dark) main h4,
-html:not(.dark) main h5,
-html:not(.dark) main h6,
-html:not(.dark) main p,
-html:not(.dark) main label,
-html:not(.dark) main li,
-html:not(.dark) main td,
-html:not(.dark) main td span:not(.badge):not(.status-badge),
-html:not(.dark) main td p,
-html:not(.dark) main td div,
-html:not(.dark) main span:not(th *):not(.badge):not(.status-badge):not(.lucide):not(button *):not(.btn *),
-html:not(.dark) main div[class*="text-muted-foreground"],
-html:not(.dark) main div[class*="text-gray-"] {
+/* `.meter-view` opts a subtree out: the Energy/Power View cards paint a fixed
+   palette on light surfaces, which this sweep would otherwise repaint. */
+html:not(.dark) main h1:not(.meter-view *),
+html:not(.dark) main h2:not(.meter-view *),
+html:not(.dark) main h3:not(.meter-view *),
+html:not(.dark) main h4:not(.meter-view *),
+html:not(.dark) main h5:not(.meter-view *),
+html:not(.dark) main h6:not(.meter-view *),
+html:not(.dark) main p:not(.meter-view *),
+html:not(.dark) main label:not(.meter-view *),
+html:not(.dark) main li:not(.meter-view *),
+html:not(.dark) main td:not(.meter-view *),
+html:not(.dark) main td span:not(.badge):not(.status-badge):not(.meter-view *),
+html:not(.dark) main td p:not(.meter-view *),
+html:not(.dark) main td div:not(.meter-view *),
+html:not(.dark) main span:not(th *):not(.badge):not(.status-badge):not(.lucide):not(button *):not(.btn *):not(.meter-view *),
+html:not(.dark) main div[class*="text-muted-foreground"]:not(.meter-view *),
+html:not(.dark) main div[class*="text-gray-"]:not(.meter-view *) {
   color: #000000 !important;
   opacity: 1 !important;
 }
 
-html.dark main h1,
-html.dark main h2,
-html.dark main h3,
-html.dark main h4,
-html.dark main h5,
-html.dark main h6,
-html.dark main p,
-html.dark main label,
-html.dark main li,
-html.dark main td,
-html.dark main td span:not(.badge):not(.status-badge),
-html.dark main td p,
-html.dark main td div,
-html.dark main span:not(th *):not(.badge):not(.status-badge):not(.lucide):not(button *):not(.btn *),
-html.dark main div[class*="text-muted-foreground"],
-html.dark main div[class*="text-gray-"] {
+html.dark main h1:not(.meter-view *),
+html.dark main h2:not(.meter-view *),
+html.dark main h3:not(.meter-view *),
+html.dark main h4:not(.meter-view *),
+html.dark main h5:not(.meter-view *),
+html.dark main h6:not(.meter-view *),
+html.dark main p:not(.meter-view *),
+html.dark main label:not(.meter-view *),
+html.dark main li:not(.meter-view *),
+html.dark main td:not(.meter-view *),
+html.dark main td span:not(.badge):not(.status-badge):not(.meter-view *),
+html.dark main td p:not(.meter-view *),
+html.dark main td div:not(.meter-view *),
+html.dark main span:not(th *):not(.badge):not(.status-badge):not(.lucide):not(button *):not(.btn *):not(.meter-view *),
+html.dark main div[class*="text-muted-foreground"]:not(.meter-view *),
+html.dark main div[class*="text-gray-"]:not(.meter-view *) {
   color: #ffffff !important;
   opacity: 1 !important;
 }
