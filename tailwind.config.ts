@@ -76,6 +76,20 @@ export default {
           muted: "hsl(var(--sidebar-muted))",
         },
         /**
+         * Product action colours. These are fixed hex values rather than
+         * CSS variables because they must stay identical in both themes and
+         * still support opacity modifiers (bg-brand/10). `brand` matches the
+         * Submit button colour enforced in index.css.
+         */
+        brand: {
+          DEFAULT: "#5865f2",
+          hover: "#4752c4",
+          teal: "#3eb1c8",
+          "teal-hover": "#3296a9",
+          danger: "#dd3333",
+          "danger-hover": "#bd2d2d",
+        },
+        /**
          * Energy View / Power View meter cards. These deliberately keep a fixed
          * light palette in both themes so the card grid matches the metering
          * hardware dashboards it mirrors; `ring` tracks the primary action

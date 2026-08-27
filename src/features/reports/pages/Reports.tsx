@@ -92,7 +92,7 @@ const EnergyReportContent = () => {
                   key={tab.id}
                   onClick={() => setSubTab(tab.id)}
                   className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${subTab === tab.id
-                    ? "bg-[#5865F2] text-white shadow-sm"
+                    ? "bg-brand text-white shadow-sm"
                     : "text-muted-foreground hover:text-foreground hover:bg-white/50"
                     }`}
                 >
@@ -117,7 +117,7 @@ const EnergyReportContent = () => {
                   value={dateFrom}
                   onChange={(e) => setDateFrom(e.target.value)}
                   placeholder="dd / mm / yyyy"
-                  className="h-11 bg-white border-gray-200 rounded-lg focus:border-[#5865F2] focus:ring-[#5865F2]"
+                  className="h-11 bg-white border-gray-200 rounded-lg focus:border-brand focus:ring-brand"
                 />
               </div>
 
@@ -130,7 +130,7 @@ const EnergyReportContent = () => {
                   value={dateTo}
                   onChange={(e) => setDateTo(e.target.value)}
                   placeholder="dd / mm / yyyy"
-                  className="h-11 bg-white border-gray-200 rounded-lg focus:border-[#5865F2] focus:ring-[#5865F2]"
+                  className="h-11 bg-white border-gray-200 rounded-lg focus:border-brand focus:ring-brand"
                 />
               </div>
             </div>
@@ -141,7 +141,7 @@ const EnergyReportContent = () => {
                 Room No
               </Label>
               <Select value={roomNo} onValueChange={setRoomNo}>
-                <SelectTrigger className="flex-1 h-11 bg-white border-gray-200 rounded-lg focus:border-[#5865F2] focus:ring-[#5865F2]">
+                <SelectTrigger className="flex-1 h-11 bg-white border-gray-200 rounded-lg focus:border-brand focus:ring-brand">
                   <SelectValue placeholder="Select Room No" />
                 </SelectTrigger>
                 <SelectContent className="bg-white">
@@ -161,7 +161,7 @@ const EnergyReportContent = () => {
                   MKDS
                 </Label>
                 <Select value={mkds} onValueChange={setMkds}>
-                  <SelectTrigger className="flex-1 h-11 bg-white border-gray-200 rounded-lg focus:border-[#5865F2] focus:ring-[#5865F2]">
+                  <SelectTrigger className="flex-1 h-11 bg-white border-gray-200 rounded-lg focus:border-brand focus:ring-brand">
                     <SelectValue placeholder="Select MKDS" />
                   </SelectTrigger>
                   <SelectContent className="bg-white">
@@ -176,7 +176,7 @@ const EnergyReportContent = () => {
 
             {/* Submit Button */}
             <div className="flex justify-center pt-4">
-              <Button className="h-11 px-8 min-w-[160px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">
+              <Button className="h-11 px-8 min-w-[160px] rounded-2xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">
                 <Download className="h-4 w-4 mr-2" />
                 Generate Report
               </Button>
@@ -199,8 +199,8 @@ const StandardReportContent = ({ reportName, singleDateOnly = false }: { reportN
       <CardContent className="p-8">
         {/* Report Title */}
         <div className="flex items-center gap-3 mb-8">
-          <div className="p-2 bg-[#5865F2]/10 rounded-lg">
-            <FileText className="h-5 w-5 text-[#5865F2]" />
+          <div className="p-2 bg-brand/10 rounded-lg">
+            <FileText className="h-5 w-5 text-brand" />
           </div>
           <h2 className="text-lg font-semibold text-foreground">{reportName}</h2>
         </div>
@@ -218,7 +218,7 @@ const StandardReportContent = ({ reportName, singleDateOnly = false }: { reportN
                 value={singleDate}
                 onChange={(e) => setSingleDate(e.target.value)}
                 placeholder="dd / mm / yyyy"
-                className="w-56 h-11 bg-white border-gray-200 rounded-lg focus:border-[#5865F2] focus:ring-[#5865F2]"
+                className="w-56 h-11 bg-white border-gray-200 rounded-lg focus:border-brand focus:ring-brand"
               />
             </div>
           ) : (
@@ -233,7 +233,7 @@ const StandardReportContent = ({ reportName, singleDateOnly = false }: { reportN
                   value={dateFrom}
                   onChange={(e) => setDateFrom(e.target.value)}
                   placeholder="dd / mm / yyyy"
-                  className="w-56 h-11 bg-white border-gray-200 rounded-lg focus:border-[#5865F2] focus:ring-[#5865F2]"
+                  className="w-56 h-11 bg-white border-gray-200 rounded-lg focus:border-brand focus:ring-brand"
                 />
               </div>
 
@@ -246,13 +246,13 @@ const StandardReportContent = ({ reportName, singleDateOnly = false }: { reportN
                   value={dateTo}
                   onChange={(e) => setDateTo(e.target.value)}
                   placeholder="dd / mm / yyyy"
-                  className="w-56 h-11 bg-white border-gray-200 rounded-lg focus:border-[#5865F2] focus:ring-[#5865F2]"
+                  className="w-56 h-11 bg-white border-gray-200 rounded-lg focus:border-brand focus:ring-brand"
                 />
               </div>
             </>
           )}
 
-          <Button className="h-11 px-8 min-w-[160px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">
+          <Button className="h-11 px-8 min-w-[160px] rounded-2xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">
             <Download className="h-4 w-4 mr-2" />
             Generate Report
           </Button>
@@ -291,7 +291,7 @@ const Reports = () => {
             >
               {tab.label}
               {activeTab === tab.id && (
-                <span className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-[#5865F2] rounded-t-full shadow-sm" />
+                <span className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-brand rounded-t-full shadow-sm" />
               )}
             </button>
           ))}

@@ -215,7 +215,7 @@ const UserRoles = () => {
 
                             <div className="flex justify-center gap-4 pt-6 mt-6 border-t border-border/30">
                                 <Button onClick={handleReset} variant="outline" className="h-10 px-8 min-w-[120px] rounded-xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all">Reset</Button>
-                                <Button onClick={handleSubmit} className="h-10 px-8 min-w-[120px] rounded-xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">Submit</Button>
+                                <Button onClick={handleSubmit} className="h-10 px-8 min-w-[120px] rounded-xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">Submit</Button>
                             </div>
                         </CardContent>
                     </Card>
@@ -268,7 +268,7 @@ const UserRoles = () => {
                                                     <TableCell className="text-cyan-600 dark:text-cyan-400 text-xs py-3 px-4">{role.notifications}</TableCell>
                                                     <TableCell className="text-center py-3 px-4">
                                                         <div className="flex gap-2 justify-center">
-                                                            <Button size="sm" className="bg-[#3eb1c8] hover:bg-[#3eb1c8]/90 text-white h-7 w-7 p-0 rounded-md" onClick={() => setEditModalOpen(true)}>
+                                                            <Button size="sm" className="bg-brand-teal hover:bg-brand-teal/90 text-white h-7 w-7 p-0 rounded-md" onClick={() => setEditModalOpen(true)}>
                                                                 <Edit className="h-3.5 w-3.5" />
                                                             </Button>
                                                             <Button size="sm" className="bg-red-500 hover:bg-red-600 text-white h-7 w-7 p-0 rounded-md">
@@ -298,7 +298,7 @@ const UserRoles = () => {
                                     <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>First</Button>
                                     <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1}>Previous</Button>
                                     {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                                        <Button key={page} variant={currentPage === page ? "default" : "ghost"} size="sm" className={`h-8 w-8 p-0 text-xs rounded-xl ${currentPage === page ? "bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold shadow-sm" : "text-muted-foreground hover:text-foreground"}`} onClick={() => setCurrentPage(page)}>
+                                        <Button key={page} variant={currentPage === page ? "default" : "ghost"} size="sm" className={`h-8 w-8 p-0 text-xs rounded-xl ${currentPage === page ? "bg-brand hover:bg-brand-hover text-white font-semibold shadow-sm" : "text-muted-foreground hover:text-foreground"}`} onClick={() => setCurrentPage(page)}>
                                             {page}
                                         </Button>
                                     ))}
@@ -354,7 +354,7 @@ const UserRoles = () => {
 
                             <div className="flex justify-center gap-4 pt-6 mt-6 border-t border-border/30">
                                 <Button variant="outline" className="h-11 px-8 min-w-[120px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all">Reset</Button>
-                                <Button className="h-11 px-8 min-w-[120px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">Save</Button>
+                                <Button className="h-11 px-8 min-w-[120px] rounded-2xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">Save</Button>
                             </div>
                         </CardContent>
                     </Card>
@@ -394,7 +394,7 @@ const UserRoles = () => {
                         <div className="grid grid-cols-[200px_1fr] items-start gap-4">
                             <Label className="text-sm font-medium text-gray-800 pt-2">Notification Subscription</Label>
                             <div className="relative border border-gray-300 rounded-[4px] p-2 pr-8 flex flex-wrap gap-2 min-h-[40px] bg-transparent">
-                                <div className="bg-[#3eb1c8] text-white text-[12px] px-2 py-0.5 rounded-[2px] flex items-center gap-1 hover:bg-[#3eb1c8]/90 cursor-default shadow-sm border border-[#3eb1c8]">
+                                <div className="bg-brand-teal text-white text-[12px] px-2 py-0.5 rounded-[2px] flex items-center gap-1 hover:bg-brand-teal/90 cursor-default shadow-sm border border-brand-teal">
                                     maintenance-request-creation <X className="h-[10px] w-[10px] cursor-pointer hover:opacity-80 stroke-[3]" />
                                 </div>
                                 <ChevronDown className="absolute right-2 top-3 h-4 w-4 text-gray-400 pointer-events-none" />
@@ -404,7 +404,7 @@ const UserRoles = () => {
 
                     <div className="flex justify-center gap-4 pb-8">
                         <Button variant="outline" className="text-amber-500 border-amber-500 hover:bg-amber-50 hover:text-amber-600 h-8 px-6 rounded-[3px] font-normal" onClick={() => setEditModalOpen(false)}>Reset</Button>
-                        <Button className="bg-transparent text-[#3eb1c8] border border-[#3eb1c8] hover:bg-cyan-50 h-8 px-6 rounded-[3px] font-normal" onClick={() => setEditModalOpen(false)}>Update</Button>
+                        <Button className="bg-transparent text-brand-teal border border-brand-teal hover:bg-cyan-50 h-8 px-6 rounded-[3px] font-normal" onClick={() => setEditModalOpen(false)}>Update</Button>
                     </div>
                 </DialogContent>
             </Dialog>

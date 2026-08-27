@@ -67,7 +67,7 @@ const Events = () => {
             {/* Header */}
             <div className="flex items-center justify-between mb-2">
                 <h1 className="text-xl font-semibold text-foreground tracking-tight">Events Management</h1>
-                <Button onClick={() => setIsAddEventOpen(true)} className="h-10 px-6 rounded-xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">Add Events</Button>
+                <Button onClick={() => setIsAddEventOpen(true)} className="h-10 px-6 rounded-xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">Add Events</Button>
             </div>
 
             {/* Table Section */}
@@ -127,7 +127,7 @@ const Events = () => {
                                             <TableCell className="text-cyan-600 dark:text-cyan-400 text-xs py-3 px-4 cursor-pointer hover:underline">{item.image}</TableCell>
                                             <TableCell className="text-center py-3 px-4">
                                                 <div className="flex gap-2 justify-center">
-                                                    <Button size="sm" className="bg-[#3eb1c8] hover:bg-[#3eb1c8]/90 text-white h-7 w-7 p-0 rounded-md" onClick={() => setEditEventOpen(true)}>
+                                                    <Button size="sm" className="bg-brand-teal hover:bg-brand-teal/90 text-white h-7 w-7 p-0 rounded-md" onClick={() => setEditEventOpen(true)}>
                                                         <Edit className="h-3.5 w-3.5" />
                                                     </Button>
                                                     <Button size="sm" className="bg-red-500 hover:bg-red-600 text-white h-7 w-7 p-0 rounded-md" onClick={() => setCancelEventOpen(true)}>
@@ -154,7 +154,7 @@ const Events = () => {
                             <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>First</Button>
                             <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1}>Previous</Button>
                             {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                                <Button key={page} variant={currentPage === page ? "default" : "ghost"} size="sm" className={`h-8 w-8 p-0 text-xs rounded-xl ${currentPage === page ? "bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold shadow-sm" : "text-muted-foreground hover:text-foreground"}`} onClick={() => setCurrentPage(page)}>{page}</Button>
+                                <Button key={page} variant={currentPage === page ? "default" : "ghost"} size="sm" className={`h-8 w-8 p-0 text-xs rounded-xl ${currentPage === page ? "bg-brand hover:bg-brand-hover text-white font-semibold shadow-sm" : "text-muted-foreground hover:text-foreground"}`} onClick={() => setCurrentPage(page)}>{page}</Button>
                             ))}
                             <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages}>Next</Button>
                             <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages}>Last</Button>
@@ -260,7 +260,7 @@ const Events = () => {
                                     <span className="text-gray-600 text-sm mt-1 border-b border-gray-300 pb-1 px-2">31</span>
                                     <ChevronDown className="h-4 w-4 text-cyan-600 cursor-pointer mt-1" />
                                 </div>
-                                <div className="ml-2 bg-[#5865F2] hover:bg-[#4752c4] text-white rounded-xl px-3.5 py-1 text-sm font-semibold cursor-pointer shadow-sm">PM</div>
+                                <div className="ml-2 bg-brand hover:bg-brand-hover text-white rounded-xl px-3.5 py-1 text-sm font-semibold cursor-pointer shadow-sm">PM</div>
                             </div>
                         </div>
 
@@ -269,17 +269,17 @@ const Events = () => {
                             <Label className="text-sm font-medium text-gray-800">End Time <span className="text-red-500">*</span></Label>
                             <div className="flex items-center gap-4">
                                 <div className="flex flex-col items-center">
-                                    <ChevronUp className="h-4 w-4 text-[#5865F2] cursor-pointer" />
+                                    <ChevronUp className="h-4 w-4 text-brand cursor-pointer" />
                                     <span className="text-gray-600 text-sm mt-1 border-b border-gray-300 pb-1 px-2">09</span>
-                                    <ChevronDown className="h-4 w-4 text-[#5865F2] cursor-pointer mt-1" />
+                                    <ChevronDown className="h-4 w-4 text-brand cursor-pointer mt-1" />
                                 </div>
                                 <span className="text-gray-800 font-medium pb-2">:</span>
                                 <div className="flex flex-col items-center">
-                                    <ChevronUp className="h-4 w-4 text-[#5865F2] cursor-pointer" />
+                                    <ChevronUp className="h-4 w-4 text-brand cursor-pointer" />
                                     <span className="text-gray-600 text-sm mt-1 border-b border-gray-300 pb-1 px-2">00</span>
-                                    <ChevronDown className="h-4 w-4 text-[#5865F2] cursor-pointer mt-1" />
+                                    <ChevronDown className="h-4 w-4 text-brand cursor-pointer mt-1" />
                                 </div>
-                                <div className="ml-2 bg-[#5865F2] hover:bg-[#4752c4] text-white rounded-xl px-3.5 py-1 text-sm font-semibold cursor-pointer shadow-sm">PM</div>
+                                <div className="ml-2 bg-brand hover:bg-brand-hover text-white rounded-xl px-3.5 py-1 text-sm font-semibold cursor-pointer shadow-sm">PM</div>
                             </div>
                         </div>
 
@@ -299,7 +299,7 @@ const Events = () => {
                                     <Button variant="outline" className="h-7 px-3 bg-gray-100 text-gray-700 text-xs border border-gray-300 rounded-[2px] font-normal">Choose file</Button>
                                     <span className="ml-3 text-xs text-gray-400">No file chosen</span>
                                 </div>
-                                <div className="text-[#3eb1c8] text-xs cursor-pointer hover:underline">Click here to preview image</div>
+                                <div className="text-brand-teal text-xs cursor-pointer hover:underline">Click here to preview image</div>
                             </div>
                         </div>
                     </div>
@@ -326,7 +326,7 @@ const Events = () => {
                     </div>
 
                     <div className="flex justify-center gap-4 pb-8">
-                        <Button className="bg-[#3eb1c8] hover:bg-cyan-600 text-white h-8 px-6 rounded-[3px] font-normal" onClick={() => setCancelEventOpen(false)}>Submit</Button>
+                        <Button className="bg-brand-teal hover:bg-cyan-600 text-white h-8 px-6 rounded-[3px] font-normal" onClick={() => setCancelEventOpen(false)}>Submit</Button>
                     </div>
                 </DialogContent>
             </Dialog>

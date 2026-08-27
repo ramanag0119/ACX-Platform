@@ -608,7 +608,7 @@ const ServicePlanning = () => {
                             min={0}
                             max={59}
                         />
-                        <Button variant="outline" size="sm" className="bg-[#5865F2] hover:bg-[#4752c4] text-white border-0 font-medium rounded-xl h-10 px-3.5 shadow-sm">
+                        <Button variant="outline" size="sm" className="bg-brand hover:bg-brand-hover text-white border-0 font-medium rounded-xl h-10 px-3.5 shadow-sm">
                             AM
                         </Button>
                     </div>
@@ -632,7 +632,7 @@ const ServicePlanning = () => {
                             min={0}
                             max={59}
                         />
-                        <Button variant="outline" size="sm" className="bg-[#5865F2] hover:bg-[#4752c4] text-white border-0 font-medium rounded-xl h-10 px-3.5 shadow-sm">
+                        <Button variant="outline" size="sm" className="bg-brand hover:bg-brand-hover text-white border-0 font-medium rounded-xl h-10 px-3.5 shadow-sm">
                             AM
                         </Button>
                     </div>
@@ -686,7 +686,7 @@ const ServicePlanning = () => {
                                 variant={scheduledForm.frequency.includes(day) ? "default" : "outline"}
                                 size="sm"
                                 className={`w-12 rounded-xl transition-all ${scheduledForm.frequency.includes(day)
-                                    ? "bg-[#5865F2] hover:bg-[#4752c4] text-white font-medium shadow-sm"
+                                    ? "bg-brand hover:bg-brand-hover text-white font-medium shadow-sm"
                                     : "bg-muted/30 border-border/50"
                                     }`}
                                 onClick={() => toggleFrequency(day, "scheduled")}
@@ -819,7 +819,7 @@ const ServicePlanning = () => {
                             placeholder="MM"
                             className="w-16 h-10 bg-muted/30 border-border/50 text-center"
                         />
-                        <Button variant="outline" size="sm" className="bg-[#5865F2] hover:bg-[#4752c4] text-white border-0 font-medium rounded-xl h-10 px-3.5 shadow-sm">
+                        <Button variant="outline" size="sm" className="bg-brand hover:bg-brand-hover text-white border-0 font-medium rounded-xl h-10 px-3.5 shadow-sm">
                             AM
                         </Button>
                     </div>
@@ -839,7 +839,7 @@ const ServicePlanning = () => {
                             placeholder="MM"
                             className="w-16 h-10 bg-muted/30 border-border/50 text-center"
                         />
-                        <Button variant="outline" size="sm" className="bg-[#5865F2] hover:bg-[#4752c4] text-white border-0 font-medium rounded-xl h-10 px-3.5 shadow-sm">
+                        <Button variant="outline" size="sm" className="bg-brand hover:bg-brand-hover text-white border-0 font-medium rounded-xl h-10 px-3.5 shadow-sm">
                             AM
                         </Button>
                     </div>
@@ -981,7 +981,7 @@ const ServicePlanning = () => {
                             placeholder="MM"
                             className="w-16 h-10 bg-muted/30 border-border/50 text-center"
                         />
-                        <Button variant="outline" size="sm" className="bg-[#5865F2] hover:bg-[#4752c4] text-white border-0 font-medium rounded-xl h-10 px-3.5 shadow-sm">
+                        <Button variant="outline" size="sm" className="bg-brand hover:bg-brand-hover text-white border-0 font-medium rounded-xl h-10 px-3.5 shadow-sm">
                             AM
                         </Button>
                     </div>
@@ -1001,7 +1001,7 @@ const ServicePlanning = () => {
                             placeholder="MM"
                             className="w-16 h-10 bg-muted/30 border-border/50 text-center"
                         />
-                        <Button variant="outline" size="sm" className="bg-[#5865F2] hover:bg-[#4752c4] text-white border-0 font-medium rounded-xl h-10 px-3.5 shadow-sm">
+                        <Button variant="outline" size="sm" className="bg-brand hover:bg-brand-hover text-white border-0 font-medium rounded-xl h-10 px-3.5 shadow-sm">
                             AM
                         </Button>
                     </div>
@@ -1053,7 +1053,7 @@ const ServicePlanning = () => {
                                 variant={disinfectionForm.frequency.includes(day) ? "default" : "outline"}
                                 size="sm"
                                 className={`w-12 rounded-xl transition-all ${disinfectionForm.frequency.includes(day)
-                                    ? "bg-[#5865F2] hover:bg-[#4752c4] text-white font-medium shadow-sm"
+                                    ? "bg-brand hover:bg-brand-hover text-white font-medium shadow-sm"
                                     : "bg-muted/30 border-border/50"
                                     }`}
                                 onClick={() => toggleFrequency(day, "disinfection")}
@@ -1184,7 +1184,7 @@ const ServicePlanning = () => {
                                         <div className="flex items-center justify-center gap-2">
                                             <Button
                                                 size="sm"
-                                                className="bg-[#3eb1c8] hover:bg-[#3eb1c8]/90 text-white h-7 w-7 p-0 rounded-md"
+                                                className="bg-brand-teal hover:bg-brand-teal/90 text-white h-7 w-7 p-0 rounded-md"
                                                 onClick={() => setEditModalOpen(true)}
                                             >
                                                 <Edit className="h-3.5 w-3.5" />
@@ -1252,7 +1252,7 @@ const ServicePlanning = () => {
                         <Button
                             type="button"
                             onClick={handleSubmit}
-                            className="h-10 px-8 min-w-[120px] rounded-xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
+                            className="h-10 px-8 min-w-[120px] rounded-xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
                         >
                             Submit
                         </Button>
@@ -1330,7 +1330,7 @@ const ServicePlanning = () => {
                                     variant={currentPage === page ? "default" : "ghost"}
                                     size="sm"
                                     className={`h-8 w-8 p-0 text-xs rounded-xl ${currentPage === page
-                                        ? "bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold shadow-sm"
+                                        ? "bg-brand hover:bg-brand-hover text-white font-semibold shadow-sm"
                                         : "text-muted-foreground hover:text-foreground"
                                         }`}
                                     onClick={() => setCurrentPage(page)}
@@ -1406,10 +1406,10 @@ const ServicePlanning = () => {
                         <div className="grid grid-cols-[140px_1fr] gap-6 items-center">
                             <Label className="text-sm font-medium text-gray-800 text-left">Assign To <span className="text-red-500">*</span></Label>
                             <div className="relative bg-gray-500 border border-gray-500 rounded-[2px] p-[2px] pr-8 flex items-center gap-1 h-[34px]">
-                                <div className="bg-[#3eb1c8] text-white text-xs px-2 py-0.5 rounded-[2px] flex items-center gap-1">
+                                <div className="bg-brand-teal text-white text-xs px-2 py-0.5 rounded-[2px] flex items-center gap-1">
                                     System User <X className="h-3 w-3 cursor-pointer hover:opacity-80" />
                                 </div>
-                                <div className="bg-[#3eb1c8] text-white text-xs px-2 py-0.5 rounded-[2px] flex items-center gap-1">
+                                <div className="bg-brand-teal text-white text-xs px-2 py-0.5 rounded-[2px] flex items-center gap-1">
                                     Namas s <X className="h-3 w-3 cursor-pointer hover:opacity-80" />
                                 </div>
                                 <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-300 pointer-events-none" />
@@ -1420,18 +1420,18 @@ const ServicePlanning = () => {
                             <Label className="text-sm font-medium text-gray-800 text-left pt-6">Start Time <span className="text-red-500">*</span></Label>
                             <div className="flex items-center gap-4">
                                 <div className="flex flex-col items-center">
-                                    <ChevronUp className="h-5 w-5 text-[#3eb1c8] cursor-pointer" />
+                                    <ChevronUp className="h-5 w-5 text-brand-teal cursor-pointer" />
                                     <input type="text" value="11" readOnly className="w-12 text-center bg-transparent border-0 border-b border-gray-300 text-gray-900 focus:ring-0 px-0 pb-1 text-base outline-none cursor-default" />
-                                    <ChevronDown className="h-5 w-5 text-[#3eb1c8] cursor-pointer" />
+                                    <ChevronDown className="h-5 w-5 text-brand-teal cursor-pointer" />
                                 </div>
                                 <span className="text-xl font-bold pb-6">:</span>
                                 <div className="flex flex-col items-center">
-                                    <ChevronUp className="h-5 w-5 text-[#3eb1c8] cursor-pointer" />
+                                    <ChevronUp className="h-5 w-5 text-brand-teal cursor-pointer" />
                                     <input type="text" value="00" readOnly className="w-12 text-center bg-transparent border-0 border-b border-gray-300 text-gray-900 focus:ring-0 px-0 pb-1 text-base outline-none cursor-default" />
-                                    <ChevronDown className="h-5 w-5 text-[#3eb1c8] cursor-pointer" />
+                                    <ChevronDown className="h-5 w-5 text-brand-teal cursor-pointer" />
                                 </div>
                                 <div className="pb-6">
-                                    <div className="bg-[#5865F2] hover:bg-[#4752c4] text-white rounded-xl px-4 py-1.5 text-sm font-semibold cursor-pointer shadow-sm transition-all">AM</div>
+                                    <div className="bg-brand hover:bg-brand-hover text-white rounded-xl px-4 py-1.5 text-sm font-semibold cursor-pointer shadow-sm transition-all">AM</div>
                                 </div>
                             </div>
                         </div>
@@ -1440,18 +1440,18 @@ const ServicePlanning = () => {
                             <Label className="text-sm font-medium text-gray-800 text-left pt-6">End Time <span className="text-red-500">*</span></Label>
                             <div className="flex items-center gap-4">
                                 <div className="flex flex-col items-center">
-                                    <ChevronUp className="h-5 w-5 text-[#5865F2] cursor-pointer" />
+                                    <ChevronUp className="h-5 w-5 text-brand cursor-pointer" />
                                     <input type="text" value="12" readOnly className="w-12 text-center bg-transparent border-0 border-b border-gray-300 text-gray-900 focus:ring-0 px-0 pb-1 text-base outline-none cursor-default" />
-                                    <ChevronDown className="h-5 w-5 text-[#5865F2] cursor-pointer" />
+                                    <ChevronDown className="h-5 w-5 text-brand cursor-pointer" />
                                 </div>
                                 <span className="text-xl font-bold pb-6">:</span>
                                 <div className="flex flex-col items-center">
-                                    <ChevronUp className="h-5 w-5 text-[#5865F2] cursor-pointer" />
+                                    <ChevronUp className="h-5 w-5 text-brand cursor-pointer" />
                                     <input type="text" value="00" readOnly className="w-12 text-center bg-transparent border-0 border-b border-gray-300 text-gray-900 focus:ring-0 px-0 pb-1 text-base outline-none cursor-default" />
-                                    <ChevronDown className="h-5 w-5 text-[#5865F2] cursor-pointer" />
+                                    <ChevronDown className="h-5 w-5 text-brand cursor-pointer" />
                                 </div>
                                 <div className="pb-6">
-                                    <div className="bg-[#5865F2] hover:bg-[#4752c4] text-white rounded-xl px-4 py-1.5 text-sm font-semibold cursor-pointer shadow-sm transition-all">AM</div>
+                                    <div className="bg-brand hover:bg-brand-hover text-white rounded-xl px-4 py-1.5 text-sm font-semibold cursor-pointer shadow-sm transition-all">AM</div>
                                 </div>
                             </div>
                         </div>
@@ -1460,11 +1460,11 @@ const ServicePlanning = () => {
                             <Label className="text-sm font-medium text-gray-800 text-left">Rooms <span className="text-red-500">*</span></Label>
                             <RadioGroup defaultValue="rooms" className="flex flex-col gap-2">
                                 <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="rooms" id="edit-rooms" className="text-[#3eb1c8] border-[#3eb1c8]" />
+                                    <RadioGroupItem value="rooms" id="edit-rooms" className="text-brand-teal border-brand-teal" />
                                     <Label htmlFor="edit-rooms" className="cursor-pointer text-gray-900 font-normal">Rooms</Label>
                                 </div>
                                 <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="non-rooms" id="edit-non-rooms" className="text-[#3eb1c8] border-gray-300" />
+                                    <RadioGroupItem value="non-rooms" id="edit-non-rooms" className="text-brand-teal border-gray-300" />
                                     <Label htmlFor="edit-non-rooms" className="cursor-pointer text-gray-900 font-normal">Non Rooms</Label>
                                 </div>
                             </RadioGroup>
@@ -1473,7 +1473,7 @@ const ServicePlanning = () => {
                         <div className="grid grid-cols-[140px_1fr] gap-6 items-center">
                             <Label className="text-sm font-medium text-gray-800 text-left">Room No <span className="text-red-500">*</span></Label>
                             <div className="relative border border-gray-500 rounded-[2px] p-[2px] pr-8 flex items-center gap-1 h-[34px]">
-                                <div className="bg-[#3eb1c8] text-white text-xs px-2 py-0.5 rounded-[2px] flex items-center gap-1">
+                                <div className="bg-brand-teal text-white text-xs px-2 py-0.5 rounded-[2px] flex items-center gap-1">
                                     211 <X className="h-3 w-3 cursor-pointer hover:opacity-80" />
                                 </div>
                                 <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
@@ -1482,9 +1482,9 @@ const ServicePlanning = () => {
 
                         <div className="grid grid-cols-[140px_1fr] gap-6 items-center">
                             <Label className="text-sm font-medium text-gray-800 text-left">Frequency <span className="text-red-500">*</span></Label>
-                            <div className="flex bg-transparent border border-[#3eb1c8] rounded-[2px] w-fit overflow-hidden">
+                            <div className="flex bg-transparent border border-brand-teal rounded-[2px] w-fit overflow-hidden">
                                 {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day, idx) => (
-                                    <div key={day} className={`px-3 py-1 text-xs font-medium cursor-pointer border-r border-[#3eb1c8] last:border-r-0 ${idx === 6 ? "bg-[#3eb1c8] text-white" : "text-gray-800 hover:bg-gray-100"}`}>
+                                    <div key={day} className={`px-3 py-1 text-xs font-medium cursor-pointer border-r border-brand-teal last:border-r-0 ${idx === 6 ? "bg-brand-teal text-white" : "text-gray-800 hover:bg-gray-100"}`}>
                                         {day}
                                     </div>
                                 ))}
@@ -1509,7 +1509,7 @@ const ServicePlanning = () => {
                             </Button>
                             <Button
                                 type="button"
-                                className="h-11 px-8 min-w-[120px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
+                                className="h-11 px-8 min-w-[120px] rounded-2xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
                                 onClick={() => setEditModalOpen(false)}
                             >
                                 Submit

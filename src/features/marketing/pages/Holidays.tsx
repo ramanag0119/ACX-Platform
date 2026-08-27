@@ -128,7 +128,7 @@ const Holidays = () => {
                     </div>
                     <div className="flex justify-center gap-4 mt-6">
                         <Button variant="outline" onClick={handleReset} className="px-8 border-border hover:bg-muted">Reset</Button>
-                        <Button onClick={handleSubmit} className="bg-[#5865F2] hover:bg-[#4752c4] text-white px-8 rounded-xl font-semibold shadow-md">{editingId ? "Update" : "Submit"}</Button>
+                        <Button onClick={handleSubmit} className="bg-brand hover:bg-brand-hover text-white px-8 rounded-xl font-semibold shadow-md">{editingId ? "Update" : "Submit"}</Button>
                     </div>
                 </CardContent>
             </Card>
@@ -176,10 +176,10 @@ const Holidays = () => {
                                             <TableCell className="text-xs py-3 px-4 text-foreground/90">{item.description}</TableCell>
                                             <TableCell className="text-center py-3 px-4">
                                                 <div className="flex gap-2 justify-center">
-                                                    <Button size="sm" className="bg-[#3eb1c8] hover:bg-[#3eb1c8]/90 text-white h-7 w-7 p-0 rounded-md" onClick={() => setEditModalOpen(true)}>
+                                                    <Button size="sm" className="bg-brand-teal hover:bg-brand-teal/90 text-white h-7 w-7 p-0 rounded-md" onClick={() => setEditModalOpen(true)}>
                                                         <Edit className="h-3.5 w-3.5" />
                                                     </Button>
-                                                    <Button size="sm" className="bg-[#d33] hover:bg-[#bd2d2d] text-white h-7 w-7 p-0 rounded-md" onClick={() => setDeleteModalOpen(true)}>
+                                                    <Button size="sm" className="bg-brand-danger hover:bg-brand-danger-hover text-white h-7 w-7 p-0 rounded-md" onClick={() => setDeleteModalOpen(true)}>
                                                         <Trash2 className="h-3.5 w-3.5" />
                                                     </Button>
                                                 </div>
@@ -203,7 +203,7 @@ const Holidays = () => {
                             <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>First</Button>
                             <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1}>Previous</Button>
                             {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                                <Button key={page} variant={currentPage === page ? "default" : "ghost"} size="sm" className={`h-8 w-8 p-0 text-xs rounded-xl ${currentPage === page ? "bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold shadow-sm" : "text-muted-foreground hover:text-foreground"}`} onClick={() => setCurrentPage(page)}>{page}</Button>
+                                <Button key={page} variant={currentPage === page ? "default" : "ghost"} size="sm" className={`h-8 w-8 p-0 text-xs rounded-xl ${currentPage === page ? "bg-brand hover:bg-brand-hover text-white font-semibold shadow-sm" : "text-muted-foreground hover:text-foreground"}`} onClick={() => setCurrentPage(page)}>{page}</Button>
                             ))}
                             <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages}>Next</Button>
                             <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages}>Last</Button>
@@ -260,7 +260,7 @@ const Holidays = () => {
 
                     <div className="flex justify-center gap-4 pb-8">
                         <Button variant="outline" className="text-amber-500 border-amber-500 hover:bg-amber-50 hover:text-amber-600 h-8 px-6 rounded-[3px] font-normal" onClick={() => setEditModalOpen(false)}>Reset</Button>
-                        <Button className="bg-transparent text-[#3eb1c8] border border-[#3eb1c8] hover:bg-cyan-50 h-8 px-6 rounded-[3px] font-normal" onClick={() => setEditModalOpen(false)}>Submit</Button>
+                        <Button className="bg-transparent text-brand-teal border border-brand-teal hover:bg-cyan-50 h-8 px-6 rounded-[3px] font-normal" onClick={() => setEditModalOpen(false)}>Submit</Button>
                     </div>
                 </DialogContent>
             </Dialog>
@@ -279,7 +279,7 @@ const Holidays = () => {
 
                         <div className="flex gap-2.5 justify-center pt-2">
                             <Button className="bg-[#3085d6] hover:bg-[#2b78c1] text-white text-[15px] font-medium px-4 py-2 rounded-[4px] h-[40px]" onClick={() => setDeleteModalOpen(false)}>Yes, delete it!</Button>
-                            <Button className="bg-[#d33] hover:bg-[#bd2d2d] text-white text-[15px] font-medium px-4 py-2 rounded-[4px] h-[40px]" onClick={() => setDeleteModalOpen(false)}>Cancel</Button>
+                            <Button className="bg-brand-danger hover:bg-brand-danger-hover text-white text-[15px] font-medium px-4 py-2 rounded-[4px] h-[40px]" onClick={() => setDeleteModalOpen(false)}>Cancel</Button>
                         </div>
                     </div>
                 </DialogContent>

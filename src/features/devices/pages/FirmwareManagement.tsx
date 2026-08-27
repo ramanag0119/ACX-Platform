@@ -152,13 +152,13 @@ const FirmwareManagement = () => {
                                             <Label>Firmware File<span className="text-red-500">*</span></Label>
                                             <div className="flex gap-2">
                                                 <Input type="file" className="bg-muted/20 border-border dark:border-slate-700/80" />
-                                                <Button className="h-10 px-4 rounded-xl bg-[#5865F2] hover:bg-[#4752c4] text-white shadow-md hover:shadow-lg transition-all"><Upload className="h-4 w-4" /></Button>
+                                                <Button className="h-10 px-4 rounded-xl bg-brand hover:bg-brand-hover text-white shadow-md hover:shadow-lg transition-all"><Upload className="h-4 w-4" /></Button>
                                             </div>
                                         </div>
                                     </div>
                                     <div className="flex justify-center gap-4 pt-6 border-t border-border/30">
                                         <Button variant="outline" onClick={handleReset} className="h-10 px-8 min-w-[120px] rounded-xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all">Reset</Button>
-                                        <Button className="h-10 px-8 min-w-[120px] rounded-xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">Submit</Button>
+                                        <Button className="h-10 px-8 min-w-[120px] rounded-xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">Submit</Button>
                                     </div>
                                 </div>
                             </CardContent>
@@ -209,10 +209,10 @@ const FirmwareManagement = () => {
                                                         <TableCell className="text-xs py-3 px-4 text-foreground/90">{item.uploadDate}</TableCell>
                                                         <TableCell className="text-center py-3 px-4">
                                                             <div className="flex gap-2 justify-center">
-                                                                <Button size="sm" className="bg-[#3eb1c8] hover:bg-[#3eb1c8]/90 text-white h-7 w-7 p-0 rounded-md" onClick={() => setEditFirmwareOpen(true)}>
+                                                                <Button size="sm" className="bg-brand-teal hover:bg-brand-teal/90 text-white h-7 w-7 p-0 rounded-md" onClick={() => setEditFirmwareOpen(true)}>
                                                                     <Edit className="h-3.5 w-3.5" />
                                                                 </Button>
-                                                                <Button size="sm" className="bg-[#d33] hover:bg-[#bd2d2d] text-white h-7 w-7 p-0 rounded-md" onClick={() => setDeleteFirmwareOpen(true)}>
+                                                                <Button size="sm" className="bg-brand-danger hover:bg-brand-danger-hover text-white h-7 w-7 p-0 rounded-md" onClick={() => setDeleteFirmwareOpen(true)}>
                                                                     <Trash2 className="h-3.5 w-3.5" />
                                                                 </Button>
                                                             </div>
@@ -236,7 +236,7 @@ const FirmwareManagement = () => {
                                         <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>First</Button>
                                         <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1}>Previous</Button>
                                         {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                                            <Button key={page} variant={currentPage === page ? "default" : "ghost"} size="sm" className={`h-8 w-8 p-0 text-xs rounded-xl ${currentPage === page ? "bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold shadow-sm" : "text-muted-foreground hover:text-foreground"}`} onClick={() => setCurrentPage(page)}>{page}</Button>
+                                            <Button key={page} variant={currentPage === page ? "default" : "ghost"} size="sm" className={`h-8 w-8 p-0 text-xs rounded-xl ${currentPage === page ? "bg-brand hover:bg-brand-hover text-white font-semibold shadow-sm" : "text-muted-foreground hover:text-foreground"}`} onClick={() => setCurrentPage(page)}>{page}</Button>
                                         ))}
                                         <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages}>Next</Button>
                                         <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages}>Last</Button>
@@ -312,7 +312,7 @@ const FirmwareManagement = () => {
                                 </div>
 
                                 <div className="flex justify-center gap-4 mt-6">
-                                    <Button className="h-10 px-8 min-w-[160px] rounded-xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">Push Firmware Update</Button>
+                                    <Button className="h-10 px-8 min-w-[160px] rounded-xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">Push Firmware Update</Button>
                                 </div>
                             </CardContent>
                         </Card>
@@ -357,7 +357,7 @@ const FirmwareManagement = () => {
                     </div>
                     <div className="flex justify-center gap-4 pb-8 border-t border-gray-100 pt-6 mt-2">
                         <Button variant="outline" className="h-10 px-8 min-w-[110px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all" onClick={() => setEditFirmwareOpen(false)}>Close</Button>
-                        <Button className="h-10 px-8 min-w-[110px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all" onClick={() => setEditFirmwareOpen(false)}>Submit</Button>
+                        <Button className="h-10 px-8 min-w-[110px] rounded-2xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all" onClick={() => setEditFirmwareOpen(false)}>Submit</Button>
                     </div>
                 </DialogContent>
             </Dialog>
@@ -379,7 +379,7 @@ const FirmwareManagement = () => {
                     </div>
                     <div className="flex justify-center gap-4 pb-8 border-t border-gray-100 pt-6 mt-2">
                         <Button variant="outline" className="h-10 px-8 min-w-[110px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all" onClick={() => setDeleteFirmwareOpen(false)}>Close</Button>
-                        <Button className="h-10 px-8 min-w-[110px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all" onClick={() => setDeleteFirmwareOpen(false)}>Update</Button>
+                        <Button className="h-10 px-8 min-w-[110px] rounded-2xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all" onClick={() => setDeleteFirmwareOpen(false)}>Update</Button>
                     </div>
                 </DialogContent>
             </Dialog>

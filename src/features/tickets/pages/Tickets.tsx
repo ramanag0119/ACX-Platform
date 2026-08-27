@@ -305,7 +305,7 @@ const Tickets = () => {
           {/* Buttons */}
           <div className="flex justify-center gap-4 mt-8">
             <Button variant="outline" onClick={handleReset} className="px-8 border-border hover:bg-muted">Reset</Button>
-            <Button onClick={handleSubmit} className="px-8 bg-[#5865F2] hover:bg-[#4752c4] text-white font-medium rounded-xl shadow-md">Submit</Button>
+            <Button onClick={handleSubmit} className="px-8 bg-brand hover:bg-brand-hover text-white font-medium rounded-xl shadow-md">Submit</Button>
           </div>
         </CardContent>
       </Card>
@@ -405,7 +405,7 @@ const Tickets = () => {
                   variant={currentPage === page ? "default" : "ghost"}
                   size="sm"
                   className={`h-8 w-8 p-0 text-xs rounded-xl ${currentPage === page
-                    ? "bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold shadow-sm"
+                    ? "bg-brand hover:bg-brand-hover text-white font-semibold shadow-sm"
                     : "text-muted-foreground hover:text-foreground"
                     }`}
                   onClick={() => setCurrentPage(page)}

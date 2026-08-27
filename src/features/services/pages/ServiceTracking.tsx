@@ -275,7 +275,7 @@ const ServiceTracking = () => {
         let modalType: "yellow" | "red" | "blue" | null = null;
         if (status === "Assigned") { bgColor = "bg-[#e5a910] hover:bg-[#cc960e]"; modalType = "yellow"; }
         else if (status === "Pending" || status === "Cancelled") { bgColor = "bg-[#ed5565] hover:bg-[#da4453]"; modalType = "red"; }
-        else if (status === "Partially Completed") { bgColor = "bg-[#3eb1c8] hover:bg-[#2e93a8]"; modalType = "blue"; }
+        else if (status === "Partially Completed") { bgColor = "bg-brand-teal hover:bg-[#2e93a8]"; modalType = "blue"; }
 
         return (
             <div className="flex justify-center gap-2">
@@ -837,7 +837,7 @@ const ServiceTracking = () => {
                                     key={page}
                                     variant={currentPage === page ? "default" : "ghost"}
                                     size="sm"
-                                    className={`h-8 w-8 p-0 text-xs rounded-xl ${currentPage === page ? "bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                                    className={`h-8 w-8 p-0 text-xs rounded-xl ${currentPage === page ? "bg-brand hover:bg-brand-hover text-white font-semibold shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
                                     onClick={() => setCurrentPage(page)}
                                 >
                                     {page}
@@ -891,7 +891,7 @@ const ServiceTracking = () => {
                                     </div>
                                 </div>
                                 <div className="flex justify-end pt-2">
-                                    <Button className="bg-[#3eb1c8] hover:bg-[#3eb1c8]/90 text-white border-0 h-9 px-6 rounded-sm font-normal" onClick={() => setStatusModalConfig({ ...statusModalConfig, isOpen: false })}>Submit</Button>
+                                    <Button className="bg-brand-teal hover:bg-brand-teal/90 text-white border-0 h-9 px-6 rounded-sm font-normal" onClick={() => setStatusModalConfig({ ...statusModalConfig, isOpen: false })}>Submit</Button>
                                 </div>
                             </>
                         )}
@@ -907,7 +907,7 @@ const ServiceTracking = () => {
                                     </div>
                                 </div>
                                 <div className="flex justify-end pt-2">
-                                    <Button className="bg-[#3eb1c8] hover:bg-[#3eb1c8]/90 text-white border-0 h-9 px-6 rounded-sm font-normal" onClick={() => setStatusModalConfig({ ...statusModalConfig, isOpen: false })}>Submit</Button>
+                                    <Button className="bg-brand-teal hover:bg-brand-teal/90 text-white border-0 h-9 px-6 rounded-sm font-normal" onClick={() => setStatusModalConfig({ ...statusModalConfig, isOpen: false })}>Submit</Button>
                                 </div>
                             </>
                         )}
@@ -934,7 +934,7 @@ const ServiceTracking = () => {
                                     </div>
                                 </div>
                                 <div className="flex justify-end pt-2">
-                                    <Button className="bg-[#3eb1c8] hover:bg-[#3eb1c8]/90 text-white border-0 h-9 px-6 rounded-sm font-normal" onClick={() => setStatusModalConfig({ ...statusModalConfig, isOpen: false })}>Submit</Button>
+                                    <Button className="bg-brand-teal hover:bg-brand-teal/90 text-white border-0 h-9 px-6 rounded-sm font-normal" onClick={() => setStatusModalConfig({ ...statusModalConfig, isOpen: false })}>Submit</Button>
                                 </div>
                             </>
                         )}

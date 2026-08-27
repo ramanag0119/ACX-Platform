@@ -85,7 +85,7 @@ const Offers = () => {
             {/* Header */}
             <div className="flex items-center justify-between mb-2">
                 <h1 className="text-xl font-semibold text-foreground tracking-tight">Offers Management</h1>
-                <Button onClick={() => setIsModalOpen(true)} className="h-10 px-6 rounded-xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">Add Offers</Button>
+                <Button onClick={() => setIsModalOpen(true)} className="h-10 px-6 rounded-xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">Add Offers</Button>
             </div>
 
             {/* Table Section */}
@@ -139,7 +139,7 @@ const Offers = () => {
                                             <TableCell className="whitespace-nowrap text-xs py-3 px-4 text-foreground/90">{item.validityTo}</TableCell>
                                             <TableCell className="text-center py-3 px-4">
                                                 <div className="flex justify-center">
-                                                    <Button size="sm" className="h-7 w-7 p-0 bg-[#3eb1c8] hover:bg-[#3eb1c8]/90 rounded-md" onClick={() => handleWithdrawClick(item)}>
+                                                    <Button size="sm" className="h-7 w-7 p-0 bg-brand-teal hover:bg-brand-teal/90 rounded-md" onClick={() => handleWithdrawClick(item)}>
                                                         <Hourglass className="h-3.5 w-3.5 text-white" />
                                                     </Button>
                                                 </div>
@@ -173,7 +173,7 @@ const Offers = () => {
                             <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>First</Button>
                             <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1}>Previous</Button>
                             {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                                <Button key={page} variant={currentPage === page ? "default" : "ghost"} size="sm" className={`h-8 w-8 p-0 text-xs rounded-xl ${currentPage === page ? "bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold shadow-sm" : "text-muted-foreground hover:text-foreground"}`} onClick={() => setCurrentPage(page)}>{page}</Button>
+                                <Button key={page} variant={currentPage === page ? "default" : "ghost"} size="sm" className={`h-8 w-8 p-0 text-xs rounded-xl ${currentPage === page ? "bg-brand hover:bg-brand-hover text-white font-semibold shadow-sm" : "text-muted-foreground hover:text-foreground"}`} onClick={() => setCurrentPage(page)}>{page}</Button>
                             ))}
                             <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages}>Next</Button>
                             <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages}>Last</Button>
@@ -240,7 +240,7 @@ const Offers = () => {
                             <Button className="bg-[#3085d6] hover:bg-[#3085d6]/90 text-white px-5 rounded-md text-base shadow-md h-11" onClick={() => setIsDeleteModalOpen(false)}>
                                 Yes, delete it!
                             </Button>
-                            <Button className="bg-[#d33] hover:bg-[#d33]/90 text-white px-5 rounded-md text-base shadow-md h-11" onClick={() => setIsDeleteModalOpen(false)}>
+                            <Button className="bg-brand-danger hover:bg-brand-danger/90 text-white px-5 rounded-md text-base shadow-md h-11" onClick={() => setIsDeleteModalOpen(false)}>
                                 Cancel
                             </Button>
                         </div>
@@ -266,7 +266,7 @@ const Offers = () => {
                             <Label className="text-sm font-medium text-gray-700">Applicable To <span className="text-red-500">*</span></Label>
                             <div className="border border-gray-300 rounded-sm p-1.5 flex flex-wrap gap-2 items-center bg-white min-h-[36px] max-w-2xl">
                                 {[101, 102, 103].map(room => (
-                                    <div key={room} className="bg-[#3eb1c8] text-white text-xs px-2 py-0.5 rounded-sm flex items-center">
+                                    <div key={room} className="bg-brand-teal text-white text-xs px-2 py-0.5 rounded-sm flex items-center">
                                         {room} <span className="ml-1 cursor-pointer hover:text-white/80">×</span>
                                     </div>
                                 ))}

@@ -344,7 +344,7 @@ const Occupancy = () => {
                   key={page}
                   variant={currentPage === page ? "default" : "ghost"}
                   size="sm"
-                  className={`h-8 w-8 p-0 text-xs rounded-xl ${currentPage === page ? "bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                  className={`h-8 w-8 p-0 text-xs rounded-xl ${currentPage === page ? "bg-brand hover:bg-brand-hover text-white font-semibold shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
                   onClick={() => setCurrentPage(page)}
                 >
                   {page}

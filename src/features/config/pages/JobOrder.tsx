@@ -243,7 +243,7 @@ const JobOrder = () => {
 
                         {/* Add Button */}
                         <div className="flex justify-center">
-                            <Button onClick={handleAddRoom} className="h-10 px-8 min-w-[120px] rounded-xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">
+                            <Button onClick={handleAddRoom} className="h-10 px-8 min-w-[120px] rounded-xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">
                                 Add
                             </Button>
                         </div>
@@ -289,7 +289,7 @@ const JobOrder = () => {
 
                     {/* Submit Button */}
                     <div className="flex justify-center mt-6">
-                        <Button onClick={handleSubmit} className="h-10 px-12 min-w-[140px] rounded-xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">
+                        <Button onClick={handleSubmit} className="h-10 px-12 min-w-[140px] rounded-xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">
                             Submit
                         </Button>
                     </div>
@@ -384,7 +384,7 @@ const JobOrder = () => {
                         <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>First</Button>
                         <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1}>Previous</Button>
                         {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                            <Button key={page} variant={currentPage === page ? "default" : "ghost"} size="sm" className={`h-8 w-8 p-0 text-xs rounded-xl ${currentPage === page ? "bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold shadow-sm" : "text-muted-foreground hover:text-foreground"}`} onClick={() => setCurrentPage(page)}>{page}</Button>
+                            <Button key={page} variant={currentPage === page ? "default" : "ghost"} size="sm" className={`h-8 w-8 p-0 text-xs rounded-xl ${currentPage === page ? "bg-brand hover:bg-brand-hover text-white font-semibold shadow-sm" : "text-muted-foreground hover:text-foreground"}`} onClick={() => setCurrentPage(page)}>{page}</Button>
                         ))}
                         <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages}>Next</Button>
                         <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages}>Last</Button>
@@ -493,7 +493,7 @@ const JobOrder = () => {
                                 </div>
 
                                 <div className="flex justify-center pt-4">
-                                    <Button className="h-9 px-6 rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-xs shadow-md hover:shadow-lg transition-all border-0">Add Job</Button>
+                                    <Button className="h-9 px-6 rounded-2xl bg-brand hover:bg-brand-hover text-white font-semibold text-xs shadow-md hover:shadow-lg transition-all border-0">Add Job</Button>
                                 </div>
                             </div>
                         </div>
@@ -517,7 +517,7 @@ const JobOrder = () => {
                         </div>
 
                         <div className="flex justify-center mt-2 pb-4">
-                            <Button className="h-10 px-8 min-w-[120px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all border-0">Update</Button>
+                            <Button className="h-10 px-8 min-w-[120px] rounded-2xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all border-0">Update</Button>
                         </div>
                     </div>
                 </DialogContent>
