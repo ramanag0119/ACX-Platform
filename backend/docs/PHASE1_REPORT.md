@@ -1,5 +1,9 @@
 # HMS Phase 1 — Database Foundation Report
 
+> **Superseded.** This report records the 39-table Phase 1 foundation as it
+> stood on 2026-08-16. The live schema is the 92-table baseline described in
+> `PHASE1_7_DATABASE_IMPLEMENTATION.md`; read this one as history only.
+
 **Status:** ✅ Complete and verified against live PostgreSQL
 **Date:** 2026-08-16
 

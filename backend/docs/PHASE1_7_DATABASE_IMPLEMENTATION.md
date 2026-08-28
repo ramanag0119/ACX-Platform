@@ -88,7 +88,7 @@ backend/
 └── docs/
     ├── FINAL_HMS_DATABASE_BLUEPRINT.md
     ├── PHASE1_7_DATABASE_IMPLEMENTATION.md   (this file)
-    └── archive/                              Phase 1 backups
+    └── archive/                              local-only, gitignored (§4.2)
 ```
 
 Module boundaries follow the blueprint's own §12.1 grouping, so a table is
@@ -119,15 +119,19 @@ The previous `hms_db` held the Phase 1 39-table foundation at revision
 step. The Phase 1 revision file was removed from `migrations/versions/` after
 being archived.
 
-### 4.2 Backups taken (all under `backend/docs/archive/`)
+### 4.2 Backups taken
 
 | Artefact | Contents |
 |---|---|
 | `hms_db_phase1_schema_backup.sql` | `pg_dump --schema-only` of the 39-table database (2,078 lines) |
-| `phase1_models_backup/` | the 8 Phase 1 model modules |
-| `8a8456154f0e_phase1_ikanos_entity_foundation.py.bak` | the superseded revision, `.bak` so Alembic cannot load it |
+| the 8 Phase 1 model modules | the pre-rebuild `app/models/` package |
+| `8a8456154f0e_phase1_ikanos_entity_foundation.py` | the superseded revision |
 
-`docs/archive/*.sql` is gitignored (see §10).
+These were taken as local working copies during the rebuild. The two code
+artefacts are preserved in git history (see the Phase 1 commits); they are not
+carried in the tree, because a second copy of superseded models and a second
+Alembic revision beside the live ones is a trap, not a backup. The `.sql` dump
+stays local and is gitignored (see §10).
 
 ### 4.3 Rebuild sequence executed
 
@@ -350,8 +354,8 @@ Beyond the 15 required checks it also asserts:
 down_revision = None          (single head, clean baseline)
 ```
 
-Superseded and removed: `8a8456154f0e` (Phase 1, 39 tables) — archived at
-`docs/archive/8a8456154f0e_phase1_ikanos_entity_foundation.py.bak`.
+Superseded and removed: `8a8456154f0e` (Phase 1, 39 tables) — recoverable from
+git history if it is ever needed.
 
 ---
 
