@@ -110,7 +110,7 @@ const Bookings = () => {
   // --- Live data -----------------------------------------------------------
   const staysQuery = useStays({ page: 1, page_size: MAX_PAGE_SIZE });
 
-  const mockBookings: BookingData[] = (staysQuery.data?.items ?? []).map((stay) => ({
+  const bookings: BookingData[] = (staysQuery.data?.items ?? []).map((stay) => ({
     id: stay.id,
     name: stay.booker?.name ?? "-",
     // The stay projection carries no guest contact details.
@@ -204,7 +204,7 @@ const Bookings = () => {
   const totalEntries = 13;
   const totalPages = Math.ceil(totalEntries / parseInt(entriesPerPage));
 
-  const filteredBookings = mockBookings.filter((booking) => {
+  const filteredBookings = bookings.filter((booking) => {
     const query = searchQuery.toLowerCase();
     return (
       booking.name.toLowerCase().includes(query) ||

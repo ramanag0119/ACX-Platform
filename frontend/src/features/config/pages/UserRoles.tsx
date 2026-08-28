@@ -79,7 +79,7 @@ const UserRoles = () => {
     const templatesQuery = useNotificationTemplates({ page: 1, page_size: MAX_PAGE_SIZE });
     const notificationTypes = (templatesQuery.data?.items ?? []).map((template) => template.name);
 
-    const sampleRoles = (rolesQuery.data?.items ?? []).map((role) => ({
+    const roles = (rolesQuery.data?.items ?? []).map((role) => ({
         id: role.id,
         userRole: role.name,
         roleType: role.role_type,
@@ -167,7 +167,7 @@ const UserRoles = () => {
     };
 
     // Filter roles
-    const filteredRoles = sampleRoles.filter(role =>
+    const filteredRoles = roles.filter(role =>
         role.userRole.toLowerCase().includes(searchQuery.toLowerCase()) ||
         role.roleType.toLowerCase().includes(searchQuery.toLowerCase())
     );
@@ -387,7 +387,7 @@ const UserRoles = () => {
                                         <SelectValue placeholder="Select a role" />
                                     </SelectTrigger>
                                     <SelectContent className="bg-popover text-popover-foreground border-border">
-                                        {sampleRoles.map((role) => (
+                                        {roles.map((role) => (
                                             <SelectItem key={role.id} value={role.id}>{role.userRole}</SelectItem>
                                         ))}
                                     </SelectContent>

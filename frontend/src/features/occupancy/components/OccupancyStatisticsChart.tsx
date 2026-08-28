@@ -40,7 +40,9 @@ export const OccupancyStatisticsChart = () => {
   const { isDark } = useTheme();
 
   const statusesQuery = useAmenityStatuses({ page: 1, page_size: MAX_PAGE_SIZE });
-  const statuses = statusesQuery.data?.items ?? [];
+  // Memoised so the identity is stable between renders: a bare `?? []` hands a
+  // new array to the useMemo/useCounts dependencies on every pass.
+  const statuses = useMemo(() => statusesQuery.data?.items ?? [], [statusesQuery.data]);
 
   const filterSets = useMemo<QueryParams[]>(
     () => statuses.map((status) => ({ status: status.id })),
