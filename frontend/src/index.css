@@ -1,0 +1,1847 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* =========================================================
+   ACX / FleetExplorer-Aligned Enterprise Design System
+   Hospitality Platform - Multi-Theme (Light & Dark)
+   ========================================================= */
+
+@layer base {
+  :root {
+    /* ---------- Light Theme Colors (FleetExplorer Light) ---------- */
+    --background: 240 20% 98%;
+    /* #f4f5fa - Very soft lavender-blue page BG */
+    --foreground: 222 47% 11%;
+    /* #0f172a - Dark slate text */
+
+    --card: 0 0% 100%;
+    /* #ffffff - Card BG */
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 239 84% 67%;
+    /* #6366f1 - Active Accent Indigo */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 40% 96.1%;
+    /* #f1f5f9 - Secondary elements */
+    --secondary-foreground: 222 47% 11%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    /* #64748b - Slate-500 */
+
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222 47% 11%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 152 70% 45%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 100%;
+
+    /* ---------- Borders ---------- */
+    --border: 214.3 31.8% 91.4%;
+    /* #e2e8f0 - Light border */
+    --input: 214.3 31.8% 91.4%;
+    --ring: 239 84% 67%;
+
+    /* ---------- Sidebar Specific ---------- */
+    --sidebar-bg: 0 0% 100%;
+    /* #ffffff */
+    --sidebar-border: 214.3 31.8% 91.4%;
+    --sidebar-text: 215 25% 40%;
+    /* #475569 - Slate */
+    --sidebar-active-bg: 239 84% 96%;
+    /* Translucent indigo #e0e7ff */
+    --sidebar-active-text: 239 84% 60%;
+    /* #6366f1 */
+    --sidebar-hover-bg: 210 40% 96.1%;
+    /* #f1f5f9 */
+    --sidebar-hover-text: 222 47% 11%;
+
+    /* ---------- Layout ---------- */
+    --sidebar-width: 260px;
+    --sidebar-collapsed-width: 68px;
+    --header-height: 70px;
+
+    /* ---------- Radius ---------- */
+    --radius: 0.75rem;
+
+    /* ---------- Shadows ---------- */
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.08);
+    --shadow-lg: 0 12px 30px rgba(0, 0, 0, 0.1);
+    --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-card-hover: 0 10px 20px rgba(0, 0, 0, 0.08);
+
+    /* Gradient tokens */
+    --gradient-primary: linear-gradient(135deg, hsl(239, 84%, 67%) 0%, hsl(244, 75%, 59%) 100%);
+    --gradient-secondary: linear-gradient(135deg, hsl(239, 84%, 67%) 0%, hsl(240, 20%, 98%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(199, 89%, 48%) 0%, hsl(239, 84%, 67%) 100%);
+  }
+
+  .dark {
+    /* ---------- Dark Theme Colors (FleetExplorer Dark) ---------- */
+    --background: 225 44% 7%;
+    /* #0a0e1a - Main App BG (Not Pitch Black) */
+    --foreground: 210 40% 98%;
+    /* #f8fafc - Bright Text */
+
+    --card: 222 40% 11%;
+    /* #111827 - Card BG */
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222 40% 11%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 239 84% 67%;
+    /* #6366f1 - Active Accent Indigo */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 222 30% 12%;
+    /* #111625 - Secondary Button/Hover BG */
+    --secondary-foreground: 210 40% 90%;
+
+    --muted: 222 25% 10%;
+    /* #0c0f17 */
+    --muted-foreground: 217.9 10.6% 64.9%;
+    /* #94a3b8 - Muted Text */
+
+    --accent: 222 30% 12%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 152 70% 45%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 100%;
+
+
+    /* ---------- Borders ---------- */
+    --border: 222 20% 18%;
+    /* #222938 - Dark Border */
+    --input: 222 20% 18%;
+    --ring: 239 84% 67%;
+
+    /* ---------- Sidebar Specific ---------- */
+    --sidebar-bg: 227 47% 6%;
+    /* #080b16 - Dark Sidebar */
+    --sidebar-border: 222 20% 18%;
+    --sidebar-text: 215 20% 65%;
+    /* #94a3b8 */
+    --sidebar-active-bg: 239 84% 67% / 0.12;
+    /* Translucent indigo */
+    --sidebar-active-text: 239 84% 65%;
+    /* #818cf8 */
+    --sidebar-hover-bg: 255 255 255 / 0.05;
+    --sidebar-hover-text: 0 0% 100%;
+
+    /* ---------- Shadows ---------- */
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.5);
+    --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.6);
+    --shadow-lg: 0 12px 30px rgba(0, 0, 0, 0.8);
+    --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.4);
+    --shadow-card-hover: 0 10px 30px rgba(0, 0, 0, 0.6);
+  }
+
+  * {
+    @apply border-border;
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    background-color: hsl(var(--background));
+    transition: background-color 0.25s ease;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    margin: 0;
+    min-width: 320px;
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    background-color: hsl(var(--background)) !important;
+    position: relative;
+    z-index: 0;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background:
+      radial-gradient(ellipse at 20% 20%, rgba(99, 102, 241, 0.06) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 80%, rgba(6, 182, 212, 0.04) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 50%, rgba(168, 85, 247, 0.03) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 1;
+    /* Sit in front of body background color */
+  }
+
+  /* Light mode glows */
+  [data-theme="light"] body::before,
+  html:not(.dark) body::before {
+    background:
+      radial-gradient(ellipse at 20% 20%, rgba(99, 102, 241, 0.1) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 80%, rgba(6, 182, 212, 0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 50%, rgba(168, 85, 247, 0.05) 0%, transparent 70%);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: 'Poppins', 'Inter', sans-serif;
+    @apply font-semibold tracking-tight text-foreground;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  ::selection {
+    background: hsl(var(--primary) / 0.25);
+  }
+}
+
+/* =========================================================
+   Global Dynamic theme overrides for page wrappers & shells
+   ========================================================= */
+
+body {
+  background-color: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
+  transition: background-color 0.25s ease, border-color 0.2s ease, color 0.2s ease;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Allow text selection inside actual form fields */
+input,
+textarea,
+select,
+[contenteditable="true"] {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+}
+
+/* Make layout wrappers transparent to let body background & glows show through */
+#root {
+  position: relative;
+  z-index: 2;
+  /* Sit in front of glows */
+}
+
+#root,
+.app-shell,
+.min-h-screen,
+main {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* Override inline layout backgrounds that block body glows */
+.min-h-screen[style*="linear-gradient"],
+[style*="linear-gradient(180deg, #F4F2FA"],
+[style*="linear-gradient(180deg, #ECE9F6"],
+[style*="linear-gradient(180deg, #0f1117"],
+[style*="linear-gradient(180deg, #131824)"] {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* Exclude layout container to avoid card bg leaking, override cards separately */
+div[style*="linear-gradient"]:not(.min-h-screen) {
+  background: hsl(var(--card)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+}
+
+/* Target card panels using flexible class matching and override inline backgrounds */
+div[style][class*="rounded-"][class*="p-"],
+div[style][class*="rounded-[16px]"][class*="p-"] {
+  background: hsl(var(--card)) !important;
+  background-color: hsl(var(--card)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+}
+
+/* General Layout Main Area */
+main {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* =========================================================
+   Header Styling (FleetExplorer style)
+   ========================================================= */
+
+header,
+header.fixed,
+header[class*="fixed"] {
+  background: hsl(var(--card)) !important;
+  background-color: hsl(var(--card)) !important;
+  border-bottom: 1px solid hsl(var(--border)) !important;
+  backdrop-filter: blur(10px);
+}
+
+header .text-muted-foreground {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+/* =========================================================
+   FUTURISTIC SIDEBAR STYLES (FleetExplorer Match)
+   ========================================================= */
+
+/* Aside Container */
+.sidebar-futuristic {
+  background: hsl(var(--sidebar-bg)) !important;
+  background-color: hsl(var(--sidebar-bg)) !important;
+  border-right: 1px solid hsl(var(--sidebar-border)) !important;
+  position: fixed;
+  left: 0;
+  top: 48px;
+  bottom: 28px;
+  height: calc(100vh - 48px - 28px);
+  z-index: 40;
+  box-shadow: none !important;
+  border-top-right-radius: 0px !important;
+  border-bottom-right-radius: 0px !important;
+}
+
+/* Sidebar Logo/Brand Section */
+.sidebar-brand {
+  position: relative;
+  z-index: 1;
+  padding: 1.1rem 1.25rem;
+  background: transparent;
+  border-bottom: 1px solid hsl(var(--sidebar-border)) !important;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+/* Clean, raw App Icon styling for clear visibility */
+.sidebar-brand img {
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 0px !important;
+  background: transparent !important;
+  border: none !important;
+  padding: 0px !important;
+  box-shadow: none !important;
+  object-fit: contain !important;
+  margin-right: 4px !important;
+  margin-left: 2px !important;
+  transition: all 0.3s ease;
+}
+
+.sidebar-brand:hover img {
+  transform: scale(1.05) !important;
+}
+
+.sidebar-brand-text {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 700;
+  font-size: 1.35rem !important;
+  /* exact font size matching FleetExplorer visual scale */
+  letter-spacing: -0.02em !important;
+  /* exact letter-spacing matching FleetExplorer */
+  line-height: 1.2 !important;
+  color: #06b6d4 !important;
+  /* Fully light blue color referenced from cyan/nos */
+  -webkit-text-fill-color: #06b6d4 !important;
+  background: none !important;
+  text-shadow: none;
+}
+
+/* Light mode heading color alignment */
+[data-theme="light"] .sidebar-brand-text,
+html:not(.dark) .sidebar-brand-text {
+  color: #0ea5e9 !important;
+  /* Light mode light blue */
+  -webkit-text-fill-color: #0ea5e9 !important;
+  background: none !important;
+}
+
+/* Navigation Container */
+.sidebar-nav {
+  position: relative;
+  z-index: 1;
+  padding: 0.75rem 0.75rem 0 0.75rem;
+}
+
+/* Navigation Item Base */
+.sidebar-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 1rem;
+  margin: 0.2rem 0;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: hsl(var(--sidebar-text)) !important;
+  text-decoration: none;
+  transition: all 0.15s ease;
+  border-left: none !important;
+}
+
+/* Hover State */
+.sidebar-nav-item:hover {
+  background: hsl(var(--sidebar-hover-bg)) !important;
+  color: hsl(var(--sidebar-hover-text)) !important;
+}
+
+.sidebar-nav-item:hover .sidebar-nav-item-icon {
+  color: hsl(var(--sidebar-hover-text)) !important;
+}
+
+/* Icon Styling */
+.sidebar-nav-item-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: hsl(var(--sidebar-text)) !important;
+  opacity: 0.85;
+  transition: color 0.15s ease;
+}
+
+/* Active/Selected State (Translucent Indigo Pill) */
+.sidebar-nav-item-active {
+  background: hsl(var(--sidebar-active-bg)) !important;
+  color: hsl(var(--sidebar-active-text)) !important;
+  border-left: none !important;
+  font-weight: 600 !important;
+  box-shadow: none !important;
+}
+
+.sidebar-nav-item-active .sidebar-nav-item-icon {
+  color: hsl(var(--sidebar-active-text)) !important;
+  opacity: 1;
+}
+
+/* Chevron */
+.sidebar-nav-chevron {
+  margin-left: auto;
+  width: 16px;
+  height: 16px;
+  opacity: 0.6;
+  color: hsl(var(--sidebar-text)) !important;
+  transition: transform 0.2s ease;
+}
+
+.sidebar-nav-chevron-open {
+  transform: rotate(180deg);
+}
+
+/* Submenu */
+.sidebar-nav-submenu {
+  margin-left: 1.85rem;
+  margin-top: 0.25rem;
+  padding-left: 0.65rem;
+  border-left: 1px solid hsl(var(--sidebar-border));
+}
+
+.sidebar-nav-subitem {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 0.75rem;
+  margin: 0.125rem 0;
+  border-radius: 4px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: hsl(var(--sidebar-text)) !important;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.sidebar-nav-subitem:hover {
+  color: hsl(var(--sidebar-hover-text)) !important;
+  background: hsl(var(--sidebar-hover-bg)) !important;
+}
+
+.sidebar-nav-subitem-active {
+  background: hsl(var(--sidebar-active-bg)) !important;
+  color: hsl(var(--sidebar-active-text)) !important;
+  font-weight: 600;
+}
+
+/* Sidebar toggle button (hamburger in collapsed state) */
+.sidebar-toggle-btn {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  color: hsl(var(--sidebar-text));
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+  margin: 0;
+}
+
+.sidebar-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+}
+
+html:not(.dark) .sidebar-toggle-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: #000000;
+}
+
+/* Sidebar close button (X mark in expanded state) */
+.sidebar-close-btn {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  background: transparent;
+  border: none;
+  color: hsl(var(--sidebar-text));
+  opacity: 0.6;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.sidebar-close-btn:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+html:not(.dark) .sidebar-close-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: #000000;
+}
+
+/* Divider */
+.sidebar-divider {
+  height: 1px;
+  margin: 0.75rem 1rem;
+  background: hsl(var(--sidebar-border)) !important;
+}
+
+/* Footer (Aligned precisely at bottom left of sidebar) */
+.sidebar-footer {
+  position: relative;
+  z-index: 1;
+  padding: 1.25rem 1.15rem;
+  border-top: 1px solid hsl(var(--sidebar-border)) !important;
+  background: transparent;
+}
+
+.sidebar-footer-text {
+  font-size: 10px;
+  font-weight: 400;
+  color: hsl(var(--sidebar-text)) !important;
+  opacity: 0.7;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Collapsed adjustments */
+.sidebar-collapsed .sidebar-brand {
+  padding: 0.85rem 0;
+  justify-content: center;
+}
+
+/* Hamburger menu button (3 lines in collapsed sidebar) */
+.sidebar-hamburger-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 40px;
+  height: 40px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.sidebar-hamburger-btn:hover {
+  opacity: 0.8;
+}
+
+.hamburger-line {
+  display: block;
+  width: 22px;
+  height: 2px;
+  background: hsl(var(--sidebar-text));
+  border-radius: 2px;
+  transition: all 0.2s ease;
+}
+
+.sidebar-hamburger-btn:hover .hamburger-line {
+  background: hsl(var(--sidebar-hover-text));
+}
+
+.sidebar-collapsed .sidebar-nav-item {
+  justify-content: center;
+  padding: 0.6rem 0;
+  margin: 0.15rem auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+}
+
+.sidebar-collapsed .sidebar-nav-item .sidebar-nav-item-icon {
+  width: 20px;
+  height: 20px;
+  margin: 0 auto;
+}
+
+.sidebar-collapsed .sidebar-nav-item-active {
+  background: hsl(var(--sidebar-active-bg)) !important;
+}
+
+.sidebar-collapsed .sidebar-footer {
+  padding: 0.75rem 0.5rem;
+}
+
+.sidebar-collapsed .sidebar-footer-text {
+  text-align: center;
+  font-size: 9px;
+}
+
+.sidebar-collapsed .sidebar-divider {
+  margin: 0.5rem 0.75rem;
+}
+
+/* Tooltip for collapsed state */
+.sidebar-tooltip {
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  margin-left: 10px;
+  padding: 0.4rem 0.8rem;
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: hsl(var(--foreground));
+  white-space: nowrap;
+  box-shadow: var(--shadow-md);
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.15s ease;
+  z-index: 100;
+}
+
+.sidebar-tooltip::before {
+  content: '';
+  position: absolute;
+  left: -4px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 4px solid transparent;
+  border-right-color: hsl(var(--card));
+}
+
+.sidebar-collapsed .sidebar-nav-item:hover .sidebar-tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Dynamic Version Alignment is now handled by the footer component */
+
+/* =========================================================
+   CARDS & CONTAINERS (Premium Theme Engine)
+   ========================================================= */
+
+@layer components {
+
+  /* Enterprise Cards & overrides for White BG containers */
+  .enterprise-card,
+  .card-premium,
+  .widget-card,
+  .bg-card,
+  .bg-white,
+  .rounded-2xl.bg-white,
+  .rounded-xl.bg-white,
+  .rounded-lg.bg-white,
+  div[style*="background-color: white"],
+  div[style*="background-color: #fff"],
+  div[style*="background: '#FFFFFF'"],
+  div[style*="background: rgb(255"] {
+    background-color: hsl(var(--card)) !important;
+    background: hsl(var(--card)) !important;
+    color: hsl(var(--foreground)) !important;
+    border: 1px solid hsl(var(--border)) !important;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    transition: all 0.25s ease;
+  }
+
+  .enterprise-card:hover,
+  .card-premium:hover,
+  .widget-card:hover {
+    box-shadow: var(--shadow-md);
+    border-color: hsl(var(--primary) / 0.3) !important;
+  }
+
+  .enterprise-card-header,
+  .enterprise-card-body {
+    border-bottom-color: hsl(var(--border)) !important;
+  }
+
+  .enterprise-card-title {
+    color: hsl(var(--foreground)) !important;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .enterprise-card-description {
+    color: hsl(var(--muted-foreground)) !important;
+  }
+
+  /* Dashboard Stat Card Containers */
+  .p-4.rounded-xl,
+  .p-6.rounded-xl,
+  .p-4.rounded-2xl,
+  .p-6.rounded-2xl {
+    background-color: inherit !important;
+  }
+
+  /* KPI Card Styles */
+  .kpi-card {
+    background-color: hsl(var(--card)) !important;
+    border: 1px solid hsl(var(--border)) !important;
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.25s ease;
+  }
+
+  .kpi-card:hover {
+    box-shadow: var(--shadow-md);
+    border-color: hsl(var(--primary) / 0.3) !important;
+    transform: translateY(-2px);
+  }
+
+  .kpi-value {
+    color: hsl(var(--foreground)) !important;
+    font-size: 1.875rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+  }
+
+  .kpi-label {
+    color: hsl(var(--muted-foreground)) !important;
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+
+  .kpi-icon {
+    background: rgba(99, 102, 241, 0.1) !important;
+    color: hsl(var(--primary)) !important;
+    border-radius: 8px;
+  }
+
+  .kpi-trend-up,
+  .kpi-trend.positive {
+    color: #10b981 !important;
+  }
+
+  .kpi-trend-down,
+  .kpi-trend.negative {
+    color: #ef4444 !important;
+  }
+
+  /* DevCard and DevHeader inner components inside RoomDetailsPanel */
+  div[style*="background:"][class*="rounded-lg"][class*="shadow-"] {
+    background: hsl(var(--card)) !important;
+    background-color: hsl(var(--card)) !important;
+    border-color: hsl(var(--border)) !important;
+  }
+
+  div[style*="backgroundColor:"][class*="p-3"][class*="flex"] {
+    background: hsl(var(--secondary)) !important;
+    background-color: hsl(var(--secondary)) !important;
+    border-bottom-color: hsl(var(--border)) !important;
+  }
+}
+
+/* =========================================================
+   TEXT COLORS & INLINE OVERRIDES
+   ========================================================= */
+
+/* Heading/Text override within panels and dashboard modules */
+h1[style*="color"],
+h2[style*="color"],
+h3[style*="color"],
+h4[style*="color"],
+h5[style*="color"],
+h6[style*="color"] {
+  color: hsl(var(--foreground)) !important;
+}
+
+p[style*="color"],
+span[style*="color"],
+p[style*="#8b95a9"],
+span[style*="#8b95a9"],
+p[style*="#5E5A7A"],
+span[style*="#5E5A7A"],
+p[style*="#8A86A8"],
+span[style*="#8A86A8"] {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+/* =========================================================
+   TABLES
+   ========================================================= */
+
+@layer components {
+
+  .enterprise-table-wrapper,
+  .data-table-wrapper {
+    background: hsl(var(--card)) !important;
+    border: 1px solid hsl(var(--border)) !important;
+  }
+
+  .enterprise-table,
+  .data-table {
+    border-color: hsl(var(--border)) !important;
+  }
+
+  .enterprise-table th,
+  .data-table th,
+  thead tr,
+  .bg-gray-50,
+  [class*="bg-gray-50"] {
+    background-color: hsl(var(--secondary)) !important;
+    color: hsl(var(--muted-foreground)) !important;
+    border-bottom: 1px solid hsl(var(--border)) !important;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .enterprise-table td,
+  .data-table td {
+    border-bottom: 1px solid hsl(var(--border)) !important;
+    color: hsl(var(--foreground)) !important;
+    opacity: 0.9;
+  }
+
+  .enterprise-table tbody tr:hover,
+  .data-table tr:hover td {
+    background-color: hsl(var(--secondary) / 0.5) !important;
+  }
+
+  /* Striped table behavior */
+  .dark tbody tr:nth-child(even),
+  [class*="bg-muted/20"],
+  .bg-muted\/20 {
+    background-color: hsl(var(--muted) / 0.2) !important;
+  }
+}
+
+/* =========================================================
+   FORM FIELDS & INPUTS
+   ========================================================= */
+
+@layer components {
+
+  input,
+  textarea,
+  select,
+  .enterprise-input {
+    background-color: hsl(var(--card)) !important;
+    border-color: hsl(var(--border)) !important;
+    color: hsl(var(--foreground)) !important;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: hsl(var(--muted-foreground) / 0.6) !important;
+  }
+
+  input:focus,
+  textarea:focus,
+  select:focus,
+  .enterprise-input:focus {
+    border-color: hsl(var(--primary)) !important;
+    box-shadow: 0 0 0 3px hsl(var(--primary) / 0.15) !important;
+  }
+
+  /* Select dropdown values option */
+  select option {
+    background-color: hsl(var(--card)) !important;
+    color: hsl(var(--foreground)) !important;
+  }
+
+  select[style*="background"] {
+    background-color: hsl(var(--card)) !important;
+    color: hsl(var(--foreground)) !important;
+    border: 1px solid hsl(var(--border)) !important;
+  }
+
+  /* Radix (shadcn) Select Triggers */
+  [data-radix-select-trigger],
+  button[role="combobox"],
+  [data-radix-collection-item][aria-haspopup="listbox"] {
+    background-color: hsl(var(--card)) !important;
+    border-color: hsl(var(--border)) !important;
+    color: hsl(var(--foreground)) !important;
+  }
+
+  [data-radix-select-trigger] span,
+  button[role="combobox"] span {
+    color: hsl(var(--foreground)) !important;
+  }
+
+  [data-placeholder] {
+    color: hsl(var(--muted-foreground) / 0.6) !important;
+  }
+
+  /* Popovers / Select Lists */
+  [data-radix-select-content],
+  [data-radix-popper-content-wrapper] [role="listbox"],
+  [role="listbox"],
+  [data-radix-popover-content],
+  [data-radix-dropdown-menu-content],
+  [role="menu"] {
+    background-color: hsl(var(--card)) !important;
+    border: 1px solid hsl(var(--border)) !important;
+    color: hsl(var(--foreground)) !important;
+  }
+
+  [role="option"],
+  [data-radix-select-item],
+  [role="menuitem"] {
+    color: hsl(var(--foreground)) !important;
+    opacity: 0.95;
+  }
+
+  [role="option"]:hover,
+  [data-radix-select-item]:hover,
+  [role="option"][data-highlighted],
+  [data-radix-select-item][data-highlighted],
+  [role="menuitem"]:hover {
+    background-color: hsl(var(--primary) / 0.12) !important;
+    color: hsl(var(--primary)) !important;
+  }
+}
+
+/* =========================================================
+   STATUS BADGES
+   ========================================================= */
+
+@layer components {
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    @apply px-3 py-1;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .status-success,
+  .status-active {
+    background: rgba(16, 185, 129, 0.12) !important;
+    color: #10b981 !important;
+  }
+
+  .status-warning,
+  .status-waiting {
+    background: rgba(245, 158, 11, 0.12) !important;
+    color: #f59e0b !important;
+  }
+
+  .status-error,
+  .status-danger,
+  .status-idle {
+    background: rgba(244, 63, 94, 0.12) !important;
+    color: #f43f5e !important;
+  }
+
+  .status-info {
+    background: rgba(6, 182, 212, 0.12) !important;
+    color: #06b6d4 !important;
+  }
+
+  .status-neutral,
+  .status-muted {
+    background: rgba(255, 255, 255, 0.08) !important;
+    color: hsl(var(--muted-foreground)) !important;
+  }
+}
+
+/* =========================================================
+   BUTTONS
+   ========================================================= */
+
+@layer components {
+
+  .enterprise-button-primary,
+  .btn-primary,
+  .btn-gradient {
+    background: var(--gradient-primary) !important;
+    color: #ffffff !important;
+    border: none !important;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px hsl(var(--primary) / 0.2);
+  }
+
+  .enterprise-button-primary:hover,
+  .btn-primary:hover,
+  .btn-gradient:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px hsl(var(--primary) / 0.35);
+  }
+
+  .enterprise-button-secondary,
+  .btn-secondary,
+  button[class*="variant-outline"] {
+    background-color: hsl(var(--card)) !important;
+    border: 1px solid hsl(var(--border)) !important;
+    color: hsl(var(--foreground)) !important;
+    transition: all 0.2s ease;
+  }
+
+  .enterprise-button-secondary:hover,
+  .btn-secondary:hover,
+  button[class*="variant-outline"]:hover {
+    background-color: hsl(var(--secondary)) !important;
+    border-color: hsl(var(--border)) !important;
+  }
+
+  button[class*="variant-ghost"]:hover,
+  .hover\:bg-muted:hover {
+    background-color: hsl(var(--secondary)) !important;
+  }
+}
+
+/* =========================================================
+   CHARTS & OTHER WIDGETS
+   ========================================================= */
+
+.recharts-cartesian-axis-tick text {
+  fill: hsl(var(--muted-foreground)) !important;
+}
+
+.recharts-legend-item-text {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+.recharts-tooltip-wrapper {
+  background-color: hsl(var(--card)) !important;
+  border-color: hsl(var(--border)) !important;
+}
+
+.recharts-cartesian-grid line {
+  stroke: hsl(var(--border)) !important;
+}
+
+svg circle[stroke^="rgba(255,255,255,"] {
+  stroke: hsl(var(--border)) !important;
+}
+
+svg circle[stroke^="rgba(124,92,255,"] {
+  stroke: hsl(var(--border)) !important;
+}
+
+/* =========================================================
+   SCROLLBAR
+   ========================================================= */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.4);
+}
+
+/* =========================================================
+   UTILITIES & ANIMATIONS
+   ========================================================= */
+
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  .animate-slide-in-right {
+    animation: slideInRight 0.3s ease-out;
+  }
+
+  .animate-slide-in-left {
+    animation: slideInLeft 0.3s ease-out;
+  }
+
+  .animate-scale-in {
+    animation: scaleIn 0.2s ease-out;
+  }
+
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slideInRight {
+    from {
+      opacity: 0;
+      transform: translateX(100%);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes slideInLeft {
+    from {
+      opacity: 0;
+      transform: translateX(-100%);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes scaleIn {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes float {
+
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+
+    50% {
+      transform: translateY(-5px);
+    }
+  }
+
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+
+  .text-gradient {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+}
+
+/* =========================================================
+   Occupancy / Listing View Alignment with FleetExplorer
+   ========================================================= */
+
+/* Table outer border and transparent backgrounds */
+div[class*="border-gray-200"]:has(> table),
+div.border-gray-200,
+.rounded-xl.overflow-hidden.border {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* Light mode table border */
+[data-theme="light"] div[class*="border-gray-200"]:has(> table),
+[data-theme="light"] div.border-gray-200 {
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Transparent table rows */
+tr,
+tr.bg-white,
+tr.bg-muted\/20,
+tr[class*="bg-white"],
+tr[class*="bg-muted"] {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* Table header formatting matching FleetExplorer */
+th,
+thead th,
+.data-table th,
+.enterprise-table th,
+.text-gray-600 {
+  color: #6366f1 !important;
+  /* Indigo header text matching FleetExplorer */
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.08em !important;
+  background-color: rgba(0, 0, 0, 0.2) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  white-space: nowrap !important;
+  padding: 10px 14px !important;
+}
+
+[data-theme="light"] th,
+[data-theme="light"] thead th,
+html:not(.dark) th,
+[data-theme="light"] .text-gray-600 {
+  color: #4f46e5 !important;
+  background-color: rgba(0, 0, 0, 0.04) !important;
+  border-bottom-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Input, Textarea and Select Dropdown overrides */
+input,
+select,
+textarea,
+button[role="combobox"],
+[data-radix-select-trigger],
+input[class*="bg-"],
+select[class*="bg-"] {
+  background-color: rgba(0, 0, 0, 0.3) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: #f1f5f9 !important;
+  border-radius: 6px !important;
+}
+
+/* Light mode overrides for inputs, selects, and textareas matching FleetExplorer */
+html:not(.dark) input,
+html:not(.dark) select,
+html:not(.dark) textarea,
+html:not(.dark) button[role="combobox"],
+html:not(.dark) [data-radix-select-trigger],
+html:not(.dark) [class*="bg-muted\/30"],
+html:not(.dark) [class*="border-border\/50"] {
+  background-color: #f1f5f9 !important;
+  /* Soft grey-blue background from FleetExplorer light mode */
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  color: #0f172a !important;
+}
+
+/* Specific compact heights for table controls and smaller inputs (h-9 class targets) */
+.h-9,
+input.h-9,
+select.h-9,
+button.h-9[role="combobox"],
+[data-radix-select-trigger].h-9 {
+  height: 32px !important;
+  font-size: 12px !important;
+}
+
+/* Align control labels */
+.mb-6 span,
+.mb-6 div,
+.flex.items-center.justify-between.mb-6 span {
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+/* Status Badges in Tables (FleetExplorer uppercase pill style) */
+td [class*="inline-flex"][class*="rounded-"]:not(button):not(.btn):not([role="button"]):not(a),
+td span[class*="border-"]:not(button):not(.btn):not([role="button"]):not(a) {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  padding: 4px 10px !important;
+  border-radius: 20px !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+}
+
+/* Ensure proper vertical and horizontal gap for wrapped badges in table cells */
+td div[class*="flex"][class*="flex-wrap"] {
+  gap: 8px 6px !important;
+}
+
+/* Badge colors matching visual status states (Dark Mode defaults) */
+td [class*="inline-flex"][class*="rounded-"][class*="bg-blue-"],
+td [class*="inline-flex"][class*="rounded-"][class*="bg-sky-"] {
+  border: 1px solid rgba(59, 130, 246, 0.3) !important;
+  background-color: rgba(59, 130, 246, 0.08) !important;
+  background: rgba(59, 130, 246, 0.08) !important;
+  color: #60a5fa !important;
+}
+
+td [class*="inline-flex"][class*="rounded-"][class*="bg-purple-"] {
+  border: 1px solid rgba(168, 85, 247, 0.3) !important;
+  background-color: rgba(168, 85, 247, 0.08) !important;
+  background: rgba(168, 85, 247, 0.08) !important;
+  color: #c084fc !important;
+}
+
+td [class*="inline-flex"][class*="rounded-"][class*="bg-amber-"] {
+  border: 1px solid rgba(245, 158, 11, 0.3) !important;
+  background-color: rgba(245, 158, 11, 0.08) !important;
+  background: rgba(245, 158, 11, 0.08) !important;
+  color: #fbbf24 !important;
+}
+
+td [class*="inline-flex"][class*="rounded-"][class*="bg-red-"] {
+  border: 1px solid rgba(244, 63, 94, 0.3) !important;
+  background-color: rgba(244, 63, 94, 0.08) !important;
+  background: rgba(244, 63, 94, 0.08) !important;
+  color: #fb7185 !important;
+}
+
+td [class*="inline-flex"][class*="rounded-"][class*="border-green-"],
+td [class*="inline-flex"][class*="rounded-"][class*="text-green-"] {
+  border: 1px solid rgba(16, 185, 129, 0.3) !important;
+  background-color: rgba(16, 185, 129, 0.08) !important;
+  background: rgba(16, 185, 129, 0.08) !important;
+  color: #34d399 !important;
+}
+
+td [class*="inline-flex"][class*="rounded-"][class*="border-gray-"],
+td [class*="inline-flex"][class*="rounded-"][class*="text-gray-"] {
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  background-color: rgba(255, 255, 255, 0.04) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  color: #94a3b8 !important;
+}
+
+/* Light mode badge color overrides */
+html:not(.dark) td [class*="inline-flex"][class*="rounded-"][class*="bg-blue-"],
+html:not(.dark) td [class*="inline-flex"][class*="rounded-"][class*="bg-sky-"] {
+  border: 1px solid rgba(37, 99, 235, 0.25) !important;
+  background-color: rgba(37, 99, 235, 0.06) !important;
+  background: rgba(37, 99, 235, 0.06) !important;
+  color: #1d4ed8 !important;
+}
+
+html:not(.dark) td [class*="inline-flex"][class*="rounded-"][class*="bg-purple-"] {
+  border: 1px solid rgba(124, 58, 237, 0.25) !important;
+  background-color: rgba(124, 58, 237, 0.06) !important;
+  background: rgba(124, 58, 237, 0.06) !important;
+  color: #6d28d9 !important;
+}
+
+html:not(.dark) td [class*="inline-flex"][class*="rounded-"][class*="bg-amber-"] {
+  border: 1px solid rgba(217, 119, 6, 0.25) !important;
+  background-color: rgba(217, 119, 6, 0.06) !important;
+  background: rgba(217, 119, 6, 0.06) !important;
+  color: #b45309 !important;
+}
+
+html:not(.dark) td [class*="inline-flex"][class*="rounded-"][class*="bg-red-"] {
+  border: 1px solid rgba(225, 29, 72, 0.25) !important;
+  background-color: rgba(225, 29, 72, 0.06) !important;
+  background: rgba(225, 29, 72, 0.06) !important;
+  color: #be123c !important;
+}
+
+html:not(.dark) td [class*="inline-flex"][class*="rounded-"][class*="border-green-"],
+html:not(.dark) td [class*="inline-flex"][class*="rounded-"][class*="text-green-"] {
+  border: 1px solid rgba(5, 150, 105, 0.25) !important;
+  background-color: rgba(5, 150, 105, 0.06) !important;
+  background: rgba(5, 150, 105, 0.06) !important;
+  color: #047857 !important;
+}
+
+html:not(.dark) td [class*="inline-flex"][class*="rounded-"][class*="border-gray-"],
+html:not(.dark) td [class*="inline-flex"][class*="rounded-"][class*="text-gray-"] {
+  border: 1px solid rgba(0, 0, 0, 0.15) !important;
+  background-color: rgba(0, 0, 0, 0.04) !important;
+  background: rgba(0, 0, 0, 0.04) !important;
+  color: #475569 !important;
+}
+
+/* Compact Table Buttons - Restyled to match the professional, outline button style of FleetExplorer */
+tbody td button,
+tbody td .btn,
+tbody td [role="button"] {
+  background-color: rgba(255, 255, 255, 0.02) !important;
+  background: rgba(255, 255, 255, 0.02) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: hsl(var(--foreground)) !important;
+  border-radius: 4px !important;
+  padding: 4px 10px !important;
+  height: 28px !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  box-shadow: none !important;
+  transition: all 0.2s ease !important;
+}
+
+tbody td button.w-8.h-8 {
+  width: 28px !important;
+  height: 28px !important;
+  padding: 0 !important;
+}
+
+/* Light mode overrides for table action buttons */
+html:not(.dark) tbody td button,
+html:not(.dark) tbody td .btn {
+  background-color: rgba(0, 0, 0, 0.02) !important;
+  background: rgba(0, 0, 0, 0.02) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  color: #000000 !important;
+}
+
+/* Hover state matching FleetExplorer actions */
+tbody td button:hover,
+tbody td .btn:hover {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: rgba(255, 255, 255, 0.16) !important;
+  color: #ffffff !important;
+}
+
+html:not(.dark) tbody td button:hover,
+html:not(.dark) tbody td .btn:hover {
+  background-color: rgba(0, 0, 0, 0.05) !important;
+  background: rgba(0, 0, 0, 0.05) !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+  color: #000000 !important;
+}
+
+/* Ensure all text content in table rows is solid full black in light mode */
+html:not(.dark) td,
+html:not(.dark) td span:not(.badge):not(.status-badge),
+html:not(.dark) td p,
+html:not(.dark) td div,
+html:not(.dark) td a:not(.btn):not([role="button"]) {
+  color: #000000 !important;
+  opacity: 1 !important;
+}
+
+/* Re-style button tabs to match FleetExplorer text tabs with indigo underlines */
+.bg-muted\/30.p-1.rounded-xl.w-fit {
+  background: transparent !important;
+  background-color: transparent !important;
+  border-radius: 0 !important;
+  padding: 0 0 12px 0 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  display: flex !important;
+  gap: 8px !important;
+  margin-bottom: 24px !important;
+}
+
+/* Light mode container border */
+html:not(.dark) .bg-muted\/30.p-1.rounded-xl.w-fit {
+  border-bottom-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Buttons inside the tab navigation */
+.bg-muted\/30.p-1.rounded-xl.w-fit button {
+  background: transparent !important;
+  background-color: transparent !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  border-bottom: 2px solid transparent !important;
+  margin-bottom: -13px !important;
+  /* aligns perfectly with the bottom border */
+  padding: 8px 16px !important;
+  font-weight: 500 !important;
+  color: hsl(var(--muted-foreground)) !important;
+  transition: all 0.2s ease;
+}
+
+/* Active tab style - strictly targets Radix active state data attribute */
+.bg-muted\/30.p-1.rounded-xl.w-fit button[data-state="active"] {
+  color: #6366f1 !important;
+  /* Active text color (indigo) */
+  border-bottom: 2px solid #6366f1 !important;
+  /* Active underline */
+}
+
+/* Light mode active tab text and underline color */
+html:not(.dark) .bg-muted\/30.p-1.rounded-xl.w-fit button[data-state="active"] {
+  color: #4f46e5 !important;
+  border-bottom-color: #4f46e5 !important;
+}
+
+/* Global Typography overrides: black in light mode, white in dark mode (except table headings, badges, and button contents) */
+html:not(.dark) main h1,
+html:not(.dark) main h2,
+html:not(.dark) main h3,
+html:not(.dark) main h4,
+html:not(.dark) main h5,
+html:not(.dark) main h6,
+html:not(.dark) main p,
+html:not(.dark) main label,
+html:not(.dark) main li,
+html:not(.dark) main td,
+html:not(.dark) main td span:not(.badge):not(.status-badge),
+html:not(.dark) main td p,
+html:not(.dark) main td div,
+html:not(.dark) main span:not(th *):not(.badge):not(.status-badge):not(.lucide):not(button *):not(.btn *),
+html:not(.dark) main div[class*="text-muted-foreground"],
+html:not(.dark) main div[class*="text-gray-"] {
+  color: #000000 !important;
+  opacity: 1 !important;
+}
+
+html.dark main h1,
+html.dark main h2,
+html.dark main h3,
+html.dark main h4,
+html.dark main h5,
+html.dark main h6,
+html.dark main p,
+html.dark main label,
+html.dark main li,
+html.dark main td,
+html.dark main td span:not(.badge):not(.status-badge),
+html.dark main td p,
+html.dark main td div,
+html.dark main span:not(th *):not(.badge):not(.status-badge):not(.lucide):not(button *):not(.btn *),
+html.dark main div[class*="text-muted-foreground"],
+html.dark main div[class*="text-gray-"] {
+  color: #ffffff !important;
+  opacity: 1 !important;
+}
+
+/* =========================================================
+   Login Page Styling (FleetExplorer Alignment)
+   ========================================================= */
+
+/* Login page background wrapper */
+div:has(> div > .bg-slate-900) {
+  background: radial-gradient(circle at 50% 50%, #f8fafc 0%, #e2e8f0 100%) !important;
+  transition: background 0.3s ease !important;
+}
+
+html.dark div:has(> div > .bg-slate-900) {
+  background: #0a0e1a !important;
+}
+
+/* Login card container */
+.bg-slate-900 {
+  background-color: #ffffff !important;
+  background: #ffffff !important;
+  border: 1px solid rgba(99, 102, 241, 0.12) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.03) !important;
+  padding: 2.5rem !important;
+}
+
+html.dark .bg-slate-900 {
+  background-color: rgba(17, 24, 39, 0.70) !important;
+  background: rgba(17, 24, 39, 0.70) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Header title */
+.bg-slate-900 h1 {
+  color: #6366f1 !important;
+  font-family: 'Poppins', sans-serif !important;
+  font-weight: 700 !important;
+  font-size: 1.5rem !important;
+  text-align: center !important;
+  margin-bottom: 0.25rem !important;
+}
+
+html.dark .bg-slate-900 h1 {
+  color: #06b6d4 !important;
+}
+
+/* Header subtitle */
+.bg-slate-900 p {
+  color: #818cf8 !important;
+  text-align: center !important;
+  font-size: 0.75rem !important;
+  font-weight: 500 !important;
+}
+
+html.dark .bg-slate-900 p {
+  color: #94a3b8 !important;
+}
+
+/* Form labels */
+.bg-slate-900 label {
+  color: #4f46e5 !important;
+  font-weight: 500 !important;
+  font-size: 0.75rem !important;
+}
+
+html.dark .bg-slate-900 label {
+  color: #94a3b8 !important;
+}
+
+/* Hide SVG input icons on the left */
+.bg-slate-900 .relative svg {
+  display: none !important;
+}
+
+/* Remove padding and style the inputs */
+.bg-slate-900 input {
+  padding-left: 12px !important;
+  background-color: #f1f5f9 !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  color: #0f172a !important;
+  border-radius: 6px !important;
+  height: 38px !important;
+  font-size: 13px !important;
+  transition: all 0.2s ease !important;
+}
+
+html.dark .bg-slate-900 input {
+  background-color: rgba(0, 0, 0, 0.3) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: #f1f5f9 !important;
+}
+
+.bg-slate-900 input::placeholder {
+  color: rgba(15, 23, 42, 0.35) !important;
+}
+
+html.dark .bg-slate-900 input::placeholder {
+  color: rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Submit button */
+.bg-slate-900 button[type="submit"] {
+  background-color: #6366f1 !important;
+  background: #6366f1 !important;
+  color: #ffffff !important;
+  border-radius: 6px !important;
+  height: 38px !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2) !important;
+  border: none !important;
+  transition: all 0.2s ease !important;
+}
+
+.bg-slate-900 button[type="submit"]:hover {
+  background-color: #4f46e5 !important;
+  background: #4f46e5 !important;
+  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.35) !important;
+}
+
+html.dark .bg-slate-900 button[type="submit"] {
+  background-color: #06b6d4 !important;
+  background: #06b6d4 !important;
+  color: #000000 !important;
+  box-shadow: 0 4px 12px rgba(6, 182, 212, 0.2) !important;
+}
+
+html.dark .bg-slate-900 button[type="submit"]:hover {
+  background-color: #0891b2 !important;
+  background: #0891b2 !important;
+  box-shadow: 0 6px 16px rgba(6, 182, 212, 0.35) !important;
+}
+
+/* =========================================================
+   Reset/Cancel and Submit Button Styles (Modern Rounded Box)
+   ========================================================= */
+
+/* Reset/Cancel button styling */
+.btn-reset {
+  border-radius: 14px !important;
+  height: 44px !important;
+  padding: 0 28px !important;
+  min-width: 110px !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Light mode Reset */
+html:not(.dark) .btn-reset {
+  background-color: #f1f5f9 !important;
+  background: #f1f5f9 !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #334155 !important;
+}
+
+html:not(.dark) .btn-reset:hover {
+  background-color: #e2e8f0 !important;
+  background: #e2e8f0 !important;
+  border-color: #94a3b8 !important;
+  color: #0f172a !important;
+}
+
+/* Dark mode Reset */
+html.dark .btn-reset {
+  background-color: rgba(30, 35, 54, 0.85) !important;
+  background: rgba(30, 35, 54, 0.85) !important;
+  border: 1px solid rgba(51, 65, 85, 0.7) !important;
+  color: #ffffff !important;
+}
+
+html.dark .btn-reset:hover {
+  background-color: rgba(40, 48, 73, 0.95) !important;
+  background: rgba(40, 48, 73, 0.95) !important;
+  border-color: rgba(71, 85, 105, 0.9) !important;
+  color: #ffffff !important;
+}
+
+/* Submit/Confirm/Save button styling */
+.btn-submit {
+  background-color: #5865F2 !important;
+  background: #5865F2 !important;
+  border: none !important;
+  border-radius: 14px !important;
+  height: 44px !important;
+  padding: 0 28px !important;
+  min-width: 110px !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: 0 4px 14px rgba(88, 101, 242, 0.35) !important;
+  transition: all 0.2s ease !important;
+}
+
+.btn-submit:hover {
+  background-color: #4752c4 !important;
+  background: #4752c4 !important;
+  box-shadow: 0 6px 18px rgba(88, 101, 242, 0.45) !important;
+  color: #ffffff !important;
+}
+
+/* Light mode overrides to ensure full black contrast inside main doesn't make submit text black */
+html:not(.dark) .btn-submit,
+html:not(.dark) .btn-submit * {
+  color: #ffffff !important;
+}
+
+/* Prevent any orange/amber effect on Submit/Save/Update buttons */
+button.btn-submit,
+button[type="submit"] {
+  background-color: #5865F2 !important;
+  background: #5865F2 !important;
+  color: #ffffff !important;
+}
+
+/* =========================================================
+   Universal Pagination Active Page Button (#5865F2)
+   ========================================================= */
+button[class*="bg-cyan-600"]:is([class*="w-9"], [class*="h-9"], [class*="p-0"]),
+button[class*="bg-primary"]:is([class*="w-9"], [class*="h-9"], [class*="p-0"]),
+button.bg-primary:is([class*="w-9"], [class*="h-9"]),
+button[variant="default"]:is([class*="w-9"], [class*="h-9"]) {
+  background-color: #5865F2 !important;
+  background: #5865F2 !important;
+  color: #ffffff !important;
+  border-radius: 12px !important;
+  font-weight: 600 !important;
+  box-shadow: 0 2px 8px rgba(88, 101, 242, 0.35) !important;
+}
+
+button[class*="bg-cyan-600"]:is([class*="w-9"], [class*="h-9"], [class*="p-0"]):hover,
+button[class*="bg-primary"]:is([class*="w-9"], [class*="h-9"], [class*="p-0"]):hover,
+button.bg-primary:is([class*="w-9"], [class*="h-9"]):hover,
+button[variant="default"]:is([class*="w-9"], [class*="h-9"]):hover {
+  background-color: #4752c4 !important;
+  background: #4752c4 !important;
+  color: #ffffff !important;
+}
+
+/* =========================================================
+   Dropdown Select Option Hover Style (Ice-Blue on Hover Only)
+   ========================================================= */
+[data-radix-select-item][data-highlighted],
+select option:hover,
+select option:focus {
+  background-color: #93c5fd !important;
+  color: #0f172a !important;
+}
+
+[data-radix-select-item] {
+  padding-left: 14px !important;
+  padding-right: 14px !important;
+  cursor: pointer !important;
+}
