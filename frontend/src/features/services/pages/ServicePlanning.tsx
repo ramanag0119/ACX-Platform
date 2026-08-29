@@ -529,7 +529,7 @@ const ServicePlanning = () => {
                             min={0}
                             max={59}
                         />
-                        <Button variant="outline" size="sm" className="bg-cyan-600 text-white border-0">
+                        <Button variant="outline" size="sm" className="bg-brand hover:bg-brand-hover text-white border-0 font-medium rounded-xl h-10 px-3.5 shadow-sm">
                             AM
                         </Button>
                     </div>
@@ -553,7 +553,7 @@ const ServicePlanning = () => {
                             min={0}
                             max={59}
                         />
-                        <Button variant="outline" size="sm" className="bg-cyan-600 text-white border-0">
+                        <Button variant="outline" size="sm" className="bg-brand hover:bg-brand-hover text-white border-0 font-medium rounded-xl h-10 px-3.5 shadow-sm">
                             AM
                         </Button>
                     </div>
@@ -603,8 +603,8 @@ const ServicePlanning = () => {
                                 key={day}
                                 variant={scheduledForm.frequency.includes(day) ? "default" : "outline"}
                                 size="sm"
-                                className={`w-12 ${scheduledForm.frequency.includes(day)
-                                    ? "bg-cyan-600 text-white"
+                                className={`w-12 rounded-xl transition-all ${scheduledForm.frequency.includes(day)
+                                    ? "bg-brand hover:bg-brand-hover text-white font-medium shadow-sm"
                                     : "bg-muted/30 border-border/50"
                                     }`}
                                 onClick={() => toggleFrequency(day, "scheduled")}
@@ -730,7 +730,7 @@ const ServicePlanning = () => {
                             placeholder="MM"
                             className="w-16 h-10 bg-muted/30 border-border/50 text-center"
                         />
-                        <Button variant="outline" size="sm" className="bg-cyan-600 text-white border-0">
+                        <Button variant="outline" size="sm" className="bg-brand hover:bg-brand-hover text-white border-0 font-medium rounded-xl h-10 px-3.5 shadow-sm">
                             AM
                         </Button>
                     </div>
@@ -750,7 +750,7 @@ const ServicePlanning = () => {
                             placeholder="MM"
                             className="w-16 h-10 bg-muted/30 border-border/50 text-center"
                         />
-                        <Button variant="outline" size="sm" className="bg-cyan-600 text-white border-0">
+                        <Button variant="outline" size="sm" className="bg-brand hover:bg-brand-hover text-white border-0 font-medium rounded-xl h-10 px-3.5 shadow-sm">
                             AM
                         </Button>
                     </div>
@@ -887,7 +887,7 @@ const ServicePlanning = () => {
                             placeholder="MM"
                             className="w-16 h-10 bg-muted/30 border-border/50 text-center"
                         />
-                        <Button variant="outline" size="sm" className="bg-cyan-600 text-white border-0">
+                        <Button variant="outline" size="sm" className="bg-brand hover:bg-brand-hover text-white border-0 font-medium rounded-xl h-10 px-3.5 shadow-sm">
                             AM
                         </Button>
                     </div>
@@ -907,7 +907,7 @@ const ServicePlanning = () => {
                             placeholder="MM"
                             className="w-16 h-10 bg-muted/30 border-border/50 text-center"
                         />
-                        <Button variant="outline" size="sm" className="bg-cyan-600 text-white border-0">
+                        <Button variant="outline" size="sm" className="bg-brand hover:bg-brand-hover text-white border-0 font-medium rounded-xl h-10 px-3.5 shadow-sm">
                             AM
                         </Button>
                     </div>
@@ -957,8 +957,8 @@ const ServicePlanning = () => {
                                 key={day}
                                 variant={disinfectionForm.frequency.includes(day) ? "default" : "outline"}
                                 size="sm"
-                                className={`w-12 ${disinfectionForm.frequency.includes(day)
-                                    ? "bg-cyan-600 text-white"
+                                className={`w-12 rounded-xl transition-all ${disinfectionForm.frequency.includes(day)
+                                    ? "bg-brand hover:bg-brand-hover text-white font-medium shadow-sm"
                                     : "bg-muted/30 border-border/50"
                                     }`}
                                 onClick={() => toggleFrequency(day, "disinfection")}
@@ -979,6 +979,7 @@ const ServicePlanning = () => {
             </div>
         </div>
     );
+
 
     const renderTable = () => {
         // Every tab renders the same rows; only the column set differs, because
@@ -1012,7 +1013,7 @@ const ServicePlanning = () => {
             ];
         } else {
             columns = [
-                { key: "sanitizerServices", label: "Sanitizer Services" },
+                { key: "facilityServices", label: "Facility Services" },
                 { key: "serviceType", label: "Service Type" },
                 { key: "department", label: "Department" },
                 { key: "assignTo", label: "Assign To" },
@@ -1024,16 +1025,16 @@ const ServicePlanning = () => {
         }
 
         return (
-            <div className="rounded-lg overflow-hidden border border-border/80 dark:border-slate-800 overflow-x-auto scrollbar-thin">
+            <div className="rounded-lg overflow-hidden border border-border/80 dark:border-slate-800">
                 <Table>
                     <TableHeader>
-                        <TableRow className="bg-gray-50 hover:bg-gray-50 border-b border-gray-200">
+                        <TableRow className="bg-muted/40 dark:bg-[#0e1322] border-b border-border dark:border-slate-800">
                             {columns.map((col) => (
-                                <TableHead key={col.key} className="text-gray-600 font-medium">
+                                <TableHead key={col.key} className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">
                                     {col.label}
                                 </TableHead>
                             ))}
-                            <TableHead className="text-gray-600 font-medium text-center">Action</TableHead>
+                            <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 text-center">Action</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1094,7 +1095,7 @@ const ServicePlanning = () => {
                                     <div className="flex items-center justify-center gap-2">
                                         <Button
                                             size="sm"
-                                            className="bg-[#3eb1c8] hover:bg-[#3eb1c8]/90 text-white h-7 w-7 p-0 rounded-[3px]"
+                                            className="bg-brand-teal hover:bg-brand-teal/90 text-white h-7 w-7 p-0 rounded-[3px]"
                                             onClick={() => setEditModalOpen(true)}
                                         >
                                             <Edit className="h-[14px] w-[14px]" />
@@ -1103,7 +1104,7 @@ const ServicePlanning = () => {
                                             retires the room/assignee links with it. */}
                                         <Button
                                             size="sm"
-                                            className="bg-[#d33] hover:bg-[#bd2d2d] text-white h-7 w-7 p-0 rounded-[3px]"
+                                            className="bg-[#d33] hover:bg-brand-danger-hover text-white h-7 w-7 p-0 rounded-[3px]"
                                             disabled={!mayWrite || removePlan.isPending}
                                             title={
                                                 mayWrite
@@ -1125,14 +1126,14 @@ const ServicePlanning = () => {
     };
 
     return (
-        <div className="space-y-6 animate-fade-in bg-[hsl(220,20%,96%)] min-h-screen -m-6 p-6">
+        <div className="space-y-6 animate-fade-in text-foreground">
             {/* Page Header */}
             <div className="mb-2">
-                <h1 className="text-2xl font-semibold text-foreground">Services Planning</h1>
+                <h1 className="text-xl font-semibold text-foreground tracking-tight">Services Planning</h1>
             </div>
 
             {/* Tabs */}
-            <div className="flex gap-6 border-b border-gray-200">
+            <div className="flex gap-6 border-b border-border dark:border-slate-800">
                 {tabs.map((tab) => (
                     <button
                         key={tab.id}
@@ -1149,29 +1150,31 @@ const ServicePlanning = () => {
                     >
                         {tab.label}
                         {activeTab === tab.id && (
-                            <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-purple-600 rounded-t-full" />
+                            <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-primary rounded-t-full" />
                         )}
                     </button>
                 ))}
             </div>
 
             {/* Form Section */}
-            <Card className="border-0 shadow-lg rounded-2xl bg-white">
+            <Card className="border border-border/80 dark:border-slate-800 shadow-xl rounded-xl bg-card text-card-foreground">
                 <CardContent className="p-6">
                     {activeTab === "scheduled" && renderScheduledServicesForm()}
                     {activeTab === "maintenance" && renderPlanMaintenanceForm()}
                     {activeTab === "disinfection" && renderDisinfectionForm()}
 
                     {/* Action Buttons */}
-                    <div className="flex justify-center gap-4 pt-4 border-t border-border/30">
+                    <div className="flex justify-center gap-4 pt-6 border-t border-border/30">
                         <Button
+                            type="button"
                             onClick={handleReset}
                             variant="outline"
-                            className="h-10 px-8 bg-cyan-600 text-white border-0 hover:bg-cyan-700"
+                            className="h-10 px-8 min-w-[120px] rounded-xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all"
                         >
                             Reset
                         </Button>
                         <Button
+                            type="button"
                             onClick={handleSubmit}
                             disabled={!mayWrite || createPlan.isPending}
                             title={
@@ -1179,7 +1182,7 @@ const ServicePlanning = () => {
                                     ? "Create this planned service"
                                     : "Your role cannot change service planning"
                             }
-                            className="h-10 px-8 min-w-[120px] rounded-xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
+                            className="h-10 px-8 min-w-[120px] rounded-xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
                         >
                             {createPlan.isPending ? "Saving..." : "Submit"}
                         </Button>
@@ -1188,10 +1191,10 @@ const ServicePlanning = () => {
             </Card>
 
             {/* Data Table Section */}
-            <Card className="border-0 shadow-lg rounded-2xl bg-white">
-                <CardContent className="p-6">
+            <Card className="border border-border/80 dark:border-slate-800 shadow-xl rounded-xl bg-card text-card-foreground overflow-hidden">
+                <CardContent className="p-5">
                     {/* Controls */}
-                    <div className="flex items-center justify-between mb-6">
+                    <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
                         <div className="flex items-center gap-2">
                             <span className="text-muted-foreground text-sm">Show</span>
                             <Select
@@ -1204,28 +1207,25 @@ const ServicePlanning = () => {
                                 <SelectTrigger className="w-20 h-9 bg-muted/30 border-border/50">
                                     <SelectValue />
                                 </SelectTrigger>
-                                <SelectContent className="bg-popover">
+                                <SelectContent className="bg-popover text-popover-foreground border-border text-xs">
                                     <SelectItem value="10">10</SelectItem>
                                     <SelectItem value="25">25</SelectItem>
                                     <SelectItem value="50">50</SelectItem>
                                     <SelectItem value="100">100</SelectItem>
                                 </SelectContent>
                             </Select>
-                            <span className="text-muted-foreground text-sm">entries</span>
+                            <span className="text-muted-foreground text-xs font-medium">entries</span>
                         </div>
 
                         <div className="flex items-center gap-2">
-                            <span className="text-muted-foreground text-sm">Search:</span>
+                            <span className="text-muted-foreground text-xs font-medium">Search:</span>
                             <div className="relative">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
                                 <Input
                                     placeholder="Facility services, Service type, Room No"
                                     value={searchQuery}
-                                    onChange={(e) => {
-                                        setSearchQuery(e.target.value);
-                                        setCurrentPage(1);
-                                    }}
-                                    className="pl-10 w-80 h-9 bg-muted/30 border-border/50"
+                                    onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                                    className="pl-9 w-64 md:w-80 h-8 text-xs bg-muted/20 border-border dark:border-slate-700/80 rounded-md placeholder:text-muted-foreground/60"
                                 />
                             </div>
                         </div>
@@ -1247,7 +1247,7 @@ const ServicePlanning = () => {
                             <Button
                                 variant="ghost"
                                 size="sm"
-                                className="text-muted-foreground hover:text-foreground"
+                                className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground"
                                 onClick={() => setCurrentPage(1)}
                                 disabled={activePage === 1}
                             >
@@ -1260,7 +1260,7 @@ const ServicePlanning = () => {
                                 onClick={() => setCurrentPage(Math.max(1, activePage - 1))}
                                 disabled={activePage === 1}
                             >
-                                <ChevronLeft className="h-4 w-4 mr-1" />
+                                <ChevronLeft className="h-3.5 w-3.5 mr-1" />
                                 Previous
                             </Button>
                             {pageNumbers.map((page) => (
@@ -1288,7 +1288,7 @@ const ServicePlanning = () => {
                                 disabled={activePage >= totalPages}
                             >
                                 Next
-                                <ChevronRight className="h-4 w-4 ml-1" />
+                                <ChevronRight className="h-3.5 w-3.5 ml-1" />
                             </Button>
                             <Button
                                 variant="ghost"
@@ -1348,10 +1348,10 @@ const ServicePlanning = () => {
                         <div className="grid grid-cols-[140px_1fr] gap-6 items-center">
                             <Label className="text-sm font-medium text-gray-800 text-left">Assign To <span className="text-red-500">*</span></Label>
                             <div className="relative bg-gray-500 border border-gray-500 rounded-[2px] p-[2px] pr-8 flex items-center gap-1 h-[34px]">
-                                <div className="bg-[#3eb1c8] text-white text-xs px-2 py-0.5 rounded-[2px] flex items-center gap-1">
+                                <div className="bg-brand-teal text-white text-xs px-2 py-0.5 rounded-[2px] flex items-center gap-1">
                                     System User <X className="h-3 w-3 cursor-pointer hover:opacity-80" />
                                 </div>
-                                <div className="bg-[#3eb1c8] text-white text-xs px-2 py-0.5 rounded-[2px] flex items-center gap-1">
+                                <div className="bg-brand-teal text-white text-xs px-2 py-0.5 rounded-[2px] flex items-center gap-1">
                                     Namas s <X className="h-3 w-3 cursor-pointer hover:opacity-80" />
                                 </div>
                                 <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-300 pointer-events-none" />
@@ -1362,18 +1362,18 @@ const ServicePlanning = () => {
                             <Label className="text-sm font-medium text-gray-800 text-left pt-6">Start Time <span className="text-red-500">*</span></Label>
                             <div className="flex items-center gap-4">
                                 <div className="flex flex-col items-center">
-                                    <ChevronUp className="h-5 w-5 text-[#3eb1c8] cursor-pointer" />
+                                    <ChevronUp className="h-5 w-5 text-brand-teal cursor-pointer" />
                                     <input type="text" value="11" readOnly className="w-12 text-center bg-transparent border-0 border-b border-gray-300 text-gray-900 focus:ring-0 px-0 pb-1 text-base outline-none cursor-default" />
-                                    <ChevronDown className="h-5 w-5 text-[#3eb1c8] cursor-pointer" />
+                                    <ChevronDown className="h-5 w-5 text-brand-teal cursor-pointer" />
                                 </div>
                                 <span className="text-xl font-bold pb-6">:</span>
                                 <div className="flex flex-col items-center">
-                                    <ChevronUp className="h-5 w-5 text-[#3eb1c8] cursor-pointer" />
+                                    <ChevronUp className="h-5 w-5 text-brand-teal cursor-pointer" />
                                     <input type="text" value="00" readOnly className="w-12 text-center bg-transparent border-0 border-b border-gray-300 text-gray-900 focus:ring-0 px-0 pb-1 text-base outline-none cursor-default" />
-                                    <ChevronDown className="h-5 w-5 text-[#3eb1c8] cursor-pointer" />
+                                    <ChevronDown className="h-5 w-5 text-brand-teal cursor-pointer" />
                                 </div>
                                 <div className="pb-6">
-                                    <div className="border border-[#3eb1c8] text-[#3eb1c8] rounded-[2px] px-3 py-[2px] text-[13px] font-medium cursor-pointer">AM</div>
+                                    <div className="bg-brand hover:bg-brand-hover text-white rounded-xl px-4 py-1.5 text-sm font-semibold cursor-pointer shadow-sm transition-all">AM</div>
                                 </div>
                             </div>
                         </div>
@@ -1382,18 +1382,18 @@ const ServicePlanning = () => {
                             <Label className="text-sm font-medium text-gray-800 text-left pt-6">End Time <span className="text-red-500">*</span></Label>
                             <div className="flex items-center gap-4">
                                 <div className="flex flex-col items-center">
-                                    <ChevronUp className="h-5 w-5 text-[#3eb1c8] cursor-pointer" />
+                                    <ChevronUp className="h-5 w-5 text-brand cursor-pointer" />
                                     <input type="text" value="12" readOnly className="w-12 text-center bg-transparent border-0 border-b border-gray-300 text-gray-900 focus:ring-0 px-0 pb-1 text-base outline-none cursor-default" />
-                                    <ChevronDown className="h-5 w-5 text-[#3eb1c8] cursor-pointer" />
+                                    <ChevronDown className="h-5 w-5 text-brand cursor-pointer" />
                                 </div>
                                 <span className="text-xl font-bold pb-6">:</span>
                                 <div className="flex flex-col items-center">
-                                    <ChevronUp className="h-5 w-5 text-[#3eb1c8] cursor-pointer" />
+                                    <ChevronUp className="h-5 w-5 text-brand cursor-pointer" />
                                     <input type="text" value="00" readOnly className="w-12 text-center bg-transparent border-0 border-b border-gray-300 text-gray-900 focus:ring-0 px-0 pb-1 text-base outline-none cursor-default" />
-                                    <ChevronDown className="h-5 w-5 text-[#3eb1c8] cursor-pointer" />
+                                    <ChevronDown className="h-5 w-5 text-brand cursor-pointer" />
                                 </div>
                                 <div className="pb-6">
-                                    <div className="border border-[#3eb1c8] text-[#3eb1c8] rounded-[2px] px-3 py-[2px] text-[13px] font-medium cursor-pointer">AM</div>
+                                    <div className="bg-brand hover:bg-brand-hover text-white rounded-xl px-4 py-1.5 text-sm font-semibold cursor-pointer shadow-sm transition-all">AM</div>
                                 </div>
                             </div>
                         </div>
@@ -1402,11 +1402,11 @@ const ServicePlanning = () => {
                             <Label className="text-sm font-medium text-gray-800 text-left">Rooms <span className="text-red-500">*</span></Label>
                             <RadioGroup defaultValue="rooms" className="flex flex-col gap-2">
                                 <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="rooms" id="edit-rooms" className="text-[#3eb1c8] border-[#3eb1c8]" />
+                                    <RadioGroupItem value="rooms" id="edit-rooms" className="text-brand-teal border-brand-teal" />
                                     <Label htmlFor="edit-rooms" className="cursor-pointer text-gray-900 font-normal">Rooms</Label>
                                 </div>
                                 <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="non-rooms" id="edit-non-rooms" className="text-[#3eb1c8] border-gray-300" />
+                                    <RadioGroupItem value="non-rooms" id="edit-non-rooms" className="text-brand-teal border-gray-300" />
                                     <Label htmlFor="edit-non-rooms" className="cursor-pointer text-gray-900 font-normal">Non Rooms</Label>
                                 </div>
                             </RadioGroup>
@@ -1415,7 +1415,7 @@ const ServicePlanning = () => {
                         <div className="grid grid-cols-[140px_1fr] gap-6 items-center">
                             <Label className="text-sm font-medium text-gray-800 text-left">Room No <span className="text-red-500">*</span></Label>
                             <div className="relative border border-gray-500 rounded-[2px] p-[2px] pr-8 flex items-center gap-1 h-[34px]">
-                                <div className="bg-[#3eb1c8] text-white text-xs px-2 py-0.5 rounded-[2px] flex items-center gap-1">
+                                <div className="bg-brand-teal text-white text-xs px-2 py-0.5 rounded-[2px] flex items-center gap-1">
                                     211 <X className="h-3 w-3 cursor-pointer hover:opacity-80" />
                                 </div>
                                 <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
@@ -1424,9 +1424,9 @@ const ServicePlanning = () => {
 
                         <div className="grid grid-cols-[140px_1fr] gap-6 items-center">
                             <Label className="text-sm font-medium text-gray-800 text-left">Frequency <span className="text-red-500">*</span></Label>
-                            <div className="flex bg-transparent border border-[#3eb1c8] rounded-[2px] w-fit overflow-hidden">
+                            <div className="flex bg-transparent border border-brand-teal rounded-[2px] w-fit overflow-hidden">
                                 {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day, idx) => (
-                                    <div key={day} className={`px-3 py-1 text-xs font-medium cursor-pointer border-r border-[#3eb1c8] last:border-r-0 ${idx === 6 ? "bg-[#3eb1c8] text-white" : "text-gray-800 hover:bg-gray-100"}`}>
+                                    <div key={day} className={`px-3 py-1 text-xs font-medium cursor-pointer border-r border-brand-teal last:border-r-0 ${idx === 6 ? "bg-brand-teal text-white" : "text-gray-800 hover:bg-gray-100"}`}>
                                         {day}
                                     </div>
                                 ))}
@@ -1442,7 +1442,7 @@ const ServicePlanning = () => {
 
                         <div className="flex justify-center gap-4 pt-4">
                             <Button variant="outline" className="h-10 px-8 min-w-[110px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all" onClick={() => setEditModalOpen(false)}>Reset</Button>
-                            <Button className="h-10 px-8 min-w-[110px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all" onClick={() => setEditModalOpen(false)}>Submit</Button>
+                            <Button className="h-10 px-8 min-w-[110px] rounded-2xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all" onClick={() => setEditModalOpen(false)}>Submit</Button>
                         </div>
                     </div>
                 </DialogContent>

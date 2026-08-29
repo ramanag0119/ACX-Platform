@@ -26,6 +26,7 @@ import {
     Cell,
     ResponsiveContainer,
     Tooltip,
+    Sector,
 } from "recharts";
 import {
     Dialog,
@@ -114,6 +115,7 @@ const formatTime = (value: string | null) =>
 
 const ServiceTracking = () => {
     const [activeService, setActiveService] = useState<number | null>(null);
+    const [activeChartIndex, setActiveChartIndex] = useState<number | undefined>(undefined);
     const [entriesPerPage, setEntriesPerPage] = useState("10");
     const [searchQuery, setSearchQuery] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
@@ -198,6 +200,27 @@ const ServiceTracking = () => {
         typesQuery.isLoading || statusesQuery.isLoading || allRequestsQuery.isLoading;
     const error = typesQuery.error ?? statusesQuery.error ?? allRequestsQuery.error;
 
+    const renderActiveShape = (props: { cx?: number; cy?: number; innerRadius?: number; outerRadius?: number; startAngle?: number; endAngle?: number; fill?: string }) => {
+        const { cx = 0, cy = 0, innerRadius = 0, outerRadius = 0, startAngle = 0, endAngle = 0, fill = "#3eb1c8" } = props;
+        return (
+            <g>
+                <Sector
+                    cx={cx}
+                    cy={cy}
+                    innerRadius={innerRadius - 2}
+                    outerRadius={outerRadius + 6}
+                    startAngle={startAngle}
+                    endAngle={endAngle}
+                    fill={fill}
+                    style={{
+                        filter: `drop-shadow(0 0 10px ${fill}80)`,
+                        transition: "all 0.3s ease-out",
+                    }}
+                />
+            </g>
+        );
+    };
+
     const getStatusBadge = (status: string) => {
         let colorClass = "bg-gray-500/20 text-gray-400";
         const normalised = status.toLowerCase();
@@ -220,7 +243,7 @@ const ServiceTracking = () => {
         const normalised = status.toLowerCase();
         if (normalised === "assigned") { bgColor = "bg-[#e5a910] hover:bg-[#cc960e]"; modalType = "yellow"; }
         else if (normalised === "pending" || normalised.startsWith("cancel")) { bgColor = "bg-[#ed5565] hover:bg-[#da4453]"; modalType = "red"; }
-        else if (normalised === "partially completed") { bgColor = "bg-[#3eb1c8] hover:bg-[#2e93a8]"; modalType = "blue"; }
+        else if (normalised === "partially completed") { bgColor = "bg-brand-teal hover:bg-[#2e93a8]"; modalType = "blue"; }
 
         return (
             <div className="flex justify-center gap-2">
@@ -250,28 +273,46 @@ const ServiceTracking = () => {
         );
     };
 
+    const filterData = <T extends Record<string, unknown>>(data: T[]) => {
+        if (!searchQuery.trim()) return data;
+        const query = searchQuery.toLowerCase().trim();
+        return data.filter((item) =>
+            Object.values(item).some((val) =>
+                val !== null && val !== undefined && String(val).toLowerCase().includes(query)
+            )
+        );
+    };
+
+    const filteredData = filterData(rows);
+    const totalEntries = filteredData.length;
+    const pageSize = parseInt(entriesPerPage) || 10;
+    const totalPages = Math.max(1, Math.ceil(totalEntries / pageSize));
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = Math.min(startIndex + pageSize, totalEntries);
+    const paginatedData = filteredData.slice(startIndex, endIndex);
+
     const renderTable = () => {
         switch (selectedType?.name) {
             case "Room Service":
                 return (
                     <Table>
                         <TableHeader>
-                            <TableRow className="bg-gray-50 border-b border-gray-200">
-                                <TableHead className="text-gray-600 font-medium">Room No</TableHead>
-                                <TableHead className="text-gray-600 font-medium">Service Type</TableHead>
-                                <TableHead className="text-gray-600 font-medium">Service Request</TableHead>
-                                <TableHead className="text-gray-600 font-medium">Service Item</TableHead>
-                                <TableHead className="text-gray-600 font-medium">Assigned To</TableHead>
-                                <TableHead className="text-gray-600 font-medium">Date</TableHead>
-                                <TableHead className="text-gray-600 font-medium">Time</TableHead>
-                                <TableHead className="text-gray-600 font-medium">Description</TableHead>
-                                <TableHead className="text-gray-600 font-medium">Status Reason</TableHead>
-                                <TableHead className="text-gray-600 font-medium">Status</TableHead>
-                                <TableHead className="text-gray-600 font-medium text-center">Action</TableHead>
+                            <TableRow className="bg-muted/40 dark:bg-[#0e1322] border-b border-border dark:border-slate-800">
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Room No</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Service Type</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Service Request</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Service Item</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Assigned To</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Date</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Time</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Description</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Status Reason</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Status</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 text-center">Action</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {rows.map((row) => (
+                            {paginatedData.map((row) => (
                                 <TableRow key={row.id} className="border-b border-border/50 dark:border-slate-800/70 bg-card dark:bg-[#101526]/80 hover:bg-muted/30 dark:hover:bg-slate-800/50 transition-colors">
                                     <TableCell className="font-medium text-foreground">{row.roomNo}</TableCell>
                                     <TableCell>{row.serviceType}</TableCell>
@@ -303,21 +344,21 @@ const ServiceTracking = () => {
                 return (
                     <Table>
                         <TableHeader>
-                            <TableRow className="bg-gray-50 border-b border-gray-200">
-                                <TableHead className="text-gray-600 font-medium">Room No</TableHead>
-                                <TableHead className="text-gray-600 font-medium">Service Type</TableHead>
-                                <TableHead className="text-gray-600 font-medium">Service Request</TableHead>
-                                <TableHead className="text-gray-600 font-medium">Assigned To</TableHead>
-                                <TableHead className="text-gray-600 font-medium">Date</TableHead>
-                                <TableHead className="text-gray-600 font-medium">Time</TableHead>
-                                <TableHead className="text-gray-600 font-medium">Description</TableHead>
-                                <TableHead className="text-gray-600 font-medium">Status Reason</TableHead>
-                                <TableHead className="text-gray-600 font-medium">Status</TableHead>
-                                <TableHead className="text-gray-600 font-medium text-center">Action</TableHead>
+                            <TableRow className="bg-muted/40 dark:bg-[#0e1322] border-b border-border dark:border-slate-800">
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Room No</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Service Type</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Service Request</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Assigned To</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Date</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Time</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Description</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Status Reason</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Status</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 text-center">Action</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {rows.map((row) => (
+                            {paginatedData.map((row) => (
                                 <TableRow key={row.id} className="border-b border-border/50 dark:border-slate-800/70 bg-card dark:bg-[#101526]/80 hover:bg-muted/30 dark:hover:bg-slate-800/50 transition-colors">
                                     <TableCell className="font-medium text-foreground">{row.roomNo}</TableCell>
                                     <TableCell>{row.serviceType}</TableCell>
@@ -340,21 +381,21 @@ const ServiceTracking = () => {
                 return (
                     <Table>
                         <TableHeader>
-                            <TableRow className="bg-gray-50 border-b border-gray-200">
-                                <TableHead className="text-gray-600 font-medium">Room No</TableHead>
-                                <TableHead className="text-gray-600 font-medium">Service Type</TableHead>
-                                <TableHead className="text-gray-600 font-medium">Service Request</TableHead>
-                                <TableHead className="text-gray-600 font-medium">Assigned To</TableHead>
-                                <TableHead className="text-gray-600 font-medium">Date</TableHead>
-                                <TableHead className="text-gray-600 font-medium">Time</TableHead>
-                                <TableHead className="text-gray-600 font-medium">Description</TableHead>
-                                <TableHead className="text-gray-600 font-medium">Status Reason</TableHead>
-                                <TableHead className="text-gray-600 font-medium">Status</TableHead>
-                                <TableHead className="text-gray-600 font-medium text-center">Action</TableHead>
+                            <TableRow className="bg-muted/40 dark:bg-[#0e1322] border-b border-border dark:border-slate-800">
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Room No</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Service Type</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Service Request</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Assigned To</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Date</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Time</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Description</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Status Reason</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Status</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 text-center">Action</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {rows.map((row) => (
+                            {paginatedData.map((row) => (
                                 <TableRow key={row.id} className="border-b border-border/50 dark:border-slate-800/70 bg-card dark:bg-[#101526]/80 hover:bg-muted/30 dark:hover:bg-slate-800/50 transition-colors">
                                     <TableCell className="font-medium text-foreground">{row.roomNo}</TableCell>
                                     <TableCell>{row.serviceType}</TableCell>
@@ -377,20 +418,20 @@ const ServiceTracking = () => {
                 return (
                     <Table>
                         <TableHeader>
-                            <TableRow className="bg-gray-50 border-b border-gray-200">
-                                <TableHead className="text-gray-600 font-medium">Room No</TableHead>
-                                <TableHead className="text-gray-600 font-medium">Food Menu</TableHead>
-                                <TableHead className="text-gray-600 font-medium">Assigned To</TableHead>
-                                <TableHead className="text-gray-600 font-medium">Date</TableHead>
-                                <TableHead className="text-gray-600 font-medium">Time</TableHead>
-                                <TableHead className="text-gray-600 font-medium">Description</TableHead>
-                                <TableHead className="text-gray-600 font-medium">Status</TableHead>
-                                <TableHead className="text-gray-600 font-medium">Status Reason</TableHead>
-                                <TableHead className="text-gray-600 font-medium text-center">Action</TableHead>
+                            <TableRow className="bg-muted/40 dark:bg-[#0e1322] border-b border-border dark:border-slate-800">
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Room No</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Food Menu</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Assigned To</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Date</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Time</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Description</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Status</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Status Reason</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 text-center">Action</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {rows.map((row) => (
+                            {paginatedData.map((row) => (
                                 <TableRow key={row.id} className="border-b border-border/50 dark:border-slate-800/70 bg-card dark:bg-[#101526]/80 hover:bg-muted/30 dark:hover:bg-slate-800/50 transition-colors">
                                     <TableCell className="font-medium text-foreground">{row.roomNo}</TableCell>
                                     <TableCell>
@@ -420,24 +461,24 @@ const ServiceTracking = () => {
                 return (
                     <Table>
                         <TableHeader>
-                            <TableRow className="bg-gray-50 border-b border-gray-200">
-                                <TableHead className="text-gray-600 font-medium">Service Management</TableHead>
-                                <TableHead className="text-gray-600 font-medium">Service Category</TableHead>
-                                <TableHead className="text-gray-600 font-medium">Service Type</TableHead>
-                                <TableHead className="text-gray-600 font-medium">Department</TableHead>
-                                <TableHead className="text-gray-600 font-medium">Assigned To</TableHead>
-                                <TableHead className="text-gray-600 font-medium">From Date</TableHead>
-                                <TableHead className="text-gray-600 font-medium">To Date</TableHead>
-                                <TableHead className="text-gray-600 font-medium">Start Time</TableHead>
-                                <TableHead className="text-gray-600 font-medium">End Time</TableHead>
-                                <TableHead className="text-gray-600 font-medium">Room No</TableHead>
-                                <TableHead className="text-gray-600 font-medium">Under Maintenance</TableHead>
-                                <TableHead className="text-gray-600 font-medium">Status</TableHead>
-                                <TableHead className="text-gray-600 font-medium text-center">Action</TableHead>
+                            <TableRow className="bg-muted/40 dark:bg-[#0e1322] border-b border-border dark:border-slate-800">
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Service Management</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Service Category</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Service Type</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Department</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Assigned To</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">From Date</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">To Date</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Start Time</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">End Time</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Room No</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Under Maintenance</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Status</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 text-center">Action</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {rows.map((row) => (
+                            {paginatedData.map((row) => (
                                 <TableRow key={row.id} className="border-b border-border/50 dark:border-slate-800/70 bg-card dark:bg-[#101526]/80 hover:bg-muted/30 dark:hover:bg-slate-800/50 transition-colors">
                                     <TableCell>{row.management}</TableCell>
                                     <TableCell>{row.category}</TableCell>
@@ -463,23 +504,23 @@ const ServiceTracking = () => {
                 return (
                     <Table>
                         <TableHeader>
-                            <TableRow className="bg-gray-50 border-b border-gray-200">
-                                <TableHead className="text-gray-600 font-medium">Service Management</TableHead>
-                                <TableHead className="text-gray-600 font-medium">Service Category</TableHead>
-                                <TableHead className="text-gray-600 font-medium">Service Type</TableHead>
-                                <TableHead className="text-gray-600 font-medium">Department</TableHead>
-                                <TableHead className="text-gray-600 font-medium">Assigned To</TableHead>
-                                <TableHead className="text-gray-600 font-medium">From Date</TableHead>
-                                <TableHead className="text-gray-600 font-medium">To Date</TableHead>
-                                <TableHead className="text-gray-600 font-medium">Start Time</TableHead>
-                                <TableHead className="text-gray-600 font-medium">End Time</TableHead>
-                                <TableHead className="text-gray-600 font-medium">Room No</TableHead>
-                                <TableHead className="text-gray-600 font-medium">Status</TableHead>
-                                <TableHead className="text-gray-600 font-medium text-center">Action</TableHead>
+                            <TableRow className="bg-muted/40 dark:bg-[#0e1322] border-b border-border dark:border-slate-800">
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Service Management</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Service Category</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Service Type</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Department</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Assigned To</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">From Date</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">To Date</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Start Time</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">End Time</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Room No</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Status</TableHead>
+                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 text-center">Action</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {rows.map((row) => (
+                            {paginatedData.map((row) => (
                                 <TableRow key={row.id} className="border-b border-border/50 dark:border-slate-800/70 bg-card dark:bg-[#101526]/80 hover:bg-muted/30 dark:hover:bg-slate-800/50 transition-colors">
                                     <TableCell>{row.management}</TableCell>
                                     <TableCell>{row.category}</TableCell>
@@ -518,7 +559,7 @@ const ServiceTracking = () => {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {rows.map((row) => (
+                            {paginatedData.map((row) => (
                                 <TableRow key={row.id} className="border-b border-border/50 dark:border-slate-800/70 bg-card dark:bg-[#101526]/80 hover:bg-muted/30 dark:hover:bg-slate-800/50 transition-colors">
                                     <TableCell className="font-medium text-foreground">{row.roomNo}</TableCell>
                                     <TableCell>{row.serviceType}</TableCell>
@@ -548,11 +589,11 @@ const ServiceTracking = () => {
 
             {/* Page Header */}
             <div className="mb-2">
-                <h1 className="text-2xl font-semibold text-foreground">Dashboard</h1>
+                <h1 className="text-xl font-semibold text-foreground tracking-tight">Services Tracking</h1>
             </div>
 
             {/* KPI Cards Row */}
-            <div className="bg-white/60 rounded-2xl border border-gray-200/60 p-4 shadow-sm">
+            <div className="bg-card dark:bg-[#0c101d] rounded-2xl border border-border/80 dark:border-slate-800 p-4 shadow-md">
                 <div className="grid grid-cols-2 lg:grid-cols-7 gap-4">
                     {serviceTypes.map((card) => {
                         const IconComp = card.icon;
@@ -563,15 +604,15 @@ const ServiceTracking = () => {
                                 className={`relative bg-white rounded-xl border-2 border-gray-100 shadow-sm overflow-hidden px-5 pt-5 pb-4 transition-all duration-200 cursor-pointer text-left flex flex-col gap-2 ${card.hoverBorder} ${card.id === selectedTypeId ? "ring-2 ring-primary shadow-md" : ""}`}
                             >
                                 {/* Icon Badge */}
-                                <div className={`w-10 h-10 rounded-full ${card.iconBg} flex items-center justify-center`}>
-                                    <IconComp className={`h-5 w-5 ${card.iconColor}`} />
+                                <div className={`w-9 h-9 rounded-full ${card.iconBg} flex items-center justify-center`}>
+                                    <IconComp className={`h-4 w-4 ${card.iconColor}`} />
                                 </div>
                                 {/* Count */}
-                                <p className="text-3xl font-bold text-gray-900 mt-1">{card.count}</p>
+                                <p className="text-2xl font-bold text-foreground mt-0.5">{card.count}</p>
                                 {/* Label */}
-                                <p className="text-xs font-medium text-gray-500 truncate w-full">{card.label}</p>
+                                <p className="text-xs font-medium text-muted-foreground truncate w-full">{card.label}</p>
                                 {/* Bottom Bar */}
-                                <div className={`w-8 h-1 rounded-full ${card.barColor} mt-1`}></div>
+                                <div className={`w-8 h-1 rounded-full ${card.barColor} mt-0.5`}></div>
                             </button>
                         );
                     })}
@@ -579,51 +620,107 @@ const ServiceTracking = () => {
             </div>
 
             {/* Donut Chart Section */}
-            <div className="flex justify-center py-6">
-                <div className="relative">
-                    <div className="h-64 w-64">
+            <div className="bg-card dark:bg-[#0c101d] rounded-2xl border border-border/80 dark:border-slate-800 p-6 shadow-md max-w-lg mx-auto transition-all">
+                <div className="flex flex-col items-center">
+                    <div className="relative w-64 h-64 flex items-center justify-center">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <Pie
                                     data={currentChartData}
                                     cx="50%"
                                     cy="50%"
-                                    innerRadius={80}
-                                    outerRadius={100}
-                                    startAngle={-40}
-                                    endAngle={220}
+                                    innerRadius={56}
+                                    outerRadius={98}
+                                    startAngle={90}
+                                    endAngle={-270}
                                     paddingAngle={0}
                                     dataKey="value"
-                                    cornerRadius={10}
-                                    stroke="none"
+                                    stroke="hsl(var(--card))"
+                                    strokeWidth={2}
+                                    activeIndex={activeChartIndex}
+                                    activeShape={renderActiveShape}
+                                    onMouseEnter={(_, index) => setActiveChartIndex(index)}
+                                    onMouseLeave={() => setActiveChartIndex(undefined)}
+                                    className="cursor-pointer"
                                 >
                                     {currentChartData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={entry.color} />
+                                        <Cell
+                                            key={`cell-${index}`}
+                                            fill={entry.color}
+                                            className="transition-all duration-300 cursor-pointer"
+                                            opacity={activeChartIndex === undefined || activeChartIndex === index ? 1 : 0.6}
+                                        />
                                     ))}
                                 </Pie>
                                 <Tooltip
+                                    formatter={(value: unknown) => [`${value}%`, 'Percentage']}
                                     contentStyle={{
                                         backgroundColor: "hsl(var(--card))",
                                         border: "1px solid hsl(var(--border))",
-                                        borderRadius: "8px",
+                                        borderRadius: "10px",
+                                        boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.2)",
+                                        fontSize: "12px",
                                     }}
                                 />
                             </PieChart>
                         </ResponsiveContainer>
-                        {/* Center text */}
-                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none pb-2">
-                            <span className="text-5xl font-bold text-foreground">{totalServices}</span>
-                            <span className="text-sm text-muted-foreground mt-1">Services</span>
+                        {/* Center Metric Display (dynamic on hover) */}
+                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center transition-all duration-200">
+                            {activeChartIndex !== undefined && currentChartData[activeChartIndex] ? (
+                                <>
+                                    <span className="text-3xl font-bold tracking-tight text-foreground transition-all">
+                                        {currentChartData[activeChartIndex].value}%
+                                    </span>
+                                    <span className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mt-0.5">
+                                        {currentChartData[activeChartIndex].name}
+                                    </span>
+                                </>
+                            ) : (
+                                <>
+                                    <span className="text-3xl font-bold tracking-tight text-foreground transition-all">
+                                        {totalServices.toLocaleString()}
+                                    </span>
+                                    <span className="text-sm text-muted-foreground font-normal mt-0.5">
+                                        services
+                                    </span>
+                                </>
+                            )}
                         </div>
                     </div>
-                    <div className="flex justify-center gap-6 mt-2">
-                        {currentChartData.map((data, index) => (
-                            <div key={index} className="flex flex-col items-center">
-                                <span className="text-foreground font-medium">{data.name}</span>
-                                <span className="text-muted-foreground text-xs">{data.value}%</span>
-                                <div className={`w-8 h-1 mt-1 rounded-full`} style={{ backgroundColor: data.color }}></div>
-                            </div>
-                        ))}
+
+                    {/* Stats Legend Cards (interactive hover synced with chart) */}
+                    <div className="flex flex-wrap items-center justify-center gap-4 mt-5 w-full">
+                        {currentChartData.map((data, index) => {
+                            const isGreen = data.name.toLowerCase().includes("complete") || data.name.toLowerCase().includes("sanitized");
+                            const isHovered = activeChartIndex === index;
+                            return (
+                                <div
+                                    key={index}
+                                    onMouseEnter={() => setActiveChartIndex(index)}
+                                    onMouseLeave={() => setActiveChartIndex(undefined)}
+                                    className={`flex items-center gap-3 px-4 py-2.5 rounded-xl border cursor-pointer transition-all duration-200 ${
+                                        isHovered
+                                            ? "scale-105 shadow-md ring-2 ring-primary/40 brightness-105"
+                                            : "hover:scale-102 hover:shadow-sm"
+                                    } ${
+                                        isGreen
+                                            ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:border-emerald-500/30 dark:text-emerald-300"
+                                            : "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:border-rose-500/30 dark:text-rose-300"
+                                    }`}
+                                >
+                                    <div
+                                        className={`w-2.5 h-2.5 rounded-full shrink-0 transition-transform duration-200 ${
+                                            isHovered ? "scale-125 shadow-sm" : ""
+                                        }`}
+                                        style={{ backgroundColor: data.color }}
+                                    />
+                                    <div className="flex flex-col text-left">
+                                        <span className="text-xs font-semibold text-foreground/90">{data.name}</span>
+                                        <span className="text-sm font-bold">{data.value}%</span>
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             </div>
@@ -647,16 +744,19 @@ const ServiceTracking = () => {
                     <span className="text-sm">entries</span>
                 </div>
 
-                <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground text-sm">Search:</span>
-                    <Input
-                        placeholder="Employee First name/ Last name, ID, Room No"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-80 h-8 bg-white text-foreground border border-gray-200"
-                    />
-                </div>
-            </div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground text-xs font-medium">Search:</span>
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                                <Input
+                                    placeholder="Search records..."
+                                    value={searchQuery}
+                                    onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                                    className="pl-9 w-64 md:w-72 h-8 text-xs bg-muted/20 border-border dark:border-slate-700/80 rounded-md placeholder:text-muted-foreground/60"
+                                />
+                            </div>
+                        </div>
+                    </div>
 
             <div className="rounded-sm overflow-hidden border border-gray-200 bg-white">
                 <DataState
@@ -731,7 +831,7 @@ const ServiceTracking = () => {
                                     </div>
                                 </div>
                                 <div className="flex justify-end pt-2">
-                                    <Button className="bg-[#3eb1c8] hover:bg-[#3eb1c8]/90 text-white border-0 h-9 px-6 rounded-sm font-normal" onClick={() => setStatusModalConfig({ ...statusModalConfig, isOpen: false })}>Submit</Button>
+                                    <Button className="bg-brand-teal hover:bg-brand-teal/90 text-white border-0 h-9 px-6 rounded-sm font-normal" onClick={() => setStatusModalConfig({ ...statusModalConfig, isOpen: false })}>Submit</Button>
                                 </div>
                             </>
                         )}
@@ -747,7 +847,7 @@ const ServiceTracking = () => {
                                     </div>
                                 </div>
                                 <div className="flex justify-end pt-2">
-                                    <Button className="bg-[#3eb1c8] hover:bg-[#3eb1c8]/90 text-white border-0 h-9 px-6 rounded-sm font-normal" onClick={() => setStatusModalConfig({ ...statusModalConfig, isOpen: false })}>Submit</Button>
+                                    <Button className="bg-brand-teal hover:bg-brand-teal/90 text-white border-0 h-9 px-6 rounded-sm font-normal" onClick={() => setStatusModalConfig({ ...statusModalConfig, isOpen: false })}>Submit</Button>
                                 </div>
                             </>
                         )}
@@ -774,7 +874,7 @@ const ServiceTracking = () => {
                                     </div>
                                 </div>
                                 <div className="flex justify-end pt-2">
-                                    <Button className="bg-[#3eb1c8] hover:bg-[#3eb1c8]/90 text-white border-0 h-9 px-6 rounded-sm font-normal" onClick={() => setStatusModalConfig({ ...statusModalConfig, isOpen: false })}>Submit</Button>
+                                    <Button className="bg-brand-teal hover:bg-brand-teal/90 text-white border-0 h-9 px-6 rounded-sm font-normal" onClick={() => setStatusModalConfig({ ...statusModalConfig, isOpen: false })}>Submit</Button>
                                 </div>
                             </>
                         )}

@@ -141,36 +141,36 @@ const Holidays = () => {
     const paginatedData = filteredData.slice(startIndex, startIndex + parseInt(entriesPerPage));
 
     return (
-        <div className="space-y-6 animate-fade-in bg-[hsl(220,20%,96%)] min-h-screen -m-6 p-6">
+        <div className="space-y-6 animate-fade-in text-foreground">
             {/* Header */}
             <div className="mb-2">
-                <h1 className="text-2xl font-semibold text-foreground">Holidays Management</h1>
+                <h1 className="text-xl font-semibold text-foreground tracking-tight">Holidays Management</h1>
             </div>
 
 
             {/* Add Form */}
-            <Card className="border-0 shadow-lg rounded-2xl bg-white">
+            <Card className="border border-border/80 dark:border-slate-800 shadow-xl rounded-xl bg-card text-card-foreground">
                 <CardContent className="p-6">
-                    <h2 className="text-lg font-semibold mb-6">Add Holidays</h2>
+                    <h2 className="text-base font-semibold mb-6 text-foreground">Add Holidays</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl">
                         <div className="space-y-2">
                             <Label>Start Date<span className="text-red-500">*</span></Label>
-                            <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="bg-muted/30 border-border/50" />
+                            <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="bg-muted/20 border-border dark:border-slate-700/80" />
                             {errors.startDate && <p className="text-red-500 text-xs">{errors.startDate}</p>}
                         </div>
                         <div className="space-y-2">
                             <Label>End Date<span className="text-red-500">*</span></Label>
-                            <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="bg-muted/30 border-border/50" />
+                            <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="bg-muted/20 border-border dark:border-slate-700/80" />
                             {errors.endDate && <p className="text-red-500 text-xs">{errors.endDate}</p>}
                         </div>
                         <div className="space-y-2 md:col-span-2">
                             <Label>Lock message<span className="text-red-500">*</span></Label>
-                            <Input value={lockMessage} onChange={(e) => setLockMessage(e.target.value)} placeholder="This message will be shown on the lock screen" className="bg-muted/30 border-border/50" />
+                            <Input value={lockMessage} onChange={(e) => setLockMessage(e.target.value)} placeholder="This message will be shown on the lock screen" className="bg-muted/20 border-border dark:border-slate-700/80" />
                             {errors.lockMessage && <p className="text-red-500 text-xs">{errors.lockMessage}</p>}
                         </div>
                         <div className="space-y-2 md:col-span-2">
                             <Label>Description<span className="text-red-500">*</span></Label>
-                            <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Enter description" className="bg-muted/30 border-border/50 min-h-[100px]" />
+                            <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Enter description" className="bg-muted/20 border-border dark:border-slate-700/80 min-h-[100px]" />
                             {errors.description && <p className="text-red-500 text-xs">{errors.description}</p>}
                         </div>
                     </div>
@@ -179,7 +179,7 @@ const Holidays = () => {
                         <Button
                             onClick={handleSubmit}
                             disabled={!mayWrite || createHoliday.isPending || updateHoliday.isPending}
-                            className="h-10 px-8 min-w-[160px] rounded-xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
+                            className="h-10 px-8 min-w-[160px] rounded-xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
                         >
                             {createHoliday.isPending || updateHoliday.isPending
                                 ? "Saving..."
@@ -192,9 +192,9 @@ const Holidays = () => {
             </Card>
 
             {/* Table */}
-            <Card className="border-0 shadow-xl">
-                <CardContent className="p-6">
-                    <div className="flex items-center justify-between mb-6">
+            <Card className="border border-border/80 dark:border-slate-800 shadow-xl rounded-xl bg-card text-card-foreground overflow-hidden">
+                <CardContent className="p-5">
+                    <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
                         <div className="flex items-center gap-2">
                             <span className="text-muted-foreground text-sm">Show</span>
                             <Select value={entriesPerPage} onValueChange={setEntriesPerPage}>
@@ -202,25 +202,26 @@ const Holidays = () => {
                                 <SelectContent className="bg-popover text-popover-foreground border-border">
                                     <SelectItem value="10">10</SelectItem>
                                     <SelectItem value="25">25</SelectItem>
+                                    <SelectItem value="50">50</SelectItem>
                                 </SelectContent>
                             </Select>
-                            <span className="text-muted-foreground text-sm">entries</span>
+                            <span className="text-muted-foreground text-xs font-medium">entries</span>
                         </div>
                         <div className="flex items-center gap-2">
-                            <span className="text-muted-foreground text-sm">Search:</span>
-                            <Input placeholder="lock message" value={search} onChange={(e) => setSearch(e.target.value)} className="w-64 h-9 bg-muted/30 border-border/50" />
+                            <span className="text-muted-foreground text-xs font-medium">Search:</span>
+                            <Input placeholder="Lock message, description" value={search} onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }} className="w-64 h-8 text-xs bg-muted/20 border-border dark:border-slate-700/80 rounded-md placeholder:text-muted-foreground/60" />
                         </div>
                     </div>
 
                     <div className="rounded-lg overflow-hidden border border-border/80 dark:border-slate-800 overflow-x-auto scrollbar-thin">
                         <Table>
                             <TableHeader>
-                                <TableRow className="bg-gray-50 hover:bg-gray-50 border-b border-gray-200">
-                                    <TableHead className="text-gray-600 font-medium">Start Date</TableHead>
-                                    <TableHead className="text-gray-600 font-medium">End Date</TableHead>
-                                    <TableHead className="text-gray-600 font-medium">Lock message</TableHead>
-                                    <TableHead className="text-gray-600 font-medium">Description</TableHead>
-                                    <TableHead className="text-gray-600 font-medium text-center">Action</TableHead>
+                                <TableRow className="bg-muted/40 dark:bg-[#0e1322] border-b border-border dark:border-slate-800">
+                                    <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Start Date</TableHead>
+                                    <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">End Date</TableHead>
+                                    <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Lock message</TableHead>
+                                    <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Description</TableHead>
+                                    <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 text-center">Action</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -232,7 +233,7 @@ const Holidays = () => {
                                         <TableCell>{item.description}</TableCell>
                                         <TableCell className="text-center">
                                             <div className="flex gap-2 justify-center">
-                                                <Button size="sm" className="bg-[#3eb1c8] hover:bg-[#3eb1c8]/90 text-white h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditModalOpen(true)}>
+                                                <Button size="sm" className="bg-brand-teal hover:bg-brand-teal/90 text-white h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditModalOpen(true)}>
                                                     <Edit className="h-[14px] w-[14px]" />
                                                 </Button>
                                                 {/* Record WHICH occasion is being retired.
@@ -240,7 +241,7 @@ const Holidays = () => {
                                                     so the confirm button had nothing to act on. */}
                                                 <Button
                                                     size="sm"
-                                                    className="bg-[#d33] hover:bg-[#bd2d2d] text-white h-7 w-7 p-0 rounded-[3px]"
+                                                    className="bg-[#d33] hover:bg-brand-danger-hover text-white h-7 w-7 p-0 rounded-[3px]"
                                                     disabled={!mayWrite}
                                                     onClick={() => {
                                                         setDeletingId(item.id);
@@ -257,16 +258,16 @@ const Holidays = () => {
                         </Table>
                     </div>
 
-                    <div className="flex items-center justify-between mt-6">
-                        <span className="text-muted-foreground text-sm">Showing {startIndex + 1} to {Math.min(startIndex + parseInt(entriesPerPage), filteredData.length)} of {filteredData.length} entries</span>
+                    <div className="flex flex-wrap items-center justify-between gap-4 mt-5">
+                        <span className="text-muted-foreground text-xs">Showing {filteredData.length > 0 ? startIndex + 1 : 0} to {Math.min(startIndex + parseInt(entriesPerPage), filteredData.length)} of {filteredData.length} entries</span>
                         <div className="flex items-center gap-1">
-                            <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>First</Button>
-                            <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1}>Previous</Button>
-                            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => i + 1).map((page) => (
-                                <Button key={page} variant={currentPage === page ? "default" : "ghost"} size="sm" className={`w-9 h-9 p-0 ${currentPage === page ? "bg-cyan-600 text-white" : ""}`} onClick={() => setCurrentPage(page)}>{page}</Button>
+                            <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>First</Button>
+                            <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1}>Previous</Button>
+                            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                                <Button key={page} variant={currentPage === page ? "default" : "ghost"} size="sm" className={`h-8 w-8 p-0 text-xs rounded-xl ${currentPage === page ? "bg-brand hover:bg-brand-hover text-white font-semibold shadow-sm" : "text-muted-foreground hover:text-foreground"}`} onClick={() => setCurrentPage(page)}>{page}</Button>
                             ))}
-                            <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages}>Next</Button>
-                            <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages}>Last</Button>
+                            <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages}>Next</Button>
+                            <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages}>Last</Button>
                         </div>
                     </div>
                 </CardContent>
@@ -319,8 +320,8 @@ const Holidays = () => {
                     </div>
 
                     <div className="flex justify-center gap-4 pb-8">
-                        <Button variant="outline" className="h-10 px-8 min-w-[110px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all" onClick={() => setEditModalOpen(false)}>Reset</Button>
-                        <Button className="h-10 px-8 min-w-[110px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all" onClick={() => setEditModalOpen(false)}>Submit</Button>
+                        <Button variant="outline" className="text-amber-500 border-amber-500 hover:bg-amber-50 hover:text-amber-600 h-8 px-6 rounded-[3px] font-normal" onClick={() => setEditModalOpen(false)}>Reset</Button>
+                        <Button className="bg-transparent text-brand-teal border border-brand-teal hover:bg-cyan-50 h-8 px-6 rounded-[3px] font-normal" onClick={() => setEditModalOpen(false)}>Submit</Button>
                     </div>
                 </DialogContent>
             </Dialog>
@@ -351,7 +352,7 @@ const Holidays = () => {
                             >
                                 {updateHoliday.isPending ? "Removing..." : "Yes, delete it!"}
                             </Button>
-                            <Button className="bg-[#d33] hover:bg-[#bd2d2d] text-white text-[15px] font-medium px-4 py-2 rounded-[4px] h-[40px]" onClick={() => setDeleteModalOpen(false)}>Cancel</Button>
+                            <Button className="bg-[#d33] hover:bg-brand-danger-hover text-white text-[15px] font-medium px-4 py-2 rounded-[4px] h-[40px]" onClick={() => setDeleteModalOpen(false)}>Cancel</Button>
                         </div>
                     </div>
                 </DialogContent>

@@ -1246,7 +1246,7 @@ const ServicesSetup = () => {
                                     <Button onClick={handleFoodCategoryReset} variant="outline" className="h-11 px-8 min-w-[120px] rounded-2xl bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 font-semibold text-sm shadow-sm transition-all">
                                         Reset
                                     </Button>
-                                    <Button onClick={handleFoodCategorySubmit} className="h-11 px-8 min-w-[120px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">
+                                    <Button onClick={handleFoodCategorySubmit} className="h-11 px-8 min-w-[120px] rounded-2xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">
                                         Submit
                                     </Button>
                                 </div>
@@ -1296,7 +1296,7 @@ const ServicesSetup = () => {
                                                 <TableCell className="text-cyan-600 hover:underline text-center cursor-pointer">{item.category}</TableCell>
                                                 <TableCell className="text-center">
                                                     <div className="flex justify-center gap-2">
-                                                        <Button size="sm" className="bg-[#3eb1c8] hover:bg-[#3eb1c8]/90 text-white h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditFoodCategoryOpen(true)}>
+                                                        <Button size="sm" className="bg-brand-teal hover:bg-brand-teal/90 text-white h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditFoodCategoryOpen(true)}>
                                                             <Edit className="h-[14px] w-[14px]" />
                                                         </Button>
                                                         <Button size="sm" className="bg-red-500 hover:bg-red-600 text-white h-7 w-7 p-0 rounded-[3px]">
@@ -1315,7 +1315,7 @@ const ServicesSetup = () => {
                                     <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setFoodCategoryCurrentPage(1)} disabled={foodCategoryCurrentPage === 1}>First</Button>
                                     <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setFoodCategoryCurrentPage(Math.max(1, foodCategoryCurrentPage - 1))} disabled={foodCategoryCurrentPage === 1}>Previous</Button>
                                     {Array.from({ length: Math.min(3, foodCategoryTotalPages) }, (_, i) => i + 1).map((page) => (
-                                        <Button key={page} variant={foodCategoryCurrentPage === page ? "default" : "ghost"} size="sm" className={`w-9 h-9 p-0 rounded-xl ${foodCategoryCurrentPage === page ? "bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold shadow-sm" : "text-muted-foreground"}`} onClick={() => setFoodCategoryCurrentPage(page)}>{page}</Button>
+                                        <Button key={page} variant={foodCategoryCurrentPage === page ? "default" : "ghost"} size="sm" className={`w-9 h-9 p-0 rounded-xl ${foodCategoryCurrentPage === page ? "bg-brand hover:bg-brand-hover text-white font-semibold shadow-sm" : "text-muted-foreground"}`} onClick={() => setFoodCategoryCurrentPage(page)}>{page}</Button>
                                     ))}
                                     <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setFoodCategoryCurrentPage(Math.min(foodCategoryTotalPages, foodCategoryCurrentPage + 1))} disabled={foodCategoryCurrentPage === foodCategoryTotalPages}>Next</Button>
                                     <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setFoodCategoryCurrentPage(foodCategoryTotalPages)} disabled={foodCategoryCurrentPage === foodCategoryTotalPages}>Last</Button>
@@ -1399,7 +1399,7 @@ const ServicesSetup = () => {
                             </div>
                             <div className="flex justify-center gap-4 mt-6 pt-6 border-t border-border/30">
                                 <Button onClick={handleFoodMenuReset} variant="outline" className="h-11 px-8 min-w-[120px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all">Reset</Button>
-                                <Button onClick={handleFoodMenuSubmit} className="h-11 px-8 min-w-[120px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">Submit</Button>
+                                <Button onClick={handleFoodMenuSubmit} className="h-11 px-8 min-w-[120px] rounded-2xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">Submit</Button>
                             </div>
                         </CardContent>
                     </Card>
@@ -1449,7 +1449,7 @@ const ServicesSetup = () => {
                                                 <TableCell className="text-foreground">{item.price}</TableCell>
                                                 <TableCell className="text-center">
                                                     <div className="flex justify-center gap-2">
-                                                        <Button size="sm" className="bg-[#3eb1c8] hover:bg-[#3eb1c8]/90 text-white h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditFoodMenuOpen(true)}>
+                                                        <Button size="sm" className="bg-brand-teal hover:bg-brand-teal/90 text-white h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditFoodMenuOpen(true)}>
                                                             <Edit className="h-[14px] w-[14px]" />
                                                         </Button>
                                                         <Button size="sm" className="bg-red-500 hover:bg-red-600 text-white h-7 w-7 p-0 rounded-[3px]">
@@ -1468,7 +1468,7 @@ const ServicesSetup = () => {
                                     <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setFoodMenuCurrentPage(1)} disabled={foodMenuCurrentPage === 1}>First</Button>
                                     <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setFoodMenuCurrentPage(Math.max(1, foodMenuCurrentPage - 1))} disabled={foodMenuCurrentPage === 1}>Previous</Button>
                                     {Array.from({ length: Math.min(3, foodMenuTotalPages) }, (_, i) => i + 1).map((page) => (
-                                        <Button key={page} variant={foodMenuCurrentPage === page ? "default" : "ghost"} size="sm" className={`w-9 h-9 p-0 rounded-xl ${foodMenuCurrentPage === page ? "bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold shadow-sm" : "text-muted-foreground"}`} onClick={() => setFoodMenuCurrentPage(page)}>{page}</Button>
+                                        <Button key={page} variant={foodMenuCurrentPage === page ? "default" : "ghost"} size="sm" className={`w-9 h-9 p-0 rounded-xl ${foodMenuCurrentPage === page ? "bg-brand hover:bg-brand-hover text-white font-semibold shadow-sm" : "text-muted-foreground"}`} onClick={() => setFoodMenuCurrentPage(page)}>{page}</Button>
                                     ))}
                                     <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setFoodMenuCurrentPage(Math.min(foodMenuTotalPages, foodMenuCurrentPage + 1))} disabled={foodMenuCurrentPage === foodMenuTotalPages}>Next</Button>
                                     <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setFoodMenuCurrentPage(foodMenuTotalPages)} disabled={foodMenuCurrentPage === foodMenuTotalPages}>Last</Button>
@@ -1572,7 +1572,7 @@ const ServicesSetup = () => {
                                     <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setFacilityServicesCurrentPage(1)} disabled={facilityServicesCurrentPage === 1}>First</Button>
                                     <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setFacilityServicesCurrentPage(Math.max(1, facilityServicesCurrentPage - 1))} disabled={facilityServicesCurrentPage === 1}>Previous</Button>
                                     {Array.from({ length: Math.min(3, facilityServicesTotalPages) }, (_, i) => i + 1).map((page) => (
-                                        <Button key={page} variant={facilityServicesCurrentPage === page ? "default" : "ghost"} size="sm" className={`w-9 h-9 p-0 rounded-xl ${facilityServicesCurrentPage === page ? "bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold shadow-sm" : "text-muted-foreground"}`} onClick={() => setFacilityServicesCurrentPage(page)}>{page}</Button>
+                                        <Button key={page} variant={facilityServicesCurrentPage === page ? "default" : "ghost"} size="sm" className={`w-9 h-9 p-0 rounded-xl ${facilityServicesCurrentPage === page ? "bg-brand hover:bg-brand-hover text-white font-semibold shadow-sm" : "text-muted-foreground"}`} onClick={() => setFacilityServicesCurrentPage(page)}>{page}</Button>
                                     ))}
                                     <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setFacilityServicesCurrentPage(Math.min(facilityServicesTotalPages, facilityServicesCurrentPage + 1))} disabled={facilityServicesCurrentPage === facilityServicesTotalPages}>Next</Button>
                                     <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setFacilityServicesCurrentPage(facilityServicesTotalPages)} disabled={facilityServicesCurrentPage === facilityServicesTotalPages}>Last</Button>
@@ -1607,7 +1607,7 @@ const ServicesSetup = () => {
                                 </div>
                                 <div className="flex justify-center gap-4 mt-6 pt-6 border-t border-border/30">
                                     <Button onClick={handleFacilityServicesTypeReset} variant="outline" className="h-11 px-8 min-w-[120px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all">Reset</Button>
-                                    <Button onClick={handleFacilityServicesTypeSubmit} className="h-11 px-8 min-w-[120px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">Submit</Button>
+                                    <Button onClick={handleFacilityServicesTypeSubmit} className="h-11 px-8 min-w-[120px] rounded-2xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">Submit</Button>
                                 </div>
                             </div>
                         </CardContent>
@@ -1645,7 +1645,7 @@ const ServicesSetup = () => {
                                                 <TableCell className="text-cyan-600 hover:underline cursor-pointer">{item.typeOfService}</TableCell>
                                                 <TableCell>30</TableCell>
                                                 <TableCell className="text-center">
-                                                    <Button size="sm" className="bg-[#3eb1c8] hover:bg-[#3eb1c8]/90 text-white h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditFacilityServiceOpen(true)}>
+                                                    <Button size="sm" className="bg-brand-teal hover:bg-brand-teal/90 text-white h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditFacilityServiceOpen(true)}>
                                                         <Edit className="h-[14px] w-[14px]" />
                                                     </Button>
                                                 </TableCell>
@@ -1660,7 +1660,7 @@ const ServicesSetup = () => {
                                     <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setFacilityServicesTypeCurrentPage(1)} disabled={facilityServicesTypeCurrentPage === 1}>First</Button>
                                     <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setFacilityServicesTypeCurrentPage(Math.max(1, facilityServicesTypeCurrentPage - 1))} disabled={facilityServicesTypeCurrentPage === 1}>Previous</Button>
                                     {Array.from({ length: Math.min(3, facilityServicesTypeTotalPages) }, (_, i) => i + 1).map((page) => (
-                                        <Button key={page} variant={facilityServicesTypeCurrentPage === page ? "default" : "ghost"} size="sm" className={`w-9 h-9 p-0 rounded-xl ${facilityServicesTypeCurrentPage === page ? "bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold shadow-sm" : "text-muted-foreground"}`} onClick={() => setFacilityServicesTypeCurrentPage(page)}>{page}</Button>
+                                        <Button key={page} variant={facilityServicesTypeCurrentPage === page ? "default" : "ghost"} size="sm" className={`w-9 h-9 p-0 rounded-xl ${facilityServicesTypeCurrentPage === page ? "bg-brand hover:bg-brand-hover text-white font-semibold shadow-sm" : "text-muted-foreground"}`} onClick={() => setFacilityServicesTypeCurrentPage(page)}>{page}</Button>
                                     ))}
                                     <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setFacilityServicesTypeCurrentPage(Math.min(facilityServicesTypeTotalPages, facilityServicesTypeCurrentPage + 1))} disabled={facilityServicesTypeCurrentPage === facilityServicesTypeTotalPages}>Next</Button>
                                     <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setFacilityServicesTypeCurrentPage(facilityServicesTypeTotalPages)} disabled={facilityServicesTypeCurrentPage === facilityServicesTypeTotalPages}>Last</Button>
@@ -1747,7 +1747,7 @@ const ServicesSetup = () => {
                             <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setHealthFitnessCurrentPage(1)} disabled={healthFitnessCurrentPage === 1}>First</Button>
                             <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setHealthFitnessCurrentPage(Math.max(1, healthFitnessCurrentPage - 1))} disabled={healthFitnessCurrentPage === 1}>Previous</Button>
                             {Array.from({ length: Math.min(3, healthFitnessTotalPages) }, (_, i) => i + 1).map((page) => (
-                                <Button key={page} variant={healthFitnessCurrentPage === page ? "default" : "ghost"} size="sm" className={`w-9 h-9 p-0 rounded-xl ${healthFitnessCurrentPage === page ? "bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold shadow-sm" : "text-muted-foreground"}`} onClick={() => setHealthFitnessCurrentPage(page)}>{page}</Button>
+                                <Button key={page} variant={healthFitnessCurrentPage === page ? "default" : "ghost"} size="sm" className={`w-9 h-9 p-0 rounded-xl ${healthFitnessCurrentPage === page ? "bg-brand hover:bg-brand-hover text-white font-semibold shadow-sm" : "text-muted-foreground"}`} onClick={() => setHealthFitnessCurrentPage(page)}>{page}</Button>
                             ))}
                             <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setHealthFitnessCurrentPage(Math.min(healthFitnessTotalPages, healthFitnessCurrentPage + 1))} disabled={healthFitnessCurrentPage === healthFitnessTotalPages}>Next</Button>
                             <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setHealthFitnessCurrentPage(healthFitnessTotalPages)} disabled={healthFitnessCurrentPage === healthFitnessTotalPages}>Last</Button>
@@ -1849,7 +1849,7 @@ const ServicesSetup = () => {
                                     <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setSanitationServicesCurrentPage(1)} disabled={sanitationServicesCurrentPage === 1}>First</Button>
                                     <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setSanitationServicesCurrentPage(Math.max(1, sanitationServicesCurrentPage - 1))} disabled={sanitationServicesCurrentPage === 1}>Previous</Button>
                                     {Array.from({ length: Math.min(3, sanitationServicesTotalPages) }, (_, i) => i + 1).map((page) => (
-                                        <Button key={page} variant={sanitationServicesCurrentPage === page ? "default" : "ghost"} size="sm" className={`w-9 h-9 p-0 rounded-xl ${sanitationServicesCurrentPage === page ? "bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold shadow-sm" : "text-muted-foreground"}`} onClick={() => setSanitationServicesCurrentPage(page)}>{page}</Button>
+                                        <Button key={page} variant={sanitationServicesCurrentPage === page ? "default" : "ghost"} size="sm" className={`w-9 h-9 p-0 rounded-xl ${sanitationServicesCurrentPage === page ? "bg-brand hover:bg-brand-hover text-white font-semibold shadow-sm" : "text-muted-foreground"}`} onClick={() => setSanitationServicesCurrentPage(page)}>{page}</Button>
                                     ))}
                                     <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setSanitationServicesCurrentPage(Math.min(sanitationServicesTotalPages, sanitationServicesCurrentPage + 1))} disabled={sanitationServicesCurrentPage === sanitationServicesTotalPages}>Next</Button>
                                     <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setSanitationServicesCurrentPage(sanitationServicesTotalPages)} disabled={sanitationServicesCurrentPage === sanitationServicesTotalPages}>Last</Button>
@@ -1888,7 +1888,7 @@ const ServicesSetup = () => {
                                 </div>
                                 <div className="flex justify-center gap-4 mt-6 pt-6 border-t border-border/30">
                                     <Button onClick={handleSanitationServicesTypeReset} variant="outline" className="h-11 px-8 min-w-[120px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all">Reset</Button>
-                                    <Button onClick={handleSanitationServicesTypeSubmit} className="h-11 px-8 min-w-[120px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">Submit</Button>
+                                    <Button onClick={handleSanitationServicesTypeSubmit} className="h-11 px-8 min-w-[120px] rounded-2xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">Submit</Button>
                                 </div>
                             </div>
                         </CardContent>
@@ -1931,7 +1931,7 @@ const ServicesSetup = () => {
                                                 <TableCell className="text-cyan-600 hover:underline text-center cursor-pointer">{item.typeOfService}</TableCell>
                                                 <TableCell className="text-center">
                                                     <div className="flex justify-center gap-2">
-                                                        <Button size="sm" className="bg-[#3eb1c8] hover:bg-[#3eb1c8]/90 text-white h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditSanitationServiceOpen(true)}>
+                                                        <Button size="sm" className="bg-brand-teal hover:bg-brand-teal/90 text-white h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditSanitationServiceOpen(true)}>
                                                             <Edit className="h-[14px] w-[14px]" />
                                                         </Button>
                                                         <Button size="sm" className="bg-red-500 hover:bg-red-600 text-white h-7 w-7 p-0 rounded-[3px]">
@@ -1950,7 +1950,7 @@ const ServicesSetup = () => {
                                     <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setSanitationServicesTypeCurrentPage(1)} disabled={sanitationServicesTypeCurrentPage === 1}>First</Button>
                                     <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setSanitationServicesTypeCurrentPage(Math.max(1, sanitationServicesTypeCurrentPage - 1))} disabled={sanitationServicesTypeCurrentPage === 1}>Previous</Button>
                                     {Array.from({ length: Math.min(3, sanitationServicesTypeTotalPages) }, (_, i) => i + 1).map((page) => (
-                                        <Button key={page} variant={sanitationServicesTypeCurrentPage === page ? "default" : "ghost"} size="sm" className={`w-9 h-9 p-0 rounded-xl ${sanitationServicesTypeCurrentPage === page ? "bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold shadow-sm" : "text-muted-foreground"}`} onClick={() => setSanitationServicesTypeCurrentPage(page)}>{page}</Button>
+                                        <Button key={page} variant={sanitationServicesTypeCurrentPage === page ? "default" : "ghost"} size="sm" className={`w-9 h-9 p-0 rounded-xl ${sanitationServicesTypeCurrentPage === page ? "bg-brand hover:bg-brand-hover text-white font-semibold shadow-sm" : "text-muted-foreground"}`} onClick={() => setSanitationServicesTypeCurrentPage(page)}>{page}</Button>
                                     ))}
                                     <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setSanitationServicesTypeCurrentPage(Math.min(sanitationServicesTypeTotalPages, sanitationServicesTypeCurrentPage + 1))} disabled={sanitationServicesTypeCurrentPage === sanitationServicesTypeTotalPages}>Next</Button>
                                     <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setSanitationServicesTypeCurrentPage(sanitationServicesTypeTotalPages)} disabled={sanitationServicesTypeCurrentPage === sanitationServicesTypeTotalPages}>Last</Button>
@@ -2052,7 +2052,7 @@ const ServicesSetup = () => {
 
                     <div className="flex justify-center gap-4 pb-8">
                         <Button variant="outline" className="h-10 px-8 min-w-[110px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all" onClick={() => setEditFoodCategoryOpen(false)}>Reset</Button>
-                        <Button className="h-10 px-8 min-w-[110px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all" onClick={() => setEditFoodCategoryOpen(false)}>Submit</Button>
+                        <Button className="h-10 px-8 min-w-[110px] rounded-2xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all" onClick={() => setEditFoodCategoryOpen(false)}>Submit</Button>
                     </div>
                 </DialogContent>
             </Dialog>
@@ -2098,7 +2098,7 @@ const ServicesSetup = () => {
 
                     <div className="flex justify-center gap-4 pb-8">
                         <Button variant="outline" className="h-10 px-8 min-w-[110px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all" onClick={() => setEditSanitationServiceOpen(false)}>Reset</Button>
-                        <Button className="h-10 px-8 min-w-[110px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all" onClick={() => setEditSanitationServiceOpen(false)}>Submit</Button>
+                        <Button className="h-10 px-8 min-w-[110px] rounded-2xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all" onClick={() => setEditSanitationServiceOpen(false)}>Submit</Button>
                     </div>
                 </DialogContent>
             </Dialog>
@@ -2176,14 +2176,14 @@ const ServicesSetup = () => {
                                     <Button variant="outline" className="h-7 px-3 bg-gray-100 text-gray-700 text-xs border border-gray-300 rounded-[2px]">Choose file</Button>
                                     <span className="ml-3 text-xs text-gray-400">No file chosen</span>
                                 </div>
-                                <div className="text-[#3eb1c8] text-xs cursor-pointer hover:underline">Click here for previous image</div>
+                                <div className="text-brand-teal text-xs cursor-pointer hover:underline">Click here for previous image</div>
                             </div>
                         </div>
                     </div>
 
                     <div className="flex justify-center gap-4 pb-8 mt-2">
                         <Button variant="outline" className="h-10 px-8 min-w-[110px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all" onClick={() => setEditFoodMenuOpen(false)}>Reset</Button>
-                        <Button className="h-10 px-8 min-w-[110px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all" onClick={() => setEditFoodMenuOpen(false)}>Submit</Button>
+                        <Button className="h-10 px-8 min-w-[110px] rounded-2xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all" onClick={() => setEditFoodMenuOpen(false)}>Submit</Button>
                     </div>
                 </DialogContent>
             </Dialog>

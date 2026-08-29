@@ -200,6 +200,13 @@ const Tickets = () => {
     ticket.serviceType.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const totalEntries = filteredTickets.length;
+  const pageSize = parseInt(entriesPerPage) || 10;
+  const totalPages = Math.max(1, Math.ceil(totalEntries / pageSize));
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalEntries);
+  const paginatedTickets = filteredTickets.slice(startIndex, endIndex);
+
   const getStatusBadge = (status: string) => {
     if (status === "Completed") {
       return <Badge className="bg-green-500 text-white hover:bg-green-600">{status}</Badge>;
@@ -208,14 +215,14 @@ const Tickets = () => {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in bg-[hsl(220,20%,96%)] min-h-screen -m-6 p-6">
+    <div className="space-y-6 animate-fade-in text-foreground">
       {/* Header */}
       <div className="mb-2">
-        <h1 className="text-2xl font-semibold text-foreground">Ticket Management</h1>
+        <h1 className="text-xl font-semibold text-foreground tracking-tight">Ticket Management</h1>
       </div>
 
       {/* Add Ticket Form */}
-      <Card className="border-0 shadow-lg rounded-2xl bg-white">
+      <Card className="border border-border/80 dark:border-slate-800 shadow-xl rounded-xl bg-card text-card-foreground">
         <CardContent className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4">
             {/* Room No */}
@@ -223,7 +230,7 @@ const Tickets = () => {
               <Label className="w-32 text-right shrink-0">Room No<span className="text-red-500">*</span></Label>
               <div className="flex-1">
                 <Select value={roomNo} onValueChange={setRoomNo}>
-                  <SelectTrigger className={`bg-muted/30 border-border/50 ${errors.roomNo ? 'border-red-500' : ''}`}>
+                  <SelectTrigger className={`bg-muted/20 border-border dark:border-slate-700/80 ${errors.roomNo ? 'border-red-500' : ''}`}>
                     <SelectValue placeholder="Select Room No" />
                   </SelectTrigger>
                   <SelectContent className="bg-popover text-popover-foreground border-border">
@@ -244,7 +251,7 @@ const Tickets = () => {
               <Label className="w-32 text-right shrink-0">Service Type<span className="text-red-500">*</span></Label>
               <div className="flex-1">
                 <Select value={serviceType} onValueChange={setServiceType}>
-                  <SelectTrigger className={`bg-muted/30 border-border/50 ${errors.serviceType ? 'border-red-500' : ''}`}>
+                  <SelectTrigger className={`bg-muted/20 border-border dark:border-slate-700/80 ${errors.serviceType ? 'border-red-500' : ''}`}>
                     <SelectValue placeholder="Select Service Type" />
                   </SelectTrigger>
                   <SelectContent className="bg-popover text-popover-foreground border-border">
@@ -265,7 +272,7 @@ const Tickets = () => {
               <Label className="w-32 text-right shrink-0">Department<span className="text-red-500">*</span></Label>
               <div className="flex-1">
                 <Select value={department} onValueChange={setDepartment}>
-                  <SelectTrigger className={`bg-muted/30 border-border/50 ${errors.department ? 'border-red-500' : ''}`}>
+                  <SelectTrigger className={`bg-muted/20 border-border dark:border-slate-700/80 ${errors.department ? 'border-red-500' : ''}`}>
                     <SelectValue placeholder="Select Department" />
                   </SelectTrigger>
                   <SelectContent className="bg-popover text-popover-foreground border-border">
@@ -286,7 +293,7 @@ const Tickets = () => {
               <Label className="w-32 text-right shrink-0">Assign to<span className="text-red-500">*</span></Label>
               <div className="flex-1">
                 <Select value={assignTo} onValueChange={setAssignTo}>
-                  <SelectTrigger className={`bg-muted/30 border-border/50 ${errors.assignTo ? 'border-red-500' : ''}`}>
+                  <SelectTrigger className={`bg-muted/20 border-border dark:border-slate-700/80 ${errors.assignTo ? 'border-red-500' : ''}`}>
                     <SelectValue placeholder="Select Assign to" />
                   </SelectTrigger>
                   <SelectContent className="bg-popover text-popover-foreground border-border">
@@ -306,7 +313,7 @@ const Tickets = () => {
             <div className="flex items-center gap-4">
               <Label className="w-32 text-right shrink-0">Date<span className="text-red-500">*</span></Label>
               <div className="flex-1">
-                <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="bg-muted/30 border-border/50" placeholder="dd-mm-yyyy" />
+                <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="bg-muted/20 border-border dark:border-slate-700/80" placeholder="dd-mm-yyyy" />
               </div>
             </div>
 
@@ -318,7 +325,7 @@ const Tickets = () => {
               <Label className="w-32 text-right shrink-0">Time<span className="text-red-500">*</span></Label>
               <div className="flex-1 flex gap-2">
                 <Select value={timeHour} onValueChange={setTimeHour}>
-                  <SelectTrigger className="w-20 bg-muted/30 border-border/50">
+                  <SelectTrigger className="w-20 bg-muted/20 border-border dark:border-slate-700/80">
                     <SelectValue placeholder="HH" />
                   </SelectTrigger>
                   <SelectContent className="bg-popover text-popover-foreground border-border">
@@ -328,7 +335,7 @@ const Tickets = () => {
                   </SelectContent>
                 </Select>
                 <Select value={timeMinute} onValueChange={setTimeMinute}>
-                  <SelectTrigger className="w-20 bg-muted/30 border-border/50">
+                  <SelectTrigger className="w-20 bg-muted/20 border-border dark:border-slate-700/80">
                     <SelectValue placeholder="MM" />
                   </SelectTrigger>
                   <SelectContent className="bg-popover text-popover-foreground border-border">
@@ -338,7 +345,7 @@ const Tickets = () => {
                   </SelectContent>
                 </Select>
                 <Select value={timePeriod} onValueChange={setTimePeriod}>
-                  <SelectTrigger className="w-20 bg-muted/30 border-border/50">
+                  <SelectTrigger className="w-20 bg-muted/20 border-border dark:border-slate-700/80">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="bg-popover text-popover-foreground border-border">
@@ -360,7 +367,7 @@ const Tickets = () => {
                   placeholder="Enter Description"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="bg-muted/30 border-border/50 min-h-[100px]"
+                  className="bg-muted/20 border-border dark:border-slate-700/80 min-h-[100px]"
                 />
               </div>
             </div>
@@ -368,63 +375,64 @@ const Tickets = () => {
 
           {/* Buttons */}
           <div className="flex justify-center gap-4 mt-8">
-            <Button variant="outline" onClick={handleReset} className="px-8 border-cyan-500 text-cyan-600 hover:bg-cyan-50">Reset</Button>
-            <Button onClick={handleSubmit} className="px-8 bg-cyan-600 hover:bg-cyan-700 text-white">Submit</Button>
+            <Button variant="outline" onClick={handleReset} className="px-8 border-border hover:bg-muted">Reset</Button>
+            <Button onClick={handleSubmit} className="px-8 bg-brand hover:bg-brand-hover text-white font-medium rounded-xl shadow-md">Submit</Button>
           </div>
         </CardContent>
       </Card>
 
       {/* Tickets Table */}
-      <Card className="border-0 shadow-xl">
-        <CardContent className="p-6">
+      <Card className="border border-border/80 dark:border-slate-800 shadow-xl rounded-xl bg-card text-card-foreground overflow-hidden">
+        <CardContent className="p-5">
           {/* Table Controls */}
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
             <div className="flex items-center gap-2">
-              <span className="text-muted-foreground text-sm">Show</span>
-              <Select value={entriesPerPage} onValueChange={setEntriesPerPage}>
-                <SelectTrigger className="w-20 h-9 bg-muted/30 border-border/50">
+              <span className="text-muted-foreground text-xs font-medium">Show</span>
+              <Select value={entriesPerPage} onValueChange={(val) => { setEntriesPerPage(val); setCurrentPage(1); }}>
+                <SelectTrigger className="w-18 h-8 text-xs bg-muted/20 border-border dark:border-slate-700/80 rounded-md">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-popover text-popover-foreground border-border">
+                <SelectContent className="bg-popover text-popover-foreground border-border text-xs">
                   <SelectItem value="10">10</SelectItem>
                   <SelectItem value="25">25</SelectItem>
                   <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
                 </SelectContent>
               </Select>
-              <span className="text-muted-foreground text-sm">entries</span>
+              <span className="text-muted-foreground text-xs font-medium">entries</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-muted-foreground text-sm">Search:</span>
+              <span className="text-muted-foreground text-xs font-medium">Search:</span>
               <Input
-                placeholder="Room no, Assign to"
+                placeholder="Room no, Assign to, Service type"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-64 h-9 bg-muted/30 border-border/50"
+                onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                className="w-64 h-8 text-xs bg-muted/20 border-border dark:border-slate-700/80 rounded-md placeholder:text-muted-foreground/60"
               />
             </div>
           </div>
 
           {/* Table */}
-          <div className="rounded-xl overflow-hidden border border-gray-200 overflow-x-auto scrollbar-thin">
+          <div className="rounded-lg overflow-hidden border border-border/80 dark:border-slate-800 overflow-x-auto scrollbar-thin">
             <Table>
               <TableHeader>
-                <TableRow className="bg-gray-50 hover:bg-gray-50 border-b border-gray-200">
-                  <TableHead className="text-gray-600 font-medium whitespace-nowrap min-w-[140px]">Service Type ↕</TableHead>
-                  <TableHead className="text-gray-600 font-medium whitespace-nowrap min-w-[150px]">Service Category ↕</TableHead>
-                  <TableHead className="text-gray-600 font-medium whitespace-nowrap min-w-[150px]">Service Request ↕</TableHead>
-                  <TableHead className="text-gray-600 font-medium whitespace-nowrap min-w-[90px] text-center">Quantity</TableHead>
-                  <TableHead className="text-gray-600 font-medium whitespace-nowrap min-w-[100px] text-center">Room No ↕</TableHead>
-                  <TableHead className="text-gray-600 font-medium whitespace-nowrap min-w-[130px]">Department</TableHead>
-                  <TableHead className="text-gray-600 font-medium whitespace-nowrap min-w-[140px]">Assign to ↕</TableHead>
-                  <TableHead className="text-gray-600 font-medium whitespace-nowrap min-w-[110px] text-center">Date ↓</TableHead>
-                  <TableHead className="text-gray-600 font-medium whitespace-nowrap min-w-[90px] text-center">Time</TableHead>
-                  <TableHead className="text-gray-600 font-medium whitespace-nowrap min-w-[180px]">Description</TableHead>
-                  <TableHead className="text-gray-600 font-medium whitespace-nowrap min-w-[120px] text-center">Status</TableHead>
-                  <TableHead className="text-gray-600 font-medium whitespace-nowrap min-w-[80px] text-center">Action</TableHead>
+                <TableRow className="bg-muted/40 dark:bg-[#0e1322] border-b border-border dark:border-slate-800">
+                  <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap min-w-[140px]">Service Type</TableHead>
+                  <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap min-w-[150px]">Service Category</TableHead>
+                  <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap min-w-[150px]">Service Request</TableHead>
+                  <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap min-w-[90px] text-center">Quantity</TableHead>
+                  <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap min-w-[100px] text-center">Room No</TableHead>
+                  <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap min-w-[130px]">Department</TableHead>
+                  <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap min-w-[140px]">Assign to</TableHead>
+                  <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap min-w-[110px] text-center">Date</TableHead>
+                  <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap min-w-[90px] text-center">Time</TableHead>
+                  <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap min-w-[180px]">Description</TableHead>
+                  <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap min-w-[120px] text-center">Status</TableHead>
+                  <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap min-w-[80px] text-center">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(requestsQuery.isLoading || requestsQuery.error || filteredTickets.length === 0) && (
+                {(requestsQuery.isLoading || requestsQuery.error || paginatedTickets.length === 0) && (
                   <TableRow>
                     <TableCell colSpan={12} className="py-2">
                       <DataState
@@ -439,23 +447,23 @@ const Tickets = () => {
                     </TableCell>
                   </TableRow>
                 )}
-                {filteredTickets.map((ticket, index) => (
+                {paginatedTickets.map((ticket, index) => (
                   <TableRow key={ticket.id} className={`${index % 2 === 0 ? "bg-card dark:bg-[#101526]/80" : "bg-muted/10 dark:bg-[#0d1120]/80"} hover:bg-muted/30 dark:hover:bg-slate-800/50 border-b border-border/50 dark:border-slate-800/70 transition-colors`}>
-                    <TableCell className="text-cyan-600 whitespace-nowrap">{ticket.serviceType}</TableCell>
-                    <TableCell className="whitespace-nowrap">{ticket.serviceCategory}</TableCell>
-                    <TableCell className={ticket.serviceRequest === "Items" ? "text-amber-500" : "text-cyan-600"}>{ticket.serviceRequest}</TableCell>
-                    <TableCell className="text-center">{ticket.quantity}</TableCell>
-                    <TableCell className="text-center">{ticket.roomNo}</TableCell>
-                    <TableCell className="whitespace-nowrap">{ticket.department}</TableCell>
-                    <TableCell className="text-cyan-600 whitespace-nowrap">{ticket.assignTo}</TableCell>
-                    <TableCell className="whitespace-nowrap text-center">{ticket.date}</TableCell>
-                    <TableCell className="text-center">{ticket.time}</TableCell>
-                    <TableCell className="max-w-[200px] truncate">{ticket.description || "-"}</TableCell>
-                    <TableCell className="text-center">{getStatusBadge(ticket.status)}</TableCell>
-                    <TableCell className="text-center">
+                    <TableCell className="text-cyan-600 dark:text-cyan-400 text-xs py-3 px-4 whitespace-nowrap font-medium">{ticket.serviceType}</TableCell>
+                    <TableCell className="whitespace-nowrap text-xs py-3 px-4 text-foreground/90">{ticket.serviceCategory}</TableCell>
+                    <TableCell className={`text-xs py-3 px-4 whitespace-nowrap ${ticket.serviceRequest === "Items" ? "text-amber-500 font-medium" : "text-cyan-600 dark:text-cyan-400 font-medium"}`}>{ticket.serviceRequest}</TableCell>
+                    <TableCell className="text-center text-xs py-3 px-4 text-foreground/90">{ticket.quantity}</TableCell>
+                    <TableCell className="text-center text-xs py-3 px-4 text-foreground/90">{ticket.roomNo}</TableCell>
+                    <TableCell className="whitespace-nowrap text-xs py-3 px-4 text-foreground/90">{ticket.department}</TableCell>
+                    <TableCell className="text-cyan-600 dark:text-cyan-400 text-xs py-3 px-4 whitespace-nowrap">{ticket.assignTo}</TableCell>
+                    <TableCell className="whitespace-nowrap text-center text-xs py-3 px-4 text-foreground/90">{ticket.date}</TableCell>
+                    <TableCell className="text-center text-xs py-3 px-4 text-foreground/90">{ticket.time}</TableCell>
+                    <TableCell className="max-w-[200px] truncate text-xs py-3 px-4 text-muted-foreground">{ticket.description || "-"}</TableCell>
+                    <TableCell className="text-center py-3 px-4">{getStatusBadge(ticket.status)}</TableCell>
+                    <TableCell className="text-center py-3 px-4">
                       <Button
                         size="sm"
-                        className="bg-cyan-600 hover:bg-cyan-700 h-7 w-7 p-0"
+                        className="bg-cyan-600 hover:bg-cyan-700 h-7 w-7 p-0 rounded-md"
                         disabled={!mayWrite}
                         onClick={() =>
                           setActionTarget({
@@ -481,17 +489,27 @@ const Tickets = () => {
           </div>
 
           {/* Pagination */}
-          <div className="flex items-center justify-between mt-6">
-            <span className="text-muted-foreground text-sm">Showing 1 to 10 of 52 entries</span>
+          <div className="flex flex-wrap items-center justify-between gap-4 mt-5">
+            <span className="text-muted-foreground text-xs">Showing {totalEntries > 0 ? startIndex + 1 : 0} to {endIndex} of {totalEntries} entries</span>
             <div className="flex items-center gap-1">
-              <Button variant="ghost" size="sm" className="text-muted-foreground">First</Button>
-              <Button variant="ghost" size="sm" className="text-muted-foreground">Previous</Button>
-              <Button size="sm" className="w-9 h-9 p-0 bg-cyan-600 text-white">1</Button>
-              <Button variant="ghost" size="sm" className="w-9 h-9 p-0 text-muted-foreground">2</Button>
-              <Button variant="ghost" size="sm" className="w-9 h-9 p-0 text-muted-foreground">3</Button>
-              <Button variant="ghost" size="sm" className="w-9 h-9 p-0 text-muted-foreground">4</Button>
-              <Button variant="ghost" size="sm" className="text-muted-foreground">Next</Button>
-              <Button variant="ghost" size="sm" className="text-muted-foreground">Last</Button>
+              <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>First</Button>
+              <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1}>Previous</Button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <Button
+                  key={page}
+                  variant={currentPage === page ? "default" : "ghost"}
+                  size="sm"
+                  className={`h-8 w-8 p-0 text-xs rounded-xl ${currentPage === page
+                    ? "bg-brand hover:bg-brand-hover text-white font-semibold shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  onClick={() => setCurrentPage(page)}
+                >
+                  {page}
+                </Button>
+              ))}
+              <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages}>Next</Button>
+              <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages}>Last</Button>
             </div>
           </div>
         </CardContent>

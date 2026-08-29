@@ -545,7 +545,7 @@ const JobOrder = () => {
                                 <Button
                                     onClick={handleAddRoom}
                                     disabled={!selectedRoom || !selectedCaleidoNetwork}
-                                    className="h-10 px-8 min-w-[160px] rounded-xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
+                                    className="h-10 px-8 min-w-[160px] rounded-xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
                                 >
                                     Add
                                 </Button>

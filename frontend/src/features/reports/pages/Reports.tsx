@@ -360,7 +360,7 @@ const Reports = () => {
           >
             {report.title}
             {activeKey === report.key && (
-              <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#5865F2] rounded-full" />
+              <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-brand rounded-full" />
             )}
           </button>
         ))}
@@ -395,7 +395,7 @@ const Reports = () => {
               <Button
                 onClick={generate}
                 disabled={reportQuery.isFetching}
-                className="h-10 px-8 min-w-[170px] rounded-xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
+                className="h-10 px-8 min-w-[170px] rounded-xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
               >
                 {reportQuery.isFetching ? (
                   <>

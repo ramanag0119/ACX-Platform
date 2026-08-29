@@ -69,6 +69,8 @@ type BookingData = {
   roomType: string;
   noOfRooms: number;
   checkIn: string;
+  /** Scheduled checkout, shown in the check in and extend dialogs. */
+  checkOut: string;
   extendCheckOut: boolean;
   bookingDate: string;
   documentsApproval: boolean;
@@ -106,6 +108,28 @@ type BookingData = {
 
 type ViewMode = "list" | "add" | "edit";
 
+const EMPTY_FORM = {
+  firstName: "",
+  lastName: "",
+  email: "",
+  countryCode: "",
+  mobileNumber: "",
+  gender: "",
+  city: "",
+  nationality: "",
+  arrival: "",
+  depart: "",
+  guestRoom: "yes",
+  /** An `amenity.id` (UUID) -- what POST /stays wants in `room_ids`. */
+  roomId: "",
+  subPackages: "",
+  noOfPersons: "",
+  numberOfRooms: "",
+  gst: "",
+  bookingReference: "",
+  comments: "",
+};
+
 const Bookings = () => {
   // --- Live data -----------------------------------------------------------
   const staysQuery = useStays({ page: 1, page_size: MAX_PAGE_SIZE });
@@ -123,6 +147,9 @@ const Bookings = () => {
     noOfRooms: stay.no_of_rooms ?? 0,
     checkIn: stay.actual_checkin_time
       ? new Date(stay.actual_checkin_time).toLocaleString()
+      : "",
+    checkOut: stay.actual_checkout_time
+      ? new Date(stay.actual_checkout_time).toLocaleString()
       : "",
     extendCheckOut: false,
     bookingDate: new Date(stay.created_on).toLocaleDateString(),
@@ -177,6 +204,7 @@ const Bookings = () => {
   const [extendModalOpen, setExtendModalOpen] = useState(false);
   const [extendUntil, setExtendUntil] = useState("");
   const [selectedBooking, setSelectedBooking] = useState<BookingData | null>(null);
+  const [extendDate, setExtendDate] = useState("");
 
   // Form state
   const [formData, setFormData] = useState({
@@ -201,10 +229,7 @@ const Bookings = () => {
     comments: "",
   });
 
-  const totalEntries = 13;
-  const totalPages = Math.ceil(totalEntries / parseInt(entriesPerPage));
-
-  const filteredBookings = bookings.filter((booking) => {
+  const matchesSearch = (booking: BookingData) => {
     const query = searchQuery.toLowerCase();
     return (
       booking.name.toLowerCase().includes(query) ||
@@ -212,7 +237,16 @@ const Bookings = () => {
       booking.email.toLowerCase().includes(query) ||
       booking.roomType.toLowerCase().includes(query)
     );
-  });
+  };
+
+  const filteredBookings = bookings.filter(matchesSearch);
+
+  const totalEntries = filteredBookings.length;
+  const pageSize = parseInt(entriesPerPage) || 10;
+  const totalPages = Math.max(1, Math.ceil(totalEntries / pageSize));
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalEntries);
+  const paginatedBookings = filteredBookings.slice(startIndex, endIndex);
 
   const handleFormChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -379,6 +413,7 @@ const Bookings = () => {
     });
   };
 
+
   const handleCheckInClick = (booking: BookingData) => {
     setSelectedBooking(booking);
     setCheckInModalOpen(true);
@@ -396,13 +431,14 @@ const Bookings = () => {
   const handleExtendClick = (booking: BookingData) => {
     setExtendUntil(booking.expectedCheckout ? toDateTimeLocal(booking.expectedCheckout) : "");
     setSelectedBooking(booking);
+    setExtendDate("");
     setExtendModalOpen(true);
   };
 
   // Add Booking Form View
   if (viewMode === "add" || viewMode === "edit") {
     return (
-      <div className="space-y-6 animate-fade-in bg-[hsl(220,20%,96%)] min-h-screen -m-6 p-6">
+      <div className="space-y-6 animate-fade-in text-foreground">
         {/* Header */}
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-4">
@@ -410,7 +446,7 @@ const Bookings = () => {
               variant="ghost"
               size="icon"
               className="hover:bg-muted"
-              onClick={() => setViewMode("list")}
+              onClick={resetForm}
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
@@ -420,15 +456,15 @@ const Bookings = () => {
           </div>
           <Button
             variant="ghost"
-            className="text-red-500 hover:text-red-600 hover:bg-red-50"
-            onClick={() => setViewMode("list")}
+            className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
+            onClick={resetForm}
           >
             Cancel
           </Button>
         </div>
 
         {/* Form */}
-        <Card className="border-0 shadow-lg rounded-2xl bg-white">
+        <Card className="border border-border/80 dark:border-slate-800 shadow-xl rounded-xl bg-card text-card-foreground">
           <CardContent className="p-8">
             <div className="grid gap-6">
               {/* Row 1: First Name, Last Name */}
@@ -782,84 +818,84 @@ const Bookings = () => {
 
   // List View
   return (
-    <div className="space-y-6 animate-fade-in bg-[hsl(220,20%,96%)] min-h-screen -m-6 p-6">
+    <div className="space-y-6 animate-fade-in text-foreground">
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
-        <h1 className="text-2xl font-semibold text-foreground">Booking Management</h1>
+        <h1 className="text-xl font-semibold text-foreground tracking-tight">Booking Management</h1>
         <div className="flex items-center gap-3">
           <Button
-            onClick={() => setViewMode("add")}
-            className="bg-cyan-600 hover:bg-cyan-700 text-white font-medium px-5 h-10 rounded-lg shadow-md hover:shadow-lg transition-all"
+            onClick={() => { setEditingBooking(null); setFormData(EMPTY_FORM); setViewMode("add"); }}
+            className="bg-brand hover:bg-brand-hover text-white font-semibold px-5 h-10 rounded-xl shadow-md hover:shadow-lg transition-all"
           >
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="h-4 w-4 mr-2 stroke-[2.5]" />
             Add Bookings
           </Button>
           <Button
             onClick={() => setBulkUploadOpen(true)}
-            className="bg-amber-500 hover:bg-amber-600 text-white font-medium px-5 h-10 rounded-lg shadow-md hover:shadow-lg transition-all"
+            className="bg-brand hover:bg-brand-hover text-white font-semibold px-5 h-10 rounded-xl shadow-md hover:shadow-lg transition-all"
           >
-            <Upload className="h-4 w-4 mr-2" />
+            <Upload className="h-4 w-4 mr-2 stroke-[2.5]" />
             Bulk Upload
           </Button>
         </div>
       </div>
 
       {/* Table Container */}
-      <Card className="border-0 shadow-lg rounded-2xl bg-white">
-        <CardContent className="p-6">
+      <Card className="border border-border/80 dark:border-slate-800 shadow-xl rounded-xl bg-card text-card-foreground overflow-hidden">
+        <CardContent className="p-5">
           {/* Controls */}
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
             <div className="flex items-center gap-2">
-              <span className="text-muted-foreground text-sm">Show</span>
-              <Select value={entriesPerPage} onValueChange={setEntriesPerPage}>
-                <SelectTrigger className="w-20 h-9 bg-muted/30 border-border/50">
+              <span className="text-muted-foreground text-xs font-medium">Show</span>
+              <Select value={entriesPerPage} onValueChange={(val) => { setEntriesPerPage(val); setCurrentPage(1); }}>
+                <SelectTrigger className="w-18 h-8 text-xs bg-muted/20 border-border dark:border-slate-700/80 rounded-md">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-popover">
+                <SelectContent className="bg-popover text-popover-foreground border-border text-xs">
                   <SelectItem value="10">10</SelectItem>
                   <SelectItem value="25">25</SelectItem>
                   <SelectItem value="50">50</SelectItem>
                   <SelectItem value="100">100</SelectItem>
                 </SelectContent>
               </Select>
-              <span className="text-muted-foreground text-sm">entries</span>
+              <span className="text-muted-foreground text-xs font-medium">entries</span>
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="text-muted-foreground text-sm">Search:</span>
+              <span className="text-muted-foreground text-xs font-medium">Search:</span>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
                 <Input
-                  placeholder="Mobile number, Room Type, Guest name, Email"
+                  placeholder="Search bookings..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 w-80 h-9 bg-muted/30 border-border/50"
+                  onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                  className="pl-9 w-64 md:w-72 h-8 text-xs bg-muted/20 border-border dark:border-slate-700/80 rounded-md placeholder:text-muted-foreground/60"
                 />
               </div>
             </div>
           </div>
 
           {/* Table */}
-          <div className="rounded-xl overflow-hidden border border-gray-200 overflow-x-auto scrollbar-thin">
+          <div className="rounded-lg overflow-hidden border border-border/80 dark:border-slate-800 overflow-x-auto scrollbar-thin">
             <Table>
               <TableHeader>
-                <TableRow className="bg-gray-50 hover:bg-gray-50 border-b border-gray-200">
-                  <TableHead className="text-gray-600 font-medium whitespace-nowrap min-w-[150px]">Name</TableHead>
-                  <TableHead className="text-gray-600 font-medium whitespace-nowrap min-w-[170px]">Mobile Number</TableHead>
-                  <TableHead className="text-gray-600 font-medium whitespace-nowrap min-w-[280px] text-center">Email</TableHead>
-                  <TableHead className="text-gray-600 font-medium whitespace-nowrap min-w-[120px] text-center">Occupants</TableHead>
-                  <TableHead className="text-gray-600 font-medium whitespace-nowrap min-w-[100px] text-center">Room No</TableHead>
-                  <TableHead className="text-gray-600 font-medium whitespace-nowrap min-w-[140px]">Room Type</TableHead>
-                  <TableHead className="text-gray-600 font-medium whitespace-nowrap min-w-[120px] text-center">No. of Rooms</TableHead>
-                  <TableHead className="text-gray-600 font-medium whitespace-nowrap min-w-[100px] text-center">Check In</TableHead>
-                  <TableHead className="text-gray-600 font-medium whitespace-nowrap min-w-[150px] text-center">Extend Checkout</TableHead>
-                  <TableHead className="text-gray-600 font-medium whitespace-nowrap min-w-[130px]">Booking Date</TableHead>
-                  <TableHead className="text-gray-600 font-medium whitespace-nowrap min-w-[170px] text-center">Documents Approval</TableHead>
-                  <TableHead className="text-gray-600 font-medium whitespace-nowrap min-w-[100px] text-center">Action</TableHead>
+                <TableRow className="bg-muted/40 dark:bg-[#0e1322] border-b border-border dark:border-slate-800">
+                  <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap min-w-[150px]">Name</TableHead>
+                  <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap min-w-[170px]">Mobile Number</TableHead>
+                  <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap min-w-[240px] text-center">Email</TableHead>
+                  <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap min-w-[100px] text-center">Occupants</TableHead>
+                  <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap min-w-[90px] text-center">Room No</TableHead>
+                  <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap min-w-[130px]">Room Type</TableHead>
+                  <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap min-w-[110px] text-center">No. of Rooms</TableHead>
+                  <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap min-w-[100px] text-center">Check In</TableHead>
+                  <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap min-w-[130px] text-center">Extend Checkout</TableHead>
+                  <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap min-w-[120px]">Booking Date</TableHead>
+                  <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap min-w-[150px] text-center">Documents Approval</TableHead>
+                  <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap min-w-[90px] text-center">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(staysQuery.isLoading || staysQuery.error || filteredBookings.length === 0) && (
+                {(staysQuery.isLoading || staysQuery.error || paginatedBookings.length === 0) && (
                   <TableRow>
                     <TableCell colSpan={13} className="py-2">
                       <DataState
@@ -874,7 +910,7 @@ const Bookings = () => {
                     </TableCell>
                   </TableRow>
                 )}
-                {filteredBookings.map((booking, index) => (
+                {paginatedBookings.map((booking, index) => (
                   <TableRow
                     key={booking.id}
                     className={`${index % 2 === 0 ? "bg-muted/20" : "bg-background"
@@ -987,17 +1023,16 @@ const Bookings = () => {
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between mt-6">
-            <span className="text-muted-foreground text-sm">
-              Showing 1 to {Math.min(parseInt(entriesPerPage), filteredBookings.length)} of{" "}
-              {totalEntries} entries
+          <div className="flex flex-wrap items-center justify-between gap-4 mt-5">
+            <span className="text-muted-foreground text-xs">
+              Showing {totalEntries > 0 ? startIndex + 1 : 0} to {endIndex} of {totalEntries} entries
             </span>
 
             <div className="flex items-center gap-1">
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-muted-foreground hover:text-foreground"
+                className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground"
                 onClick={() => setCurrentPage(1)}
                 disabled={currentPage === 1}
               >
@@ -1006,20 +1041,20 @@ const Bookings = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-muted-foreground hover:text-foreground"
+                className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground"
                 onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                 disabled={currentPage === 1}
               >
-                <ChevronLeft className="h-4 w-4 mr-1" />
+                <ChevronLeft className="h-3.5 w-3.5 mr-1" />
                 Previous
               </Button>
-              {[1, 2].map((page) => (
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                 <Button
                   key={page}
                   variant={currentPage === page ? "default" : "ghost"}
                   size="sm"
-                  className={`w-9 h-9 p-0 ${currentPage === page
-                    ? "bg-primary text-white"
+                  className={`h-8 w-8 p-0 text-xs rounded-xl ${currentPage === page
+                    ? "bg-brand hover:bg-brand-hover text-white font-semibold shadow-sm"
                     : "text-muted-foreground hover:text-foreground"
                     }`}
                   onClick={() => setCurrentPage(page)}
@@ -1030,17 +1065,17 @@ const Bookings = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-muted-foreground hover:text-foreground"
+                className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground"
                 onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                 disabled={currentPage === totalPages}
               >
                 Next
-                <ChevronRight className="h-4 w-4 ml-1" />
+                <ChevronRight className="h-3.5 w-3.5 ml-1" />
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-muted-foreground hover:text-foreground"
+                className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground"
                 onClick={() => setCurrentPage(totalPages)}
                 disabled={currentPage === totalPages}
               >
@@ -1060,7 +1095,7 @@ const Bookings = () => {
           <div className="space-y-6 py-4">
             <div className="flex items-center gap-4">
               <Button
-                className="bg-amber-500 hover:bg-amber-600 text-white font-medium px-5 h-10 rounded-lg"
+                className="bg-brand hover:bg-brand-hover text-white font-medium px-5 h-10 rounded-xl shadow-sm"
               >
                 <Download className="h-4 w-4 mr-2" />
                 Sample Template
@@ -1108,7 +1143,7 @@ const Bookings = () => {
               <Button
                 onClick={handleBulkUpload}
                 disabled={!selectedFile}
-                className="h-10 px-6 bg-cyan-600 hover:bg-cyan-700 text-white"
+                className="h-10 px-6 bg-brand hover:bg-brand-hover text-white font-semibold rounded-lg"
               >
                 Submit
               </Button>
@@ -1233,7 +1268,7 @@ const Bookings = () => {
             </p>
           </div>
 
-          <div className="flex justify-center gap-4 pt-6">
+          <div className="flex justify-center gap-4 pt-6 border-t border-border/30">
             <Button
               variant="outline"
               onClick={() => setExtendUntil("")}
@@ -1242,7 +1277,7 @@ const Bookings = () => {
               Reset
             </Button>
             <Button
-              className="h-10 px-8 min-w-[110px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
+              className="h-10 px-8 min-w-[110px] rounded-2xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
               disabled={!selectedBooking || !extendUntil || extend.isPending}
               onClick={() => {
                 if (!selectedBooking || !extendUntil) return;

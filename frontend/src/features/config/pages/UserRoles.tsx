@@ -181,31 +181,31 @@ const UserRoles = () => {
     const currentEntries = filteredRoles.slice(startIndex, endIndex);
 
     return (
-        <div className="space-y-6 animate-fade-in bg-[hsl(220,20%,96%)] min-h-screen -m-6 p-6">
+        <div className="space-y-6 animate-fade-in text-foreground">
             {/* Header */}
             <div className="mb-2">
-                <h1 className="text-2xl font-semibold text-foreground">User Role Management</h1>
+                <h1 className="text-xl font-semibold text-foreground tracking-tight">User Role Management</h1>
             </div>
 
             <Tabs defaultValue="user-role" className="w-full">
-                <TabsList className="bg-muted/30 p-1 rounded-xl w-fit mb-6">
-                    <TabsTrigger value="user-role" className="px-6 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm">
+                <TabsList className="bg-muted/30 p-1 rounded-xl w-fit mb-6 border border-border/50">
+                    <TabsTrigger value="user-role" className="px-6 py-2 text-xs font-semibold uppercase tracking-wider rounded-lg transition-all duration-200 data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm">
                         User Role
                     </TabsTrigger>
-                    <TabsTrigger value="web-modules" className="px-6 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm">
+                    <TabsTrigger value="web-modules" className="px-6 py-2 text-xs font-semibold uppercase tracking-wider rounded-lg transition-all duration-200 data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm">
                         Web Modules
                     </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="user-role" className="space-y-6">
                     {/* Form Section */}
-                    <Card className="border-0 shadow-lg rounded-2xl bg-white">
+                    <Card className="border border-border/80 dark:border-slate-800 shadow-xl rounded-xl bg-card text-card-foreground">
                         <CardContent className="p-6">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                                 <div className="space-y-2">
                                     <Label htmlFor="role-type" className="text-sm font-medium">Role Type</Label>
                                     <Select value={roleType} onValueChange={setRoleType}>
-                                        <SelectTrigger className="h-10 bg-muted/30 border-border/50">
+                                        <SelectTrigger className="h-10 bg-muted/20 border-border dark:border-slate-700/80">
                                             <SelectValue placeholder="Select Role type" />
                                         </SelectTrigger>
                                         <SelectContent className="bg-popover text-popover-foreground border-border">
@@ -222,7 +222,7 @@ const UserRoles = () => {
                                         placeholder="Enter User Role Name"
                                         value={roleName}
                                         onChange={(e) => setRoleName(e.target.value)}
-                                        className="h-10 bg-muted/30 border-border/50"
+                                        className="h-10 bg-muted/20 border-border dark:border-slate-700/80"
                                     />
                                 </div>
 
@@ -233,7 +233,7 @@ const UserRoles = () => {
                                             type="button"
                                             variant="outline"
                                             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                                            className="w-full h-10 justify-between bg-muted/30 border-border/50 hover:bg-muted/50"
+                                            className="w-full h-10 justify-between bg-muted/20 border-border dark:border-slate-700/80 hover:bg-muted/40"
                                         >
                                             <span className="truncate">
                                                 {selectedNotifications.length > 0
@@ -242,23 +242,23 @@ const UserRoles = () => {
                                             </span>
                                         </Button>
                                         {isDropdownOpen && (
-                                            <div className="absolute z-50 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-auto">
-                                                <div className="flex items-center space-x-2 p-2 border-b bg-muted/20">
+                                            <div className="absolute z-50 w-full mt-1 bg-popover text-popover-foreground border border-border rounded-xl shadow-xl max-h-60 overflow-auto">
+                                                <div className="flex items-center space-x-2 p-2.5 border-b border-border bg-muted/20">
                                                     <Checkbox
                                                         id="select-all"
                                                         checked={selectedNotifications.length === notificationTypes.length}
                                                         onCheckedChange={handleSelectAll}
                                                     />
-                                                    <label htmlFor="select-all" className="text-sm cursor-pointer flex-1">Select All</label>
+                                                    <label htmlFor="select-all" className="text-xs font-semibold cursor-pointer flex-1">Select All</label>
                                                 </div>
                                                 {notificationTypes.map((notification) => (
-                                                    <div key={notification} className="flex items-center space-x-2 p-2 hover:bg-muted/40 rounded">
+                                                    <div key={notification} className="flex items-center space-x-2 p-2 hover:bg-muted/40 rounded transition-colors">
                                                         <Checkbox
                                                             id={notification}
                                                             checked={selectedNotifications.includes(notification)}
                                                             onCheckedChange={() => handleNotificationToggle(notification)}
                                                         />
-                                                        <label htmlFor={notification} className="text-sm cursor-pointer flex-1">{notification}</label>
+                                                        <label htmlFor={notification} className="text-xs cursor-pointer flex-1">{notification}</label>
                                                     </div>
                                                 ))}
                                             </div>
@@ -271,7 +271,7 @@ const UserRoles = () => {
                                 <Button onClick={handleReset} className="h-10 px-8 min-w-[120px] rounded-xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all">Reset</Button>
                                 <Button
                                     onClick={handleSubmit}
-                                    className="h-10 px-8 min-w-[120px] rounded-xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
+                                    className="h-10 px-8 min-w-[120px] rounded-xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
                                     disabled={!mayWrite || !roleName.trim() || !roleType || createRole.isPending}
                                     title={mayWrite ? "Create this role" : "Your role cannot manage roles"}
                                 >
@@ -282,30 +282,30 @@ const UserRoles = () => {
                     </Card>
 
                     {/* Table Section */}
-                    <Card className="border-0 shadow-lg rounded-2xl bg-white">
-                        <CardContent className="p-6">
-                            <div className="flex items-center justify-between mb-6">
+                    <Card className="border border-border/80 dark:border-slate-800 shadow-xl rounded-xl bg-card text-card-foreground overflow-hidden">
+                        <CardContent className="p-5">
+                            <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
                                 <div className="flex items-center gap-2">
-                                    <span className="text-muted-foreground text-sm">Show</span>
-                                    <Select value={entriesPerPage} onValueChange={setEntriesPerPage}>
-                                        <SelectTrigger className="w-20 h-9 bg-muted/30 border-border/50">
+                                    <span className="text-muted-foreground text-xs font-medium">Show</span>
+                                    <Select value={entriesPerPage} onValueChange={(val) => { setEntriesPerPage(val); setCurrentPage(1); }}>
+                                        <SelectTrigger className="w-18 h-8 text-xs bg-muted/20 border-border dark:border-slate-700/80 rounded-md">
                                             <SelectValue />
                                         </SelectTrigger>
-                                        <SelectContent className="bg-popover text-popover-foreground border-border">
+                                        <SelectContent className="bg-popover text-popover-foreground border-border text-xs">
                                             <SelectItem value="10">10</SelectItem>
                                             <SelectItem value="25">25</SelectItem>
                                             <SelectItem value="50">50</SelectItem>
                                         </SelectContent>
                                     </Select>
-                                    <span className="text-muted-foreground text-sm">entries</span>
+                                    <span className="text-muted-foreground text-xs font-medium">entries</span>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <span className="text-muted-foreground text-sm">Search:</span>
+                                    <span className="text-muted-foreground text-xs font-medium">Search:</span>
                                     <Input
                                         placeholder="User role type..."
                                         value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="w-48 h-9 bg-muted/30 border-border/50"
+                                        onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                                        className="w-48 h-8 text-xs bg-muted/20 border-border dark:border-slate-700/80 rounded-md placeholder:text-muted-foreground/60"
                                     />
                                 </div>
                             </div>
@@ -320,11 +320,11 @@ const UserRoles = () => {
                               >
                                 <Table>
                                     <TableHeader>
-                                        <TableRow className="bg-gray-50 hover:bg-gray-50 border-b border-gray-200">
-                                            <TableHead className="text-gray-600 font-medium">User Role ▲</TableHead>
-                                            <TableHead className="text-gray-600 font-medium">Role Type ▲</TableHead>
-                                            <TableHead className="text-gray-600 font-medium">Subscribed Notifications ▲</TableHead>
-                                            <TableHead className="text-gray-600 font-medium text-center">Action</TableHead>
+                                        <TableRow className="bg-muted/40 dark:bg-[#0e1322] border-b border-border dark:border-slate-800">
+                                            <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">User Role</TableHead>
+                                            <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Role Type</TableHead>
+                                            <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Subscribed Notifications</TableHead>
+                                            <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 text-center">Action</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -335,7 +335,7 @@ const UserRoles = () => {
                                                 <TableCell className="text-cyan-600">{role.notifications}</TableCell>
                                                 <TableCell className="text-center">
                                                     <div className="flex gap-2 justify-center">
-                                                        <Button size="sm" className="bg-[#3eb1c8] hover:bg-[#3eb1c8]/90 text-white h-7 w-7 p-0 rounded-[3px]" disabled={!mayWrite} onClick={() => { setEditingRole({ id: role.id, name: role.userRole, roleType: role.roleType }); setEditModalOpen(true); }}>
+                                                        <Button size="sm" className="bg-brand-teal hover:bg-brand-teal/90 text-white h-7 w-7 p-0 rounded-[3px]" disabled={!mayWrite} onClick={() => { setEditingRole({ id: role.id, name: role.userRole, roleType: role.roleType }); setEditModalOpen(true); }}>
                                                             <Edit className="h-[14px] w-[14px]" />
                                                         </Button>
                                                         <Button size="sm" className="bg-red-500 hover:bg-red-600 text-white h-7 w-7 p-0 rounded-[3px]">
@@ -351,20 +351,20 @@ const UserRoles = () => {
                             </div>
 
                             {/* Pagination */}
-                            <div className="flex items-center justify-between mt-6">
-                                <span className="text-muted-foreground text-sm">
-                                    Showing {startIndex + 1} to {endIndex} of {totalEntries} entries
+                            <div className="flex flex-wrap items-center justify-between gap-4 mt-5">
+                                <span className="text-muted-foreground text-xs">
+                                    Showing {totalEntries > 0 ? startIndex + 1 : 0} to {endIndex} of {totalEntries} entries
                                 </span>
                                 <div className="flex items-center gap-1">
-                                    <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>First</Button>
-                                    <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1}>Previous</Button>
-                                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => i + 1).map((page) => (
-                                        <Button key={page} variant={currentPage === page ? "default" : "ghost"} size="sm" className={`w-9 h-9 p-0 ${currentPage === page ? "bg-cyan-600 text-white" : ""}`} onClick={() => setCurrentPage(page)}>
+                                    <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>First</Button>
+                                    <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1}>Previous</Button>
+                                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                                        <Button key={page} variant={currentPage === page ? "default" : "ghost"} size="sm" className={`h-8 w-8 p-0 text-xs rounded-xl ${currentPage === page ? "bg-brand hover:bg-brand-hover text-white font-semibold shadow-sm" : "text-muted-foreground hover:text-foreground"}`} onClick={() => setCurrentPage(page)}>
                                             {page}
                                         </Button>
                                     ))}
-                                    <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages}>Next</Button>
-                                    <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages}>Last</Button>
+                                    <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages}>Next</Button>
+                                    <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages}>Last</Button>
                                 </div>
                             </div>
                         </CardContent>
@@ -372,7 +372,7 @@ const UserRoles = () => {
                 </TabsContent>
 
                 <TabsContent value="web-modules" className="space-y-6">
-                    <Card className="border-0 shadow-lg rounded-2xl bg-white">
+                    <Card className="border border-border/80 dark:border-slate-800 shadow-xl rounded-xl bg-card text-card-foreground">
                         <CardContent className="p-6">
                             <div className="space-y-4 max-w-md mb-6">
                                 <Label className="text-sm font-medium">Select User Role</Label>
@@ -453,7 +453,7 @@ const UserRoles = () => {
                                         Reset
                                     </Button>
                                     <Button
-                                        className="h-10 px-8 min-w-[120px] rounded-xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
+                                        className="h-10 px-8 min-w-[120px] rounded-xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
                                         disabled={!mayWrite || !selectedRole || savePermissions.isPending}
                                         onClick={() =>
                                             savePermissions.mutate(
@@ -530,7 +530,7 @@ const UserRoles = () => {
                         <div className="grid grid-cols-[200px_1fr] items-start gap-4">
                             <Label className="text-sm font-medium text-gray-800 pt-2">Notification Subscription</Label>
                             <div className="relative border border-gray-300 rounded-[4px] p-2 pr-8 flex flex-wrap gap-2 min-h-[40px] bg-transparent">
-                                <div className="bg-[#3eb1c8] text-white text-[12px] px-2 py-0.5 rounded-[2px] flex items-center gap-1 hover:bg-[#3eb1c8]/90 cursor-default shadow-sm border border-[#3eb1c8]">
+                                <div className="bg-brand-teal text-white text-[12px] px-2 py-0.5 rounded-[2px] flex items-center gap-1 hover:bg-brand-teal/90 cursor-default shadow-sm border border-brand-teal">
                                     maintenance-request-creation <X className="h-[10px] w-[10px] cursor-pointer hover:opacity-80 stroke-[3]" />
                                 </div>
                                 <ChevronDown className="absolute right-2 top-3 h-4 w-4 text-gray-400 pointer-events-none" />
@@ -541,7 +541,7 @@ const UserRoles = () => {
                     <div className="flex justify-center gap-4 pb-8">
                         <Button variant="outline" className="h-10 px-8 min-w-[110px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all" onClick={() => setEditModalOpen(false)}>Reset</Button>
                         <Button
-                            className="h-10 px-8 min-w-[110px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
+                            className="h-10 px-8 min-w-[110px] rounded-2xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
                             disabled={!editingRole?.name || updateRole.isPending}
                             onClick={() =>
                                 editingRole &&

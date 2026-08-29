@@ -173,43 +173,43 @@ const FirmwareManagement = () => {
 
     return (
         <>
-            <div className="space-y-6 animate-fade-in bg-[hsl(220,20%,96%)] min-h-screen -m-6 p-6">
+            <div className="space-y-6 animate-fade-in text-foreground">
                 {/* Header */}
                 <div className="mb-2">
-                    <h1 className="text-2xl font-semibold text-foreground">Firmware Management</h1>
+                    <h1 className="text-xl font-semibold text-foreground tracking-tight">Firmware Management</h1>
                 </div>
 
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                    <div className="flex gap-6 border-b border-gray-200 mb-6">
+                    <div className="flex gap-6 border-b border-border dark:border-slate-800 mb-6">
                         <button
                             onClick={() => setActiveTab("add-firmware")}
-                            className={`relative px-1 pb-3 text-sm font-medium transition-all duration-200 ${activeTab === "add-firmware"
+                            className={`relative px-1 pb-3 text-xs font-semibold uppercase tracking-wider transition-all duration-200 ${activeTab === "add-firmware"
                                 ? "text-foreground"
                                 : "text-muted-foreground hover:text-foreground"
                                 }`}
                         >
                             Add Firmware
                             {activeTab === "add-firmware" && (
-                                <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-purple-600 rounded-t-full" />
+                                <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-primary rounded-t-full" />
                             )}
                         </button>
                         <button
                             onClick={() => setActiveTab("firmware-update")}
-                            className={`relative px-1 pb-3 text-sm font-medium transition-all duration-200 ${activeTab === "firmware-update"
+                            className={`relative px-1 pb-3 text-xs font-semibold uppercase tracking-wider transition-all duration-200 ${activeTab === "firmware-update"
                                 ? "text-foreground"
                                 : "text-muted-foreground hover:text-foreground"
                                 }`}
                         >
                             Firmware Update
                             {activeTab === "firmware-update" && (
-                                <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-purple-600 rounded-t-full" />
+                                <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-primary rounded-t-full" />
                             )}
                         </button>
                     </div>
 
                     <TabsContent value="add-firmware" className="space-y-6">
                         {/* Add Firmware Form */}
-                        <Card className="border-0 shadow-lg rounded-2xl bg-white">
+                        <Card className="border border-border/80 dark:border-slate-800 shadow-xl rounded-xl bg-card text-card-foreground">
                             <CardContent className="p-6">
                                 <h2 className="text-lg font-semibold mb-6">Add New Firmware</h2>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl">
@@ -244,14 +244,14 @@ const FirmwareManagement = () => {
                                         <Label>Firmware File<span className="text-red-500">*</span></Label>
                                         <div className="flex gap-2">
                                             <Input type="file" className="bg-muted/30 border-border/50" />
-                                            <Button className="rounded-xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"><Upload className="h-4 w-4" /></Button>
+                                            <Button className="rounded-xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"><Upload className="h-4 w-4" /></Button>
                                         </div>
                                     </div>
                                 </div>
                                 <div className="flex justify-center gap-4 mt-6">
                                     <Button variant="outline" onClick={handleReset} className="px-8">Reset</Button>
                                     <Button
-                                        className="h-10 px-8 min-w-[160px] rounded-xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
+                                        className="h-10 px-8 min-w-[160px] rounded-xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
                                         disabled={
                                             !mayWrite ||
                                             !deviceType ||
@@ -269,9 +269,9 @@ const FirmwareManagement = () => {
                         </Card>
 
                         {/* Firmware Table */}
-                        <Card className="border-0 shadow-lg rounded-2xl bg-white">
-                            <CardContent className="p-6">
-                                <div className="flex items-center justify-between mb-6">
+                        <Card className="border border-border/80 dark:border-slate-800 shadow-xl rounded-xl bg-card text-card-foreground overflow-hidden">
+                            <CardContent className="p-5">
+                                <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
                                     <div className="flex items-center gap-2">
                                         <span className="text-muted-foreground text-sm">Show</span>
                                         <Select value={entriesPerPage} onValueChange={setEntriesPerPage}>
@@ -279,26 +279,27 @@ const FirmwareManagement = () => {
                                             <SelectContent className="bg-popover text-popover-foreground border-border">
                                                 <SelectItem value="10">10</SelectItem>
                                                 <SelectItem value="25">25</SelectItem>
+                                                <SelectItem value="50">50</SelectItem>
                                             </SelectContent>
                                         </Select>
-                                        <span className="text-muted-foreground text-sm">entries</span>
+                                        <span className="text-muted-foreground text-xs font-medium">entries</span>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <span className="text-muted-foreground text-sm">Search:</span>
-                                        <Input placeholder="Device type, version..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-64 h-9 bg-muted/30 border-border/50" />
+                                        <span className="text-muted-foreground text-xs font-medium">Search:</span>
+                                        <Input placeholder="Device type, version..." value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }} className="w-64 h-8 text-xs bg-muted/20 border-border dark:border-slate-700/80 rounded-md placeholder:text-muted-foreground/60" />
                                     </div>
                                 </div>
 
                                 <div className="rounded-lg overflow-hidden border border-border/80 dark:border-slate-800 overflow-x-auto scrollbar-thin">
                                     <Table>
                                         <TableHeader>
-                                            <TableRow className="bg-gray-50 hover:bg-gray-50 border-b border-gray-200">
-                                                <TableHead className="text-gray-600 font-medium">Device Type</TableHead>
-                                                <TableHead className="text-gray-600 font-medium">Firmware Version</TableHead>
-                                                <TableHead className="text-gray-600 font-medium">Release Notes</TableHead>
-                                                <TableHead className="text-gray-600 font-medium">CRC Value</TableHead>
-                                                <TableHead className="text-gray-600 font-medium">Upload Date</TableHead>
-                                                <TableHead className="text-gray-600 font-medium text-center">Action</TableHead>
+                                            <TableRow className="bg-muted/40 dark:bg-[#0e1322] border-b border-border dark:border-slate-800">
+                                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Device Type</TableHead>
+                                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Firmware Version</TableHead>
+                                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Release Notes</TableHead>
+                                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">CRC Value</TableHead>
+                                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Upload Date</TableHead>
+                                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 text-center">Action</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -328,7 +329,7 @@ const FirmwareManagement = () => {
                                                         <div className="flex gap-2 justify-center">
                                                             <Button
                                                                 size="sm"
-                                                                className="bg-[#3eb1c8] hover:bg-[#3eb1c8]/90 text-white h-7 w-7 p-0 rounded-[3px]"
+                                                                className="bg-brand-teal hover:bg-brand-teal/90 text-white h-7 w-7 p-0 rounded-[3px]"
                                                                 disabled={!mayWrite}
                                                                 onClick={() => {
                                                                     setEditingFirmware({
@@ -343,7 +344,7 @@ const FirmwareManagement = () => {
                                                             </Button>
                                                             <Button
                                                                 size="sm"
-                                                                className="bg-[#d33] hover:bg-[#bd2d2d] text-white h-7 w-7 p-0 rounded-[3px]"
+                                                                className="bg-[#d33] hover:bg-brand-danger-hover text-white h-7 w-7 p-0 rounded-[3px]"
                                                                 disabled={!mayWrite || updateFirmwareMutation.isPending}
                                                                 title="Decommission this build (refused while a device still expects it)"
                                                                 onClick={() =>
@@ -363,14 +364,16 @@ const FirmwareManagement = () => {
                                     </Table>
                                 </div>
 
-                                <div className="flex items-center justify-between mt-6">
-                                    <span className="text-muted-foreground text-sm">Showing {startIndex + 1} to {Math.min(startIndex + parseInt(entriesPerPage), filteredData.length)} of {filteredData.length} entries</span>
+                                <div className="flex flex-wrap items-center justify-between gap-4 mt-5">
+                                    <span className="text-muted-foreground text-xs">Showing {filteredData.length > 0 ? startIndex + 1 : 0} to {Math.min(startIndex + parseInt(entriesPerPage), filteredData.length)} of {filteredData.length} entries</span>
                                     <div className="flex items-center gap-1">
-                                        <Button variant="ghost" size="sm" className="text-muted-foreground">First</Button>
-                                        <Button variant="ghost" size="sm" className="text-muted-foreground">Previous</Button>
-                                        <Button size="sm" className="w-9 h-9 p-0 bg-cyan-600 text-white">1</Button>
-                                        <Button variant="ghost" size="sm" className="text-muted-foreground">Next</Button>
-                                        <Button variant="ghost" size="sm" className="text-muted-foreground">Last</Button>
+                                        <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>First</Button>
+                                        <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1}>Previous</Button>
+                                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                                            <Button key={page} variant={currentPage === page ? "default" : "ghost"} size="sm" className={`h-8 w-8 p-0 text-xs rounded-xl ${currentPage === page ? "bg-brand hover:bg-brand-hover text-white font-semibold shadow-sm" : "text-muted-foreground hover:text-foreground"}`} onClick={() => setCurrentPage(page)}>{page}</Button>
+                                        ))}
+                                        <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages}>Next</Button>
+                                        <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages}>Last</Button>
                                     </div>
                                 </div>
                             </CardContent>
@@ -378,14 +381,14 @@ const FirmwareManagement = () => {
                     </TabsContent>
 
                     <TabsContent value="firmware-update" className="space-y-6">
-                        <Card className="border-0 shadow-lg rounded-2xl bg-white">
+                        <Card className="border border-border/80 dark:border-slate-800 shadow-xl rounded-xl bg-card text-card-foreground">
                             <CardContent className="p-6">
-                                <h2 className="text-lg font-semibold mb-6">Push Firmware Update</h2>
+                                <h2 className="text-base font-semibold mb-6 text-foreground">Push Firmware Update</h2>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mb-6">
                                     <div className="space-y-2">
                                         <Label>Select Device Type</Label>
                                         <Select value={selectedDeviceType} onValueChange={setSelectedDeviceType}>
-                                            <SelectTrigger className="h-10 bg-muted/30 border-border/50">
+                                            <SelectTrigger className="h-10 bg-muted/20 border-border dark:border-slate-700/80">
                                                 <SelectValue placeholder="Select device type" />
                                             </SelectTrigger>
                                             <SelectContent className="bg-popover text-popover-foreground border-border">
@@ -416,14 +419,14 @@ const FirmwareManagement = () => {
                                 <div className="rounded-lg overflow-hidden border border-border/80 dark:border-slate-800 overflow-x-auto scrollbar-thin">
                                     <Table>
                                         <TableHeader>
-                                            <TableRow className="bg-gray-50 hover:bg-gray-50 border-b border-gray-200">
-                                                <TableHead className="text-gray-600 font-medium w-12">
+                                            <TableRow className="bg-muted/40 dark:bg-[#0e1322] border-b border-border dark:border-slate-800">
+                                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 w-12">
                                                     <Checkbox onCheckedChange={(checked) => handleSelectAll(checked as boolean)} />
                                                 </TableHead>
-                                                <TableHead className="text-gray-600 font-medium">Device Name</TableHead>
-                                                <TableHead className="text-gray-600 font-medium">Current Version</TableHead>
-                                                <TableHead className="text-gray-600 font-medium">Expected Version</TableHead>
-                                                <TableHead className="text-gray-600 font-medium">Select Version</TableHead>
+                                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Device Name</TableHead>
+                                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Current Version</TableHead>
+                                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Expected Version</TableHead>
+                                                <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Select Version</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -447,15 +450,15 @@ const FirmwareManagement = () => {
                                                     <TableCell>
                                                         <Checkbox checked={device.selected} onCheckedChange={() => handleDeviceSelect(device.id)} />
                                                     </TableCell>
-                                                    <TableCell className="text-cyan-600 font-medium">{device.deviceName}</TableCell>
-                                                    <TableCell>{device.currentVersion}</TableCell>
-                                                    <TableCell>{device.expectedVersion}</TableCell>
-                                                    <TableCell>
+                                                    <TableCell className="text-cyan-600 dark:text-cyan-400 text-xs py-3 px-4 font-medium">{device.deviceName}</TableCell>
+                                                    <TableCell className="text-xs py-3 px-4 font-mono text-foreground/90">{device.currentVersion}</TableCell>
+                                                    <TableCell className="text-xs py-3 px-4 font-mono text-foreground/90">{device.expectedVersion}</TableCell>
+                                                    <TableCell className="py-3 px-4">
                                                         <Select defaultValue={device.expectedVersion}>
-                                                            <SelectTrigger className="w-32 h-8 bg-muted/30 border-border/50">
+                                                            <SelectTrigger className="w-32 h-8 text-xs bg-muted/20 border-border dark:border-slate-700/80 rounded-md font-mono">
                                                                 <SelectValue />
                                                             </SelectTrigger>
-                                                            <SelectContent className="bg-popover text-popover-foreground border-border">
+                                                            <SelectContent className="bg-popover text-popover-foreground border-border text-xs">
                                                                 <SelectItem value="v2.1.5">v2.1.5</SelectItem>
                                                                 <SelectItem value="v2.1.4">v2.1.4</SelectItem>
                                                                 <SelectItem value="v2.1.3">v2.1.3</SelectItem>
@@ -470,7 +473,7 @@ const FirmwareManagement = () => {
 
                                 <div className="flex justify-center gap-4 mt-6">
                                     <Button
-                                        className="h-10 px-8 min-w-[160px] rounded-xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
+                                        className="h-10 px-8 min-w-[160px] rounded-xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
                                         disabled={
                                             !mayWrite ||
                                             !selectedDeviceType ||
@@ -557,7 +560,7 @@ const FirmwareManagement = () => {
                     <div className="flex justify-center gap-4 pb-8 border-t border-gray-100 pt-6 mt-2">
                         <Button variant="outline" className="h-10 px-8 min-w-[110px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all" onClick={() => setEditFirmwareOpen(false)}>Close</Button>
                         <Button
-                            className="h-10 px-8 min-w-[110px] rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
+                            className="h-10 px-8 min-w-[110px] rounded-2xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
                             disabled={!editingFirmware || updateFirmwareMutation.isPending}
                             onClick={() =>
                                 editingFirmware &&
