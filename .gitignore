@@ -22,3 +22,15 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# TypeScript incremental build artifacts
+*.tsbuildinfo
+
+# PostgreSQL dumps and database backups -- never commit. A pg_dump of hms_db
+# carries real password hashes and guest PII, and it is not application
+# source: the schema comes from `alembic upgrade head` and the data from
+# `python -m seeds.run_seed`.
+hms_db_full_backup.sql
+*_backup.sql
+*_dump.sql
+*.dump
