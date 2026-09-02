@@ -554,7 +554,7 @@ const ServicePlanning = () => {
                             max={59}
                         />
                         <Button variant="outline" size="sm" className="bg-brand hover:bg-brand-hover text-white border-0 font-medium rounded-xl h-10 px-3.5 shadow-sm">
-                            AM
+                            PM
                         </Button>
                     </div>
                 </div>
@@ -751,7 +751,7 @@ const ServicePlanning = () => {
                             className="w-16 h-10 bg-muted/30 border-border/50 text-center"
                         />
                         <Button variant="outline" size="sm" className="bg-brand hover:bg-brand-hover text-white border-0 font-medium rounded-xl h-10 px-3.5 shadow-sm">
-                            AM
+                            PM
                         </Button>
                     </div>
                 </div>
@@ -908,7 +908,7 @@ const ServicePlanning = () => {
                             className="w-16 h-10 bg-muted/30 border-border/50 text-center"
                         />
                         <Button variant="outline" size="sm" className="bg-brand hover:bg-brand-hover text-white border-0 font-medium rounded-xl h-10 px-3.5 shadow-sm">
-                            AM
+                            PM
                         </Button>
                     </div>
                 </div>
