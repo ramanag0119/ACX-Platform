@@ -13,9 +13,9 @@ interface MeterNodeCardProps {
   node: MeterNode;
   selected?: boolean;
   /**
-   * Which pair of figures the top section shows. Both start with live kW on the
-   * left; the bold right-hand figure is energy from midnight in Energy View and
-   * today's peak demand in Power View.
+   * Which pair of figures the top section shows. Both start with the summed
+   * live load in KW on the left; the bold right-hand figure is consumed energy
+   * in Energy View and the highest single-device load in Power View.
    */
   metric?: "energy" | "power";
   /** Top (white) section click - drills into the children of this node. */
@@ -50,16 +50,21 @@ export const MeterNodeCard = ({
         <div className="flex items-stretch">
           <span
             className="flex-1 text-center text-[13px] font-semibold leading-none text-meter-accent"
-            title="Live load (kW)"
+            title="Summed live load (KW), from device_param active_power"
           >
             {node.liveKw}
           </span>
           <span className="w-px shrink-0 bg-meter-divider" aria-hidden="true" />
+          {/* An em dash means nothing in scope has reported the parameter. */}
           <span
             className="flex-1 text-center text-[13px] font-bold leading-none text-meter-value"
-            title={isPower ? "Peak demand today (kW)" : "Energy from midnight (kWh)"}
+            title={
+              isPower
+                ? "Highest single-device load (KW)"
+                : "Energy consumed (energy_stat stores no unit)"
+            }
           >
-            {isPower ? node.peakKw : node.energyKwh}
+            {isPower ? node.peakLoad ?? "—" : node.energyTotal}
           </span>
         </div>
 

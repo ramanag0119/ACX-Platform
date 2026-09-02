@@ -1,22 +1,33 @@
-import { type MeterNode, type RoomOccupancy, nodeLabel } from "../data/meters";
+import {
+  type MeterNode,
+  type RoomOccupancy,
+  FALLBACK_ROOM_STATUS,
+  ROOM_STATUS_ORDER,
+  nodeLabel,
+} from "../data/meters";
 
 /**
- * Power View room board: one tile per room in the current scope, with a
- * per-status tally in the panel header. Tiles share the card footer's tint so
- * the board reads as one surface; status is carried as a label, not a colour.
+ * Room board: one tile per room in the current scope, with a per-status tally
+ * in the panel header. Tiles share the card footer's tint so the board reads
+ * as one surface; status is carried as a label, not a colour.
+ *
+ * The statuses are the real `amenity_status` rows, so Allotted -- a room held
+ * by a stay that has not checked in -- is counted separately from Occupied.
  */
 
-const STATUS_ORDER: RoomOccupancy[] = ["available", "occupied", "maintenance", "non-smart"];
-
-/** A room with no reported housekeeping state is treated as non-smart. */
-const FALLBACK_STATUS: RoomOccupancy = "non-smart";
-
 const STATUS_LABEL: Record<RoomOccupancy, string> = {
-  available: "Available",
-  occupied: "Occupied",
-  maintenance: "Maintenance",
-  "non-smart": "Non-Smart room",
+  Available: "Available",
+  Occupied: "Occupied",
+  Allotted: "Allotted",
+  Unavailable: "Unavailable",
+  Unknown: "No status",
 };
+
+const emptyCounts = () =>
+  ROOM_STATUS_ORDER.reduce(
+    (totals, status) => ({ ...totals, [status]: 0 }),
+    {} as Record<RoomOccupancy, number>,
+  );
 
 interface RoomStatusPanelProps {
   rooms: MeterNode[];
@@ -24,21 +35,17 @@ interface RoomStatusPanelProps {
 }
 
 export const RoomStatusPanel = ({ rooms, onSelectRoom }: RoomStatusPanelProps) => {
-  const counts = rooms.reduce<Record<RoomOccupancy, number>>(
-    (totals, room) => {
-      const status = room.occupancy ?? FALLBACK_STATUS;
-      totals[status] += 1;
-      return totals;
-    },
-    { available: 0, occupied: 0, maintenance: 0, "non-smart": 0 },
-  );
+  const counts = rooms.reduce<Record<RoomOccupancy, number>>((totals, room) => {
+    totals[room.occupancy ?? FALLBACK_ROOM_STATUS] += 1;
+    return totals;
+  }, emptyCounts());
 
   return (
     <section className="rounded-[2px] border border-border/60 bg-muted/20 p-4 dark:border-slate-800/80 dark:bg-slate-900/30">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
         <h3 className="text-[13px] font-bold text-foreground">Rooms</h3>
         <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
-          {STATUS_ORDER.map((status, index) => (
+          {ROOM_STATUS_ORDER.map((status, index) => (
             <span key={status} className="flex items-center gap-1.5">
               {index > 0 && <span className="text-muted-foreground/40">|</span>}
               <span>
@@ -56,7 +63,7 @@ export const RoomStatusPanel = ({ rooms, onSelectRoom }: RoomStatusPanelProps) =
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
           {rooms.map((room) => {
-            const status = room.occupancy ?? FALLBACK_STATUS;
+            const status = room.occupancy ?? FALLBACK_ROOM_STATUS;
             return (
               <button
                 key={room.id}

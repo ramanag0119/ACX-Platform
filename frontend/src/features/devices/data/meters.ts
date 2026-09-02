@@ -3,28 +3,79 @@
  * Building -> Floor -> Room -> Appliance.
  *
  * Every node exposes the same shape so the card grid can render any level of
- * the tree, and parent readings are aggregated from their children so the
+ * the tree, and parent readings are folded up from their children so the
  * numbers on a Building card always reconcile with its floors and rooms.
+ *
+ * This module holds the shape, the selectors and the adapter that folds the
+ * live HMS reads into it. It carries NO readings of its own: every figure
+ * below arrives from the API, and anything a device has not reported stays
+ * null rather than being inferred.
  */
+
+import type {
+  BuildingRead,
+  DeviceRead,
+  FloorRead,
+  OccupancyRead,
+  ValueAlertRead,
+} from "@/lib/api/types";
 
 export type MeterNodeKind = "building" | "floor" | "room";
 
-/** Housekeeping state of a room, shown as a colour tile in Power View. */
-export type RoomOccupancy = "available" | "occupied" | "maintenance" | "non-smart";
+/* ------------------------------------------------------------------ */
+/* Room status                                                        */
+/* ------------------------------------------------------------------ */
 
+/**
+ * The real `amenity_status` names -- all FOUR of them -- plus a bucket for a
+ * room that reports none. Allotted (held by a stay that has not checked in)
+ * is its own state and is deliberately not folded into Occupied.
+ */
+export const ROOM_STATUS_ORDER = [
+  "Available",
+  "Occupied",
+  "Allotted",
+  "Unavailable",
+  "Unknown",
+] as const;
+
+export type RoomOccupancy = (typeof ROOM_STATUS_ORDER)[number];
+
+export const FALLBACK_ROOM_STATUS: RoomOccupancy = "Unknown";
+
+const KNOWN_ROOM_STATUS = new Set<string>(ROOM_STATUS_ORDER);
+
+/** Narrows a stored `amenity_status.name` onto the union, without guessing. */
+export const toRoomStatus = (name: string | null | undefined): RoomOccupancy =>
+  name && KNOWN_ROOM_STATUS.has(name) ? (name as RoomOccupancy) : FALLBACK_ROOM_STATUS;
+
+/* ------------------------------------------------------------------ */
+/* Node shape                                                         */
+/* ------------------------------------------------------------------ */
+
+/**
+ * One metered appliance, from `device` plus its latest `device_stat` rows.
+ *
+ * Each figure is null when the device has not reported that parameter. Power
+ * factor is commonly null: `device_param` defines it, but not every device
+ * type publishes it.
+ */
 export interface ApplianceReading {
   id: string;
   device: string;
-  voltage: number;
-  current: number;
-  powerFactor: number;
-  /** kWh accumulated in the last 5 minute window. */
-  energy5Min: number;
-  /** kWh accumulated since midnight. */
-  energyFromMidnight: number;
-  /** Configured consumption limit for the appliance was crossed. */
+  /** device_param `voltage`, in V. */
+  voltage: number | null;
+  /** device_param `current`, in Amps. */
+  current: number | null;
+  /** device_param `power_factor`, unitless. */
+  powerFactor: number | null;
+  /** device_param `active_power`, in KW. */
+  activePower: number | null;
+  /** SUM over `energy_stat` for this device. That table stores NO unit. */
+  energyTotal: number | null;
+  /** An active `value_alert` on a consumption parameter for this device. */
   limitExceeded: boolean;
-  /** Instantaneous load crossed the configured threshold. */
+  /** An active `value_alert` on an instantaneous load parameter. */
   loadExceeded: boolean;
 }
 
@@ -32,302 +83,244 @@ export interface MeterNode {
   id: string;
   kind: MeterNodeKind;
   name: string;
-  /** Room/unit number rendered after the name, e.g. "Restaurant - 102". */
+  /** Room/unit number rendered after the name, e.g. "Guest Room - 102". */
   code?: string;
   /** Breadcrumb of the ancestors, e.g. "Building A -> Floor 1". */
   path?: string;
+  /** Online when at least one device in scope reports health_status Active. */
   status: "online" | "offline";
+  /** Active `value_alert` rows against the devices in scope. */
   alerts: number;
-  /** Live load in kW - the red figure on the card in both views. */
+  /** Summed `active_power` in scope, in KW -- the red figure on the card. */
   liveKw: number;
-  /** Energy since midnight in kWh - the bold figure in Energy View. */
-  energyKwh: number;
-  /** Peak demand recorded today in kW - the bold figure in Power View. */
-  peakKw: number;
+  /** Summed `energy_stat` consumption in scope. Carries NO unit. */
+  energyTotal: number;
+  /** Highest single-device `active_power` in scope, in KW. Null if none. */
+  peakLoad: number | null;
   /** Metered devices behind this node - the figure in the card footer. */
   deviceCount: number;
-  /** Rooms only - drives the Power View room status tiles. */
+  /** Rooms only - drives the room status board. */
   occupancy?: RoomOccupancy;
   appliances: ApplianceReading[];
   children: MeterNode[];
 }
 
 /* ------------------------------------------------------------------ */
-/* Mock meter readings                                                */
+/* Adapter input                                                      */
 /* ------------------------------------------------------------------ */
 
-/** Deterministic PRNG so the mock readings stay stable between renders. */
-const seededRandom = (seed: string) => {
-  let hash = 2166136261;
-  for (let i = 0; i < seed.length; i += 1) {
-    hash ^= seed.charCodeAt(i);
-    hash = Math.imul(hash, 16777619);
-  }
-  return () => {
-    hash = (Math.imul(hash, 1103515245) + 12345) & 0x7fffffff;
-    return hash / 0x7fffffff;
-  };
-};
+/** The latest numeric reading per electrical parameter for one device. */
+export interface DeviceReadings {
+  voltage: number | null;
+  current: number | null;
+  powerFactor: number | null;
+  activePower: number | null;
+}
 
-const round = (value: number, decimals: number) => {
+/**
+ * Everything `buildMeterTree` needs, already keyed. The caller owns the
+ * fetching; this module stays a pure function of what came back.
+ */
+export interface MeterHierarchyInput {
+  /** Used for building display names and ordering only. */
+  buildings: BuildingRead[];
+  /** Used for floor display names and ordering only. */
+  floors: FloorRead[];
+  /** GET /occupancy -- the rooms, already scoped by the page's filters. */
+  rooms: OccupancyRead[];
+  /** GET /devices -- the appliances, already scoped. */
+  devices: DeviceRead[];
+  /** amenity_id -> SUM(energy_consumed), from group_by=amenity. */
+  energyByAmenity: Map<string, number>;
+  /** device_name -> SUM(energy_consumed), from group_by=device. */
+  energyByDeviceName: Map<string, number>;
+  /** device_id -> latest reading per parameter. */
+  readingsByDevice: Map<string, DeviceReadings>;
+  /** device_id -> active value alerts. */
+  alertsByDevice: Map<string, ValueAlertRead[]>;
+}
+
+/**
+ * `limit_config.parameter` values that describe instantaneous load. An alert
+ * on anything else (voltage, active_energy) reads as a consumption limit.
+ */
+const LOAD_PARAMS = new Set(["current", "active_power", "reactive_power"]);
+
+const round = (value: number, decimals = 2) => {
   const factor = 10 ** decimals;
   return Math.round(value * factor) / factor;
 };
 
-const APPLIANCE_TYPES = [
-  "Air Conditioner",
-  "Lighting",
-  "Ceiling Fan",
-  "Power Socket",
-  "Water Heater",
-  "Mini Bar",
-  "Television",
-];
+/** Sums a column, returning null when nothing in scope reported it. */
+const sumOrNull = (values: (number | null)[]): number | null => {
+  const present = values.filter((value): value is number => value !== null);
+  return present.length === 0 ? null : present.reduce((total, value) => total + value, 0);
+};
 
-const buildAppliances = (roomId: string, offline: boolean): ApplianceReading[] => {
-  const random = seededRandom(roomId);
-  const count = 3 + Math.floor(random() * 3);
+const maxOrNull = (values: (number | null)[]): number | null => {
+  const present = values.filter((value): value is number => value !== null);
+  return present.length === 0 ? null : Math.max(...present);
+};
 
-  return Array.from({ length: count }, (_, index) => {
-    const voltage = offline ? 0 : round(228 + random() * 13, 1);
-    const current = offline ? 0 : round(0.2 + random() * 6.3, 2);
-    const powerFactor = offline ? 0 : round(0.82 + random() * 0.17, 2);
-    const energy5Min = round((voltage * current * powerFactor) / 12000, 3);
-    const hoursElapsed = 6 + random() * 10;
+const applianceLabel = (device: DeviceRead) =>
+  device.appliance_name ?? device.device_name ?? device.device_uid ?? "Unnamed device";
 
-    return {
-      id: `${roomId}-A${index + 1}`,
-      device: APPLIANCE_TYPES[(index + roomId.length) % APPLIANCE_TYPES.length],
-      voltage,
-      current,
-      powerFactor,
-      energy5Min,
-      energyFromMidnight: round(energy5Min * 12 * hoursElapsed, 2),
-      limitExceeded: !offline && random() > 0.82,
-      loadExceeded: !offline && current > 5.4,
-    };
-  });
+const toAppliance = (
+  device: DeviceRead,
+  input: MeterHierarchyInput,
+): ApplianceReading => {
+  const readings = input.readingsByDevice.get(device.id);
+  const alerts = input.alertsByDevice.get(device.id) ?? [];
+
+  return {
+    id: device.id,
+    device: applianceLabel(device),
+    voltage: readings?.voltage ?? null,
+    current: readings?.current ?? null,
+    powerFactor: readings?.powerFactor ?? null,
+    activePower: readings?.activePower ?? null,
+    energyTotal: device.device_name
+      ? input.energyByDeviceName.get(device.device_name) ?? null
+      : null,
+    limitExceeded: alerts.some(
+      (alert) => !alert.parameter || !LOAD_PARAMS.has(alert.parameter),
+    ),
+    loadExceeded: alerts.some(
+      (alert) => alert.parameter !== null && LOAD_PARAMS.has(alert.parameter),
+    ),
+  };
+};
+
+/** Rolls a parent up from its children so every level reconciles. */
+const aggregate = (
+  node: Omit<
+    MeterNode,
+    "liveKw" | "energyTotal" | "peakLoad" | "deviceCount" | "alerts" | "status"
+  >,
+): MeterNode => {
+  const { children } = node;
+  return {
+    ...node,
+    liveKw: round(children.reduce((total, child) => total + child.liveKw, 0)),
+    energyTotal: round(children.reduce((total, child) => total + child.energyTotal, 0), 3),
+    peakLoad: maxOrNull(children.map((child) => child.peakLoad)),
+    deviceCount: children.reduce((total, child) => total + child.deviceCount, 0),
+    alerts: children.reduce((total, child) => total + child.alerts, 0),
+    status: children.some((child) => child.status === "online") ? "online" : "offline",
+  };
 };
 
 /* ------------------------------------------------------------------ */
 /* Tree construction                                                  */
 /* ------------------------------------------------------------------ */
 
-interface RoomSeed {
-  name: string;
-  code: string;
-  offline?: boolean;
-}
+const UNASSIGNED = "unassigned";
 
-interface FloorSeed {
-  name: string;
-  rooms: RoomSeed[];
-}
+/** Label used for rooms whose `property_chain` leaves a level unset. */
+const UNASSIGNED_LABEL = "Unassigned";
 
-interface BuildingSeed {
-  name: string;
-  floors: FloorSeed[];
-}
-
-const BUILDING_SEEDS: BuildingSeed[] = [
-  {
-    name: "Building A",
-    floors: [
-      {
-        name: "Floor 1",
-        rooms: [
-          { name: "Store Room", code: "101" },
-          { name: "Restaurant", code: "102" },
-          { name: "Restaurant", code: "104" },
-          { name: "Restaurant", code: "105" },
-          { name: "Car Parking", code: "109" },
-          { name: "Store Room", code: "103", offline: true },
-          { name: "Restaurant", code: "3" },
-        ],
-      },
-      {
-        name: "Floor 2",
-        rooms: [
-          { name: "Conference Hall", code: "201" },
-          { name: "Guest Room", code: "202" },
-          { name: "Guest Room", code: "203", offline: true },
-          { name: "Pantry", code: "205" },
-        ],
-      },
-      {
-        name: "Floor 3",
-        rooms: [
-          { name: "Car Parking", code: "306" },
-          { name: "Car Parking", code: "3002" },
-          { name: "Car Parking", code: "303" },
-          { name: "Car Parking", code: "311" },
-        ],
-      },
-      {
-        name: "Floor 4",
-        rooms: [
-          { name: "Spa", code: "401" },
-          { name: "Gym", code: "402" },
-          { name: "Laundry", code: "404", offline: true },
-        ],
-      },
-      {
-        name: "Floor 5",
-        rooms: [
-          { name: "Champagne Bar", code: "502" },
-          { name: "Restaurant", code: "504" },
-          { name: "Restaurant", code: "506" },
-          { name: "Restaurant", code: "507" },
-          { name: "Restaurant", code: "508" },
-        ],
-      },
-    ],
-  },
-  {
-    name: "Demo Box",
-    floors: [
-      {
-        name: "US Demo",
-        rooms: [
-          { name: "Demo Room", code: "D1" },
-          { name: "Demo Room", code: "D2" },
-        ],
-      },
-      {
-        name: "Demo",
-        rooms: [{ name: "Show Room", code: "D3" }],
-      },
-    ],
-  },
-  {
-    name: "Dev & Testing",
-    floors: [
-      {
-        name: "Floor 1",
-        rooms: [
-          { name: "Senthil MDU Room", code: "T1" },
-          { name: "Senthil USA", code: "T2", offline: true },
-        ],
-      },
-    ],
-  },
-  {
-    name: "Building D PILOT",
-    floors: [
-      {
-        name: "Ground Floor",
-        rooms: [
-          { name: "Lobby", code: "G01" },
-          { name: "Reception", code: "G02" },
-          { name: "Utility Room", code: "G03", offline: true },
-        ],
-      },
-    ],
-  },
-];
-
-const slug = (value: string) =>
-  value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
-
-type AggregateInput = Omit<
-  MeterNode,
-  "liveKw" | "energyKwh" | "peakKw" | "deviceCount" | "alerts" | "status"
->;
-
-const aggregate = (node: AggregateInput): MeterNode => {
-  const { children } = node;
-  return {
-    ...node,
-    liveKw: round(
-      children.reduce((sum, child) => sum + child.liveKw, 0),
-      2,
-    ),
-    energyKwh: round(
-      children.reduce((sum, child) => sum + child.energyKwh, 0),
-      2,
-    ),
-    peakKw: round(
-      children.reduce((sum, child) => sum + child.peakKw, 0),
-      2,
-    ),
-    deviceCount: children.reduce((sum, child) => sum + child.deviceCount, 0),
-    alerts: children.reduce((sum, child) => sum + child.alerts, 0),
-    status: children.some((child) => child.status === "online") ? "online" : "offline",
-  };
+const groupBy = <T>(items: T[], key: (item: T) => string) => {
+  const groups = new Map<string, T[]>();
+  for (const item of items) {
+    const bucket = groups.get(key(item));
+    if (bucket) bucket.push(item);
+    else groups.set(key(item), [item]);
+  }
+  return groups;
 };
 
-const buildTree = (): MeterNode[] =>
-  BUILDING_SEEDS.map((building) => {
-    const buildingId = slug(building.name);
+/**
+ * Folds the live reads into the Building -> Floor -> Room tree.
+ *
+ * The tree is built upward from `rooms`, so it always reflects exactly the
+ * scope the caller fetched: a building with no rooms in scope does not appear,
+ * and a room whose chain leaves the building or floor unset is grouped under
+ * an explicit "Unassigned" node rather than being dropped.
+ */
+export const buildMeterTree = (input: MeterHierarchyInput): MeterNode[] => {
+  const devicesByAmenity = groupBy(input.devices, (device) => device.amenity_id);
+  const buildingNames = new Map(input.buildings.map((b) => [b.id, b.name]));
+  const floorNames = new Map(input.floors.map((f) => [f.id, f.name]));
 
-    const floors = building.floors.map((floor) => {
-      const floorId = `${buildingId}--${slug(floor.name)}`;
+  // Ordering follows the reference lists, so the grid is stable between
+  // renders and matches the order the filter dropdowns show.
+  const buildingOrder = new Map(input.buildings.map((b, index) => [b.id, index]));
+  const floorOrder = new Map(input.floors.map((f, index) => [f.id, index]));
+  const rank = (order: Map<string, number>, id: string) => order.get(id) ?? Number.MAX_SAFE_INTEGER;
 
-      const rooms: MeterNode[] = floor.rooms.map((room) => {
-        const roomId = `${floorId}--${slug(`${room.name}-${room.code}`)}`;
-        const appliances = buildAppliances(roomId, Boolean(room.offline));
-        const liveKw = round(
-          appliances.reduce(
-            (sum, appliance) => sum + (appliance.voltage * appliance.current * appliance.powerFactor) / 1000,
-            0,
-          ),
-          2,
-        );
-        // A second draw from the room seed keeps peak and occupancy stable too.
-        const roomRandom = seededRandom(`${roomId}-state`);
-        const occupancyRoll = roomRandom();
+  const roomsByBuilding = groupBy(input.rooms, (room) => room.building_id ?? UNASSIGNED);
 
-        return {
-          id: roomId,
-          kind: "room" as const,
-          name: room.name,
-          code: room.code,
-          path: `${building.name} -> ${floor.name}`,
-          status: room.offline ? ("offline" as const) : ("online" as const),
-          alerts: appliances.filter((appliance) => appliance.limitExceeded || appliance.loadExceeded).length,
-          liveKw,
-          energyKwh: round(
-            appliances.reduce((sum, appliance) => sum + appliance.energyFromMidnight, 0),
-            2,
-          ),
-          peakKw: round(liveKw * (1.15 + roomRandom() * 0.45), 2),
-          deviceCount: appliances.length,
-          // An unreachable meter cannot report a housekeeping state.
-          occupancy: room.offline
-            ? ("non-smart" as const)
-            : occupancyRoll > 0.62
-              ? ("available" as const)
-              : occupancyRoll > 0.28
-                ? ("occupied" as const)
-                : ("maintenance" as const),
-          appliances,
-          children: [],
-        };
-      });
+  const buildings = [...roomsByBuilding.entries()]
+    .sort(([a], [b]) => rank(buildingOrder, a) - rank(buildingOrder, b))
+    .map(([buildingId, buildingRooms]) => {
+      const buildingLabel =
+        buildingId === UNASSIGNED
+          ? UNASSIGNED_LABEL
+          : buildingNames.get(buildingId) ??
+            buildingRooms[0].building_name ??
+            UNASSIGNED_LABEL;
+
+      const roomsByFloor = groupBy(buildingRooms, (room) => room.floor_id ?? UNASSIGNED);
+
+      const floors = [...roomsByFloor.entries()]
+        .sort(([a], [b]) => rank(floorOrder, a) - rank(floorOrder, b))
+        .map(([floorId, floorRooms]) => {
+          const floorLabel =
+            floorId === UNASSIGNED
+              ? UNASSIGNED_LABEL
+              : floorNames.get(floorId) ?? floorRooms[0].floor_name ?? UNASSIGNED_LABEL;
+
+          const rooms: MeterNode[] = floorRooms.map((room) => {
+            const roomDevices = devicesByAmenity.get(room.amenity_id) ?? [];
+            const appliances = roomDevices.map((device) => toAppliance(device, input));
+            const loads = appliances.map((appliance) => appliance.activePower);
+
+            return {
+              id: room.amenity_id,
+              kind: "room" as const,
+              // `amenity_type_name` is the kind of room, `room_name` the unit
+              // number -- the card renders them as "Guest Room - 101".
+              name: room.amenity_type_name ?? room.room_name,
+              code: room.amenity_type_name ? room.room_name : undefined,
+              path: `${buildingLabel} -> ${floorLabel}`,
+              status: roomDevices.some((device) => device.health_status === "Active")
+                ? ("online" as const)
+                : ("offline" as const),
+              alerts: roomDevices.reduce(
+                (total, device) => total + (input.alertsByDevice.get(device.id)?.length ?? 0),
+                0,
+              ),
+              liveKw: round(sumOrNull(loads) ?? 0),
+              energyTotal: round(input.energyByAmenity.get(room.amenity_id) ?? 0, 3),
+              peakLoad: maxOrNull(loads),
+              deviceCount: roomDevices.length,
+              occupancy: toRoomStatus(room.status_name),
+              appliances,
+              children: [],
+            };
+          });
+
+          return aggregate({
+            id: `${buildingId}--${floorId}`,
+            kind: "floor",
+            name: floorLabel,
+            path: buildingLabel,
+            appliances: rooms.flatMap((room) => room.appliances),
+            children: rooms,
+          });
+        });
 
       return aggregate({
-        id: floorId,
-        kind: "floor",
-        name: floor.name,
-        path: building.name,
-        appliances: rooms.flatMap((room) => room.appliances),
-        children: rooms,
+        id: buildingId,
+        kind: "building",
+        name: buildingLabel,
+        appliances: floors.flatMap((floor) => floor.appliances),
+        children: floors,
       });
     });
 
-    return aggregate({
-      id: buildingId,
-      kind: "building",
-      name: building.name,
-      appliances: floors.flatMap((floor) => floor.appliances),
-      children: floors,
-    });
-  });
-
-export const meterTree: MeterNode[] = buildTree();
+  return buildings;
+};
 
 /* ------------------------------------------------------------------ */
 /* Selectors                                                          */

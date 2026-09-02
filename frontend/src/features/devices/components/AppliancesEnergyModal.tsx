@@ -8,18 +8,26 @@ interface AppliancesEnergyModalProps {
   onClose: () => void;
 }
 
+/**
+ * Columns follow `device_param` exactly: voltage in V, current in Amps and
+ * active_power in KW, with power_factor unitless. `energy_stat` stores no unit
+ * column, so its total is labelled without one.
+ */
 const COLUMNS = [
   { label: "S.No", align: "left" as const, width: "w-[70px]" },
-  { label: "Device", align: "left" as const, width: "w-[170px]" },
+  { label: "Device", align: "left" as const, width: "w-[190px]" },
   { label: "Voltage (V)", align: "right" as const, width: "w-[110px]" },
-  { label: "Current (A)", align: "right" as const, width: "w-[110px]" },
+  { label: "Current (Amps)", align: "right" as const, width: "w-[120px]" },
   { label: "Power Factor", align: "right" as const, width: "w-[120px]" },
-  { label: "Energy (5 min in kWh)", align: "right" as const, width: "w-[170px]" },
-  { label: "Energy (from mid night in kWh)", align: "right" as const, width: "" },
+  { label: "Active Power (KW)", align: "right" as const, width: "w-[150px]" },
+  { label: "Energy consumed (no unit stored)", align: "right" as const, width: "" },
 ];
 
 const CELL = "border border-meter-panel-border px-3 py-2";
 const NUM_CELL = `${CELL} text-right tabular-nums text-white`;
+
+/** An em dash means the device has not reported that parameter. */
+const reading = (value: number | null) => (value === null ? "—" : value);
 
 export const AppliancesEnergyModal = ({ node, onClose }: AppliancesEnergyModalProps) => {
   const appliances = node?.appliances ?? [];
@@ -110,20 +118,12 @@ export const AppliancesEnergyModal = ({ node, onClose }: AppliancesEnergyModalPr
                           )}
                         </span>
                       </td>
-                      <td className={NUM_CELL}>
-                        {appliance.voltage}
-                      </td>
-                      <td className={NUM_CELL}>
-                        {appliance.current}
-                      </td>
-                      <td className={NUM_CELL}>
-                        {appliance.powerFactor}
-                      </td>
-                      <td className={NUM_CELL}>
-                        {appliance.energy5Min}
-                      </td>
+                      <td className={NUM_CELL}>{reading(appliance.voltage)}</td>
+                      <td className={NUM_CELL}>{reading(appliance.current)}</td>
+                      <td className={NUM_CELL}>{reading(appliance.powerFactor)}</td>
+                      <td className={NUM_CELL}>{reading(appliance.activePower)}</td>
                       <td className={cn(NUM_CELL, "font-bold")}>
-                        {appliance.energyFromMidnight}
+                        {reading(appliance.energyTotal)}
                       </td>
                     </tr>
                   ))
