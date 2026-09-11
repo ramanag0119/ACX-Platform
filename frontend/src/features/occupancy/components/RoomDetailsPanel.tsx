@@ -4,6 +4,7 @@ import { useTheme } from "@/core/contexts/ThemeContext";
 import { DataState } from "@/core/components/DataState";
 import { useDeviceStats, useDevices, useOccupancyDetail } from "@/lib/api/hooks";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
+import { roomStatusTextClass } from "../lib/roomStatus";
 
 interface RoomDetailsPanelProps {
   /** The room's `amenity.id`. Everything on this panel is fetched with it. */
@@ -123,15 +124,26 @@ export const RoomDetailsPanel = ({ amenityId, roomNumber, roomType }: RoomDetail
                       roomType ??
                       "-",
                   },
-                  { label: "Status", value: occupancy?.status_name ?? "-" },
-                ].map(({ label, value }) => (
+                  {
+                    label: "Status",
+                    value: occupancy?.status_name ?? "-",
+                    // The one coloured row: room status uses the module's
+                    // shared Available/Occupied/Allotted/Unavailable colours.
+                    className: roomStatusTextClass(occupancy?.status_name),
+                  },
+                ].map(({ label, value, className }) => (
                   <div
                     key={label}
                     className="flex justify-between py-2"
                     style={{ borderBottom: `1px solid ${rowBorder}` }}
                   >
                     <span style={{ color: labelColor }}>{label}</span>
-                    <span style={{ color: valueColor }}>{value}</span>
+                    <span
+                      className={className}
+                      style={className ? undefined : { color: valueColor }}
+                    >
+                      {value}
+                    </span>
                   </div>
                 ))}
               </div>

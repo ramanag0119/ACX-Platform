@@ -262,7 +262,19 @@ def list_devices(
     if firmware_id:
         stmt = stmt.where(Device.current_firmware_version == firmware_id)
     if firmware_outdated is not None:
-        mismatch = Device.current_firmware_version != Device.expected_firmware_version
+        # NULL-aware on purpose. `!=` is three-valued in SQL, so a device whose
+        # current OR expected firmware is NULL evaluated to NULL and was dropped
+        # from BOTH branches -- `firmware_outdated=true` and `=false` together
+        # returned fewer rows than the table holds, and a device that has never
+        # reported a version was silently counted as up to date.
+        #
+        # IS DISTINCT FROM treats NULL as a value, so the two branches now
+        # partition the set exactly. A device with no reported current version
+        # but a known expected one IS outdated: it is not running what it
+        # should be.
+        mismatch = Device.current_firmware_version.is_distinct_from(
+            Device.expected_firmware_version
+        )
         stmt = stmt.where(mismatch if firmware_outdated else ~mismatch)
 
     total = _count(db, stmt)

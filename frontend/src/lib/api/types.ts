@@ -93,6 +93,25 @@ export type DailyMetricType =
 
 export type ParamDataType = "Integer" | "Double" | "String" | "Date Time";
 
+/**
+ * `value_alert.status` -- a bare `smallint` with NO lookup table anywhere in
+ * the 92-table schema (unlike `amenity_status` or `service_status`, which are
+ * real reference tables and must always be resolved by name through their own
+ * endpoint). 0 = Active, 1 = Resolved is a column-level convention the backend
+ * documents on GET /value-alerts, so it is named here once instead of being
+ * repeated as a bare `0` at each call site. There is nothing to resolve it
+ * against, and inventing a lookup table for it is out of scope.
+ */
+export const VALUE_ALERT_ACTIVE = 0;
+export const VALUE_ALERT_RESOLVED = 1;
+
+/**
+ * `amenity_status.amenity_status_name` values. The NAME is the stable business
+ * vocabulary; the id is seeded data. Always resolve the id from
+ * GET /amenity-statuses rather than assuming 0/1/2/3.
+ */
+export const ROOM_STATUS_OCCUPIED = "Occupied";
+
 export type RoleType = "admin" | "system_user" | "manager" | "guest" | "staff";
 
 /**

@@ -60,11 +60,15 @@ from app.services.writes import (
     transaction,
 )
 
-#: `amenity_status` ids as seeded: 0 Available, 1 Occupied, 2 Unavailable, 3 Allotted.
-ROOM_AVAILABLE = 0
-ROOM_OCCUPIED = 1
-ROOM_UNAVAILABLE = 2
-ROOM_ALLOTTED = 3
+#: `amenity_status.amenity_status_name` values. The vocabulary this module
+#: reasons about is the NAME; the id is resolved from the lookup table on every
+#: use (see `_room_status_id`). Previously these were the literal ids 0-3
+#: "as seeded", which made a reordered or re-seeded `amenity_status` table
+#: silently write the wrong room state on check-in, check-out and reallocation.
+ROOM_AVAILABLE = "Available"
+ROOM_OCCUPIED = "Occupied"
+ROOM_UNAVAILABLE = "Unavailable"
+ROOM_ALLOTTED = "Allotted"
 
 #: `stay_status` enum labels.
 STAY_PENDING = "pending"

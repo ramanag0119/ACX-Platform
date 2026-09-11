@@ -9,10 +9,8 @@ import { ProtectedRoute } from "@/core/components/ProtectedRoute";
 import Login from "@/features/auth/pages/Login";
 import Dashboard from "@/features/dashboard/pages/Dashboard";
 import Tickets from "@/features/tickets/pages/Tickets";
-import RoomView from "@/features/occupancy/pages/RoomView";
 import DeviceManagement from "@/features/devices/pages/DeviceManagement";
 import Reports from "@/features/reports/pages/Reports";
-import EnergyView from "@/features/devices/pages/EnergyView";
 import KeySettings from "@/features/devices/pages/KeySettings";
 import Occupancy from "@/features/occupancy/pages/Occupancy";
 import Bookings from "@/features/bookings/pages/Bookings";
@@ -30,7 +28,6 @@ import Offers from "@/features/marketing/pages/Offers";
 import Holidays from "@/features/marketing/pages/Holidays";
 import FirmwareManagement from "@/features/devices/pages/FirmwareManagement";
 import Events from "@/features/marketing/pages/Events";
-import PowerView from "@/features/devices/pages/PowerView";
 
 const queryClient = new QueryClient();
 
@@ -72,9 +69,12 @@ const App = () => (
               <Route path="/devices/firmware-management" element={<FirmwareManagement />} />
               <Route path="/reports/*" element={<Reports />} />
               <Route path="/tickets" element={<Tickets />} />
-              <Route path="/power-view" element={<PowerView />} />
-              <Route path="/energy-view" element={<EnergyView />} />
-              <Route path="/room-view" element={<RoomView />} />
+              {/* /power-view, /energy-view and /room-view are retired. Their
+                  room-level figures are part of Room Details on /occupancy,
+                  so old links land there rather than on a dead page. */}
+              <Route path="/power-view" element={<Navigate to="/occupancy" replace />} />
+              <Route path="/energy-view" element={<Navigate to="/occupancy" replace />} />
+              <Route path="/room-view" element={<Navigate to="/occupancy" replace />} />
               <Route path="/key-settings" element={<KeySettings />} />
             </Route>
             <Route path="*" element={<NotFound />} />

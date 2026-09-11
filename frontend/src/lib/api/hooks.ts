@@ -240,16 +240,22 @@ export const useInvoices = (params?: QueryParams) =>
 
 export const useDeviceParams = (params?: QueryParams) =>
   useApiQuery(["device-params", params], () => api.listDeviceParams(params));
-export const useDeviceStats = (params?: QueryParams) =>
-  useApiQuery(["device-stats", params], () => api.listDeviceStats(params));
+/**
+ * `enabled` exists because these two reads are gated on modules the calling
+ * screen may not hold (`caleido_network` / `reports`). Without it, passing
+ * `undefined` params would still fire -- unfiltered, and 403 for a role
+ * without the grant. Callers that always have params can ignore it.
+ */
+export const useDeviceStats = (params?: QueryParams, options?: { enabled?: boolean }) =>
+  useApiQuery(["device-stats", params], () => api.listDeviceStats(params), options);
 export const useDeviceCurrentStats = (params?: QueryParams) =>
   useApiQuery(["device-current-stats", params], () => api.listDeviceCurrentStats(params));
 export const useOtherDeviceReadings = (params?: QueryParams) =>
   useApiQuery(["other-device-readings", params], () => api.listOtherDeviceReadings(params));
 export const useEnergyStats = (params?: QueryParams) =>
   useApiQuery(["energy-stats", params], () => api.listEnergyStats(params));
-export const useEnergySummary = (params?: QueryParams) =>
-  useApiQuery(["energy-summary", params], () => api.getEnergySummary(params));
+export const useEnergySummary = (params?: QueryParams, options?: { enabled?: boolean }) =>
+  useApiQuery(["energy-summary", params], () => api.getEnergySummary(params), options);
 export const useDailyDataPoints = (params?: QueryParams) =>
   useApiQuery(["daily-data-points", params], () => api.listDailyDataPoints(params));
 

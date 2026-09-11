@@ -18,6 +18,8 @@ import { CheckCircle, XCircle } from "lucide-react";
 import { DataState } from "@/core/components/DataState";
 import { useDevices, useOccupancyDetail, useServiceRequests } from "@/lib/api/hooks";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
+import { roomStatusBadgeClass, roomStatusTextClass } from "../lib/roomStatus";
+import { RoomPowerEnergy } from "./RoomPowerEnergy";
 
 interface RoomDetailsModalProps {
     /** `amenity.id` -- everything in this dialog is fetched with it. */
@@ -51,6 +53,10 @@ const formatDateTime = (value: string | null | undefined) =>
  *
  * Guest contact details, ID proof, nationality and pax are likewise absent:
  * the occupancy projection returns only `UserRef` (id, name, emp_id).
+ *
+ * The Power & Energy section is where the retired Power View and Energy View
+ * live now. It reuses their reads, narrowed to this room's amenity id -- see
+ * `RoomPowerEnergy` for the parameters, units and permission handling.
  */
 export function RoomDetailsModal({
     amenityId,
@@ -86,7 +92,11 @@ export function RoomDetailsModal({
                         <DialogTitle className="text-xl font-semibold">
                             Occupancy No: {roomNo}
                         </DialogTitle>
-                        <Badge variant={status === "Available" ? "outline" : "destructive"} className="mr-8">
+                        {/* Same status -> same colour as the room list. */}
+                        <Badge
+                            variant="outline"
+                            className={`mr-8 ${roomStatusBadgeClass(occupancy?.status_name ?? status)}`}
+                        >
                             {occupancy?.status_name ?? status}
                         </Badge>
                     </div>
@@ -115,14 +125,43 @@ export function RoomDetailsModal({
                                             {occupancy?.amenity_type_name ?? roomType}
                                         </span>
                                     </div>
+                                    {/* Building and floor are separate columns on
+                                        the occupancy projection, so they are shown
+                                        separately rather than concatenated. */}
+                                    <div className="space-y-1">
+                                        <span className="text-muted-foreground block text-xs uppercase tracking-wider">
+                                            Tower / Building :
+                                        </span>
+                                        <span className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">
+                                            {occupancy?.building_name ?? "-"}
+                                        </span>
+                                    </div>
                                     <div className="space-y-1">
                                         <span className="text-muted-foreground block text-xs uppercase tracking-wider">
                                             Floor :
                                         </span>
                                         <span className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">
-                                            {[occupancy?.building_name, occupancy?.floor_name]
-                                                .filter(Boolean)
-                                                .join(" - ") || "-"}
+                                            {occupancy?.floor_name ?? "-"}
+                                        </span>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <span className="text-muted-foreground block text-xs uppercase tracking-wider">
+                                            Room Status :
+                                        </span>
+                                        <span
+                                            className={`text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3 ${roomStatusTextClass(
+                                                occupancy?.status_name ?? status,
+                                            )}`}
+                                        >
+                                            {occupancy?.status_name ?? status}
+                                        </span>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <span className="text-muted-foreground block text-xs uppercase tracking-wider">
+                                            Room Allocations :
+                                        </span>
+                                        <span className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">
+                                            {occupancy?.allocation_count ?? "-"}
                                         </span>
                                     </div>
                                     <div className="space-y-1">
@@ -265,6 +304,16 @@ export function RoomDetailsModal({
                                     </Table>
                                 </DataState>
                             </div>
+                        </section>
+
+                        {/* Power & Energy Section -- what the retired Power View
+                            and Energy View used to show, narrowed to this room.
+                            See RoomPowerEnergy for the parameters and units. */}
+                        <section>
+                            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+                                Power &amp; Energy
+                            </h3>
+                            <RoomPowerEnergy amenityId={enabled} />
                         </section>
 
                         {/* Service Requests Section (see the file header: the

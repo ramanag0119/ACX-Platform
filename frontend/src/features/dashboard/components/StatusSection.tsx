@@ -7,6 +7,7 @@ import { DataState, InlineLoading } from "@/core/components/DataState";
 import { useCount, useFloors, useOccupancy } from "@/lib/api/hooks";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
 import type { QueryParams } from "@/lib/api/client";
+import { ROOM_STATUS_NAMES, roomStatusTint } from "@/features/occupancy/lib/roomStatus";
 
 /**
  * Building -> floor -> room drill-down, filtered BY THE BACKEND at every level.
@@ -49,13 +50,14 @@ interface StatusSectionProps {
   onAffectedOnlyChange: (value: boolean) => void;
 }
 
-/** The four `amenity_status` rows, coloured as on the occupancy chart. */
-const STATUS_TINT: Record<string, { light: string; dark: string; border: string; text: string }> = {
-  Available: { light: "#E0F2FE", dark: "#12354a", border: "#38BDF8", text: "#075985" },
-  Occupied: { light: "#DCFCE7", dark: "#12341f", border: "#22C55E", text: "#065F46" },
-  Allotted: { light: "#FEF3C7", dark: "#3a2e12", border: "#F59E0B", text: "#78350F" },
-  Unavailable: { light: "#FEE2E2", dark: "#3d1f1f", border: "#EF4444", text: "#7F1D1D" },
-};
+/**
+ * The four `amenity_status` rows. These tiles show room occupancy status, so
+ * they take their colours from the occupancy module's shared map rather than
+ * keeping a second copy -- Available/Occupied/Allotted/Unavailable must read
+ * the same here as in the room list and Room Details.
+ */
+const STATUS_TINT: Record<string, { light: string; dark: string; border: string; text: string }> =
+  Object.fromEntries(ROOM_STATUS_NAMES.map((name) => [name, roomStatusTint(name)]));
 
 /**
  * The real device-health split for a scope, as two backend COUNT(*) calls
