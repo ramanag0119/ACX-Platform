@@ -5,6 +5,7 @@ import { useTheme } from "@/core/contexts/ThemeContext";
 import { DataState } from "@/core/components/DataState";
 import { useFloors, useOccupancy, useStays } from "@/lib/api/hooks";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
+import { roomStatusColor } from "../lib/roomStatus";
 
 /**
  * Room View, driven by GET /occupancy and GET /stays.
@@ -202,7 +203,7 @@ const RoomView = () => {
                         cy="50"
                         r="40"
                         fill="transparent"
-                        stroke="#22c55e"
+                        stroke={roomStatusColor("Available")}
                         strokeWidth="20"
                         strokeDasharray={`${counts.availablePercent * 2.51} ${100 * 2.51}`}
                         strokeDashoffset="0"
@@ -212,7 +213,7 @@ const RoomView = () => {
                         cy="50"
                         r="40"
                         fill="transparent"
-                        stroke="#ef4444"
+                        stroke={roomStatusColor("Occupied")}
                         strokeWidth="20"
                         strokeDasharray={`${counts.occupiedPercent * 2.51} ${100 * 2.51}`}
                         strokeDashoffset={`${-counts.availablePercent * 2.51}`}
@@ -225,24 +226,25 @@ const RoomView = () => {
                     </div>
                   </div>
 
-                  {/* Legend -- all four real statuses, with their live counts. */}
+                  {/* Legend -- all four real statuses, with their live counts.
+                      Swatches come from the module's shared status colours. */}
                   <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 bg-red-500 rounded"></div>
-                      <span className="text-sm" style={{ color: mutedColor }}>Occupied ({counts.occupied})</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 bg-green-500 rounded"></div>
-                      <span className="text-sm" style={{ color: mutedColor }}>Available ({counts.available})</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 bg-amber-500 rounded"></div>
-                      <span className="text-sm" style={{ color: mutedColor }}>Allotted ({counts.allotted})</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 bg-gray-400 rounded"></div>
-                      <span className="text-sm" style={{ color: mutedColor }}>Unavailable ({counts.unavailable})</span>
-                    </div>
+                    {[
+                      { status: "Occupied", count: counts.occupied },
+                      { status: "Available", count: counts.available },
+                      { status: "Allotted", count: counts.allotted },
+                      { status: "Unavailable", count: counts.unavailable },
+                    ].map(({ status, count }) => (
+                      <div key={status} className="flex items-center gap-2">
+                        <div
+                          className="w-4 h-4 rounded"
+                          style={{ background: roomStatusColor(status) }}
+                        />
+                        <span className="text-sm" style={{ color: mutedColor }}>
+                          {status} ({count})
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>

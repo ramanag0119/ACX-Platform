@@ -206,7 +206,12 @@ class OccupantBody(Body):
 class RoomStateUpdate(Body):
     """`amenity` status and flags -- the Occupancy screen's own controls."""
 
-    status: int | None = Field(default=None, ge=0, le=3)
+    #: An `amenity_status` id. No upper bound here: `le=3` hardcoded the four
+    #: seeded rows, so adding a fifth status would have been rejected at the
+    #: schema before the service could look it up. The service validates the id
+    #: against `amenity_status` and answers 422 for one that does not exist, so
+    #: the bound added nothing but a stale assumption.
+    status: int | None = Field(default=None, ge=0)
     is_dnd: int | None = Field(default=None, ge=0, le=1)
     power_save_mode: int | None = Field(default=None, ge=0, le=1)
 

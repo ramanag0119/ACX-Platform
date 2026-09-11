@@ -93,6 +93,18 @@ export type DailyMetricType =
 
 export type ParamDataType = "Integer" | "Double" | "String" | "Date Time";
 
+/**
+ * `value_alert.status` -- a bare `smallint` with NO lookup table anywhere in
+ * the 92-table schema (unlike `amenity_status` or `service_status`, which are
+ * real reference tables and must always be resolved by name through their own
+ * endpoint). 0 = Active, 1 = Resolved is a column-level convention the backend
+ * documents on GET /value-alerts, so it is named here once instead of being
+ * repeated as a bare `0` at each call site. There is nothing to resolve it
+ * against, and inventing a lookup table for it is out of scope.
+ */
+export const VALUE_ALERT_ACTIVE = 0;
+export const VALUE_ALERT_RESOLVED = 1;
+
 export type RoleType = "admin" | "system_user" | "manager" | "guest" | "staff";
 
 /**
@@ -108,6 +120,28 @@ export const KNOWN_AMENITY_STATUSES = [
   "Unavailable",
   "Allotted",
 ] as const;
+
+export type AmenityStatusName = (typeof KNOWN_AMENITY_STATUSES)[number];
+
+/**
+ * The four `amenity_status` names, for the code that has to NAME one.
+ *
+ * The NAME is the stable business vocabulary; the id is seeded data, so an id
+ * is always resolved from GET /amenity-statuses rather than assumed to be
+ * 0/1/2/3. This object exists so that resolution reads
+ * `name === ROOM_STATUS.AVAILABLE` instead of a bare string literal repeated
+ * across the dashboard, the room list and the reallocation dialog.
+ *
+ * It is typed against `KNOWN_AMENITY_STATUSES` above, which stays the single
+ * declaration of the vocabulary: a typo or a name that list does not hold is a
+ * compile error rather than a filter that silently matches nothing.
+ */
+export const ROOM_STATUS = {
+  AVAILABLE: "Available",
+  OCCUPIED: "Occupied",
+  UNAVAILABLE: "Unavailable",
+  ALLOTTED: "Allotted",
+} as const satisfies Record<string, AmenityStatusName>;
 
 export const KNOWN_INCIDENT_STATUSES = [
   "Unread",

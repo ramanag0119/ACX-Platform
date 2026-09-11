@@ -21,6 +21,26 @@ function retry(failureCount: number, error: unknown) {
 
 type Options<T> = Omit<UseQueryOptions<T, ApiError>, "queryKey" | "queryFn">;
 
+/**
+ * Opt-in `enabled` for the list hooks.
+ *
+ * WHY THIS EXISTS, AND WHEN TO REACH FOR IT. `useThing(cond ? {...} : undefined)`
+ * reads like "only fetch when cond", but it is not: `undefined` params mean an
+ * UNFILTERED request, and the hook still fires one. That is harmless where the
+ * caller merely ignores the result, but wrong in two cases the callers below
+ * actually hit:
+ *
+ *   RBAC   the endpoint is gated on a module the role may not hold, so firing
+ *          anyway answers 403 instead of not asking.
+ *   Safety the params carry the filter that makes the result correct (a
+ *          resolved lookup id, say), so an unfiltered fetch returns rows the
+ *          screen must not show.
+ *
+ * In both cases pass `{ enabled }` as well as the conditional params. The
+ * params still shape the query key; `enabled` is what stops the request.
+ */
+type EnabledOption = { enabled?: boolean };
+
 /** Every list hook is built from this, so paging behaves identically. */
 function useApiQuery<T>(
   key: unknown[],
@@ -146,10 +166,10 @@ export const useFacilities = (params?: QueryParams) =>
   useApiQuery(["facilities", params], () => api.listFacilities(params));
 export const useProperties = (params?: QueryParams) =>
   useApiQuery(["properties", params], () => api.listProperties(params));
-export const useBuildings = (params?: QueryParams) =>
-  useApiQuery(["buildings", params], () => api.listBuildings(params));
-export const useFloors = (params?: QueryParams) =>
-  useApiQuery(["floors", params], () => api.listFloors(params));
+export const useBuildings = (params?: QueryParams, options?: EnabledOption) =>
+  useApiQuery(["buildings", params], () => api.listBuildings(params), options);
+export const useFloors = (params?: QueryParams, options?: EnabledOption) =>
+  useApiQuery(["floors", params], () => api.listFloors(params), options);
 export const useRooms = (params?: QueryParams) =>
   useApiQuery(["rooms", params], () => api.listRooms(params));
 
@@ -211,14 +231,14 @@ export const useActivities = (params?: QueryParams) =>
 
 // --- Occupancy & stays -----------------------------------------------------
 
-export const useOccupancy = (params?: QueryParams) =>
-  useApiQuery(["occupancy", params], () => api.listOccupancy(params));
+export const useOccupancy = (params?: QueryParams, options?: EnabledOption) =>
+  useApiQuery(["occupancy", params], () => api.listOccupancy(params), options);
 export const useOccupancyDetail = (amenityId: string | null) =>
   useApiQuery(["occupancy", amenityId], () => api.getOccupancy(amenityId!), {
     enabled: Boolean(amenityId),
   });
-export const useAmenityStatuses = (params?: QueryParams) =>
-  useApiQuery(["amenity-statuses", params], () => api.listAmenityStatuses(params));
+export const useAmenityStatuses = (params?: QueryParams, options?: EnabledOption) =>
+  useApiQuery(["amenity-statuses", params], () => api.listAmenityStatuses(params), options);
 export const useAmenityConditions = (params?: QueryParams) =>
   useApiQuery(["amenity-conditions", params], () => api.listAmenityConditions(params));
 export const useStays = (params?: QueryParams) =>
@@ -240,16 +260,18 @@ export const useInvoices = (params?: QueryParams) =>
 
 export const useDeviceParams = (params?: QueryParams) =>
   useApiQuery(["device-params", params], () => api.listDeviceParams(params));
-export const useDeviceStats = (params?: QueryParams) =>
-  useApiQuery(["device-stats", params], () => api.listDeviceStats(params));
+/** Gated on `caleido_network`; see `EnabledOption`. */
+export const useDeviceStats = (params?: QueryParams, options?: EnabledOption) =>
+  useApiQuery(["device-stats", params], () => api.listDeviceStats(params), options);
 export const useDeviceCurrentStats = (params?: QueryParams) =>
   useApiQuery(["device-current-stats", params], () => api.listDeviceCurrentStats(params));
 export const useOtherDeviceReadings = (params?: QueryParams) =>
   useApiQuery(["other-device-readings", params], () => api.listOtherDeviceReadings(params));
 export const useEnergyStats = (params?: QueryParams) =>
   useApiQuery(["energy-stats", params], () => api.listEnergyStats(params));
-export const useEnergySummary = (params?: QueryParams) =>
-  useApiQuery(["energy-summary", params], () => api.getEnergySummary(params));
+/** Gated on `reports`; see `EnabledOption`. */
+export const useEnergySummary = (params?: QueryParams, options?: EnabledOption) =>
+  useApiQuery(["energy-summary", params], () => api.getEnergySummary(params), options);
 export const useDailyDataPoints = (params?: QueryParams) =>
   useApiQuery(["daily-data-points", params], () => api.listDailyDataPoints(params));
 

@@ -352,12 +352,33 @@ def test_filter_by_model_and_manufacturer(client, db):
 
 
 def test_filter_firmware_outdated(client, db):
+    """The oracle is IS DISTINCT FROM, not `<>`.
+
+    `<>` is three-valued: a device with a NULL current or expected version made
+    it NULL, so such a device was dropped from BOTH `firmware_outdated=true`
+    and `=false`. The filter is NULL-aware, so the oracle has to be too.
+    """
     body = client.get(f"{V1}/devices?firmware_outdated=true&page_size=100").json()
     assert body["total"] == db.execute(
         text("""SELECT count(*) FROM device
-                WHERE current_firmware_version <> expected_firmware_version""")
+                WHERE current_firmware_version
+                      IS DISTINCT FROM expected_firmware_version""")
     ).scalar_one()
     assert all(d["firmware_up_to_date"] is False for d in body["items"])
+
+
+def test_firmware_outdated_branches_partition_every_device(client, db):
+    """true + false must add up to the whole table, with no device lost.
+
+    This is what the three-valued `<>` broke: a device that had never reported
+    a firmware version appeared in neither branch, so the two counts silently
+    summed to less than the device count.
+    """
+    outdated = client.get(f"{V1}/devices?firmware_outdated=true&page_size=1").json()
+    current = client.get(f"{V1}/devices?firmware_outdated=false&page_size=1").json()
+    assert outdated["total"] + current["total"] == db.execute(
+        text("SELECT count(*) FROM device")
+    ).scalar_one()
 
 
 def test_filter_matching_nothing_returns_an_empty_page(client):

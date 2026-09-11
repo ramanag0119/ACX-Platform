@@ -65,9 +65,12 @@ const Dashboard = () => {
     <div className="space-y-4 animate-fade-in min-h-screen -m-6 p-6" style={{ background: pageBg }}>
       {/* Page Header */}
       <div className="mb-4">
-        <h1 className="text-xl font-semibold" style={{ color: titleColor }}>Dashboard</h1>
+        <h1 className="text-xl font-semibold" style={{ color: titleColor }}>HMS</h1>
         <p className="text-sm mt-0.5" style={{ color: subtitleColor }}>
-          Welcome back! Here's an overview of your property operations.
+          Hospitality Management System
+        </p>
+        <p className="text-sm mt-0.5" style={{ color: subtitleColor }}>
+          Smart Buildings. Smarter Operations.
         </p>
       </div>
 

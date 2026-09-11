@@ -20,6 +20,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Info, ArrowRight, Wrench, ShieldCheck, BatteryLow, Star, UserCheck, Clock, Minus } from "lucide-react";
 import { RoomDetailsModal } from "../components/RoomDetailsModal";
+import { roomStatusBadgeClass } from "../lib/roomStatus";
 import { DataState, TableLoading } from "@/core/components/DataState";
 import { useAuth } from "@/core/contexts/AuthContext";
 import { ReallocateRoomDialog } from "../components/ReallocateRoomDialog";
@@ -29,12 +30,32 @@ import {
   useCheckOutStay,
   useUpdateRoomState,
 } from "@/lib/api/mutations";
-import { useAmenityStatuses, useOccupancy } from "@/lib/api/hooks";
+import {
+  useAmenityStatuses,
+  useBuildings,
+  useFloors,
+  useOccupancy,
+} from "@/lib/api/hooks";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
 import type { OccupancyRead } from "@/lib/api/types";
 
 /**
- * Live occupancy from GET /occupancy.
+ * The Occupancy Dashboard: live occupancy from GET /occupancy.
+ *
+ * DRILL-DOWN. Building -> Floor -> Status -> room list. All three are server
+ * side filters the endpoint already accepts (`building_id` and `floor_id`
+ * resolve through `property_chain`, `status` through `amenity_status`), so the
+ * table, its `total` and its pagination all agree with the selection. Nothing
+ * is filtered in the browser except the free-text search, which the endpoint
+ * has no parameter for.
+ *
+ * Every option list is a real lookup:
+ *   Building -> GET /buildings
+ *   Floor    -> GET /floors?building_id=...   (narrowed by the selection)
+ *   Status   -> GET /amenity-statuses         (the four rows, never hardcoded)
+ *
+ * Deliberately NOT here: Available / Occupied / Allotted / Unavailable summary
+ * cards. The four statuses are drill-down options only.
  *
  * TWO MISMATCHES WITH THE ORIGINAL SCREEN, both resolved in favour of the
  * database:
@@ -58,6 +79,8 @@ type RoomRow = {
   amenityId: string;
   roomNo: string;
   roomType: string;
+  buildingName: string;
+  floorName: string;
   guestName: string;
   statusName: string;
   conditions: string[];
@@ -65,6 +88,10 @@ type RoomRow = {
   stayId: string | null;
   stayStatus: string | null;
   checkedIn: boolean;
+  /** The stay's realized check-in; null until the guest is in house. */
+  checkInTime: string | null;
+  /** The stay's EXPECTED checkout -- the only checkout the projection holds. */
+  checkOutTime: string | null;
   conditionIds: number[];
 };
 
@@ -72,6 +99,8 @@ const toRow = (item: OccupancyRead): RoomRow => ({
   amenityId: item.amenity_id,
   roomNo: item.room_name,
   roomType: item.amenity_type_name ?? "-",
+  buildingName: item.building_name ?? "-",
+  floorName: item.floor_name ?? "-",
   guestName: item.current_stay?.booker?.name ?? "-",
   statusName: item.status_name ?? "-",
   conditions: item.conditions.map((condition) => condition.name),
@@ -79,14 +108,21 @@ const toRow = (item: OccupancyRead): RoomRow => ({
   stayStatus: item.current_stay?.status ?? null,
   // `actual_checkin_time` is what makes a stay in-house.
   checkedIn: Boolean(item.current_stay?.actual_checkin_time),
+  checkInTime: item.current_stay?.actual_checkin_time ?? null,
+  checkOutTime: item.current_stay?.expected_checkout_time ?? null,
   conditionIds: item.conditions.map((condition) => condition.id),
 });
+
+const formatDateTime = (value: string | null) =>
+  value ? new Date(value).toLocaleString() : "-";
 
 const Occupancy = () => {
   const [activeTab, setActiveTab] = useState<"guest" | "nonGuest">("guest");
   const [entriesPerPage, setEntriesPerPage] = useState("10");
   const [searchQuery, setSearchQuery] = useState("");
   const [filterBy, setFilterBy] = useState("all");
+  const [buildingFilter, setBuildingFilter] = useState("all");
+  const [floorFilter, setFloorFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedRoom, setSelectedRoom] = useState<RoomRow | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -95,7 +131,7 @@ const Occupancy = () => {
 
   // --- Mutations. Each one refetches occupancy, so the table shows the
   // database's state rather than a locally patched row.
-  const { canWrite } = useAuth();
+  const { canRead, canWrite } = useAuth();
   const mayWriteOccupancy = canWrite("occupancy");
   const mayWriteBookings = canWrite("bookings");
   const checkIn = useCheckInStay();
@@ -112,10 +148,42 @@ const Occupancy = () => {
       ? undefined
       : statuses.find((status) => status.amenity_status_name === filterBy)?.id;
 
+  // Building / Floor options. /buildings and /floors are gated on
+  // `facility_management`, which is not the `occupancy` grant that opens this
+  // screen, so they are requested only when the role holds it -- asking
+  // anyway would answer 403 and leave the selects broken rather than absent.
+  // `enabled` is what actually stops the request -- conditional params alone
+  // would still fire an unfiltered one and take the 403 this avoids.
+  const mayReadFacility = canRead("facility_management");
+  const buildingsQuery = useBuildings(
+    mayReadFacility ? { page: 1, page_size: MAX_PAGE_SIZE } : undefined,
+    { enabled: mayReadFacility },
+  );
+  const floorsQuery = useFloors(
+    mayReadFacility
+      ? {
+          page: 1,
+          page_size: MAX_PAGE_SIZE,
+          // Floors follow the chosen building; the endpoint owns the join.
+          ...(buildingFilter !== "all" ? { building_id: buildingFilter } : {}),
+        }
+      : undefined,
+    { enabled: mayReadFacility },
+  );
+  const buildings = buildingsQuery.data?.items ?? [];
+  const floors = floorsQuery.data?.items ?? [];
+
+  /** The drill-down, as the endpoint's own query parameters. */
+  const scopeParams = {
+    ...(buildingFilter !== "all" ? { building_id: buildingFilter } : {}),
+    ...(floorFilter !== "all" ? { floor_id: floorFilter } : {}),
+    ...(selectedStatusId !== undefined ? { status: selectedStatusId } : {}),
+  };
+
   const commonParams = {
     page: currentPage,
     page_size: pageSize,
-    ...(selectedStatusId !== undefined ? { status: selectedStatusId } : {}),
+    ...scopeParams,
   };
 
   const guestQuery = useOccupancy(
@@ -124,14 +192,12 @@ const Occupancy = () => {
   // Two calls, because `amenity_category` takes a single value.
   const restaurantQuery = useOccupancy(
     activeTab === "nonGuest"
-      ? { page: 1, page_size: MAX_PAGE_SIZE, amenity_category: "restaurant",
-          ...(selectedStatusId !== undefined ? { status: selectedStatusId } : {}) }
+      ? { page: 1, page_size: MAX_PAGE_SIZE, amenity_category: "restaurant", ...scopeParams }
       : undefined,
   );
   const othersQuery = useOccupancy(
     activeTab === "nonGuest"
-      ? { page: 1, page_size: MAX_PAGE_SIZE, amenity_category: "others",
-          ...(selectedStatusId !== undefined ? { status: selectedStatusId } : {}) }
+      ? { page: 1, page_size: MAX_PAGE_SIZE, amenity_category: "others", ...scopeParams }
       : undefined,
   );
 
@@ -186,6 +252,22 @@ const Occupancy = () => {
 
   const switchTab = (tab: "guest" | "nonGuest") => {
     setActiveTab(tab);
+    setCurrentPage(1);
+  };
+
+  /**
+   * Choosing a building clears the floor below it: a floor id from the
+   * previous building would be sent alongside the new selection and match
+   * nothing. Any change returns to page 1, because the row count changes.
+   */
+  const changeBuilding = (value: string) => {
+    setBuildingFilter(value);
+    setFloorFilter("all");
+    setCurrentPage(1);
+  };
+
+  const changeFloor = (value: string) => {
+    setFloorFilter(value);
     setCurrentPage(1);
   };
 
@@ -247,16 +329,6 @@ const Occupancy = () => {
     );
   };
 
-  /** Only Available is a "free" room; the other three all mean not bookable. */
-  const statusClass = (statusName: string) =>
-    statusName === "Available"
-      ? "border-green-500 text-green-600 dark:text-green-400 dark:border-green-500/60 dark:bg-green-950/30"
-      : statusName === "Occupied"
-        ? "border-blue-500 text-blue-600 dark:text-blue-400 dark:border-blue-500/60 dark:bg-blue-950/30"
-        : statusName === "Allotted"
-          ? "border-amber-500 text-amber-600 dark:text-amber-400 dark:border-amber-500/60 dark:bg-amber-950/30"
-          : "border-gray-400 text-gray-500 dark:text-gray-400 dark:border-gray-600 dark:bg-slate-800/40";
-
   const handleDetailsClick = (room: RoomRow) => {
     setSelectedRoom(room);
     setIsModalOpen(true);
@@ -266,7 +338,7 @@ const Occupancy = () => {
     <div className="space-y-5 animate-fade-in text-foreground">
       {/* Header */}
       <div className="mb-2">
-        <h1 className="text-xl font-semibold text-foreground tracking-tight">Occupancy Management</h1>
+        <h1 className="text-xl font-semibold text-foreground tracking-tight">Occupancy Dashboard</h1>
       </div>
 
       {/* Tabs */}
@@ -325,8 +397,48 @@ const Occupancy = () => {
             </div>
 
             <div className="flex flex-wrap items-center gap-4">
+              {/* Building -> Floor -> Status drill-down. Every option is a
+                  database row; none of the three is hardcoded. */}
+              {mayReadFacility && (
+                <>
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground text-sm">Building</span>
+                    <Select value={buildingFilter} onValueChange={changeBuilding}>
+                      <SelectTrigger className="w-36 h-9 bg-muted/30 border-border/50 dark:border-slate-700">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover text-popover-foreground border-border text-xs">
+                        <SelectItem value="all">All Buildings</SelectItem>
+                        {buildings.map((building) => (
+                          <SelectItem key={building.id} value={building.id}>
+                            {building.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground text-sm">Floor</span>
+                    <Select value={floorFilter} onValueChange={changeFloor}>
+                      <SelectTrigger className="w-36 h-9 bg-muted/30 border-border/50 dark:border-slate-700">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover text-popover-foreground border-border text-xs">
+                        <SelectItem value="all">All Floors</SelectItem>
+                        {floors.map((floor) => (
+                          <SelectItem key={floor.id} value={floor.id}>
+                            {floor.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              )}
+
               <div className="flex items-center gap-2">
-                <span className="text-muted-foreground text-sm">Filter By</span>
+                <span className="text-muted-foreground text-sm">Status</span>
                 <Select
                   value={filterBy}
                   onValueChange={(value) => {
@@ -367,14 +479,18 @@ const Occupancy = () => {
               error={error}
               isEmpty={filteredRooms.length === 0}
               emptyTitle="No rooms match this view"
-              loader={<TableLoading columns={9} />}
+              loader={<TableLoading columns={13} />}
             >
               <Table>
                 <TableHeader>
                   <TableRow className="bg-gray-50/80 dark:bg-slate-800/60 hover:bg-gray-50 dark:hover:bg-slate-800/60 border-b border-gray-200 dark:border-slate-800">
                     <TableHead className="text-gray-600 dark:text-slate-300 font-medium">Room No</TableHead>
                     <TableHead className="text-gray-600 dark:text-slate-300 font-medium">Room Type</TableHead>
+                    <TableHead className="text-gray-600 dark:text-slate-300 font-medium">Building</TableHead>
+                    <TableHead className="text-gray-600 dark:text-slate-300 font-medium">Floor</TableHead>
                     <TableHead className="text-gray-600 dark:text-slate-300 font-medium">Guest name</TableHead>
+                    <TableHead className="text-gray-600 dark:text-slate-300 font-medium">Check-In</TableHead>
+                    <TableHead className="text-gray-600 dark:text-slate-300 font-medium">Check-Out</TableHead>
                     <TableHead className="text-gray-600 dark:text-slate-300 font-medium text-center">Generate <span className="text-gray-400 dark:text-slate-500">↓</span></TableHead>
                     <TableHead className="text-gray-600 dark:text-slate-300 font-medium text-center">Status</TableHead>
                     <TableHead className="text-gray-600 dark:text-slate-300 font-medium text-center">Condition</TableHead>
@@ -389,9 +505,27 @@ const Occupancy = () => {
                       key={room.amenityId}
                       className={`${index % 2 === 0 ? "bg-card dark:bg-slate-900/60" : "bg-muted/20 dark:bg-slate-800/40"} hover:bg-muted/40 dark:hover:bg-slate-800/80 border-b border-border/40 dark:border-slate-800/50`}
                     >
-                      <TableCell className="font-medium text-foreground">{room.roomNo}</TableCell>
+                      <TableCell className="font-medium text-foreground">
+                        {/* The room number opens the same dialog as Details. */}
+                        <button
+                          type="button"
+                          className="font-medium text-foreground hover:text-primary hover:underline"
+                          onClick={() => handleDetailsClick(room)}
+                          title={`Open details for room ${room.roomNo}`}
+                        >
+                          {room.roomNo}
+                        </button>
+                      </TableCell>
                       <TableCell className="text-foreground">{room.roomType}</TableCell>
+                      <TableCell className="text-foreground">{room.buildingName}</TableCell>
+                      <TableCell className="text-foreground">{room.floorName}</TableCell>
                       <TableCell className="text-foreground">{room.guestName}</TableCell>
+                      <TableCell className="text-foreground whitespace-nowrap">
+                        {formatDateTime(room.checkInTime)}
+                      </TableCell>
+                      <TableCell className="text-foreground whitespace-nowrap">
+                        {formatDateTime(room.checkOutTime)}
+                      </TableCell>
                       <TableCell className="text-center">
                         {/* Check-in / check-out: the real stay workflow. Room
                             state follows automatically (Occupied / Available). */}
@@ -428,7 +562,7 @@ const Occupancy = () => {
                         )}
                       </TableCell>
                       <TableCell className="text-center">
-                        <Badge variant="outline" className={statusClass(room.statusName)}>
+                        <Badge variant="outline" className={roomStatusBadgeClass(room.statusName)}>
                           {room.statusName}
                         </Badge>
                       </TableCell>

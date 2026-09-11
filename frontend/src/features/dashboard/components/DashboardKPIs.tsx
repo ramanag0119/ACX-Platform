@@ -16,7 +16,12 @@ import {
 import { useTheme } from "@/core/contexts/ThemeContext";
 import { useAuth } from "@/core/contexts/AuthContext";
 import { ApiError, describeApiError } from "@/lib/api/client";
-import { useCount, useEnergySummary } from "@/lib/api/hooks";
+import { useAmenityStatuses, useCount, useEnergySummary } from "@/lib/api/hooks";
+import {
+  MAX_PAGE_SIZE,
+  ROOM_STATUS,
+  VALUE_ALERT_ACTIVE,
+} from "@/lib/api/types";
 
 /**
  * The dashboard KPI row. Every figure is a backend `total` -- the COUNT(*) the
@@ -153,8 +158,9 @@ const AlertTiles = ({ enabled }: { enabled: boolean }) => {
   const all = useCount("alerts", undefined, enabled);
   const critical = useCount("alerts", { alert_severity: "critical" }, enabled);
   const warning = useCount("alerts", { alert_severity: "warning" }, enabled);
-  // value_alert.status is an integer: 0 = Active, 1 = Resolved.
-  const activeValue = useCount("value-alerts", { status: 0 }, enabled);
+  // `value_alert.status` has no lookup table in the schema; the 0 = Active
+  // convention is named in lib/api/types rather than written inline.
+  const activeValue = useCount("value-alerts", { status: VALUE_ALERT_ACTIVE }, enabled);
   const incidents = useCount("incidents", undefined, enabled);
   const unassigned = useCount("incidents", { unassigned: true }, enabled);
 
@@ -205,7 +211,25 @@ const AlertTiles = ({ enabled }: { enabled: boolean }) => {
 const OccupancyTile = ({ enabled }: { enabled: boolean }) => {
   const rooms = useCount("occupancy", undefined, enabled);
   const inHouse = useCount("occupancy", { is_occupied: true }, enabled);
-  const flaggedOccupied = useCount("occupancy", { status: 1 }, enabled);
+
+  // The "Occupied" id is READ FROM `amenity_status`, not assumed to be 1. The
+  // ids are seeded values, so a re-seed or reorder would have silently counted
+  // the wrong status here. /amenity-statuses is gated on the same `occupancy`
+  // module as this tile, so it needs no extra grant.
+  // `enabled` is passed as an option too: conditional params alone would still
+  // fire the request, which is the 403 the tile's own gate exists to avoid.
+  const statusesQuery = useAmenityStatuses(
+    enabled ? { page: 1, page_size: MAX_PAGE_SIZE } : undefined,
+    { enabled },
+  );
+  const occupiedStatusId = statusesQuery.data?.items.find(
+    (status) => status.amenity_status_name === ROOM_STATUS.OCCUPIED,
+  )?.id;
+  const flaggedOccupied = useCount(
+    "occupancy",
+    occupiedStatusId === undefined ? undefined : { status: occupiedStatusId },
+    enabled && occupiedStatusId !== undefined,
+  );
 
   const detail =
     rooms.total !== null

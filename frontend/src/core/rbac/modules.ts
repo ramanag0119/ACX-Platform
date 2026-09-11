@@ -7,13 +7,15 @@
  * 401/403 remains the security boundary, and no role name appears anywhere
  * in this file or its consumers.
  *
- * Two screens have no module of their own and are documented, not invented:
+ * One screen has no module of its own and is documented, not invented:
  *
  *   /config/limit-alert  Limit Config Alert reads `value-alerts`, which the
  *                        backend gates on `caleido_network`.
- *   /power-view          Both read device telemetry, also `caleido_network`.
- *   /energy-view         (see the frontend/backend gap list in the report)
- *   /room-view           Reads rooms + occupancy -> `occupancy`.
+ *
+ * /power-view, /energy-view and /room-view are retired: they now redirect to
+ * /occupancy, which carries its own `occupancy` grant. The telemetry and
+ * energy reads they used are still gated on `caleido_network` and `reports`,
+ * and Room Details asks for each one only when that grant is held.
  */
 
 /** Every module the backend recognises. */
@@ -63,9 +65,6 @@ export const ROUTE_MODULE: Record<string, HmsModule> = {
   "/devices/firmware-management": "firmware_management",
   "/reports": "reports",
   "/tickets": "tickets",
-  "/power-view": "caleido_network",
-  "/energy-view": "reports",
-  "/room-view": "occupancy",
   "/key-settings": "default_key",
 };
 

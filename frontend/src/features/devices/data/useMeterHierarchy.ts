@@ -30,7 +30,13 @@ import {
   useOccupancy,
   useValueAlerts,
 } from "@/lib/api/hooks";
-import { MAX_PAGE_SIZE, type DeviceStatRead, type ValueAlertRead } from "@/lib/api/types";
+import {
+  MAX_PAGE_SIZE,
+  ROOM_STATUS,
+  VALUE_ALERT_ACTIVE,
+  type DeviceStatRead,
+  type ValueAlertRead,
+} from "@/lib/api/types";
 
 import { buildMeterTree, type DeviceReadings, type MeterNode } from "./meters";
 
@@ -140,10 +146,12 @@ export const useMeterHierarchy = (scope: MeterScope): MeterHierarchy => {
   const deviceEnergyQuery = useEnergySummary({ group_by: "device", ...scope });
 
   // /value-alerts filters on the device or the room, not the chain, so it is
-  // narrowed only when a specific room is selected.
+  // narrowed only when a specific room is selected. `value_alert.status` has no
+  // lookup table in the schema, so the 0 = Active convention is named in
+  // lib/api/types rather than written as a bare literal here.
   const alertsQuery = useValueAlerts({
     ...PAGE,
-    status: 0,
+    status: VALUE_ALERT_ACTIVE,
     ...(scope.amenity_id ? { amenity_id: scope.amenity_id } : {}),
   });
 
@@ -250,7 +258,7 @@ export const useMeterHierarchy = (scope: MeterScope): MeterHierarchy => {
     })),
     rooms: rooms.map((room) => ({ id: room.amenity_id, name: room.room_name })),
     activeDevices: devices.filter((device) => device.is_power_off === false).length,
-    occupiedRooms: rooms.filter((room) => room.status_name === "Occupied").length,
+    occupiedRooms: rooms.filter((room) => room.status_name === ROOM_STATUS.OCCUPIED).length,
     totalEnergy: roomEnergyQuery.data?.total_energy_consumed ?? 0,
   };
 };

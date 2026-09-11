@@ -17,9 +17,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DataState } from "@/core/components/DataState";
-import { useOccupancy, useStayRoomAllocations } from "@/lib/api/hooks";
+import {
+  useAmenityStatuses,
+  useOccupancy,
+  useStayRoomAllocations,
+} from "@/lib/api/hooks";
 import { useReallocateRoom } from "@/lib/api/mutations";
-import { MAX_PAGE_SIZE } from "@/lib/api/types";
+import { MAX_PAGE_SIZE, ROOM_STATUS } from "@/lib/api/types";
 
 interface ReallocateRoomDialogProps {
   open: boolean;
@@ -36,8 +40,17 @@ interface ReallocateRoomDialogProps {
  * the guest is in-house, otherwise Allotted). A room another live stay holds is
  * refused with 409, which surfaces as the shared error toast.
  *
- * Only rooms with no live stay are offered, so the common case does not rely on
- * the conflict check to explain itself.
+ * WHICH ROOMS ARE OFFERED: only rooms whose stored `amenity.status` is
+ * Available. The status id is resolved from GET /amenity-statuses rather than
+ * written here, so it can never drift from the lookup table, and the filter is
+ * applied BY THE BACKEND via `?status=`, not by a pass over a fetched page.
+ *
+ * This previously filtered on `!current_stay` -- the STAY GRAPH -- which is a
+ * different question from the room's status. The two diverge in the live data
+ * (a room can be flagged Occupied, Unavailable or Allotted while holding no
+ * stay), so Unavailable and Allotted rooms were being offered as targets. The
+ * `!current_stay` check is kept as a second guard for the opposite divergence:
+ * a room flagged Available that a live stay still holds.
  */
 export const ReallocateRoomDialog = ({
   open,
@@ -47,8 +60,29 @@ export const ReallocateRoomDialog = ({
 }: ReallocateRoomDialogProps) => {
   const [targetRoom, setTargetRoom] = useState("");
 
-  const occupancyQuery = useOccupancy(
+  // The Available id comes from the lookup table, never from a literal.
+  const statusesQuery = useAmenityStatuses(
     open ? { page: 1, page_size: MAX_PAGE_SIZE } : undefined,
+    { enabled: open },
+  );
+  const availableStatusId = useMemo(
+    () =>
+      (statusesQuery.data?.items ?? []).find(
+        (status) => status.amenity_status_name === ROOM_STATUS.AVAILABLE,
+      )?.id,
+    [statusesQuery.data],
+  );
+
+  // Genuinely disabled until the id is known. The conditional params are not
+  // enough on their own: with `undefined` params this hook fetches the
+  // UNFILTERED room list, which is exactly the set this dialog must not offer.
+  // `enabled` is what holds the request until `?status=` can be sent with it.
+  const roomsReady = open && availableStatusId !== undefined;
+  const occupancyQuery = useOccupancy(
+    roomsReady
+      ? { page: 1, page_size: MAX_PAGE_SIZE, status: availableStatusId }
+      : undefined,
+    { enabled: roomsReady },
   );
   // Reallocation is keyed on the ALLOCATION row, not the stay.
   const allocationsQuery = useStayRoomAllocations(open ? stayId : null);
@@ -59,6 +93,8 @@ export const ReallocateRoomDialog = ({
     return (rows.find((row) => row.room_name === currentRoomName) ?? rows[0])?.id ?? null;
   }, [allocationsQuery.data, currentRoomName]);
 
+  // The backend has already restricted this page to Available rooms; all that
+  // is left is to drop the room the stay is being moved out of.
   const freeRooms = useMemo(
     () =>
       (occupancyQuery.data?.items ?? []).filter(
@@ -88,10 +124,16 @@ export const ReallocateRoomDialog = ({
         </DialogHeader>
 
         <DataState
-          isLoading={occupancyQuery.isLoading || allocationsQuery.isLoading}
-          error={occupancyQuery.error ?? allocationsQuery.error}
+          isLoading={
+            statusesQuery.isLoading ||
+            occupancyQuery.isLoading ||
+            allocationsQuery.isLoading
+          }
+          error={
+            statusesQuery.error ?? occupancyQuery.error ?? allocationsQuery.error
+          }
           isEmpty={freeRooms.length === 0}
-          emptyTitle="No free room to move this stay into"
+          emptyTitle="No Available room to move this stay into"
         >
           <div className="space-y-2">
             <Label>New room</Label>

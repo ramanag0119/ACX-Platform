@@ -11,9 +11,6 @@ import {
   Cpu,
   FileText,
   Ticket,
-  Zap,
-  Gauge,
-  Home,
   Key,
   ChevronDown,
   ChevronRight,
@@ -122,7 +119,7 @@ export const AppSidebar = ({ collapsed }: AppSidebarProps) => {
   const { canRead } = useAuth();
 
   const allNavItems = [
-    { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+    { to: "/dashboard", icon: LayoutDashboard, label: "HMS" },
     { to: "/occupancy", icon: Users, label: "Occupancy" },
     { to: "/bookings", icon: Calendar, label: "Bookings" },
     {
@@ -161,9 +158,8 @@ export const AppSidebar = ({ collapsed }: AppSidebarProps) => {
     },
     { to: "/reports/occupancy", icon: FileText, label: "Reports" },
     { to: "/tickets", icon: Ticket, label: "Tickets" },
-    { to: "/power-view", icon: Zap, label: "Power View" },
-    { to: "/energy-view", icon: Gauge, label: "Energy View" },
-    { to: "/room-view", icon: Home, label: "Room View" },
+    // Power View / Energy View / Room View are gone: their room-level figures
+    // now live inside the Occupancy Dashboard's Room Details dialog.
     { to: "/key-settings", icon: Key, label: "Default Key Settings" },
   ];
 

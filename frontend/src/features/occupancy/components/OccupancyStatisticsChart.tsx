@@ -5,7 +5,8 @@ import { useTheme } from "@/core/contexts/ThemeContext";
 import { DataState } from "@/core/components/DataState";
 import { useAmenityStatuses, useCount, useCounts } from "@/lib/api/hooks";
 import type { QueryParams } from "@/lib/api/client";
-import { MAX_PAGE_SIZE } from "@/lib/api/types";
+import { MAX_PAGE_SIZE, ROOM_STATUS } from "@/lib/api/types";
+import { roomStatusColor } from "../lib/roomStatus";
 
 /**
  * Room counts by the real `amenity_status` row, from GET /occupancy.
@@ -27,14 +28,6 @@ import { MAX_PAGE_SIZE } from "@/lib/api/types";
  * while 2 have a guest in house. Both are shown; neither is silently
  * substituted for the other.
  */
-
-const STATUS_COLORS: Record<string, string> = {
-  Occupied: "hsl(145,70%,45%)",
-  Available: "hsl(199,89%,48%)",
-  Allotted: "hsl(38,92%,50%)",
-  Unavailable: "hsl(0,70%,50%)",
-};
-const FALLBACK_COLOR = "hsl(220,9%,60%)";
 
 export const OccupancyStatisticsChart = () => {
   const { isDark } = useTheme();
@@ -59,7 +52,7 @@ export const OccupancyStatisticsChart = () => {
         .map((status, index) => ({
           name: status.amenity_status_name,
           value: perStatus.totals[index] ?? 0,
-          color: STATUS_COLORS[status.amenity_status_name] ?? FALLBACK_COLOR,
+          color: roomStatusColor(status.amenity_status_name),
         }))
         .filter((slice) => slice.value > 0),
     [statuses, perStatus.totals],
@@ -72,7 +65,7 @@ export const OccupancyStatisticsChart = () => {
 
   // The amenity flag's own Occupied count, for the disagreement note.
   const flaggedOccupied = useMemo(() => {
-    const index = statuses.findIndex((s) => s.amenity_status_name === "Occupied");
+    const index = statuses.findIndex((s) => s.amenity_status_name === ROOM_STATUS.OCCUPIED);
     return index >= 0 ? perStatus.totals[index] : null;
   }, [statuses, perStatus.totals]);
 
