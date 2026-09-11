@@ -96,13 +96,39 @@ ALLOCATION_ACTIVE = 1
 # ---------------------------------------------------------------------------
 
 
-def _set_room_status(db: Session, room_id: uuid.UUID, status: int) -> None:
+def _room_status_id(db: Session, status_name: str) -> int:
+    """Resolve an `amenity_status` NAME to the id stored in `amenity.status`.
+
+    `amenity.status` is a smallint FK, so a name has to become an id before it
+    can be written. Looking it up on every use is what lets this module reason
+    in names: a re-seeded or reordered `amenity_status` table changes the id and
+    this still writes the right row.
+
+    A name the table does not hold is a deployment problem, not a request
+    problem, so it raises rather than falling back to a literal.
+    """
+    status_id = db.execute(
+        select(AmenityStatus.id).where(
+            AmenityStatus.amenity_status_name == status_name
+        )
+    ).scalars().first()
+    if status_id is None:
+        raise Invalid(f"Amenity status {status_name!r} is not seeded.")
+    return status_id
+
+
+def _room_status_name(db: Session, status_id: int) -> str | None:
+    """The reverse: the name stored under an id, or None if there is no row."""
+    row = db.get(AmenityStatus, status_id)
+    return row.amenity_status_name if row is not None else None
+
+
+def _set_room_status(db: Session, room_id: uuid.UUID, status_name: str) -> None:
+    """Write a room's status, given the NAME. The id is resolved here."""
     room = db.get(Amenity, room_id)
     if room is None:
         raise Invalid(f"Room {room_id} does not exist.")
-    if db.get(AmenityStatus, status) is None:
-        raise Invalid(f"Amenity status {status} does not exist.")
-    room.status = status
+    room.status = _room_status_id(db, status_name)
 
 
 def _stay_rooms(db: Session, stay_id: uuid.UUID) -> list[RoomAllocation]:
@@ -551,10 +577,15 @@ def update_room_state(
         room = require_row(db, Amenity, amenity_id, "Room")
 
         if "status" in changes:
+            # The request carries the id; the guard rail below is written in
+            # names, so the id is resolved back through `amenity_status`. This
+            # comparison must not be made against the raw id -- that is the
+            # seeded-value assumption this module exists to avoid.
             new_status = changes["status"]
-            if db.get(AmenityStatus, new_status) is None:
+            new_status_name = _room_status_name(db, new_status)
+            if new_status_name is None:
                 raise Invalid(f"Amenity status {new_status} does not exist.")
-            if new_status in (ROOM_AVAILABLE, ROOM_UNAVAILABLE):
+            if new_status_name in (ROOM_AVAILABLE, ROOM_UNAVAILABLE):
                 holder = db.execute(
                     select(Stay.internal_stay_ref_number)
                     .join(RoomAllocation, RoomAllocation.stay_id == Stay.id)

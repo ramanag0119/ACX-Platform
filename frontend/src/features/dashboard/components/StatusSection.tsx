@@ -7,7 +7,7 @@ import { DataState, InlineLoading } from "@/core/components/DataState";
 import { useCount, useFloors, useOccupancy } from "@/lib/api/hooks";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
 import type { QueryParams } from "@/lib/api/client";
-import { ROOM_STATUS_NAMES, roomStatusTint } from "@/features/occupancy/lib/roomStatus";
+import { KNOWN_AMENITY_STATUSES, roomStatusTint } from "@/features/occupancy/lib/roomStatus";
 
 /**
  * Building -> floor -> room drill-down, filtered BY THE BACKEND at every level.
@@ -57,7 +57,7 @@ interface StatusSectionProps {
  * the same here as in the room list and Room Details.
  */
 const STATUS_TINT: Record<string, { light: string; dark: string; border: string; text: string }> =
-  Object.fromEntries(ROOM_STATUS_NAMES.map((name) => [name, roomStatusTint(name)]));
+  Object.fromEntries(KNOWN_AMENITY_STATUSES.map((name) => [name, roomStatusTint(name)]));
 
 /**
  * The real device-health split for a scope, as two backend COUNT(*) calls

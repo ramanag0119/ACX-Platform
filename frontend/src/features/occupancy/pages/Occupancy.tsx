@@ -152,9 +152,12 @@ const Occupancy = () => {
   // `facility_management`, which is not the `occupancy` grant that opens this
   // screen, so they are requested only when the role holds it -- asking
   // anyway would answer 403 and leave the selects broken rather than absent.
+  // `enabled` is what actually stops the request -- conditional params alone
+  // would still fire an unfiltered one and take the 403 this avoids.
   const mayReadFacility = canRead("facility_management");
   const buildingsQuery = useBuildings(
     mayReadFacility ? { page: 1, page_size: MAX_PAGE_SIZE } : undefined,
+    { enabled: mayReadFacility },
   );
   const floorsQuery = useFloors(
     mayReadFacility
@@ -165,6 +168,7 @@ const Occupancy = () => {
           ...(buildingFilter !== "all" ? { building_id: buildingFilter } : {}),
         }
       : undefined,
+    { enabled: mayReadFacility },
   );
   const buildings = buildingsQuery.data?.items ?? [];
   const floors = floorsQuery.data?.items ?? [];

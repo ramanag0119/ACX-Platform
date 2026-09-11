@@ -25,15 +25,19 @@
  * and friends); no new design token, CSS variable or theme entry is introduced.
  */
 
-/** The four `amenity_status` names, in the order the module lists them. */
-export const ROOM_STATUS_NAMES = [
-    "Available",
-    "Occupied",
-    "Allotted",
-    "Unavailable",
-] as const;
+import {
+    KNOWN_AMENITY_STATUSES,
+    ROOM_STATUS,
+    type AmenityStatusName,
+} from "@/lib/api/types";
 
-export type RoomStatusName = (typeof ROOM_STATUS_NAMES)[number];
+/**
+ * Re-exported so this module is a one-stop import for the status vocabulary.
+ * The names themselves are declared once, in lib/api/types, beside the other
+ * lookup-table constants -- this file owns the COLOURS, not the vocabulary.
+ */
+export { KNOWN_AMENITY_STATUSES, ROOM_STATUS };
+export type RoomStatusName = AmenityStatusName;
 
 interface RoomStatusStyle {
     /** Outline `<Badge>` classes, light and dark. */
@@ -46,29 +50,29 @@ interface RoomStatusStyle {
     tint: { light: string; dark: string; border: string; text: string };
 }
 
-const STATUS_STYLE: Record<string, RoomStatusStyle> = {
-    Available: {
+const STATUS_STYLE: Record<AmenityStatusName, RoomStatusStyle> = {
+    [ROOM_STATUS.AVAILABLE]: {
         badgeClass:
             "border-green-500 text-green-600 dark:text-green-400 dark:border-green-500/60 dark:bg-green-950/30",
         textClass: "text-green-600 dark:text-green-400",
         color: "#22C55E",
         tint: { light: "#DCFCE7", dark: "#12341f", border: "#22C55E", text: "#065F46" },
     },
-    Occupied: {
+    [ROOM_STATUS.OCCUPIED]: {
         badgeClass:
             "border-red-500 text-red-600 dark:text-red-400 dark:border-red-500/60 dark:bg-red-950/30",
         textClass: "text-red-600 dark:text-red-400",
         color: "#EF4444",
         tint: { light: "#FEE2E2", dark: "#3d1f1f", border: "#EF4444", text: "#7F1D1D" },
     },
-    Allotted: {
+    [ROOM_STATUS.ALLOTTED]: {
         badgeClass:
             "border-yellow-500 text-yellow-600 dark:text-yellow-400 dark:border-yellow-500/60 dark:bg-yellow-950/30",
         textClass: "text-yellow-600 dark:text-yellow-400",
         color: "#EAB308",
         tint: { light: "#FEF9C3", dark: "#3a3512", border: "#EAB308", text: "#713F12" },
     },
-    Unavailable: {
+    [ROOM_STATUS.UNAVAILABLE]: {
         badgeClass:
             "border-blue-500 text-blue-600 dark:text-blue-400 dark:border-blue-500/60 dark:bg-blue-950/30",
         textClass: "text-blue-600 dark:text-blue-400",
@@ -87,7 +91,7 @@ const NEUTRAL: RoomStatusStyle = {
 };
 
 const styleOf = (statusName: string | null | undefined) =>
-    (statusName && STATUS_STYLE[statusName]) || NEUTRAL;
+    (statusName && STATUS_STYLE[statusName as AmenityStatusName]) || NEUTRAL;
 
 export const roomStatusBadgeClass = (statusName: string | null | undefined) =>
     styleOf(statusName).badgeClass;

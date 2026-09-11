@@ -5,7 +5,7 @@ import { useTheme } from "@/core/contexts/ThemeContext";
 import { DataState } from "@/core/components/DataState";
 import { useAmenityStatuses, useCount, useCounts } from "@/lib/api/hooks";
 import type { QueryParams } from "@/lib/api/client";
-import { MAX_PAGE_SIZE } from "@/lib/api/types";
+import { MAX_PAGE_SIZE, ROOM_STATUS } from "@/lib/api/types";
 import { roomStatusColor } from "../lib/roomStatus";
 
 /**
@@ -28,7 +28,6 @@ import { roomStatusColor } from "../lib/roomStatus";
  * while 2 have a guest in house. Both are shown; neither is silently
  * substituted for the other.
  */
-
 
 export const OccupancyStatisticsChart = () => {
   const { isDark } = useTheme();
@@ -66,7 +65,7 @@ export const OccupancyStatisticsChart = () => {
 
   // The amenity flag's own Occupied count, for the disagreement note.
   const flaggedOccupied = useMemo(() => {
-    const index = statuses.findIndex((s) => s.amenity_status_name === "Occupied");
+    const index = statuses.findIndex((s) => s.amenity_status_name === ROOM_STATUS.OCCUPIED);
     return index >= 0 ? perStatus.totals[index] : null;
   }, [statuses, perStatus.totals]);
 

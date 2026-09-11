@@ -19,7 +19,7 @@ import { ApiError, describeApiError } from "@/lib/api/client";
 import { useAmenityStatuses, useCount, useEnergySummary } from "@/lib/api/hooks";
 import {
   MAX_PAGE_SIZE,
-  ROOM_STATUS_OCCUPIED,
+  ROOM_STATUS,
   VALUE_ALERT_ACTIVE,
 } from "@/lib/api/types";
 
@@ -216,11 +216,14 @@ const OccupancyTile = ({ enabled }: { enabled: boolean }) => {
   // ids are seeded values, so a re-seed or reorder would have silently counted
   // the wrong status here. /amenity-statuses is gated on the same `occupancy`
   // module as this tile, so it needs no extra grant.
+  // `enabled` is passed as an option too: conditional params alone would still
+  // fire the request, which is the 403 the tile's own gate exists to avoid.
   const statusesQuery = useAmenityStatuses(
     enabled ? { page: 1, page_size: MAX_PAGE_SIZE } : undefined,
+    { enabled },
   );
   const occupiedStatusId = statusesQuery.data?.items.find(
-    (status) => status.amenity_status_name === ROOM_STATUS_OCCUPIED,
+    (status) => status.amenity_status_name === ROOM_STATUS.OCCUPIED,
   )?.id;
   const flaggedOccupied = useCount(
     "occupancy",

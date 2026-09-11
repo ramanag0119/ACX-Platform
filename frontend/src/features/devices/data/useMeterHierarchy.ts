@@ -32,6 +32,7 @@ import {
 } from "@/lib/api/hooks";
 import {
   MAX_PAGE_SIZE,
+  ROOM_STATUS,
   VALUE_ALERT_ACTIVE,
   type DeviceStatRead,
   type ValueAlertRead,
@@ -257,7 +258,7 @@ export const useMeterHierarchy = (scope: MeterScope): MeterHierarchy => {
     })),
     rooms: rooms.map((room) => ({ id: room.amenity_id, name: room.room_name })),
     activeDevices: devices.filter((device) => device.is_power_off === false).length,
-    occupiedRooms: rooms.filter((room) => room.status_name === "Occupied").length,
+    occupiedRooms: rooms.filter((room) => room.status_name === ROOM_STATUS.OCCUPIED).length,
     totalEnergy: roomEnergyQuery.data?.total_energy_consumed ?? 0,
   };
 };

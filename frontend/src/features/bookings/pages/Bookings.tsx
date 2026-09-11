@@ -44,7 +44,7 @@ import {
 } from "lucide-react";
 import { DataState, TableLoading } from "@/core/components/DataState";
 import { toast } from "@/hooks/use-toast";
-import { MAX_PAGE_SIZE } from "@/lib/api/types";
+import { MAX_PAGE_SIZE, ROOM_STATUS } from "@/lib/api/types";
 import { useRooms, useStays, useUsers } from "@/lib/api/hooks";
 import { describeApiError } from "@/lib/api/client";
 import {
@@ -188,7 +188,7 @@ const Bookings = () => {
    * an avoidable error. The real `status_name` decides -- nothing is hardcoded.
    */
   const allocatableRooms = (roomsQuery.data?.items ?? []).filter(
-    (room) => room.status_name === "Available",
+    (room) => room.status_name === ROOM_STATUS.AVAILABLE,
   );
 
   const [viewMode, setViewMode] = useState<ViewMode>("list");

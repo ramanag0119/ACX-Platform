@@ -157,13 +157,19 @@ def firmware_usage(db: Session, firmware_id: uuid.UUID) -> dict[str, int]:
 def _device_stmt() -> Select:
     """Explicit allow-list. `authentication_code` and `metadata` are absent
     on purpose and must stay absent."""
+    # Must agree with the `firmware_outdated` filter in `list_devices`, which
+    # partitions on IS DISTINCT FROM. The two used to disagree: a device with no
+    # reported current version but a known expected one is selected by
+    # `firmware_outdated=true`, yet this reported None ("unknown") for it.
+    #
+    # Only a device with no EXPECTED version is genuinely unknowable -- there is
+    # no target to compare against. Once a target exists, a missing current
+    # version is not unknown, it is not up to date.
     up_to_date = case(
-        (
-            Device.current_firmware_version.is_(None)
-            | Device.expected_firmware_version.is_(None),
-            None,
+        (Device.expected_firmware_version.is_(None), None),
+        else_=Device.current_firmware_version.is_not_distinct_from(
+            Device.expected_firmware_version
         ),
-        else_=Device.current_firmware_version == Device.expected_firmware_version,
     )
     return (
         select(

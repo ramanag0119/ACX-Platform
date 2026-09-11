@@ -23,7 +23,7 @@ import {
   useStayRoomAllocations,
 } from "@/lib/api/hooks";
 import { useReallocateRoom } from "@/lib/api/mutations";
-import { MAX_PAGE_SIZE } from "@/lib/api/types";
+import { MAX_PAGE_SIZE, ROOM_STATUS } from "@/lib/api/types";
 
 interface ReallocateRoomDialogProps {
   open: boolean;
@@ -63,21 +63,26 @@ export const ReallocateRoomDialog = ({
   // The Available id comes from the lookup table, never from a literal.
   const statusesQuery = useAmenityStatuses(
     open ? { page: 1, page_size: MAX_PAGE_SIZE } : undefined,
+    { enabled: open },
   );
   const availableStatusId = useMemo(
     () =>
       (statusesQuery.data?.items ?? []).find(
-        (status) => status.amenity_status_name === "Available",
+        (status) => status.amenity_status_name === ROOM_STATUS.AVAILABLE,
       )?.id,
     [statusesQuery.data],
   );
 
-  // Stays disabled until the id is known, so an unfiltered list can never be
-  // fetched and briefly rendered.
+  // Genuinely disabled until the id is known. The conditional params are not
+  // enough on their own: with `undefined` params this hook fetches the
+  // UNFILTERED room list, which is exactly the set this dialog must not offer.
+  // `enabled` is what holds the request until `?status=` can be sent with it.
+  const roomsReady = open && availableStatusId !== undefined;
   const occupancyQuery = useOccupancy(
-    open && availableStatusId !== undefined
+    roomsReady
       ? { page: 1, page_size: MAX_PAGE_SIZE, status: availableStatusId }
       : undefined,
+    { enabled: roomsReady },
   );
   // Reallocation is keyed on the ALLOCATION row, not the stay.
   const allocationsQuery = useStayRoomAllocations(open ? stayId : null);

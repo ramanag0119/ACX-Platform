@@ -105,13 +105,6 @@ export type ParamDataType = "Integer" | "Double" | "String" | "Date Time";
 export const VALUE_ALERT_ACTIVE = 0;
 export const VALUE_ALERT_RESOLVED = 1;
 
-/**
- * `amenity_status.amenity_status_name` values. The NAME is the stable business
- * vocabulary; the id is seeded data. Always resolve the id from
- * GET /amenity-statuses rather than assuming 0/1/2/3.
- */
-export const ROOM_STATUS_OCCUPIED = "Occupied";
-
 export type RoleType = "admin" | "system_user" | "manager" | "guest" | "staff";
 
 /**
@@ -127,6 +120,28 @@ export const KNOWN_AMENITY_STATUSES = [
   "Unavailable",
   "Allotted",
 ] as const;
+
+export type AmenityStatusName = (typeof KNOWN_AMENITY_STATUSES)[number];
+
+/**
+ * The four `amenity_status` names, for the code that has to NAME one.
+ *
+ * The NAME is the stable business vocabulary; the id is seeded data, so an id
+ * is always resolved from GET /amenity-statuses rather than assumed to be
+ * 0/1/2/3. This object exists so that resolution reads
+ * `name === ROOM_STATUS.AVAILABLE` instead of a bare string literal repeated
+ * across the dashboard, the room list and the reallocation dialog.
+ *
+ * It is typed against `KNOWN_AMENITY_STATUSES` above, which stays the single
+ * declaration of the vocabulary: a typo or a name that list does not hold is a
+ * compile error rather than a filter that silently matches nothing.
+ */
+export const ROOM_STATUS = {
+  AVAILABLE: "Available",
+  OCCUPIED: "Occupied",
+  UNAVAILABLE: "Unavailable",
+  ALLOTTED: "Allotted",
+} as const satisfies Record<string, AmenityStatusName>;
 
 export const KNOWN_INCIDENT_STATUSES = [
   "Unread",
