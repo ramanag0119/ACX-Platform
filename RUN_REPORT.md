@@ -105,6 +105,22 @@ uvicorn app.main:app --reload
 Backend serves on **http://127.0.0.1:8000** · interactive docs at
 **http://127.0.0.1:8000/docs**.
 
+Smoke-test it — this confirms the app booted *and* that it reached PostgreSQL:
+
+```sh
+curl http://127.0.0.1:8000/api/v1/health/db
+```
+
+Expected:
+
+```json
+{"status":"ok","database":"hms_db","schema_name":"public",
+ "server_version":"16.12","alembic_revision":"0e2687233b59","latency_ms":61.2}
+```
+
+If `alembic_revision` is null or the call 503s, step 4 (`alembic upgrade head`)
+did not complete or the `POSTGRES_*` values in `.env` are wrong.
+
 ### Backend `.env` variables
 
 Copied from `backend/.env.example`. Placeholders you **must** change are marked.
@@ -204,6 +220,20 @@ cd frontend && npm run dev
 
 Then open **http://localhost:8080** and log in with the account you created in
 step 5.
+
+### Verified from a clean clone
+
+This sequence was executed end to end against a fresh
+`git clone` of `feature/changes-hms`:
+
+| Step | Result |
+|---|---|
+| `npm install` (frontend) | exit 0 |
+| `npx tsc -b --noEmit` | exit 0 — no type errors |
+| `npm run build` | exit 0 |
+| `python -m venv .venv` + `pip install -r requirements.txt` | exit 0 |
+| `import app.main` | OK |
+| `uvicorn app.main:app` → `GET /api/v1/health/db` | **HTTP 200**, database reachable |
 
 ---
 
