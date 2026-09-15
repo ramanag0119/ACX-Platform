@@ -449,6 +449,6 @@ def test_notification_routes_are_read_only(client):
 def test_earlier_phase_endpoints_still_work(client, anon, admin_headers):
     assert anon.get("/health").status_code == 200
     for path in (f"{V1}/facilities", f"{V1}/rooms", f"{V1}/users", f"{V1}/roles",
-                 f"{V1}/service-requests", f"{V1}/devices", f"{V1}/firmware"):
+                 f"{V1}/service-requests", f"{V1}/devices"):
         assert client.get(path).status_code == 200
     assert anon.get(f"{V1}/auth/me", headers=admin_headers).status_code == 200

@@ -40,7 +40,6 @@ def require_seeded(db):
 ENUM_FILTERS = [
     ("/api/v1/devices", "health_status", "device_health_status"),
     ("/api/v1/devices", "device_config_status", "device_config_status"),
-    ("/api/v1/firmware", "status", "firmware_status"),
     ("/api/v1/alerts", "alert_severity", "alert_severity"),
     ("/api/v1/stays", "status", "stay_status"),
     ("/api/v1/stays", "request_source", "request_source"),

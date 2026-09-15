@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Info, ArrowRight, Wrench, ShieldCheck, BatteryLow, Star, UserCheck, Clock, Minus } from "lucide-react";
+import { Info, ArrowRight, Wrench, ShieldCheck, BatteryLow, Star, UserCheck, Clock, Minus, CheckCircle2 } from "lucide-react";
 import { RoomDetailsModal } from "../components/RoomDetailsModal";
 import { roomStatusBadgeClass } from "../lib/roomStatus";
 import { DataState, TableLoading } from "@/core/components/DataState";
@@ -115,6 +115,33 @@ const toRow = (item: OccupancyRead): RoomRow => ({
 
 const formatDateTime = (value: string | null) =>
   value ? new Date(value).toLocaleString() : "-";
+
+/**
+ * Room Type, shortened for the table cell only.
+ *
+ * The stored `amenity_type.name` ("Guest Room", "Suite") is untouched: the row
+ * still carries it, search still matches on it, and the cell keeps it in its
+ * `title` so the meaning is never lost. The initial is taken FROM that name
+ * rather than from a map of known types, so a type added to `amenity_type`
+ * later shortens itself without a change here.
+ */
+const shortRoomType = (roomType: string) =>
+  roomType && roomType !== "-" ? roomType.trim().charAt(0).toUpperCase() : "-";
+
+/**
+ * A stay that is still in house after its expected checkout has passed.
+ *
+ * Both halves are values the API already returns -- `actual_checkin_time` (via
+ * `checkedIn`) and `expected_checkout_time`. No date is hardcoded, and the
+ * room's stored status is NOT rewritten: a room the database says is Occupied
+ * still reports Occupied. What this does is stop the table showing a past
+ * checkout as if it were unremarkable, which is the inconsistency -- an
+ * overdue departure is a real operational state, not a normal occupancy.
+ */
+const isOverdueCheckout = (room: RoomRow) =>
+  room.checkedIn &&
+  room.checkOutTime !== null &&
+  new Date(room.checkOutTime).getTime() < Date.now();
 
 const Occupancy = () => {
   const [activeTab, setActiveTab] = useState<"guest" | "nonGuest">("guest");
@@ -273,9 +300,30 @@ const Occupancy = () => {
 
   const getConditionBadge = (condition: string) => {
     const lowerCondition = condition.toLowerCase();
+    const pillClass =
+      "inline-flex h-7 items-center justify-center gap-1.5 px-2.5 py-1 text-[10.5px] font-semibold leading-none rounded-full border whitespace-nowrap";
+
+    // `amenity_condition` 5, "Ready for occupant". Like every other branch here
+    // this only chooses a COLOUR for a name the API returned -- the condition
+    // list itself is backend data, never a literal in this file. Positive
+    // colouring so the rooms that can actually be handed over stand out.
+    if (lowerCondition.includes("ready")) {
+      return (
+        <span
+          key={condition}
+          className={`${pillClass} border-green-200 bg-green-50 text-green-700 dark:border-green-500/40 dark:bg-green-950/60 dark:text-green-400`}
+        >
+          <CheckCircle2 className="h-3 w-3 text-green-600 dark:text-green-400" />
+          {condition}
+        </span>
+      );
+    }
     if (lowerCondition.includes("maintenance")) {
       return (
-        <span key={condition} className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-500/40 dark:bg-orange-950/60 dark:text-orange-400 text-[11.5px] font-medium">
+        <span
+          key={condition}
+          className={`${pillClass} border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-500/40 dark:bg-orange-950/60 dark:text-orange-400`}
+        >
           <Wrench className="h-3 w-3 text-orange-600 dark:text-orange-400" />
           {condition}
         </span>
@@ -283,7 +331,10 @@ const Occupancy = () => {
     }
     if (lowerCondition.includes("sanitation")) {
       return (
-        <span key={condition} className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-950/60 dark:text-emerald-400 text-[11.5px] font-medium">
+        <span
+          key={condition}
+          className={`${pillClass} border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-950/60 dark:text-emerald-400`}
+        >
           <ShieldCheck className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
           {condition}
         </span>
@@ -291,7 +342,10 @@ const Occupancy = () => {
     }
     if (lowerCondition.includes("low battery")) {
       return (
-        <span key={condition} className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/40 dark:bg-rose-950/60 dark:text-rose-400 text-[11.5px] font-medium">
+        <span
+          key={condition}
+          className={`${pillClass} border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/40 dark:bg-rose-950/60 dark:text-rose-400`}
+        >
           <BatteryLow className="h-3 w-3 text-rose-600 dark:text-rose-400" />
           {condition}
         </span>
@@ -299,7 +353,10 @@ const Occupancy = () => {
     }
     if (lowerCondition.includes("vip")) {
       return (
-        <span key={condition} className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-purple-200 bg-purple-50 text-purple-700 dark:border-purple-500/40 dark:bg-purple-950/60 dark:text-purple-300 text-[11.5px] font-medium">
+        <span
+          key={condition}
+          className={`${pillClass} border-purple-200 bg-purple-50 text-purple-700 dark:border-purple-500/40 dark:bg-purple-950/60 dark:text-purple-300`}
+        >
           <Star className="h-3 w-3 text-purple-600 dark:text-purple-300" />
           {condition}
         </span>
@@ -307,7 +364,10 @@ const Occupancy = () => {
     }
     if (lowerCondition.includes("occupied")) {
       return (
-        <span key={condition} className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/40 dark:bg-amber-950/60 dark:text-amber-300 text-[11.5px] font-medium">
+        <span
+          key={condition}
+          className={`${pillClass} border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/40 dark:bg-amber-950/60 dark:text-amber-300`}
+        >
           <UserCheck className="h-3 w-3 text-amber-600 dark:text-amber-300" />
           {condition}
         </span>
@@ -315,14 +375,20 @@ const Occupancy = () => {
     }
     if (lowerCondition.includes("late checkout")) {
       return (
-        <span key={condition} className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/40 dark:bg-amber-950/60 dark:text-amber-400 text-[11.5px] font-medium">
+        <span
+          key={condition}
+          className={`${pillClass} border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/40 dark:bg-amber-950/60 dark:text-amber-400`}
+        >
           <Clock className="h-3 w-3 text-amber-600 dark:text-amber-400" />
           {condition}
         </span>
       );
     }
     return (
-      <span key={condition} className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-700/60 dark:bg-slate-800/60 dark:text-slate-400 text-[11.5px] font-medium">
+      <span
+        key={condition}
+        className={`${pillClass} border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-700/60 dark:bg-slate-800/60 dark:text-slate-400`}
+      >
         <Minus className="h-3 w-3" />
         {condition}
       </span>
@@ -478,7 +544,7 @@ const Occupancy = () => {
               isLoading={isLoading}
               error={error}
               isEmpty={filteredRooms.length === 0}
-              emptyTitle="No rooms match this view"
+              emptyTitle="No Rooms match this view"
               loader={<TableLoading columns={13} />}
             >
               <Table>
@@ -495,7 +561,7 @@ const Occupancy = () => {
                     <TableHead className="text-gray-600 dark:text-slate-300 font-medium text-center">Status</TableHead>
                     <TableHead className="text-gray-600 dark:text-slate-300 font-medium text-center">Condition</TableHead>
                     <TableHead className="text-gray-600 dark:text-slate-300 font-medium text-center">Details</TableHead>
-                    <TableHead className="text-gray-600 dark:text-slate-300 font-medium text-center">Reallocate</TableHead>
+                    <TableHead className="text-gray-600 dark:text-slate-300 font-medium text-center">Reassign</TableHead>
                     <TableHead className="text-gray-600 dark:text-slate-300 font-medium text-center">Invoice <span className="text-gray-400 dark:text-slate-500">↓</span></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -516,15 +582,32 @@ const Occupancy = () => {
                           {room.roomNo}
                         </button>
                       </TableCell>
-                      <TableCell className="text-foreground">{room.roomType}</TableCell>
+                      {/* Shortened for width; the full type is on the title. */}
+                      <TableCell className="text-foreground" title={room.roomType}>
+                        {shortRoomType(room.roomType)}
+                      </TableCell>
                       <TableCell className="text-foreground">{room.buildingName}</TableCell>
                       <TableCell className="text-foreground">{room.floorName}</TableCell>
                       <TableCell className="text-foreground">{room.guestName}</TableCell>
                       <TableCell className="text-foreground whitespace-nowrap">
                         {formatDateTime(room.checkInTime)}
                       </TableCell>
-                      <TableCell className="text-foreground whitespace-nowrap">
+                      <TableCell
+                        className={`whitespace-nowrap ${
+                          isOverdueCheckout(room)
+                            ? "text-red-600 dark:text-red-400 font-medium"
+                            : "text-foreground"
+                        }`}
+                      >
                         {formatDateTime(room.checkOutTime)}
+                        {isOverdueCheckout(room) && (
+                          <span
+                            className="ml-1.5 inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[10.5px] font-semibold text-red-700 dark:border-red-500/40 dark:bg-red-950/60 dark:text-red-400"
+                            title="Expected check-out has passed but the stay is still checked in"
+                          >
+                            <Clock className="h-3 w-3" /> Overdue
+                          </span>
+                        )}
                       </TableCell>
                       <TableCell className="text-center">
                         {/* Check-in / check-out: the real stay workflow. Room
@@ -532,7 +615,7 @@ const Occupancy = () => {
                         {room.stayId && !room.checkedIn ? (
                           <Button
                             size="sm"
-                            className="bg-teal-600 hover:bg-teal-700 text-white text-xs px-3"
+                            className="rounded-full bg-teal-600 hover:bg-teal-700 text-white text-xs px-3"
                             disabled={!mayWriteBookings || checkIn.isPending}
                             onClick={() => checkIn.mutate({ id: room.stayId as string })}
                             title={
@@ -546,12 +629,12 @@ const Occupancy = () => {
                         ) : room.stayId && room.checkedIn ? (
                           <Button
                             size="sm"
-                            className="bg-purple-600 hover:bg-purple-700 text-white text-xs px-3"
+                            className="rounded-full bg-purple-600 hover:bg-purple-700 text-white text-xs px-3"
                             disabled={!mayWriteBookings || checkOut.isPending}
                             onClick={() => checkOut.mutate({ id: room.stayId as string })}
                             title={
                               mayWriteBookings
-                                ? "Check this stay out and release the room"
+                                ? "Check this stay out and release the Room"
                                 : "Your role cannot change bookings"
                             }
                           >
@@ -567,11 +650,17 @@ const Occupancy = () => {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-center">
-                        <button
-                          type="button"
-                          className="flex flex-wrap gap-1 justify-center w-full disabled:cursor-not-allowed"
-                          disabled={!mayWriteOccupancy}
-                          onClick={() => setConditionsRoom(room)}
+                        <div
+                          role="button"
+                          tabIndex={mayWriteOccupancy ? 0 : -1}
+                          className="flex w-full flex-wrap items-center justify-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
+                          onClick={() => mayWriteOccupancy && setConditionsRoom(room)}
+                          onKeyDown={(event) => {
+                            if ((event.key === "Enter" || event.key === " ") && mayWriteOccupancy) {
+                              event.preventDefault();
+                              setConditionsRoom(room);
+                            }
+                          }}
                           title={
                             mayWriteOccupancy
                               ? "Edit housekeeping conditions"
@@ -583,7 +672,7 @@ const Occupancy = () => {
                             : <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-gray-200 bg-gray-50 text-gray-400 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400 text-xs font-semibold">
                                 <Minus className="h-3.5 w-3.5" /> -
                               </span>}
-                        </button>
+                        </div>
                       </TableCell>
                       <TableCell className="text-center">
                         <Button
@@ -602,9 +691,9 @@ const Occupancy = () => {
                           onClick={() => setReallocateRoom(room)}
                           title={
                             !room.stayId
-                              ? "No stay holds this room"
+                              ? "No stay holds this Room"
                               : mayWriteBookings
-                                ? "Move this stay to another room"
+                                ? "Move this stay to another Room"
                                 : "Your role cannot change bookings"
                           }
                         >

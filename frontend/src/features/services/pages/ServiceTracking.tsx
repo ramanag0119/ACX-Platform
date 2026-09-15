@@ -579,7 +579,7 @@ const ServiceTracking = () => {
     };
 
     return (
-        <div className="space-y-6 animate-fade-in bg-[hsl(220,20%,96%)] min-h-screen -m-6 p-6">
+        <div className="space-y-5 animate-fade-in bg-[hsl(220,20%,96%)] min-h-full -mx-4 -my-3 px-4 py-3">
             <ServiceRequestActionsDialog
                 open={Boolean(actionTarget)}
                 onClose={() => setActionTarget(null)}

@@ -111,7 +111,7 @@ const RoomView = () => {
   const gridBorder = isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.08)";
 
   return (
-    <div className="space-y-6 animate-fade-in min-h-screen -m-6 p-6" style={{ background: pageBg }}>
+    <div className="space-y-5 animate-fade-in min-h-full -mx-4 -my-3 px-4 py-3" style={{ background: pageBg }}>
       {/* Header */}
       <div className="mb-2">
         <h1 className="text-2xl font-semibold" style={{ color: titleColor }}>Room View</h1>
@@ -252,11 +252,8 @@ const RoomView = () => {
           </div>
 
           {/* Status Bar */}
-          <div
-            className="rounded-lg p-5 transition-all duration-250 ease hover:-translate-y-0.5"
-            style={{ background: cardBg, border: cardBorder, boxShadow: "0 8px 24px rgba(17,12,46,0.12)" }}
-          >
-            <div className="flex items-center justify-between">
+          <div className="py-2">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               {/* Condition legend -- the real `amenity_condition` rows. */}
               <div className="flex items-center gap-6">
                 <div className="flex items-center gap-2">

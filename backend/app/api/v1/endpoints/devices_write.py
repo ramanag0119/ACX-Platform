@@ -28,7 +28,7 @@ from fastapi import APIRouter, Depends, status
 from app.api.deps import CurrentUser, DbSession, require_permission
 from app.schemas.alert import IncidentDetail, IncidentRead, ValueAlertRead
 from app.schemas.common import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, Page
-from app.schemas.device import DeviceDetail, DeviceRead, FirmwareRead
+from app.schemas.device import DeviceDetail, DeviceRead
 from app.schemas.health import ErrorResponse
 from app.schemas.ops_write import (
     DeviceCreate,
@@ -57,10 +57,8 @@ WRITE_RESPONSES = {
 
 NETWORK_WRITE = [Depends(require_permission("caleido_network", "write"))]
 NETWORK_READ = [Depends(require_permission("caleido_network", "read"))]
-FIRMWARE_WRITE = [Depends(require_permission("firmware_management", "write"))]
 
 devices_write_router = APIRouter(prefix="/devices", tags=["devices"], responses=WRITE_RESPONSES)
-firmware_write_router = APIRouter(prefix="/firmware", tags=["firmware"], responses=WRITE_RESPONSES)
 incidents_write_router = APIRouter(
     prefix="/incidents", tags=["incidents"], responses=WRITE_RESPONSES
 )
@@ -156,80 +154,6 @@ def decommission_device(
 def device_under_maintenance(device_id: uuid.UUID, db: DbSession) -> DeviceDetail:
     service.set_device_config_status(db, device_id, config_status="under_maintenance")
     return _device_detail(db, device_id)
-
-
-# ---------------------------------------------------------------------------
-# Firmware
-# ---------------------------------------------------------------------------
-
-
-@firmware_write_router.post(
-    "",
-    response_model=FirmwareRead,
-    status_code=status.HTTP_201_CREATED,
-    dependencies=FIRMWARE_WRITE,
-    summary="Add a firmware build",
-    description=(
-        "One build per (device type, version): a duplicate is a 409. The file "
-        "itself is referenced by `firmware_url` and `crc`; this API records the "
-        "build, it does not host binaries."
-    ),
-)
-def create_firmware(
-    payload: FirmwareCreate, db: DbSession, current_user: CurrentUser
-) -> FirmwareRead:
-    row = service.create_firmware(
-        db, data=payload.model_dump(), actor_id=current_user.id
-    )
-    return FirmwareRead.model_validate(device_read.get_firmware(db, row.id))
-
-
-@firmware_write_router.patch(
-    "/{firmware_id}",
-    response_model=FirmwareRead,
-    dependencies=FIRMWARE_WRITE,
-    summary="Update or decommission a firmware build",
-    description=(
-        "Decommissioning is refused with 409 while any device still expects that "
-        "version, so a device can never be left waiting for a retired build."
-    ),
-)
-def update_firmware(
-    firmware_id: uuid.UUID,
-    payload: FirmwareUpdate,
-    db: DbSession,
-    current_user: CurrentUser,
-) -> FirmwareRead:
-    service.update_firmware(
-        db,
-        firmware_id,
-        changes=payload.model_dump(exclude_unset=True),
-        actor_id=current_user.id,
-    )
-    return FirmwareRead.model_validate(device_read.get_firmware(db, firmware_id))
-
-
-@firmware_write_router.post(
-    "/{firmware_id}/assign",
-    response_model=list[DeviceRead],
-    dependencies=FIRMWARE_WRITE,
-    summary="Assign a firmware build to devices",
-    description=(
-        "Sets `device.expected_firmware_version` on each device, in one "
-        "transaction. That column IS the assignment -- the hub compares it with "
-        "`current_firmware_version` and pulls the build. No command is queued, "
-        "because the schema has no command or MQTT table. A device of the wrong "
-        "device type is rejected."
-    ),
-)
-def assign_firmware(
-    firmware_id: uuid.UUID, payload: FirmwareAssignBody, db: DbSession
-) -> list[DeviceRead]:
-    service.assign_firmware(db, firmware_id, device_ids=payload.device_ids)
-    return [
-        DeviceRead.model_validate(device_read.get_device(db, device_id))
-        for device_id in payload.device_ids
-    ]
 
 
 # ---------------------------------------------------------------------------

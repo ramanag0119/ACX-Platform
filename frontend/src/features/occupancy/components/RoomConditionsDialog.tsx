@@ -65,7 +65,7 @@ export const RoomConditionsDialog = ({
     <Dialog open={open} onOpenChange={(next) => (next ? undefined : onClose())}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>Conditions for room {roomName}</DialogTitle>
+          <DialogTitle>Device conditions Room {roomName}</DialogTitle>
         </DialogHeader>
 
         <DataState isLoading={conditionsQuery.isLoading} error={conditionsQuery.error}>

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -40,10 +40,13 @@ interface ReallocateRoomDialogProps {
  * the guest is in-house, otherwise Allotted). A room another live stay holds is
  * refused with 409, which surfaces as the shared error toast.
  *
- * WHICH ROOMS ARE OFFERED: only rooms whose stored `amenity.status` is
- * Available. The status id is resolved from GET /amenity-statuses rather than
- * written here, so it can never drift from the lookup table, and the filter is
- * applied BY THE BACKEND via `?status=`, not by a pass over a fetched page.
+ * WHICH ROOMS ARE OFFERED: rooms that are BOTH Available AND a guest-occupancy
+ * space (`amenity_category = "room"`). Status alone is not enough -- the Gym,
+ * the Restaurant and the Conference Room are all amenities too and are
+ * routinely Available, but a stay cannot be moved into one. The status id is
+ * resolved from GET /amenity-statuses rather than written here, so it can never
+ * drift from the lookup table, and BOTH filters are applied BY THE BACKEND via
+ * `?status=` and `?amenity_category=`, not by a pass over a fetched page.
  *
  * This previously filtered on `!current_stay` -- the STAY GRAPH -- which is a
  * different question from the room's status. The two diverge in the live data
@@ -59,6 +62,19 @@ export const ReallocateRoomDialog = ({
   currentRoomName,
 }: ReallocateRoomDialogProps) => {
   const [targetRoom, setTargetRoom] = useState("");
+
+  /**
+   * Clear the selection every time the dialog opens.
+   *
+   * Without this the component keeps the room chosen for the PREVIOUS stay:
+   * reopening Reassign for another room showed that stale id already selected,
+   * and it is very likely no longer Available -- it may even be the room the
+   * last reassign just filled. Submitting it sends an id that is not in the
+   * offered list, which the server rejects. Reassign now always opens empty.
+   */
+  useEffect(() => {
+    if (open) setTargetRoom("");
+  }, [open, stayId]);
 
   // The Available id comes from the lookup table, never from a literal.
   const statusesQuery = useAmenityStatuses(
@@ -80,7 +96,18 @@ export const ReallocateRoomDialog = ({
   const roomsReady = open && availableStatusId !== undefined;
   const occupancyQuery = useOccupancy(
     roomsReady
-      ? { page: 1, page_size: MAX_PAGE_SIZE, status: availableStatusId }
+      ? {
+          page: 1,
+          page_size: MAX_PAGE_SIZE,
+          status: availableStatusId,
+          // A stay can only move into a guest-occupancy space. `amenity_category`
+          // is the real discriminator -- "room" covers Guest Room and Suite,
+          // while Restaurant, Gym and Conference Room are "restaurant"/"others"
+          // and are excluded however Available they happen to be. This is the
+          // same category the Guest tab filters on, and it is resolved from
+          // `amenity_type.amenity_category`, so a type added later sorts itself.
+          amenity_category: "room",
+        }
       : undefined,
     { enabled: roomsReady },
   );
@@ -103,6 +130,14 @@ export const ReallocateRoomDialog = ({
     [occupancyQuery.data, currentRoomName],
   );
 
+  /**
+   * The stay holds no `room_allocation` row, so there is nothing to move.
+   * Reassign is keyed on the allocation, not the stay, so this case can only
+   * fail -- it is reported rather than left as a button that does nothing.
+   */
+  const allocationMissing =
+    !allocationsQuery.isLoading && Boolean(stayId) && allocationId === null;
+
   const handleSubmit = () => {
     if (!allocationId || !targetRoom) return;
     reallocate.mutate(
@@ -120,7 +155,7 @@ export const ReallocateRoomDialog = ({
     <Dialog open={open} onOpenChange={(next) => (next ? undefined : onClose())}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Reallocate room {currentRoomName}</DialogTitle>
+          <DialogTitle>Reassign Room {currentRoomName}</DialogTitle>
         </DialogHeader>
 
         <DataState
@@ -133,13 +168,13 @@ export const ReallocateRoomDialog = ({
             statusesQuery.error ?? occupancyQuery.error ?? allocationsQuery.error
           }
           isEmpty={freeRooms.length === 0}
-          emptyTitle="No Available room to move this stay into"
+          emptyTitle="No Available Room to move this stay into"
         >
           <div className="space-y-2">
-            <Label>New room</Label>
+            <Label>New Room</Label>
             <Select value={targetRoom} onValueChange={setTargetRoom}>
               <SelectTrigger>
-                <SelectValue placeholder="Select a room" />
+                <SelectValue placeholder="Select a Room" />
               </SelectTrigger>
               <SelectContent>
                 {freeRooms.map((room) => (
@@ -150,9 +185,15 @@ export const ReallocateRoomDialog = ({
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              The old room is released in the same transaction, so the stay can never
-              hold two rooms.
+              The old Room is released in the same transaction, so the stay can never
+              hold two Rooms.
             </p>
+            {allocationMissing && (
+              <p className="text-xs font-medium text-destructive">
+                This stay holds no Room allocation, so there is nothing to reassign.
+                Allocate a Room to the stay first.
+              </p>
+            )}
           </div>
         </DataState>
 
@@ -163,8 +204,16 @@ export const ReallocateRoomDialog = ({
           <Button
             onClick={handleSubmit}
             disabled={!targetRoom || !allocationId || reallocate.isPending}
+            // A disabled button with no explanation reads as a broken screen.
+            title={
+              allocationMissing
+                ? "This stay holds no Room allocation to move"
+                : !targetRoom
+                  ? "Select a Room to move this stay into"
+                  : undefined
+            }
           >
-            {reallocate.isPending ? "Moving..." : "Reallocate"}
+            {reallocate.isPending ? "Moving..." : "Reassign"}
           </Button>
         </DialogFooter>
       </DialogContent>

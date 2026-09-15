@@ -41,6 +41,7 @@ import {
   X,
   ArrowLeft,
   LogIn,
+  Wallet,
 } from "lucide-react";
 import { DataState, TableLoading } from "@/core/components/DataState";
 import { toast } from "@/hooks/use-toast";
@@ -128,6 +129,14 @@ const EMPTY_FORM = {
   gst: "",
   bookingReference: "",
   comments: "",
+  /**
+   * Whether this booking may be settled from the guest's e-wallet.
+   *
+   * UI-ONLY for now: `stay` has no wallet/payment column and no endpoint
+   * accepts one, so this is deliberately NOT part of either submit payload.
+   * See the E-Wallet section in the form.
+   */
+  eWallet: "disabled",
 };
 
 const Bookings = () => {
@@ -207,27 +216,7 @@ const Bookings = () => {
   const [extendDate, setExtendDate] = useState("");
 
   // Form state
-  const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    countryCode: "",
-    mobileNumber: "",
-    gender: "",
-    city: "",
-    nationality: "",
-    arrival: "",
-    depart: "",
-    guestRoom: "yes",
-    /** An `amenity.id` (UUID) -- what POST /stays wants in `room_ids`. */
-    roomId: "",
-    subPackages: "",
-    noOfPersons: "",
-    numberOfRooms: "",
-    gst: "",
-    bookingReference: "",
-    comments: "",
-  });
+  const [formData, setFormData] = useState(EMPTY_FORM);
 
   const matchesSearch = (booking: BookingData) => {
     const query = searchQuery.toLowerCase();
@@ -255,26 +244,7 @@ const Bookings = () => {
   const resetForm = () => {
     setViewMode("list");
     setEditingBooking(null);
-    setFormData({
-      firstName: "",
-      lastName: "",
-      email: "",
-      countryCode: "",
-      mobileNumber: "",
-      gender: "",
-      city: "",
-      nationality: "",
-      arrival: "",
-      depart: "",
-      guestRoom: "yes",
-      roomId: "",
-      subPackages: "",
-      noOfPersons: "",
-      numberOfRooms: "",
-      gst: "",
-      bookingReference: "",
-      comments: "",
-    });
+    setFormData(EMPTY_FORM);
   };
 
   /**
@@ -380,6 +350,8 @@ const Bookings = () => {
       gst: "",
       bookingReference: "",
       comments: "",
+      // Nothing to restore: no stay column stores it (see EMPTY_FORM).
+      eWallet: "disabled",
     });
     setViewMode("edit");
   };
@@ -777,26 +749,53 @@ const Bookings = () => {
                 />
               </div>
 
-              {/* Row 11: ID Proof Documents */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-primary">ID Proof Documents</Label>
-                <div className="flex items-center gap-4">
-                  <Button
-                    variant="outline"
-                    className="h-12 px-6 border-dashed border-2 hover:border-primary"
-                    onClick={() => document.getElementById("id-proof-upload")?.click()}
+              {/* Row 11: ID Proof Documents, E-Wallet */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-primary">ID Proof Documents</Label>
+                  <div className="flex items-center gap-4">
+                    <Button
+                      variant="outline"
+                      className="h-12 px-6 border-dashed border-2 hover:border-primary"
+                      onClick={() => document.getElementById("id-proof-upload")?.click()}
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      Choose Files
+                    </Button>
+                    <span className="text-muted-foreground text-sm">No file chosen</span>
+                    <input
+                      id="id-proof-upload"
+                      type="file"
+                      multiple
+                      className="hidden"
+                      accept="image/*,.pdf"
+                    />
+                  </div>
+                </div>
+
+                {/* E-Wallet. A PAYMENT METHOD, nothing else: the guest's name,
+                    contact, reference and room are already fields on this form,
+                    so none of them is repeated here. No card number, CVV or PIN
+                    is collected either -- keeping card data out of HMS is the
+                    reason for paying by wallet in the first place. */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-primary">E-Wallet</Label>
+                  <Select
+                    value={formData.eWallet}
+                    onValueChange={(value) => handleFormChange("eWallet", value)}
                   >
-                    <Upload className="h-4 w-4 mr-2" />
-                    Choose Files
-                  </Button>
-                  <span className="text-muted-foreground text-sm">No file chosen</span>
-                  <input
-                    id="id-proof-upload"
-                    type="file"
-                    multiple
-                    className="hidden"
-                    accept="image/*,.pdf"
-                  />
+                    <SelectTrigger className="h-12 bg-muted/30 border-border/50 focus:border-primary">
+                      <SelectValue placeholder="Select E-Wallet support" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="enabled">Enabled</SelectItem>
+                      <SelectItem value="disabled">Disabled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Wallet className="h-3.5 w-3.5 shrink-0" />
+                    Settled from the guest's e-wallet. HMS collects no card details.
+                  </p>
                 </div>
               </div>
 

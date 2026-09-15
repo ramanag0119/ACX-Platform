@@ -159,6 +159,7 @@ export const RoomDetailsPanel = ({ amenityId, roomNumber, roomType }: RoomDetail
                   { label: "Guest Name", value: stay?.booker?.name ?? "-" },
                   { label: "Stay Reference", value: stay?.internal_stay_ref_number ?? "-" },
                   { label: "Additional Guest", value: stay ? String(Math.max(stay.no_of_guests - 1, 0)) : "-" },
+                  { label: "Expected Check In", value: formatDateTime(stay?.expected_checkin_time) },
                   { label: "Actual Check In", value: formatDateTime(stay?.actual_checkin_time) },
                   { label: "Expected Check Out", value: formatDateTime(stay?.expected_checkout_time) },
                 ].map(({ label, value }) => (

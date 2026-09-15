@@ -8,7 +8,6 @@ import {
   Tag,
   PartyPopper,
   CalendarDays,
-  Cpu,
   FileText,
   Ticket,
   Key,
@@ -25,6 +24,8 @@ import {
   User,
   Target,
   ShieldAlert,
+  BedDouble,
+  CalendarRange,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/core/contexts/AuthContext";
@@ -40,7 +41,15 @@ interface NavItemProps {
 
 const NavItem = ({ to, icon: Icon, label, collapsed, subItems }: NavItemProps) => {
   const location = useLocation();
-  const isActive = location.pathname === to || location.pathname.startsWith(to + "/");
+  const matches = (path: string) =>
+    location.pathname === path || location.pathname.startsWith(path + "/");
+  // A group is active when its own prefix matches OR any child's does. For
+  // Services and Config and Setup the children already sit under the parent
+  // prefix, so this changes nothing for them; it is what lets
+  // a group whose children keep their own top-level routes -- Stay -> Offers,
+  // Booking -- still highlight and open on the page it is showing.
+  const isActive =
+    matches(to) || (subItems ?? []).some((item) => matches(item.to));
   const hasSubItems = subItems && subItems.length > 0;
   const [isOpen, setIsOpen] = useState(isActive);
 
@@ -121,7 +130,19 @@ export const AppSidebar = ({ collapsed }: AppSidebarProps) => {
   const allNavItems = [
     { to: "/dashboard", icon: LayoutDashboard, label: "HMS" },
     { to: "/occupancy", icon: Users, label: "Occupancy" },
-    { to: "/bookings", icon: Calendar, label: "Bookings" },
+    // Stay groups the two screens a stay is made of. `/stay` is a nav-only
+    // prefix with no route of its own -- the parent is a disclosure button,
+    // never a link -- so Offers and Booking keep their existing routes,
+    // components and module grants untouched.
+    {
+      to: "/stay",
+      icon: BedDouble,
+      label: "Stay",
+      subItems: [
+        { to: "/offers", label: "Offers", icon: Tag },
+        { to: "/bookings", label: "Booking", icon: Calendar },
+      ],
+    },
     {
       to: "/services",
       icon: Headphones,
@@ -144,16 +165,16 @@ export const AppSidebar = ({ collapsed }: AppSidebarProps) => {
         { to: "/config/limit-alert", label: "Limit Config Alert", icon: ShieldAlert },
       ],
     },
-    { to: "/offers", icon: Tag, label: "Offers" },
-    { to: "/holidays", icon: PartyPopper, label: "Holidays" },
-    { to: "/events", icon: CalendarDays, label: "Events" },
+    // Manage groups the calendar-driven screens. Like Stay, `/manage` is a
+    // nav-only prefix with no route of its own, so Holidays and Events keep
+    // their existing routes, components and module grants untouched.
     {
-      to: "/devices",
-      icon: Cpu,
-      label: "Device Management",
+      to: "/manage",
+      icon: CalendarRange,
+      label: "Manage",
       subItems: [
-        { to: "/devices/caleido-network", label: "Caleido Network", icon: Cpu },
-        { to: "/devices/firmware-management", label: "Firmware Management", icon: Wrench },
+        { to: "/holidays", label: "Holidays", icon: PartyPopper },
+        { to: "/events", label: "Events", icon: CalendarDays },
       ],
     },
     { to: "/reports/occupancy", icon: FileText, label: "Reports" },

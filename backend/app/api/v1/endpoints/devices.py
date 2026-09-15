@@ -38,13 +38,10 @@ from app.schemas.device import (
     DeviceRef,
     DeviceTypeDetail,
     DeviceTypeRead,
-    FirmwareDetail,
-    FirmwareRead,
 )
 from app.schemas.filters import (
     DeviceConfigStatus,
     DeviceHealthStatus,
-    FirmwareStatus,
 )
 from app.schemas.health import ErrorResponse
 from app.services import device as svc
@@ -56,7 +53,6 @@ AUTH_RESPONSES = {
 }
 
 NETWORK_READ = [Depends(require_permission("caleido_network", "read"))]
-FIRMWARE_READ = [Depends(require_permission("firmware_management", "read"))]
 
 PageParam = Query(1, ge=1, description="1-based page number")
 SizeParam = Query(DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE, description="Rows per page")
@@ -68,10 +64,6 @@ device_types_router = APIRouter(
 devices_router = APIRouter(
     prefix="/devices", tags=["devices"],
     dependencies=NETWORK_READ, responses=AUTH_RESPONSES,
-)
-firmware_router = APIRouter(
-    prefix="/firmware", tags=["firmware"],
-    dependencies=FIRMWARE_READ, responses=AUTH_RESPONSES,
 )
 
 
@@ -222,54 +214,3 @@ def get_device_health(
     if data is None:
         raise _missing("Device", device_id)
     return DeviceHealthRead.model_validate(data)
-
-
-# ---------------------------------------------------------------------------
-# firmware
-# ---------------------------------------------------------------------------
-
-
-@firmware_router.get(
-    "",
-    response_model=Page[FirmwareRead],
-    summary="List firmware releases",
-    description=(
-        "There is no `is_latest` column. Currency is determined per device by "
-        "comparing current_firmware_version with expected_firmware_version -- "
-        "see the `firmware_outdated` filter on /devices."
-    ),
-)
-def list_firmware(
-    db: DbSession,
-    page: int = PageParam,
-    page_size: int = SizeParam,
-    device_type_id: int | None = Query(None),
-    status_value: FirmwareStatus | None = Query(
-        None, alias="status", description="firmware_status: active | decommissioned"
-    ),
-    firmware_version: str | None = Query(None),
-) -> Page[FirmwareRead]:
-    rows, total = svc.list_firmware(
-        db, page=page, page_size=page_size, device_type_id=device_type_id,
-        status=status_value, firmware_version=firmware_version,
-    )
-    return Page[FirmwareRead](
-        items=[FirmwareRead.model_validate(r) for r in rows],
-        page=page, page_size=page_size, total=total,
-    )
-
-
-@firmware_router.get(
-    "/{firmware_id}",
-    response_model=FirmwareDetail,
-    responses=NOT_FOUND,
-    summary="Get a firmware release",
-)
-def get_firmware(firmware_id: uuid.UUID, db: DbSession) -> FirmwareDetail:
-    row = svc.get_firmware(db, firmware_id)
-    if row is None:
-        raise _missing("Firmware", firmware_id)
-    return FirmwareDetail(
-        **FirmwareRead.model_validate(row).model_dump(),
-        **svc.firmware_usage(db, firmware_id),
-    )

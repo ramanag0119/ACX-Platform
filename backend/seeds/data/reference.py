@@ -64,12 +64,16 @@ AMENITY_STATUSES = [
     (3, "Allotted"),
 ]
 
-# amenity_conditions (4)
+# amenity_conditions (5)
 AMENITY_CONDITIONS = [
     (1, "Dirty"),
     (2, "Low battery"),
     (3, "Under maintenance"),
     (4, "Sanitation"),
+    # Readiness is a condition, not a status: a room can be Available and still
+    # be Dirty, so "ready to hand to a guest" needs its own value rather than
+    # being read off `amenity_status`.
+    (5, "Ready for occupant"),
 ]
 
 # incident_statuses (4) -- `Open` is NOT one of them
