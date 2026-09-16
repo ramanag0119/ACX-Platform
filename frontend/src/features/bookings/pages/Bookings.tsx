@@ -109,11 +109,33 @@ type BookingData = {
 
 type ViewMode = "list" | "add" | "edit";
 
+/**
+ * Dialling codes offered on the guest form.
+ *
+ * Declared once and rendered from, so the list, the blank-form value and the
+ * fallback used when a stored number carries no code can never disagree --
+ * previously "+91" was written as a literal in three separate places and the
+ * blank form defaulted to "" while the edit path defaulted to "+91".
+ *
+ * There is no `country_code` lookup table in the schema, so this stays a
+ * frontend list; when one is added, replace it with that query.
+ */
+const COUNTRY_CODES = [
+  { code: "+91", label: "+91 (India)" },
+  { code: "+1", label: "+1 (USA)" },
+  { code: "+44", label: "+44 (UK)" },
+  { code: "+971", label: "+971 (UAE)" },
+] as const;
+
+/** Widened to `string` on purpose: this seeds a free-form form field, and a
+ *  literal type here would reject every other code in the list. */
+const DEFAULT_COUNTRY_CODE: string = COUNTRY_CODES[0].code;
+
 const EMPTY_FORM = {
   firstName: "",
   lastName: "",
   email: "",
-  countryCode: "",
+  countryCode: DEFAULT_COUNTRY_CODE,
   mobileNumber: "",
   gender: "",
   city: "",
@@ -296,7 +318,7 @@ const Bookings = () => {
         first_name: formData.firstName,
         last_name: formData.lastName || null,
         email: formData.email || null,
-        phone_number: `${formData.countryCode || "+91"}${formData.mobileNumber}`,
+        phone_number: `${formData.countryCode || DEFAULT_COUNTRY_CODE}${formData.mobileNumber}`,
         gender: (formData.gender || null) as "male" | "female" | "other" | null,
         address: formData.city || null,
         is_staff: 0,
@@ -327,31 +349,26 @@ const Bookings = () => {
   const handleEdit = (booking: BookingData) => {
     setEditingBooking(booking);
     const nameParts = booking.name.split(" ");
+    // Only the fields the list row actually carries are set; everything else
+    // keeps its blank-form value. Spreading EMPTY_FORM rather than restating
+    // all eighteen means a field added to the form can never be silently
+    // dropped from the edit path.
+    //
+    // `roomId` stays blank on purpose: the row carries a room TYPE NAME, not an
+    // `amenity.id`, and the edit branch of handleSubmit sends no `room_ids`
+    // anyway -- reallocating a room is a separate operation
+    // (PATCH /room-allocations/{id}). `eWallet` has nothing to restore: no stay
+    // column stores it (see EMPTY_FORM).
     setFormData({
+      ...EMPTY_FORM,
       firstName: nameParts[0] || "",
       lastName: nameParts.slice(1).join(" ") || "",
       email: booking.email,
-      countryCode: booking.mobileNumber.split(" ")[0] || "+91",
+      countryCode: booking.mobileNumber.split(" ")[0] || DEFAULT_COUNTRY_CODE,
       mobileNumber: booking.mobileNumber.split(" ")[1] || "",
-      gender: "",
-      city: "",
-      nationality: "",
       arrival: booking.checkIn,
-      depart: "",
-      guestRoom: "yes",
-      // Left empty on purpose: the row carries a room TYPE NAME, not an
-      // `amenity.id`, and the edit branch of handleSubmit sends no `room_ids`
-      // anyway -- reallocating a room is a separate operation
-      // (PATCH /room-allocations/{id}).
-      roomId: "",
-      subPackages: "",
       noOfPersons: booking.occupants.toString(),
       numberOfRooms: booking.noOfRooms.toString(),
-      gst: "",
-      bookingReference: "",
-      comments: "",
-      // Nothing to restore: no stay column stores it (see EMPTY_FORM).
-      eWallet: "disabled",
     });
     setViewMode("edit");
   };
@@ -489,10 +506,11 @@ const Bookings = () => {
                       <SelectValue placeholder="Select country code" />
                     </SelectTrigger>
                     <SelectContent className="bg-popover">
-                      <SelectItem value="+91">+91 (India)</SelectItem>
-                      <SelectItem value="+1">+1 (USA)</SelectItem>
-                      <SelectItem value="+44">+44 (UK)</SelectItem>
-                      <SelectItem value="+971">+971 (UAE)</SelectItem>
+                      {COUNTRY_CODES.map(({ code, label }) => (
+                        <SelectItem key={code} value={code}>
+                          {label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>

@@ -650,10 +650,19 @@ const Occupancy = () => {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-center">
+                        {/* A div, not a button: the condition pills inside are
+                            interactive-looking elements and a button may not
+                            nest one. `disabled` does not exist on a div, so the
+                            read-only state is carried by aria-disabled and the
+                            cursor class rather than a `disabled:` variant that
+                            would never match. */}
                         <div
                           role="button"
+                          aria-disabled={!mayWriteOccupancy}
                           tabIndex={mayWriteOccupancy ? 0 : -1}
-                          className="flex w-full flex-wrap items-center justify-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
+                          className={`flex w-full flex-wrap items-center justify-center gap-1.5 ${
+                            mayWriteOccupancy ? "cursor-pointer" : "cursor-not-allowed"
+                          }`}
                           onClick={() => mayWriteOccupancy && setConditionsRoom(room)}
                           onKeyDown={(event) => {
                             if ((event.key === "Enter" || event.key === " ") && mayWriteOccupancy) {

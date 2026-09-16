@@ -34,7 +34,6 @@ DeviceConfigStatus = Literal[
     "missing",
 ]
 DeviceHealthStatus = Literal["Active", "Inactive"]
-FirmwareStatus = Literal["active", "decommissioned"]
 AmenityCategory = Literal["room", "restaurant", "others"]
 JobOrderTypeOfWork = Literal["installation", "replacement", "troubleshoot"]
 JobOrderStatus = Literal["pending", "completed"]
@@ -262,36 +261,10 @@ class DeviceDecommissionBody(Body):
     reason: str | None = Field(default=None, max_length=255)
 
 
-class FirmwareCreate(Body):
-    device_type_id: int = Field(ge=1)
-    firmware_version: str = Field(min_length=1, max_length=20)
-    firmware_filename: str = Field(min_length=1, max_length=255)
-    firmware_url: str = Field(min_length=1, max_length=500)
-    crc: str = Field(min_length=1, max_length=100)
-    firmware_size: str | None = Field(default=None, max_length=50)
-    release_date: datetime | None = None
-    release_notes: str | None = None
-    status: FirmwareStatus = "active"
-
-
-class FirmwareUpdate(Body):
-    firmware_filename: str | None = Field(default=None, min_length=1, max_length=255)
-    firmware_url: str | None = Field(default=None, min_length=1, max_length=500)
-    crc: str | None = Field(default=None, min_length=1, max_length=100)
-    release_date: datetime | None = None
-    release_notes: str | None = None
-    status: FirmwareStatus | None = None
-    decommission_reason: str | None = Field(default=None, max_length=255)
-
-
-class FirmwareAssignBody(Body):
-    """Set `device.expected_firmware_version` for the chosen devices.
-
-    That column IS the assignment: the hub reads it and pulls the build. There
-    is no command table, so nothing is queued or pushed from here.
-    """
-
-    device_ids: list[uuid.UUID] = Field(min_length=1)
+# The FirmwareCreate / FirmwareUpdate / FirmwareAssignBody bodies were removed
+# with the /firmware write endpoints that were their only consumers. The
+# `firmware` table and `device.expected_firmware_version` are untouched --
+# nothing in the API writes to them any more.
 
 
 class IncidentUpdate(Body):

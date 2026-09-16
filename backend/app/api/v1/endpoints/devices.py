@@ -1,19 +1,21 @@
-"""Device inventory, types, firmware and health read APIs (Phase 2.6).
+"""Device inventory, types and health read APIs (Phase 2.6).
 
     GET /api/v1/device-types      · /{id}          device_type (4 lookup rows)
     GET /api/v1/devices           · /{id}          device
     GET /api/v1/devices/{id}/health                device health, assembled
-    GET /api/v1/firmware          · /{id}          firmware
 
 RBAC, taken from the seeded `role_module` registry rather than assumed:
 
-    /device-types, /devices  ->  `caleido_network`      (Device Mgmt screen)
-    /firmware                ->  `firmware_management`  (Firmware Mgmt screen)
+    /device-types, /devices  ->  `caleido_network`
 
-The database already draws the line: the Duty Manager role holds
-`caleido_network` with read_access=true and write_access=FALSE, and holds no
-`firmware_management` grant at all. So a Manager can view the device network
-but cannot reach firmware -- enforced by data, not by a role-name check.
+Read access is enforced by data, not by a role-name check: the Duty Manager
+role holds `caleido_network` with read_access=true and write_access=FALSE.
+
+The /firmware read endpoints were removed with the Firmware Management screen
+that was their only caller, along with the `firmware_management` grant. The
+`firmware_id` and `firmware_outdated` FILTERS on /devices remain -- they read
+`device.current_firmware_version` / `expected_firmware_version`, which are
+device columns and have nothing to do with the removed routes.
 
 READ-ONLY. See docs/PHASE2_6_DEVICES.md for the blockers that make a safe
 write path impossible from the current schema.

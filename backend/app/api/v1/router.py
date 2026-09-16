@@ -68,11 +68,11 @@ api_router.include_router(stays_write.allocations_router)
 api_router.include_router(stays_write.occupants_router)
 api_router.include_router(stays_write.occupancy_write_router)
 
-# Phase 2.6 -- device inventory, types, firmware and health (read-only).
+# Phase 2.6 -- device inventory, types and health (read-only).
 api_router.include_router(devices.device_types_router)
 api_router.include_router(devices.devices_router)
 
-# Phase 3.0 -- device, firmware, incident and limit-config writes.
+# Phase 3.0 -- device, incident and limit-config writes.
 api_router.include_router(devices_write.devices_write_router)
 api_router.include_router(devices_write.incidents_write_router)
 api_router.include_router(devices_write.limit_configs_router)

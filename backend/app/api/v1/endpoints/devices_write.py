@@ -1,20 +1,19 @@
-"""Write endpoints for devices, firmware, incidents and limit configuration.
+"""Write endpoints for devices, incidents and limit configuration.
 
     POST   /devices                          register a device
     PATCH  /devices/{id}                     edit it
     POST   /devices/{id}/commission          config status -> commissioned
     POST   /devices/{id}/decommission        config status -> decommissioned
     POST   /devices/{id}/maintenance         config status -> under_maintenance
-    POST   /firmware                         add a firmware build
-    PATCH  /firmware/{id}                    edit / decommission a build
-    POST   /firmware/{id}/assign             set expected version on devices
     PATCH  /incidents/{id}                   acknowledge / assign / resolve
     GET    /limit-configs                    list thresholds
     POST   /limit-configs                    create one
     PATCH  /limit-configs/{id}               edit one
 
-RBAC: `caleido_network` write for devices, incidents and limit configs;
-`firmware_management` write for firmware -- the same split the read side uses.
+RBAC: `caleido_network` write for devices, incidents and limit configs.
+
+The /firmware write endpoints were removed with the Firmware Management screen
+that was their only caller; so was the `firmware_management` grant they used.
 
 `device.authentication_code` is never accepted or returned by any of these.
 """
@@ -34,9 +33,6 @@ from app.schemas.ops_write import (
     DeviceCreate,
     DeviceDecommissionBody,
     DeviceUpdate,
-    FirmwareAssignBody,
-    FirmwareCreate,
-    FirmwareUpdate,
     IncidentUpdate,
     LimitConfigCreate,
     LimitConfigUpdate,
