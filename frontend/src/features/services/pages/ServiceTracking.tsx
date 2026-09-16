@@ -17,9 +17,8 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import { Search, ChevronLeft, ChevronRight, Eye, Edit, Share2, Pencil, Settings, X, ChevronDown, Bed, Briefcase, Building, Utensils, Wrench, HeartPulse, Sparkles } from "lucide-react";
-import { useTheme } from "@/core/contexts/ThemeContext";
+import { Card } from "@/components/ui/card";
+import { Search, Settings, X, ChevronDown, Bed, Briefcase, Building, Utensils, Wrench, HeartPulse, Sparkles } from "lucide-react";
 import {
     PieChart,
     Pie,

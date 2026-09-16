@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Pencil, Trash2, X, ChevronDown, Edit } from "lucide-react";
+import { Trash2, X, ChevronDown, Edit } from "lucide-react";
 import { DataState, TableLoading } from "@/core/components/DataState";
 import { useNotificationTemplates, useRolePermissions, useRoles } from "@/lib/api/hooks";
 import { useAuth } from "@/core/contexts/AuthContext";

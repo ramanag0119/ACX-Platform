@@ -22,7 +22,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Search, ChevronLeft, ChevronRight, Eye, Edit, Check, X, ChevronDown, ChevronUp } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Edit, X, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/core/contexts/AuthContext";
 import { DataState, TableLoading } from "@/core/components/DataState";

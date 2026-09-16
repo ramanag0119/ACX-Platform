@@ -18,7 +18,7 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
-import { Pencil, Trash2, Eye, EyeOff, X, Edit, ChevronDown } from "lucide-react";
+import { Trash2, Eye, EyeOff, X, Edit } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { DataState, TableLoading } from "@/core/components/DataState";
@@ -287,7 +287,7 @@ const Employees = () => {
                 <PageHeader
                   title="Employee Management"
                   actions={
-                    <Button onClick={() => setShowAddEmployee(false)} variant="destructive" className="h-9 px-4 text-xs font-semibold rounded-xl shadow-sm">
+                    <Button onClick={() => setShowAddEmployee(false)} variant="destructive" className="px-4 text-xs font-semibold rounded-xl shadow-sm">
                         Cancel
                     </Button>
                   }
@@ -673,7 +673,7 @@ const Employees = () => {
             <PageHeader
               title="Employee Management"
               actions={
-                <Button onClick={() => setShowAddEmployee(true)} className="h-9 px-4 text-xs font-semibold rounded-xl bg-brand hover:bg-brand-hover text-white shadow-md hover:shadow-lg transition-all">
+                <Button onClick={() => setShowAddEmployee(true)} className="px-4 text-xs font-semibold rounded-xl bg-brand hover:bg-brand-hover text-white shadow-md hover:shadow-lg transition-all">
                     Add Employee
                 </Button>
               }

@@ -19,7 +19,7 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
-import { Pencil, Trash2, X, Edit } from "lucide-react";
+import { Trash2, X, Edit } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { DataState, TableLoading } from "@/core/components/DataState";
 import { useAuth } from "@/core/contexts/AuthContext";
@@ -211,6 +211,15 @@ const Holidays = () => {
                         </div>
                     </div>
 
+                    {/* Loading and error are handled here, not by the empty row
+                        below: without this a failed request left the list at []
+                        and the table reported "no records", which reads as an
+                        empty facility rather than a failed request. */}
+                    <DataState
+                        isLoading={holidaysQuery.isLoading}
+                        error={holidaysQuery.error}
+                        loader={<TableLoading columns={13} />}
+                    >
                     <div className="rounded-lg overflow-hidden border border-border/80 dark:border-slate-800 overflow-x-auto scrollbar-thin">
                         <Table>
                             <TableHeader>
@@ -255,6 +264,7 @@ const Holidays = () => {
                             </TableBody>
                         </Table>
                     </div>
+                    </DataState>
 
                     <div className="flex flex-wrap items-center justify-between gap-4 mt-5">
                         <span className="text-muted-foreground text-xs">Showing {filteredData.length > 0 ? startIndex + 1 : 0} to {Math.min(startIndex + parseInt(entriesPerPage), filteredData.length)} of {filteredData.length} entries</span>

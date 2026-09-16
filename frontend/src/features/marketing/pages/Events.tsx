@@ -20,7 +20,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Pencil, CalendarX2, X, Edit, ChevronUp, ChevronDown } from "lucide-react";
+import { CalendarX2, X, Edit, ChevronUp, ChevronDown } from "lucide-react";
 import { DataState, TableLoading } from "@/core/components/DataState";
 import { useAuth } from "@/core/contexts/AuthContext";
 import { useEvents } from "@/lib/api/hooks";
@@ -72,6 +72,7 @@ const Events = () => {
     }));
     const [isAddEventOpen, setIsAddEventOpen] = useState(false);
     const [cancellingEventId, setCancellingEventId] = useState<string | null>(null);
+    const [cancelReason, setCancelReason] = useState("");
     const [searchQuery, setSearchQuery] = useState("");
     const [entriesPerPage, setEntriesPerPage] = useState("10");
     const [currentPage, setCurrentPage] = useState(1);
@@ -96,12 +97,23 @@ const Events = () => {
 
     const handleReset = () => { setEventName(""); setVenue(""); setChiefGuests(""); setStartDate(""); setEndDate(""); setAttendees(""); setDescription(""); };
 
+    /**
+     * Closing has to clear the reason as well as the target. Leaving it behind
+     * pre-filled the next cancellation with the previous event's reason, which
+     * the required-field check would then happily accept.
+     */
+    const closeCancelDialog = () => {
+        setCancelEventOpen(false);
+        setCancellingEventId(null);
+        setCancelReason("");
+    };
+
     return (
         <div className="space-y-6 animate-fade-in text-foreground">
             <PageHeader
                 title="Events Management"
                 actions={
-                    <Button onClick={() => setIsAddEventOpen(true)} className="h-10 px-6 rounded-xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">Add Events</Button>
+                    <Button onClick={() => setIsAddEventOpen(true)} className="px-6 rounded-xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">Add Events</Button>
                 }
             />
 
@@ -128,6 +140,17 @@ const Events = () => {
                         </div>
                     </div>
 
+                    {/* Loading and error are handled here, not by the empty row
+                        below: without this a failed GET /events left `items` at
+                        [] and the table said "No events found", which reads as
+                        "this facility has no events" rather than "the request
+                        failed". `isEmpty` is deliberately not passed -- the row
+                        below states whether a search term is filtering it. */}
+                    <DataState
+                        isLoading={eventsQuery.isLoading}
+                        error={eventsQuery.error}
+                        loader={<TableLoading columns={12} />}
+                    >
                     <div className="rounded-lg overflow-hidden border border-border/80 dark:border-slate-800 overflow-x-auto scrollbar-thin">
                         <Table>
                             <TableHeader>
@@ -194,6 +217,7 @@ const Events = () => {
                             </TableBody>
                         </Table>
                     </div>
+                    </DataState>
 
                     <div className="flex flex-wrap items-center justify-between gap-4 mt-5">
                         <span className="text-muted-foreground text-xs">Showing {filteredData.length > 0 ? startIndex + 1 : 0} to {Math.min(startIndex + parseInt(entriesPerPage), filteredData.length)} of {filteredData.length} entries</span>
@@ -389,19 +413,22 @@ const Events = () => {
             </Dialog>
 
             {/* Cancel Event Modal */}
-            <Dialog open={cancelEventOpen} onOpenChange={setCancelEventOpen}>
+            <Dialog open={cancelEventOpen} onOpenChange={(open) => (open ? setCancelEventOpen(true) : closeCancelDialog())}>
                 <DialogContent className="max-w-[500px] bg-card text-card-foreground border-0 p-0 overflow-hidden flex flex-col hide-close-button shadow-2xl [&>button]:hidden rounded-[4px]">
                     <div className="flex justify-between items-center p-3 px-5 bg-card border-b border-border">
                         <h2 className="text-[17px] font-semibold text-foreground tracking-wide">Cancel Events Menu</h2>
-                        <Button variant="ghost" className="h-7 w-7 p-0 border-[1.5px] border-border rounded-[2px] hover:bg-muted" onClick={() => setCancelEventOpen(false)}>
+                        <Button variant="ghost" className="h-7 w-7 p-0 border-[1.5px] border-border rounded-[2px] hover:bg-muted" onClick={closeCancelDialog}>
                             <X className="h-4 w-4 text-muted-foreground stroke-[3]" />
                         </Button>
                     </div>
                     <div className="p-8 px-10 space-y-7">
                         <div className="grid grid-cols-[160px_1fr] items-center gap-4">
-                            <Label className="text-sm font-medium text-foreground">Reason for Cancel <span className="text-red-500">*</span></Label>
+                            <Label htmlFor="cancel-reason" className="text-sm font-medium text-foreground">Reason for Cancel <span className="text-red-500">*</span></Label>
                             <input
+                                id="cancel-reason"
                                 type="text"
+                                value={cancelReason}
+                                onChange={(e) => setCancelReason(e.target.value)}
                                 className="w-full bg-transparent border-0 border-b border-border text-foreground focus:ring-0 px-0 pb-1 text-sm outline-none"
                             />
                         </div>
@@ -410,7 +437,12 @@ const Events = () => {
                     <div className="flex justify-center gap-4 pb-8">
                         <Button
                             className="bg-brand-teal hover:bg-cyan-600 text-white h-8 px-6 rounded-[3px] font-normal"
-                            disabled={!mayWrite || !cancellingEventId || updateEvent.isPending}
+                            disabled={
+                                !mayWrite ||
+                                !cancellingEventId ||
+                                !cancelReason.trim() ||
+                                updateEvent.isPending
+                            }
                             onClick={() =>
                                 cancellingEventId &&
                                 updateEvent.mutate(
@@ -418,10 +450,14 @@ const Events = () => {
                                         id: cancellingEventId,
                                         body: {
                                             // `facility_event` stores the reason and a status flag.
+                                            // The reason was previously collected and thrown away:
+                                            // the field is marked required, so submitting without
+                                            // it recorded a cancellation nobody could explain.
                                             status: 0,
+                                            cancellation_reason: cancelReason.trim(),
                                         },
                                     },
-                                    { onSuccess: () => setCancelEventOpen(false) },
+                                    { onSuccess: () => closeCancelDialog() },
                                 )
                             }
                         >

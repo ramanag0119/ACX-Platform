@@ -19,11 +19,10 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Search, ChevronLeft, ChevronRight, ChevronDown, Eye, Edit, Trash2, Upload, X, ChevronUp } from "lucide-react";
+import { Search, ChevronRight, ChevronDown, Edit, Trash2, Upload, X } from "lucide-react";
 import { DataState, TableLoading } from "@/core/components/DataState";
 import {
   useAmenityTypes,

@@ -840,22 +840,25 @@ const Bookings = () => {
       <PageHeader
         title="Booking Management"
         actions={
-        <div className="flex items-center gap-3">
-          <Button
-            onClick={() => { setEditingBooking(null); setFormData(EMPTY_FORM); setViewMode("add"); }}
-            className="bg-brand hover:bg-brand-hover text-white font-semibold px-5 h-10 rounded-xl shadow-md hover:shadow-lg transition-all"
-          >
-            <Plus className="h-4 w-4 mr-2 stroke-[2.5]" />
-            Add Bookings
-          </Button>
-          <Button
-            onClick={() => setBulkUploadOpen(true)}
-            className="bg-brand hover:bg-brand-hover text-white font-semibold px-5 h-10 rounded-xl shadow-md hover:shadow-lg transition-all"
-          >
-            <Upload className="h-4 w-4 mr-2 stroke-[2.5]" />
-            Bulk Upload
-          </Button>
-        </div>
+          /* Siblings, NOT wrapped in a flex div: the header's actions slot
+             already lays its children out, and a wrapper would absorb the
+             shared 36px/9px control sizing meant for the buttons themselves. */
+          <>
+            <Button
+              onClick={() => { setEditingBooking(null); setFormData(EMPTY_FORM); setViewMode("add"); }}
+              className="bg-brand hover:bg-brand-hover text-white font-semibold px-5 rounded-xl shadow-md hover:shadow-lg transition-all"
+            >
+              <Plus className="h-4 w-4 mr-2 stroke-[2.5]" />
+              Add Bookings
+            </Button>
+            <Button
+              onClick={() => setBulkUploadOpen(true)}
+              className="bg-brand hover:bg-brand-hover text-white font-semibold px-5 rounded-xl shadow-md hover:shadow-lg transition-all"
+            >
+              <Upload className="h-4 w-4 mr-2 stroke-[2.5]" />
+              Bulk Upload
+            </Button>
+          </>
         }
       />
 

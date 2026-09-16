@@ -1877,6 +1877,20 @@ select option:focus {
 
    `.hms-content` (AppLayout) is the single scroll container, which is what
    makes plain `position: sticky` work here. */
+/* The scroll container owns its horizontal padding here rather than in a
+   Tailwind `px-*` class, because the sticky header has to cancel that exact
+   value to sit full-bleed. Declaring it once as a custom property means the
+   two cannot drift: change the gutter and the header's negative inset follows.
+   Height and gutter of the bar itself are variables for the same reason --
+   they are referenced in more than one place. */
+.hms-content {
+  --hms-content-gutter: 1rem;
+  --hms-header-height: 74px;
+  --hms-header-gutter: 32px;
+
+  padding-inline: var(--hms-content-gutter);
+}
+
 .hms-page-header {
   position: sticky;
   top: 0;
@@ -1896,7 +1910,7 @@ select option:focus {
 
      `sticky` -- never `fixed` -- is what keeps the bar in normal flow, so it
      takes up real height and content starts BELOW it instead of underneath. */
-  margin-inline: -1rem;
+  margin-inline: calc(-1 * var(--hms-content-gutter));
   margin-bottom: 1rem;
 
   display: flex;
@@ -1905,8 +1919,8 @@ select option:focus {
   flex-wrap: nowrap;
   gap: 1.5rem;
 
-  height: 74px;
-  padding-inline: 32px;
+  height: var(--hms-header-height);
+  padding-inline: var(--hms-header-gutter);
 
   /* SOLID, deliberately. This was `backdrop-filter: blur()` over a
      transparent fill, which washed out the KPI cards showing through as they

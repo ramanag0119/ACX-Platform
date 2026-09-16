@@ -19,7 +19,7 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
-import { X, Check, Pencil, Trash2, ChevronDown, Edit } from "lucide-react";
+import { X, Trash2, ChevronDown, Edit } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DataState, TableLoading } from "@/core/components/DataState";
 import { useRooms, useServiceCategories, useServiceItems, useServiceTypes } from "@/lib/api/hooks";
