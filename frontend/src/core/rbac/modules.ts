@@ -16,6 +16,11 @@
  * /occupancy, which carries its own `occupancy` grant. The telemetry and
  * energy reads they used are still gated on `caleido_network` and `reports`,
  * and Room Details asks for each one only when that grant is held.
+ *
+ * Device Management (Caleido Network, Firmware Management) is removed. Its
+ * routes are gone, and so is the `firmware_management` module, which nothing
+ * else used. `caleido_network` REMAINS: it still gates Limit Config Alert,
+ * the Room Details telemetry reads and the dashboard's alert tiles.
  */
 
 /** Every module the backend recognises. */
@@ -33,7 +38,6 @@ export const HMS_MODULES = [
   "offers",
   "events",
   "caleido_network",
-  "firmware_management",
   "reports",
   "tickets",
   "holidays",
@@ -61,8 +65,6 @@ export const ROUTE_MODULE: Record<string, HmsModule> = {
   "/offers": "offers",
   "/holidays": "holidays",
   "/events": "events",
-  "/devices/caleido-network": "caleido_network",
-  "/devices/firmware-management": "firmware_management",
   "/reports": "reports",
   "/tickets": "tickets",
   "/key-settings": "default_key",

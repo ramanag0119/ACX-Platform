@@ -26,9 +26,6 @@ const INVALIDATE = {
   serviceCatalogue: ["service-categories", "service-items", "service-types"],
   stays: ["stays", "occupancy", "rooms", "invoices", "daily-data-points"],
   occupancy: ["occupancy", "rooms", "amenity-conditions", "amenity-statuses"],
-  devices: ["devices", "device-types", "incidents", "alerts"],
-  firmware: ["firmware", "devices"],
-  incidents: ["incidents", "alerts"],
   limitConfigs: ["limit-configs", "value-alerts"],
   facility: ["facilities", "rooms", "buildings", "floors", "properties"],
   catalogue: ["amenity-types", "packages", "features", "rooms"],
@@ -288,7 +285,7 @@ export const useReallocateRoom = () =>
     ({ allocationId, roomId }: { allocationId: string; roomId: string }) =>
       writes.reallocateRoom(allocationId, roomId),
     INVALIDATE.stays,
-    { success: "Room reallocated" },
+    { success: "Room reassigned" },
   );
 
 export const useReleaseAllocation = () =>
@@ -330,71 +327,9 @@ export const useSetRoomConditions = () =>
   );
 
 // ---------------------------------------------------------------------------
-// Devices, firmware, incidents, limit configs
+// Devices and incidents were written by the removed Device Management
+// screens; only the limit-config writes below still have a consumer.
 // ---------------------------------------------------------------------------
-
-export const useCreateDevice = (opts?: Options<writes.DeviceWrite, unknown>) =>
-  useApiMutation(writes.createDevice, INVALIDATE.devices, { success: "Device added", ...opts });
-
-export const useUpdateDevice = () =>
-  useApiMutation(
-    ({ id, body }: { id: string; body: Parameters<typeof writes.updateDevice>[1] }) =>
-      writes.updateDevice(id, body),
-    INVALIDATE.devices,
-    { success: "Device updated" },
-  );
-
-export const useCommissionDevice = () =>
-  useApiMutation((id: string) => writes.commissionDevice(id), INVALIDATE.devices, {
-    success: "Device commissioned",
-  });
-
-export const useDecommissionDevice = () =>
-  useApiMutation(
-    ({ id, reason }: { id: string; reason?: string | null }) =>
-      writes.decommissionDevice(id, reason),
-    INVALIDATE.devices,
-    { success: "Device decommissioned" },
-  );
-
-export const useDeviceMaintenance = () =>
-  useApiMutation((id: string) => writes.deviceUnderMaintenance(id), INVALIDATE.devices, {
-    success: "Device flagged for maintenance",
-  });
-
-export const useCreateFirmware = (opts?: Options<writes.FirmwareWrite, unknown>) =>
-  useApiMutation(writes.createFirmware, INVALIDATE.firmware, {
-    success: "Firmware added",
-    ...opts,
-  });
-
-export const useUpdateFirmware = () =>
-  useApiMutation(
-    ({ id, body }: { id: string; body: Partial<writes.FirmwareWrite> }) =>
-      writes.updateFirmware(id, body),
-    INVALIDATE.firmware,
-    { success: "Firmware updated" },
-  );
-
-export const useAssignFirmware = () =>
-  useApiMutation(
-    ({ id, deviceIds }: { id: string; deviceIds: string[] }) =>
-      writes.assignFirmware(id, deviceIds),
-    INVALIDATE.firmware,
-    {
-      success: (_data, vars) =>
-        `Firmware assigned to ${vars.deviceIds.length} device${
-          vars.deviceIds.length === 1 ? "" : "s"
-        }`,
-    },
-  );
-
-export const useUpdateIncident = () =>
-  useApiMutation(
-    ({ id, body }: { id: string; body: writes.IncidentWrite }) => writes.updateIncident(id, body),
-    INVALIDATE.incidents,
-    { success: "Incident updated" },
-  );
 
 export const useCreateLimitConfig = (opts?: Options<writes.LimitConfigWrite, unknown>) =>
   useApiMutation(writes.createLimitConfig, INVALIDATE.limitConfigs, {

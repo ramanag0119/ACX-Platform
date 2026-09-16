@@ -90,7 +90,7 @@ export function RoomDetailsModal({
                 <DialogHeader className="p-6 pb-2 border-b border-border">
                     <div className="flex items-center justify-between">
                         <DialogTitle className="text-xl font-semibold">
-                            Occupancy No: {roomNo}
+                            Room No: {roomNo}
                         </DialogTitle>
                         {/* Same status -> same colour as the room list. */}
                         <Badge
@@ -174,7 +174,15 @@ export function RoomDetailsModal({
                                     </div>
                                     <div className="space-y-1">
                                         <span className="text-muted-foreground block text-xs uppercase tracking-wider">
-                                            Checkout Date :
+                                            Expected Checkin :
+                                        </span>
+                                        <span className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">
+                                            {formatDateTime(stay?.expected_checkin_time)}
+                                        </span>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <span className="text-muted-foreground block text-xs uppercase tracking-wider">
+                                            Expected Checkout :
                                         </span>
                                         <span className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">
                                             {formatDateTime(stay?.expected_checkout_time)}
@@ -245,9 +253,6 @@ export function RoomDetailsModal({
                                     <Table>
                                         <TableHeader className="bg-muted/40 dark:bg-[#0e1322]">
                                             <TableRow>
-                                                <TableHead className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3 w-[50px]">
-                                                    S.No
-                                                </TableHead>
                                                 <TableHead className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">Device Type</TableHead>
                                                 <TableHead className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">
                                                     Occupancy No
@@ -264,11 +269,8 @@ export function RoomDetailsModal({
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {devices.map((device, index) => (
+                                            {devices.map((device) => (
                                                 <TableRow key={device.id} className="hover:bg-muted/5">
-                                                    <TableCell className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">
-                                                        {index + 1}
-                                                    </TableCell>
                                                     <TableCell>{device.device_type_name ?? "-"}</TableCell>
                                                     <TableCell>{device.amenity_name ?? roomNo}</TableCell>
                                                     <TableCell>{device.device_name ?? "-"}</TableCell>

@@ -413,8 +413,8 @@ html:not(.dark) .sidebar-brand-text {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.65rem 1rem;
-  margin: 0.2rem 0;
+  padding: 0.5rem 0.875rem;
+  margin: 0.125rem 0;
   border-radius: 6px;
   font-size: 0.875rem;
   font-weight: 500;
@@ -475,7 +475,7 @@ html:not(.dark) .sidebar-brand-text {
 /* Submenu */
 .sidebar-nav-submenu {
   margin-left: 1.85rem;
-  margin-top: 0.25rem;
+  margin-top: 0.125rem;
   padding-left: 0.65rem;
   border-left: 1px solid hsl(var(--sidebar-border));
 }
@@ -484,8 +484,8 @@ html:not(.dark) .sidebar-brand-text {
   display: flex;
   align-items: center;
   gap: 0.625rem;
-  padding: 0.5rem 0.75rem;
-  margin: 0.125rem 0;
+  padding: 0.375rem 0.75rem;
+  margin: 0.0625rem 0;
   border-radius: 4px;
   font-size: 0.8125rem;
   font-weight: 500;
@@ -1846,4 +1846,50 @@ select option:focus {
   padding-left: 14px !important;
   padding-right: 14px !important;
   cursor: pointer !important;
+}
+
+/* ==========================================================================
+   HMS layout system
+   --------------------------------------------------------------------------
+   Presentation only. Nothing here hides, removes or resizes content -- it
+   trims dead space and keeps the things you navigate by on screen.
+
+   `.hms-content` is the single scroll container for every page (see
+   AppLayout), which is what makes plain `position: sticky` work below.
+   ========================================================================== */
+
+/* --- Sticky module heading ------------------------------------------------
+   Every HMS page already renders `space-y-* animate-fade-in` with its <h1>
+   in the first block, so the heading is pinned from here instead of editing
+   a dozen pages. `:has(h1)` is what keeps this off the fade-in CARDS that
+   are not page headings. No second heading is introduced -- this is the
+   page's own <h1>, held in place. */
+.hms-content .animate-fade-in > h1:first-child,
+.hms-content .animate-fade-in > :first-child:has(h1) {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  padding-block: 0.5rem;
+  /* Fully opaque: a translucent heading lets table rows show through as they
+     scroll under it, which reads as text overlapping the heading. The colour
+     is the app's own surface token -- no new colour is introduced. */
+  background-color: hsl(var(--background));
+}
+
+/* --- Table headers --------------------------------------------------------
+   NOT sticky, and deliberately so. A global `position: sticky` on `thead th`
+   needs a fixed top offset, which is only correct on pages whose heading is
+   exactly that tall -- everywhere else the header floats down over the rows,
+   which reads as the header overlapping the data. It also has to paint an
+   opaque background, which overrides whatever header colour each table
+   already sets. Both are page-specific guesses dressed up as a global rule,
+   so the rule is gone; each table keeps its own header styling.
+   ========================================================================== */
+
+/* --- Viewport fit ---------------------------------------------------------
+   A page inside the scroll container must not claim a whole viewport of its
+   own; `min-h-screen` there re-introduced exactly the scrolling the shell
+   fix removed. */
+.hms-content .min-h-screen {
+  min-height: 100%;
 }

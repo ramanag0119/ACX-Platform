@@ -62,7 +62,7 @@ const Dashboard = () => {
   const subtitleColor = isDark ? "#8b95a9" : "#5E5A7A";
 
   return (
-    <div className="space-y-4 animate-fade-in min-h-screen -m-6 p-6" style={{ background: pageBg }}>
+    <div className="space-y-4 animate-fade-in min-h-full -mx-4 -my-3 px-4 py-3" style={{ background: pageBg }}>
       {/* Page Header */}
       <div className="mb-4">
         <h1 className="text-xl font-semibold" style={{ color: titleColor }}>HMS</h1>

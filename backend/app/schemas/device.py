@@ -64,43 +64,6 @@ class DeviceTypeDetail(DeviceTypeRead):
 # ---------------------------------------------------------------------------
 
 
-class FirmwareRead(ORMModel):
-    """A row of `firmware`.
-
-    There is no `is_latest` column: currency is determined by comparing
-    `device.current_firmware_version` with `device.expected_firmware_version`.
-    """
-
-    id: uuid.UUID
-    firmware_version: str = Field(examples=["2.4.1"])
-    device_type_id: int
-    device_type_name: str | None = Field(default=None, examples=["Intellihub"])
-    firmware_filename: str
-    firmware_url: str
-    firmware_size: Decimal | None = None
-    crc: str
-    release_date: datetime | None = None
-    release_notes: str | None = None
-    decommission_reason: str | None = None
-    status: str = Field(examples=["active"], description="active | decommissioned")
-    created_on: datetime
-    updated_on: datetime
-
-
-class FirmwareDetail(FirmwareRead):
-    devices_running: int = Field(
-        description="Devices whose current_firmware_version is this release"
-    )
-    devices_expecting: int = Field(
-        description="Devices whose expected_firmware_version is this release"
-    )
-
-
-# ---------------------------------------------------------------------------
-# device
-# ---------------------------------------------------------------------------
-
-
 class DeviceRef(ORMModel):
     """A minimal device reference, used for parent/child links."""
 

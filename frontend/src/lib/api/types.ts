@@ -505,44 +505,6 @@ export interface OperationSample {
   operation_percentage: string | null;
 }
 
-export interface DeviceHealthRead {
-  device_id: string;
-  device_uid: string | null;
-  device_name: string | null;
-  device_type_name: string | null;
-  health_status: DeviceHealthStatus | null;
-  device_config_status: DeviceConfigStatus | null;
-  device_temperature: string | null;
-  is_power_off: boolean | null;
-  operational_mode: number | null;
-  last_reported_on: string | null;
-  health_sample_count: number;
-  recent_samples: DeviceHealthSample[];
-  battery_cycles: BatteryCycle[];
-  operation_history: OperationSample[];
-}
-
-export interface FirmwareRead {
-  id: string;
-  firmware_version: string;
-  device_type_id: number;
-  device_type_name: string | null;
-  firmware_filename: string;
-  firmware_url: string;
-  firmware_size: string | null;
-  crc: string;
-  release_date: string | null;
-  release_notes: string | null;
-  decommission_reason: string | null;
-  status: FirmwareStatus;
-  created_on: string;
-  updated_on: string;
-}
-
-// ---------------------------------------------------------------------------
-// Alerts, incidents, notifications (Phase 2.7)
-// ---------------------------------------------------------------------------
-
 export interface AlertTypeRead {
   id: number;
   name: string;
@@ -682,6 +644,7 @@ export interface CurrentStayRef {
   internal_stay_ref_number: string;
   status: string | null;
   booker: UserRef | null;
+  expected_checkin_time: string;
   expected_checkout_time: string;
   actual_checkin_time: string | null;
   no_of_guests: number;

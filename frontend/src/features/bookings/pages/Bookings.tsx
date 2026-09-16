@@ -41,6 +41,7 @@ import {
   X,
   ArrowLeft,
   LogIn,
+  Wallet,
 } from "lucide-react";
 import { DataState, TableLoading } from "@/core/components/DataState";
 import { toast } from "@/hooks/use-toast";
@@ -108,11 +109,33 @@ type BookingData = {
 
 type ViewMode = "list" | "add" | "edit";
 
+/**
+ * Dialling codes offered on the guest form.
+ *
+ * Declared once and rendered from, so the list, the blank-form value and the
+ * fallback used when a stored number carries no code can never disagree --
+ * previously "+91" was written as a literal in three separate places and the
+ * blank form defaulted to "" while the edit path defaulted to "+91".
+ *
+ * There is no `country_code` lookup table in the schema, so this stays a
+ * frontend list; when one is added, replace it with that query.
+ */
+const COUNTRY_CODES = [
+  { code: "+91", label: "+91 (India)" },
+  { code: "+1", label: "+1 (USA)" },
+  { code: "+44", label: "+44 (UK)" },
+  { code: "+971", label: "+971 (UAE)" },
+] as const;
+
+/** Widened to `string` on purpose: this seeds a free-form form field, and a
+ *  literal type here would reject every other code in the list. */
+const DEFAULT_COUNTRY_CODE: string = COUNTRY_CODES[0].code;
+
 const EMPTY_FORM = {
   firstName: "",
   lastName: "",
   email: "",
-  countryCode: "",
+  countryCode: DEFAULT_COUNTRY_CODE,
   mobileNumber: "",
   gender: "",
   city: "",
@@ -128,6 +151,14 @@ const EMPTY_FORM = {
   gst: "",
   bookingReference: "",
   comments: "",
+  /**
+   * Whether this booking may be settled from the guest's e-wallet.
+   *
+   * UI-ONLY for now: `stay` has no wallet/payment column and no endpoint
+   * accepts one, so this is deliberately NOT part of either submit payload.
+   * See the E-Wallet section in the form.
+   */
+  eWallet: "disabled",
 };
 
 const Bookings = () => {
@@ -207,27 +238,7 @@ const Bookings = () => {
   const [extendDate, setExtendDate] = useState("");
 
   // Form state
-  const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    countryCode: "",
-    mobileNumber: "",
-    gender: "",
-    city: "",
-    nationality: "",
-    arrival: "",
-    depart: "",
-    guestRoom: "yes",
-    /** An `amenity.id` (UUID) -- what POST /stays wants in `room_ids`. */
-    roomId: "",
-    subPackages: "",
-    noOfPersons: "",
-    numberOfRooms: "",
-    gst: "",
-    bookingReference: "",
-    comments: "",
-  });
+  const [formData, setFormData] = useState(EMPTY_FORM);
 
   const matchesSearch = (booking: BookingData) => {
     const query = searchQuery.toLowerCase();
@@ -255,26 +266,7 @@ const Bookings = () => {
   const resetForm = () => {
     setViewMode("list");
     setEditingBooking(null);
-    setFormData({
-      firstName: "",
-      lastName: "",
-      email: "",
-      countryCode: "",
-      mobileNumber: "",
-      gender: "",
-      city: "",
-      nationality: "",
-      arrival: "",
-      depart: "",
-      guestRoom: "yes",
-      roomId: "",
-      subPackages: "",
-      noOfPersons: "",
-      numberOfRooms: "",
-      gst: "",
-      bookingReference: "",
-      comments: "",
-    });
+    setFormData(EMPTY_FORM);
   };
 
   /**
@@ -326,7 +318,7 @@ const Bookings = () => {
         first_name: formData.firstName,
         last_name: formData.lastName || null,
         email: formData.email || null,
-        phone_number: `${formData.countryCode || "+91"}${formData.mobileNumber}`,
+        phone_number: `${formData.countryCode || DEFAULT_COUNTRY_CODE}${formData.mobileNumber}`,
         gender: (formData.gender || null) as "male" | "female" | "other" | null,
         address: formData.city || null,
         is_staff: 0,
@@ -357,29 +349,26 @@ const Bookings = () => {
   const handleEdit = (booking: BookingData) => {
     setEditingBooking(booking);
     const nameParts = booking.name.split(" ");
+    // Only the fields the list row actually carries are set; everything else
+    // keeps its blank-form value. Spreading EMPTY_FORM rather than restating
+    // all eighteen means a field added to the form can never be silently
+    // dropped from the edit path.
+    //
+    // `roomId` stays blank on purpose: the row carries a room TYPE NAME, not an
+    // `amenity.id`, and the edit branch of handleSubmit sends no `room_ids`
+    // anyway -- reallocating a room is a separate operation
+    // (PATCH /room-allocations/{id}). `eWallet` has nothing to restore: no stay
+    // column stores it (see EMPTY_FORM).
     setFormData({
+      ...EMPTY_FORM,
       firstName: nameParts[0] || "",
       lastName: nameParts.slice(1).join(" ") || "",
       email: booking.email,
-      countryCode: booking.mobileNumber.split(" ")[0] || "+91",
+      countryCode: booking.mobileNumber.split(" ")[0] || DEFAULT_COUNTRY_CODE,
       mobileNumber: booking.mobileNumber.split(" ")[1] || "",
-      gender: "",
-      city: "",
-      nationality: "",
       arrival: booking.checkIn,
-      depart: "",
-      guestRoom: "yes",
-      // Left empty on purpose: the row carries a room TYPE NAME, not an
-      // `amenity.id`, and the edit branch of handleSubmit sends no `room_ids`
-      // anyway -- reallocating a room is a separate operation
-      // (PATCH /room-allocations/{id}).
-      roomId: "",
-      subPackages: "",
       noOfPersons: booking.occupants.toString(),
       numberOfRooms: booking.noOfRooms.toString(),
-      gst: "",
-      bookingReference: "",
-      comments: "",
     });
     setViewMode("edit");
   };
@@ -517,10 +506,11 @@ const Bookings = () => {
                       <SelectValue placeholder="Select country code" />
                     </SelectTrigger>
                     <SelectContent className="bg-popover">
-                      <SelectItem value="+91">+91 (India)</SelectItem>
-                      <SelectItem value="+1">+1 (USA)</SelectItem>
-                      <SelectItem value="+44">+44 (UK)</SelectItem>
-                      <SelectItem value="+971">+971 (UAE)</SelectItem>
+                      {COUNTRY_CODES.map(({ code, label }) => (
+                        <SelectItem key={code} value={code}>
+                          {label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -777,26 +767,53 @@ const Bookings = () => {
                 />
               </div>
 
-              {/* Row 11: ID Proof Documents */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-primary">ID Proof Documents</Label>
-                <div className="flex items-center gap-4">
-                  <Button
-                    variant="outline"
-                    className="h-12 px-6 border-dashed border-2 hover:border-primary"
-                    onClick={() => document.getElementById("id-proof-upload")?.click()}
+              {/* Row 11: ID Proof Documents, E-Wallet */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-primary">ID Proof Documents</Label>
+                  <div className="flex items-center gap-4">
+                    <Button
+                      variant="outline"
+                      className="h-12 px-6 border-dashed border-2 hover:border-primary"
+                      onClick={() => document.getElementById("id-proof-upload")?.click()}
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      Choose Files
+                    </Button>
+                    <span className="text-muted-foreground text-sm">No file chosen</span>
+                    <input
+                      id="id-proof-upload"
+                      type="file"
+                      multiple
+                      className="hidden"
+                      accept="image/*,.pdf"
+                    />
+                  </div>
+                </div>
+
+                {/* E-Wallet. A PAYMENT METHOD, nothing else: the guest's name,
+                    contact, reference and room are already fields on this form,
+                    so none of them is repeated here. No card number, CVV or PIN
+                    is collected either -- keeping card data out of HMS is the
+                    reason for paying by wallet in the first place. */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-primary">E-Wallet</Label>
+                  <Select
+                    value={formData.eWallet}
+                    onValueChange={(value) => handleFormChange("eWallet", value)}
                   >
-                    <Upload className="h-4 w-4 mr-2" />
-                    Choose Files
-                  </Button>
-                  <span className="text-muted-foreground text-sm">No file chosen</span>
-                  <input
-                    id="id-proof-upload"
-                    type="file"
-                    multiple
-                    className="hidden"
-                    accept="image/*,.pdf"
-                  />
+                    <SelectTrigger className="h-12 bg-muted/30 border-border/50 focus:border-primary">
+                      <SelectValue placeholder="Select E-Wallet support" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="enabled">Enabled</SelectItem>
+                      <SelectItem value="disabled">Disabled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Wallet className="h-3.5 w-3.5 shrink-0" />
+                    Settled from the guest's e-wallet. HMS collects no card details.
+                  </p>
                 </div>
               </div>
 

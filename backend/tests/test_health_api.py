@@ -267,14 +267,13 @@ DELIVERED_PATHS = {
     f"{V1}/service-items/{{item_id}}",
     f"{V1}/service-requests",
     f"{V1}/service-requests/{{request_id}}",
-    # Phase 2.6 -- device inventory, firmware and health
+    # Phase 2.6 -- device inventory and health. Firmware went with the
+    # Device Management module.
     f"{V1}/device-types",
     f"{V1}/device-types/{{device_type_id}}",
     f"{V1}/devices",
     f"{V1}/devices/{{device_id}}",
     f"{V1}/devices/{{device_id}}/health",
-    f"{V1}/firmware",
-    f"{V1}/firmware/{{firmware_id}}",
     # Phase 2.7 -- alerts, incidents, notifications
     f"{V1}/alert-types",
     f"{V1}/alert-types/{{alert_type_id}}",
@@ -338,11 +337,10 @@ DELIVERED_PATHS = {
     f"{V1}/room-allocations/{{allocation_id}}",
     f"{V1}/stay-occupants/{{occupant_id}}",
     f"{V1}/occupancy/{{amenity_id}}/conditions",
-    # Devices and firmware
+    # Devices
     f"{V1}/devices/{{device_id}}/commission",
     f"{V1}/devices/{{device_id}}/decommission",
     f"{V1}/devices/{{device_id}}/maintenance",
-    f"{V1}/firmware/{{firmware_id}}/assign",
     f"{V1}/limit-configs",
     f"{V1}/limit-configs/{{config_id}}",
     # Room catalogue

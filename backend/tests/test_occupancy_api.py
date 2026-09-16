@@ -297,6 +297,7 @@ def test_current_stay_is_derived_from_the_stay_graph(client, db):
     assert len(with_stay) == expected
     for r in with_stay:
         assert r["current_stay"]["actual_checkin_time"] is not None
+        assert r["current_stay"]["expected_checkin_time"] is not None
         assert r["current_stay"]["booker"]
 
 
@@ -386,7 +387,8 @@ def test_amenity_lookups_are_the_real_vocabularies(client):
     assert statuses[0]["id"] == 0, "id 0 is a real, meaningful id"
     conditions = client.get(f"{V1}/amenity-conditions").json()["items"]
     assert [c["name"] for c in conditions] == [
-        "Dirty", "Low battery", "Under maintenance", "Sanitation"
+        "Dirty", "Low battery", "Under maintenance", "Sanitation",
+        "Ready for occupant",
     ]
 
 

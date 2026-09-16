@@ -4,8 +4,21 @@ import { cn } from "@/lib/utils";
 
 const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableElement>>(
   ({ className, ...props }, ref) => (
+    /*
+      `min-w-max` is what keeps a column header above its own column.
+
+      A global rule in index.css sets `white-space: nowrap !important` on every
+      `th`, so a header can never wrap. With `w-full` and the default auto
+      layout, a table with more columns than fit was compressed BELOW its
+      content width -- and a header that cannot wrap and cannot shrink simply
+      overflows into the next column, which is what the overlapping headers
+      were. Sizing to content instead means the columns stay honest and the
+      wrapper below scrolls horizontally when it genuinely has to. The wrapper
+      is `w-full`, so that scrolling stays inside the table and never becomes
+      page-level horizontal scroll.
+    */
     <div className="relative w-full overflow-auto">
-      <table ref={ref} className={cn("w-full caption-bottom text-sm", className)} {...props} />
+      <table ref={ref} className={cn("w-full min-w-max caption-bottom text-sm", className)} {...props} />
     </div>
   ),
 );
@@ -46,7 +59,7 @@ const TableHead = React.forwardRef<HTMLTableCellElement, React.ThHTMLAttributes<
     <th
       ref={ref}
       className={cn(
-        "h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0",
+        "h-9 px-3 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0",
         className,
       )}
       {...props}
@@ -57,7 +70,7 @@ TableHead.displayName = "TableHead";
 
 const TableCell = React.forwardRef<HTMLTableCellElement, React.TdHTMLAttributes<HTMLTableCellElement>>(
   ({ className, ...props }, ref) => (
-    <td ref={ref} className={cn("p-4 align-middle [&:has([role=checkbox])]:pr-0", className)} {...props} />
+    <td ref={ref} className={cn("px-3 py-2 align-middle [&:has([role=checkbox])]:pr-0", className)} {...props} />
   ),
 );
 TableCell.displayName = "TableCell";

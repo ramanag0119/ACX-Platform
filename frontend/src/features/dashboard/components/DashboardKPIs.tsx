@@ -5,10 +5,8 @@ import {
   AlertTriangle,
   BedDouble,
   ClipboardList,
-  Cpu,
   Gauge,
   LifeBuoy,
-  UploadCloud,
   UserCheck,
   Zap,
 } from "lucide-react";
@@ -117,41 +115,6 @@ const GREEN = "#22c55e";
 const AMBER = "#f59e0b";
 const RED = "#ef4444";
 const VIOLET = "#7c5cff";
-
-/** Devices, with the real `device_health_status` enum: Active | Inactive. */
-const DeviceTiles = ({ enabled }: { enabled: boolean }) => {
-  const all = useCount("devices", undefined, enabled);
-  const active = useCount("devices", { health_status: "Active" }, enabled);
-  const inactive = useCount("devices", { health_status: "Inactive" }, enabled);
-  const outdated = useCount("devices", { firmware_outdated: true }, enabled);
-
-  return (
-    <>
-      <Tile
-        label="Devices"
-        icon={Cpu}
-        accent={BLUE}
-        value={all.total}
-        detail={
-          active.total !== null && inactive.total !== null
-            ? `${active.total} Active · ${inactive.total} Inactive`
-            : undefined
-        }
-        isLoading={all.isLoading}
-        error={all.error}
-      />
-      <Tile
-        label="Firmware outdated"
-        icon={UploadCloud}
-        accent={outdated.total ? AMBER : GREEN}
-        value={outdated.total}
-        detail="current version differs from expected"
-        isLoading={outdated.isLoading}
-        error={outdated.error}
-      />
-    </>
-  );
-};
 
 /** Device alerts carry a SEVERITY (warning | critical) and no status. */
 const AlertTiles = ({ enabled }: { enabled: boolean }) => {
@@ -331,7 +294,6 @@ export const DashboardKPIs = () => {
 
   return (
     <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
-      {network && <DeviceTiles enabled={network} />}
       {network && <AlertTiles enabled={network} />}
       {canRead("occupancy") && <OccupancyTile enabled />}
       {canRead("bookings") && <StayTile enabled />}
