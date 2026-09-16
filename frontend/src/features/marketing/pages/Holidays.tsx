@@ -19,13 +19,14 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
-import { Pencil, Trash2, X, Edit } from "lucide-react";
+import { Trash2, X, Edit } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { DataState, TableLoading } from "@/core/components/DataState";
 import { useAuth } from "@/core/contexts/AuthContext";
 import { useHolidays, useOccasionTypes } from "@/lib/api/hooks";
 import { useCreateHoliday, useUpdateHoliday } from "@/lib/api/mutations";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 // Sample holidays data
 /**
@@ -142,10 +143,7 @@ const Holidays = () => {
 
     return (
         <div className="space-y-6 animate-fade-in text-foreground">
-            {/* Header */}
-            <div className="mb-2">
-                <h1 className="text-xl font-semibold text-foreground tracking-tight">Holidays Management</h1>
-            </div>
+            <PageHeader title="Holidays Management" />
 
 
             {/* Add Form */}
@@ -213,6 +211,15 @@ const Holidays = () => {
                         </div>
                     </div>
 
+                    {/* Loading and error are handled here, not by the empty row
+                        below: without this a failed request left the list at []
+                        and the table reported "no records", which reads as an
+                        empty facility rather than a failed request. */}
+                    <DataState
+                        isLoading={holidaysQuery.isLoading}
+                        error={holidaysQuery.error}
+                        loader={<TableLoading columns={13} />}
+                    >
                     <div className="rounded-lg overflow-hidden border border-border/80 dark:border-slate-800 overflow-x-auto scrollbar-thin">
                         <Table>
                             <TableHeader>
@@ -257,6 +264,7 @@ const Holidays = () => {
                             </TableBody>
                         </Table>
                     </div>
+                    </DataState>
 
                     <div className="flex flex-wrap items-center justify-between gap-4 mt-5">
                         <span className="text-muted-foreground text-xs">Showing {filteredData.length > 0 ? startIndex + 1 : 0} to {Math.min(startIndex + parseInt(entriesPerPage), filteredData.length)} of {filteredData.length} entries</span>

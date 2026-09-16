@@ -40,6 +40,7 @@ import {
   ServiceRequestActionsDialog,
   type ServiceRequestActionTarget,
 } from "@/features/services/components/ServiceRequestActionsDialog";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 /**
  * Tickets, connected to the Phase 2.5 service APIs.
@@ -216,10 +217,7 @@ const Tickets = () => {
 
   return (
     <div className="space-y-6 animate-fade-in text-foreground">
-      {/* Header */}
-      <div className="mb-2">
-        <h1 className="text-xl font-semibold text-foreground tracking-tight">Ticket Management</h1>
-      </div>
+      <PageHeader title="Ticket Management" />
 
       {/* Add Ticket Form */}
       <Card className="border border-border/80 dark:border-slate-800 shadow-xl rounded-xl bg-card text-card-foreground">

@@ -24,8 +24,10 @@ import { KNOWN_AMENITY_STATUSES, roomStatusTint } from "@/features/occupancy/lib
  *     Inactive; there is no warning or error state. The real Active/Inactive
  *     counts for the selected scope are shown instead.
  *   - Room tiles were coloured by `room.type.includes('Error')` -- a guess at
- *     health from an amenity TYPE NAME. Tiles are now coloured by the room's
- *     real `amenity_status`, the same four values the occupancy chart uses.
+ *     health from an amenity TYPE NAME. Tiles now carry the room's real
+ *     `amenity_status` as a coloured dot, the same four values the occupancy
+ *     chart uses; the tile surface itself stays neutral so the condition line
+ *     underneath reads at the same contrast on every status.
  *
  * "Affected rooms" is a real condition: at least one active `amenity_condition`
  * (Dirty, Low battery, Under maintenance, Sanitation) on the room.
@@ -146,10 +148,21 @@ export const StatusSection = ({
   const bldMutedText = isDark ? "#8b95a9" : "#6B7280";
 
   // Floor card colors
-  const flrDefaultBg = isDark ? "#252a3e" : "#EEF2FF";
-  const flrSelectedBg = isDark ? "#3d1f1f" : "#FEE2E2";
+  const flrDefaultBg = isDark ? "#252a3e" : "#FFFFFF";
+  const flrSelectedBg = isDark ? "#1e3a5f" : "#EEF2FF";
+  const flrDefaultBorder = isDark ? "#3a4158" : "#E5E7EB";
   const flrDefaultText = isDark ? "#dde2ed" : "#1F1B3A";
-  const flrMutedText = isDark ? "#8b95a9" : "#5E5A7A";
+  const flrMutedText = isDark ? "#8b95a9" : "#6B7280";
+
+  // Room tile colors. Tiles are neutral cards; the STATUS is carried by a
+  // coloured dot rather than a filled background, so a room's condition text
+  // stays legible against one consistent surface.
+  const roomBg = isDark ? "#252a3e" : "#FFFFFF";
+  const roomBorder = isDark ? "#3a4158" : "#E5E7EB";
+  const roomNumberText = isDark ? "#f3f4f6" : "#111827";
+  const roomTypeText = isDark ? "#8b95a9" : "#6B7280";
+  const roomStatusText = isDark ? "#c3cad9" : "#374151";
+  const roomConditionText = isDark ? "#7c8598" : "#9CA3AF";
 
   const cardStyle = {
     background: cardBg,
@@ -274,21 +287,25 @@ export const StatusSection = ({
                   className="cursor-pointer rounded-lg p-4 text-center border-2 transition-all duration-150 hover:-translate-y-0.5"
                   style={{
                     backgroundColor: selectedFloor === floor.id ? flrSelectedBg : flrDefaultBg,
-                    borderColor: selectedFloor === floor.id ? "#EF4444" : "transparent",
-                    color: selectedFloor === floor.id ? (isDark ? "#fca5a5" : "#7F1D1D") : flrDefaultText,
-                    boxShadow: selectedFloor === floor.id ? "0 4px 12px rgba(239, 68, 68, 0.2)" : "none"
+                    borderColor: selectedFloor === floor.id ? "#6366F1" : flrDefaultBorder,
+                    color: selectedFloor === floor.id ? (isDark ? "#a5b4fc" : "#1E1B4B") : flrDefaultText,
+                    boxShadow: selectedFloor === floor.id ? "0 4px 12px rgba(99, 102, 241, 0.2)" : "none"
                   }}
                   onMouseEnter={(e) => {
-                    if (selectedFloor !== floor.id)
-                      (e.currentTarget as HTMLDivElement).style.backgroundColor = isDark ? "#2e3450" : "#E6E9FF";
+                    if (selectedFloor !== floor.id) {
+                      (e.currentTarget as HTMLDivElement).style.backgroundColor = isDark ? "#2e3450" : "#F9FAFB";
+                      (e.currentTarget as HTMLDivElement).style.borderColor = isDark ? "#6366f1" : "#A5B4FC";
+                    }
                   }}
                   onMouseLeave={(e) => {
-                    if (selectedFloor !== floor.id)
+                    if (selectedFloor !== floor.id) {
                       (e.currentTarget as HTMLDivElement).style.backgroundColor = flrDefaultBg;
+                      (e.currentTarget as HTMLDivElement).style.borderColor = flrDefaultBorder;
+                    }
                   }}
                 >
-                  <p className="font-medium">{floor.name}</p>
-                  <p className="text-sm" style={{ color: selectedFloor === floor.id ? (isDark ? "#fca5a5" : "#7F1D1D") : flrMutedText }}>
+                  <p className="font-medium text-base">{floor.name}</p>
+                  <p className="text-sm mt-0.5" style={{ color: selectedFloor === floor.id ? (isDark ? "#a5b4fc" : "#1E1B4B") : flrMutedText }}>
                     {floor.room_count} rooms
                   </p>
                 </div>
@@ -309,7 +326,7 @@ export const StatusSection = ({
             <div className="flex flex-wrap items-center gap-3 text-xs" style={{ color: mutedColor }}>
               {Object.entries(STATUS_TINT).map(([name, tint]) => (
                 <span key={name} className="flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 rounded-sm" style={{ background: tint.border }} />
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: tint.border }} />
                   {name}
                 </span>
               ))}
@@ -328,12 +345,8 @@ export const StatusSection = ({
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
               {rooms.map((room) => {
                 const tint = STATUS_TINT[room.statusName];
-                const bg = tint
-                  ? (isDark ? tint.dark : tint.light)
-                  : (isDark ? "#252a3e" : "#F3F4F6");
-                const text = selectedRoom === room.id && tint
-                  ? (isDark ? "#e5e7eb" : tint.text)
-                  : (isDark ? "#dde2ed" : "#1F1B3A");
+                const dotColor = tint?.border ?? "#94A3B8";
+                const isSelected = selectedRoom === room.id;
                 return (
                   <div
                     key={room.id}
@@ -343,21 +356,31 @@ export const StatusSection = ({
                         ? `${room.statusName} · ${room.conditions.join(", ")}`
                         : room.statusName
                     }
-                    className="cursor-pointer rounded-lg p-4 text-center border-2 transition-all duration-150 hover:-translate-y-0.5"
+                    className="cursor-pointer rounded-lg p-4 text-left border transition-all duration-150 hover:-translate-y-0.5"
                     style={{
-                      backgroundColor: bg,
-                      borderColor: selectedRoom === room.id ? (tint?.border ?? "#6366F1") : "transparent",
-                      color: text,
-                      boxShadow: selectedRoom === room.id ? "0 4px 12px rgba(17,12,46,0.18)" : "none",
+                      backgroundColor: isSelected
+                        ? (isDark ? tint?.dark ?? "#2e3450" : tint?.light ?? "#F3F4F6")
+                        : roomBg,
+                      borderColor: isSelected ? dotColor : roomBorder,
+                      borderWidth: isSelected ? "2px" : "1px",
+                      boxShadow: isSelected ? "0 4px 12px rgba(17,12,46,0.18)" : "none",
                     }}
                   >
-                    <p className="font-bold text-lg" style={{ color: text }}>{room.number}</p>
-                    <p className="text-xs" style={{ color: text, opacity: 0.75 }}>{room.type}</p>
-                    <p className="text-[11px] mt-1" style={{ color: text, opacity: 0.9 }}>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="h-2.5 w-2.5 shrink-0 rounded-full"
+                        style={{ background: dotColor }}
+                      />
+                      <p className="font-bold text-lg leading-none" style={{ color: roomNumberText }}>
+                        {room.number}
+                      </p>
+                    </div>
+                    <p className="text-xs mt-2.5" style={{ color: roomTypeText }}>{room.type}</p>
+                    <p className="text-sm mt-2" style={{ color: roomStatusText }}>
                       {room.statusName}
                     </p>
                     {room.conditions.length > 0 && (
-                      <p className="text-[10px] mt-0.5 truncate" style={{ color: text, opacity: 0.75 }}>
+                      <p className="text-[11px] mt-2 truncate" style={{ color: roomConditionText }}>
                         {room.conditions.join(", ")}
                       </p>
                     )}

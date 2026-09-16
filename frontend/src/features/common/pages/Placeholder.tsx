@@ -1,6 +1,7 @@
 import { Construction } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 const Placeholder = () => {
   const location = useLocation();
@@ -12,10 +13,7 @@ const Placeholder = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="page-header">
-        <h1 className="page-title">{formattedName}</h1>
-        <p className="page-description">This module is under construction</p>
-      </div>
+      <PageHeader title={formattedName} description="This module is under construction" />
 
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-16">

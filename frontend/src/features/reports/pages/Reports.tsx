@@ -28,6 +28,7 @@ import { useReport, useReportDefinitions } from "@/lib/api/hooks";
 import { downloadReportXlsx, type ReportColumn, type ReportFilterSpec } from "@/lib/api/reports";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
 import { useQuery } from "@tanstack/react-query";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 /**
  * Reports, connected to GET /api/v1/reports.
@@ -316,7 +317,7 @@ const Reports = () => {
   if (!mayRead) {
     return (
       <div className="space-y-6 animate-fade-in">
-        <h1 className="text-xl font-semibold text-foreground tracking-tight">Reports</h1>
+        <PageHeader title="Reports" />
         <Card className="border border-border/80 dark:border-slate-800 shadow-xl rounded-xl bg-card">
           <CardContent className="p-10 text-center text-sm text-muted-foreground">
             Your role does not grant access to reports.
@@ -328,13 +329,10 @@ const Reports = () => {
 
   return (
     <div className="space-y-6 animate-fade-in text-foreground">
-      <div className="mb-2">
-        <h1 className="text-xl font-semibold text-foreground tracking-tight">Reports</h1>
-        <p className="text-xs text-muted-foreground mt-1">
-          Every report reads the live HMS database through the module that owns
-          the data, so it always reflects the latest records.
-        </p>
-      </div>
+      <PageHeader
+        title="Reports"
+        description="Every report reads the live HMS database through the module that owns the data, so it always reflects the latest records."
+      />
 
       {/* Tabs come from the backend's report list, not a local array. */}
       <div className="flex gap-1 flex-wrap border-b border-border/70 dark:border-slate-800">

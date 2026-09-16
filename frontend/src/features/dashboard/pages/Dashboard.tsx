@@ -7,11 +7,11 @@ import { RecentActivityPanel } from "../components/RecentActivityPanel";
 import { DashboardKPIs } from "../components/DashboardKPIs";
 import { StatusSection } from "../components/StatusSection";
 import { RoomDetailsPanel } from "@/features/occupancy/components/RoomDetailsPanel";
-import { useTheme } from "@/core/contexts/ThemeContext";
 import { useAuth } from "@/core/contexts/AuthContext";
 import { DataState } from "@/core/components/DataState";
 import { useBuildings } from "@/lib/api/hooks";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 /**
  * Building and floor are PROJECTIONS over `property` + `property_chain`, not
@@ -56,23 +56,14 @@ const Dashboard = () => {
     setSelectedRoom(null);
   };
 
-  const { isDark } = useTheme();
-  const pageBg = isDark ? "linear-gradient(180deg, #0f1117, #131824)" : "linear-gradient(180deg, #F4F2FA, #ECE9F6)";
-  const titleColor = isDark ? "#dde2ed" : "#1F1B3A";
-  const subtitleColor = isDark ? "#8b95a9" : "#5E5A7A";
-
   return (
-    <div className="space-y-4 animate-fade-in min-h-full -mx-4 -my-3 px-4 py-3" style={{ background: pageBg }}>
-      {/* Page Header */}
-      <div className="mb-4">
-        <h1 className="text-xl font-semibold" style={{ color: titleColor }}>HMS</h1>
-        <p className="text-sm mt-0.5" style={{ color: subtitleColor }}>
-          Hospitality Management System
-        </p>
-        <p className="text-sm mt-0.5" style={{ color: subtitleColor }}>
-          Smart Buildings. Smarter Operations.
-        </p>
-      </div>
+    <div className="space-y-4 animate-fade-in text-foreground">
+      {/* Descriptor and tagline are ONE line: the header bar is a fixed height
+          and clips its subtitle, so a <br /> here would drop the tagline. */}
+      <PageHeader
+        title="HMS"
+        description="Hospitality Management System · Smart Buildings. Smarter Operations."
+      />
 
       {/* KPI row - every figure is a backend total */}
       <DashboardKPIs />
