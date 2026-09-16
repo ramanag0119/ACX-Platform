@@ -154,7 +154,7 @@ export const MeterHierarchyView = ({
     // full width; 76px is that layout's pt-[48px] + pb-[28px].
     // `meter-view` opts this subtree out of the global typography colour sweep
     // in index.css, which would otherwise repaint the card titles white.
-    <div className="meter-view -m-5 min-h-[calc(100vh-76px)] bg-background">
+    <div className="meter-view -mx-4 -my-3 min-h-full bg-background">
       {/* Grey title strip with the live status legend */}
       <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 bg-meter-strip px-5 py-2">
         <h1 className="text-[13px] font-bold text-white">{title}</h1>

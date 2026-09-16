@@ -26,8 +26,7 @@ NETWORK = [
     (f"{V1}/device-types", "caleido_network"),
     (f"{V1}/devices", "caleido_network"),
 ]
-FIRMWARE = [(f"{V1}/firmware", "firmware_management")]
-ALL_ENDPOINTS = NETWORK + FIRMWARE
+ALL_ENDPOINTS = NETWORK
 
 
 @pytest.fixture(scope="module")
@@ -87,7 +86,6 @@ def test_list_returns_200_with_the_shared_envelope(client, path, module):
     [
         (f"{V1}/device-types", "SELECT count(*) FROM device_type"),
         (f"{V1}/devices", "SELECT count(*) FROM device"),
-        (f"{V1}/firmware", "SELECT count(*) FROM firmware"),
     ],
 )
 def test_totals_are_database_backed(client, db, path, sql):
@@ -218,7 +216,7 @@ def test_device_404(client):
     assert r.json()["error"]["code"] == "not_found"
 
 
-@pytest.mark.parametrize("path", [f"{V1}/devices", f"{V1}/firmware"])
+@pytest.mark.parametrize("path", [f"{V1}/devices"])
 def test_malformed_uuid_is_422(client, path):
     r = client.get(f"{path}/not-a-uuid")
     assert r.status_code == 422
@@ -492,47 +490,6 @@ def test_health_endpoint_reads_no_telemetry(client, hub_id):
 
 
 # ---------------------------------------------------------------------------
-# Firmware
-# ---------------------------------------------------------------------------
-
-
-def test_firmware_list_resolves_device_type(client, db):
-    body = client.get(f"{V1}/firmware?page_size=100").json()
-    assert body["total"] == db.execute(text("SELECT count(*) FROM firmware")).scalar_one()
-    assert all(f["device_type_name"] for f in body["items"])
-    assert {f["status"] for f in body["items"]} <= {"active", "decommissioned"}
-
-
-def test_firmware_detail_usage_counts(client, db):
-    firmware_id, expected = db.execute(
-        text("""SELECT current_firmware_version, count(*) FROM device
-                WHERE current_firmware_version IS NOT NULL
-                GROUP BY 1 ORDER BY 2 DESC LIMIT 1""")
-    ).one()
-    body = client.get(f"{V1}/firmware/{firmware_id}").json()
-    assert body["devices_running"] == expected
-    assert body["devices_expecting"] == db.execute(
-        text("SELECT count(*) FROM device WHERE expected_firmware_version = :f"),
-        {"f": firmware_id},
-    ).scalar_one()
-
-
-def test_firmware_filters(client, db):
-    body = client.get(f"{V1}/firmware?status=decommissioned&page_size=100").json()
-    assert body["total"] == db.execute(
-        text("SELECT count(*) FROM firmware WHERE status = 'decommissioned'")
-    ).scalar_one()
-    by_type = client.get(f"{V1}/firmware?device_type_id=1&page_size=100").json()
-    assert by_type["total"] == db.execute(
-        text("SELECT count(*) FROM firmware WHERE device_type_id = 1")
-    ).scalar_one()
-
-
-def test_firmware_404(client):
-    assert client.get(f"{V1}/firmware/{uuid.uuid4()}").status_code == 404
-
-
-# ---------------------------------------------------------------------------
 # Pagination
 # ---------------------------------------------------------------------------
 
@@ -608,9 +565,12 @@ def test_manager_access_follows_the_database_grants(
         assert module in r.json()["error"]["message"]
 
 
-def test_manager_can_view_the_network_but_not_firmware(anon, manager_headers, db):
-    """The seeded Duty Manager holds caleido_network read (write=false) and no
-    firmware_management grant at all."""
+def test_manager_can_view_the_network(anon, manager_headers, db):
+    """The seeded Duty Manager holds caleido_network read (write=false).
+
+    The firmware_management grant is still checked here: the module row
+    survives in the database after the Firmware Management screen and its
+    endpoints were removed, and the Duty Manager was never given it."""
     row = db.execute(
         text("""SELECT p.read_access, p.write_access FROM role r
                 JOIN role_module_permission p ON p.role_id = r.id
@@ -627,7 +587,6 @@ def test_manager_can_view_the_network_but_not_firmware(anon, manager_headers, db
 
     assert anon.get(f"{V1}/devices", headers=manager_headers).status_code == 200
     assert anon.get(f"{V1}/device-types", headers=manager_headers).status_code == 200
-    assert anon.get(f"{V1}/firmware", headers=manager_headers).status_code == 403
 
 
 def test_device_health_is_protected_too(anon, manager_headers, client, db, hub_id):
@@ -649,8 +608,9 @@ def test_phase_2_6_routes_are_registered(client):
         f"{V1}/device-types", f"{V1}/device-types/{{device_type_id}}",
         f"{V1}/devices", f"{V1}/devices/{{device_id}}",
         f"{V1}/devices/{{device_id}}/health",
-        f"{V1}/firmware", f"{V1}/firmware/{{firmware_id}}",
     } <= paths
+    # Firmware went with the Device Management module.
+    assert not [p for p in paths if "firmware" in p]
 
 
 DEVICE_WRITES = {
@@ -659,18 +619,16 @@ DEVICE_WRITES = {
     (f"{V1}/devices/{{device_id}}/commission", "post"),
     (f"{V1}/devices/{{device_id}}/decommission", "post"),
     (f"{V1}/devices/{{device_id}}/maintenance", "post"),
-    (f"{V1}/firmware", "post"),
-    (f"{V1}/firmware/{{firmware_id}}", "patch"),
-    (f"{V1}/firmware/{{firmware_id}}/assign", "post"),
 }
 
 
 def test_device_write_surface_is_exactly_the_intended_set(client):
-    """Phase 3.0 makes devices and firmware writable.
+    """Phase 3.0 makes devices writable.
 
     Still absent, because no such table exists: any command, MQTT or
-    telemetry-ingestion route. Firmware "push" is only
-    `device.expected_firmware_version`, which /firmware/{id}/assign sets.
+    telemetry-ingestion route. The /firmware writes went with the Device
+    Management module; `device.expected_firmware_version` remains a column
+    and is still settable through PATCH /devices/{id}.
     """
     schema = client.get("/openapi.json").json()
     found = {

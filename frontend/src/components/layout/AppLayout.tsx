@@ -56,13 +56,23 @@ const AppLayoutInner = () => {
         onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
       />
       <AppSidebar collapsed={sidebarCollapsed} />
+      {/*
+        The shell is exactly one viewport tall, and the CONTENT scrolls inside
+        it rather than the window.
+
+        It used to be `min-h-screen` PLUS 48px/28px of padding for the fixed
+        header and footer, so every page was 100vh + 76px and scrolled even
+        when it had nothing to scroll. `h-screen` makes the padding part of the
+        viewport instead of extra to it, which is what removes that dead space
+        and lets a page's own heading stay put with plain `position: sticky`.
+      */}
       <main
         className={cn(
-          "pt-[48px] pb-[28px] min-h-screen transition-all duration-300 flex flex-col justify-between",
+          "pt-[48px] pb-[28px] h-screen transition-all duration-300 flex flex-col",
           sidebarCollapsed ? "pl-[64px]" : "pl-[240px]"
         )}
       >
-        <div className="p-5 flex-1">
+        <div className="hms-content flex-1 min-h-0 overflow-y-auto px-4 py-3">
           <ModuleGuard>
             <Outlet />
           </ModuleGuard>

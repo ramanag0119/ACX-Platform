@@ -1,19 +1,21 @@
-"""Device inventory, types, firmware and health read APIs (Phase 2.6).
+"""Device inventory, types and health read APIs (Phase 2.6).
 
     GET /api/v1/device-types      · /{id}          device_type (4 lookup rows)
     GET /api/v1/devices           · /{id}          device
     GET /api/v1/devices/{id}/health                device health, assembled
-    GET /api/v1/firmware          · /{id}          firmware
 
 RBAC, taken from the seeded `role_module` registry rather than assumed:
 
-    /device-types, /devices  ->  `caleido_network`      (Device Mgmt screen)
-    /firmware                ->  `firmware_management`  (Firmware Mgmt screen)
+    /device-types, /devices  ->  `caleido_network`
 
-The database already draws the line: the Duty Manager role holds
-`caleido_network` with read_access=true and write_access=FALSE, and holds no
-`firmware_management` grant at all. So a Manager can view the device network
-but cannot reach firmware -- enforced by data, not by a role-name check.
+Read access is enforced by data, not by a role-name check: the Duty Manager
+role holds `caleido_network` with read_access=true and write_access=FALSE.
+
+The /firmware read endpoints were removed with the Firmware Management screen
+that was their only caller, along with the `firmware_management` grant. The
+`firmware_id` and `firmware_outdated` FILTERS on /devices remain -- they read
+`device.current_firmware_version` / `expected_firmware_version`, which are
+device columns and have nothing to do with the removed routes.
 
 READ-ONLY. See docs/PHASE2_6_DEVICES.md for the blockers that make a safe
 write path impossible from the current schema.
@@ -38,13 +40,10 @@ from app.schemas.device import (
     DeviceRef,
     DeviceTypeDetail,
     DeviceTypeRead,
-    FirmwareDetail,
-    FirmwareRead,
 )
 from app.schemas.filters import (
     DeviceConfigStatus,
     DeviceHealthStatus,
-    FirmwareStatus,
 )
 from app.schemas.health import ErrorResponse
 from app.services import device as svc
@@ -56,7 +55,6 @@ AUTH_RESPONSES = {
 }
 
 NETWORK_READ = [Depends(require_permission("caleido_network", "read"))]
-FIRMWARE_READ = [Depends(require_permission("firmware_management", "read"))]
 
 PageParam = Query(1, ge=1, description="1-based page number")
 SizeParam = Query(DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE, description="Rows per page")
@@ -68,10 +66,6 @@ device_types_router = APIRouter(
 devices_router = APIRouter(
     prefix="/devices", tags=["devices"],
     dependencies=NETWORK_READ, responses=AUTH_RESPONSES,
-)
-firmware_router = APIRouter(
-    prefix="/firmware", tags=["firmware"],
-    dependencies=FIRMWARE_READ, responses=AUTH_RESPONSES,
 )
 
 
@@ -222,54 +216,3 @@ def get_device_health(
     if data is None:
         raise _missing("Device", device_id)
     return DeviceHealthRead.model_validate(data)
-
-
-# ---------------------------------------------------------------------------
-# firmware
-# ---------------------------------------------------------------------------
-
-
-@firmware_router.get(
-    "",
-    response_model=Page[FirmwareRead],
-    summary="List firmware releases",
-    description=(
-        "There is no `is_latest` column. Currency is determined per device by "
-        "comparing current_firmware_version with expected_firmware_version -- "
-        "see the `firmware_outdated` filter on /devices."
-    ),
-)
-def list_firmware(
-    db: DbSession,
-    page: int = PageParam,
-    page_size: int = SizeParam,
-    device_type_id: int | None = Query(None),
-    status_value: FirmwareStatus | None = Query(
-        None, alias="status", description="firmware_status: active | decommissioned"
-    ),
-    firmware_version: str | None = Query(None),
-) -> Page[FirmwareRead]:
-    rows, total = svc.list_firmware(
-        db, page=page, page_size=page_size, device_type_id=device_type_id,
-        status=status_value, firmware_version=firmware_version,
-    )
-    return Page[FirmwareRead](
-        items=[FirmwareRead.model_validate(r) for r in rows],
-        page=page, page_size=page_size, total=total,
-    )
-
-
-@firmware_router.get(
-    "/{firmware_id}",
-    response_model=FirmwareDetail,
-    responses=NOT_FOUND,
-    summary="Get a firmware release",
-)
-def get_firmware(firmware_id: uuid.UUID, db: DbSession) -> FirmwareDetail:
-    row = svc.get_firmware(db, firmware_id)
-    if row is None:
-        raise _missing("Firmware", firmware_id)
-    return FirmwareDetail(
-        **FirmwareRead.model_validate(row).model_dump(),
-        **svc.firmware_usage(db, firmware_id),
-    )

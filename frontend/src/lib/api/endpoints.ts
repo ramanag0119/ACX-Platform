@@ -25,7 +25,6 @@ import type {
   CurrentUser,
   DailyDataPointRead,
   DeviceCurrentStatRead,
-  DeviceHealthRead,
   DeviceParamRead,
   DeviceRead,
   DeviceStatRead,
@@ -33,7 +32,6 @@ import type {
   EnergyStatRead,
   EnergySummaryRead,
   FacilityRead,
-  FirmwareRead,
   FloorRead,
   IncidentRead,
   InvoiceRead,
@@ -117,17 +115,13 @@ export const listServiceItems = (params?: QueryParams) =>
 export const listServiceRequests = (params?: QueryParams) =>
   apiClient.get<Page<ServiceRequestRead>>("/service-requests", params);
 
-// --- Devices & firmware (Phase 2.6) ----------------------------------------
+// --- Devices (Phase 2.6) ---------------------------------------------------
 
 export const listDeviceTypes = (params?: QueryParams) =>
   apiClient.get<Page<DeviceTypeRead>>("/device-types", params);
 export const listDevices = (params?: QueryParams) =>
   apiClient.get<Page<DeviceRead>>("/devices", params);
 export const getDevice = (deviceId: string) => apiClient.get<DeviceRead>(`/devices/${deviceId}`);
-export const getDeviceHealth = (deviceId: string, params?: QueryParams) =>
-  apiClient.get<DeviceHealthRead>(`/devices/${deviceId}/health`, params);
-export const listFirmware = (params?: QueryParams) =>
-  apiClient.get<Page<FirmwareRead>>("/firmware", params);
 
 // --- Alerts & notifications (Phase 2.7) ------------------------------------
 

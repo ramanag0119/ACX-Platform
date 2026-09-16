@@ -67,6 +67,7 @@ class CurrentStayRef(ORMModel):
     internal_stay_ref_number: str
     status: str | None = None
     booker: UserRef | None = None
+    expected_checkin_time: datetime
     expected_checkout_time: datetime
     actual_checkin_time: datetime | None = None
     no_of_guests: int

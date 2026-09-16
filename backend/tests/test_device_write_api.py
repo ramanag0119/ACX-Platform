@@ -201,149 +201,6 @@ def test_invalid_config_status_is_rejected(api, device_type_id, room_id, unique,
 
 
 # ---------------------------------------------------------------------------
-# Firmware
-# ---------------------------------------------------------------------------
-
-
-def _firmware_payload(device_type_id, unique, **overrides) -> dict:
-    payload = {
-        "device_type_id": device_type_id,
-        "firmware_version": f"9.9.{unique[:3]}",
-        "firmware_filename": f"test-{unique}.bin",
-        "firmware_url": f"https://firmware.internal/test-{unique}.bin",
-        "crc": f"CRC{unique.upper()}",
-        "release_notes": "Write test build",
-    }
-    payload.update(overrides)
-    return payload
-
-
-def test_create_firmware_persists(api, db, device_type_id, unique, cleanup):
-    r = api.post(f"{V1}/firmware", json=_firmware_payload(device_type_id, unique))
-    assert r.status_code == 201
-    cleanup.add("firmware", r.json()["id"])
-
-    row = db.execute(
-        text("SELECT firmware_version, status, uploaded_by FROM firmware WHERE id = :i"),
-        {"i": r.json()["id"]},
-    ).one()
-    assert row.status == "active"
-    assert row.uploaded_by is not None
-
-
-def test_duplicate_version_for_a_device_type_is_409(api, device_type_id, unique, cleanup):
-    first = api.post(f"{V1}/firmware", json=_firmware_payload(device_type_id, unique))
-    cleanup.add("firmware", first.json()["id"])
-
-    r = api.post(f"{V1}/firmware", json=_firmware_payload(device_type_id, unique))
-    assert r.status_code == 409
-
-
-def test_assign_firmware_sets_the_expected_version(
-    api, db, device_type_id, room_id, unique, cleanup
-):
-    """That column IS the assignment -- no command table exists."""
-    firmware = api.post(
-        f"{V1}/firmware", json=_firmware_payload(device_type_id, unique)
-    ).json()
-    device = api.post(
-        f"{V1}/devices", json=_device_payload(device_type_id, room_id, unique)
-    ).json()
-    cleanup.add("device", device["id"])
-    cleanup.add("firmware", firmware["id"])
-
-    r = api.post(
-        f"{V1}/firmware/{firmware['id']}/assign", json={"device_ids": [device["id"]]}
-    )
-    assert r.status_code == 200
-    # The column holds the firmware ID; the read model joins it to the version.
-    assert str(db.execute(
-        text("SELECT expected_firmware_version FROM device WHERE id = :i"),
-        {"i": device["id"]},
-    ).scalar_one()) == firmware["id"]
-
-
-def test_assigning_to_the_wrong_device_type_is_rejected(
-    api, db, device_type_id, room_id, unique, cleanup
-):
-    other_type = db.execute(
-        text("SELECT id FROM device_type WHERE id <> :t LIMIT 1"), {"t": device_type_id}
-    ).scalar_one()
-    firmware = api.post(
-        f"{V1}/firmware", json=_firmware_payload(device_type_id, unique)
-    ).json()
-    device = api.post(
-        f"{V1}/devices", json=_device_payload(other_type, room_id, unique)
-    ).json()
-    cleanup.add("device", device["id"])
-    cleanup.add("firmware", firmware["id"])
-
-    r = api.post(
-        f"{V1}/firmware/{firmware['id']}/assign", json={"device_ids": [device["id"]]}
-    )
-    assert r.status_code == 422
-    assert "device type" in r.json()["error"]["message"]
-
-
-def test_decommissioning_firmware_still_expected_by_a_device_is_409(
-    api, device_type_id, room_id, unique, cleanup
-):
-    firmware = api.post(
-        f"{V1}/firmware", json=_firmware_payload(device_type_id, unique)
-    ).json()
-    device = api.post(
-        f"{V1}/devices", json=_device_payload(device_type_id, room_id, unique)
-    ).json()
-    cleanup.sql("UPDATE device SET expected_firmware_version = NULL WHERE id = :value",
-                {"value": device["id"]})
-    cleanup.add("device", device["id"])
-    cleanup.add("firmware", firmware["id"])
-
-    api.post(f"{V1}/firmware/{firmware['id']}/assign", json={"device_ids": [device["id"]]})
-    r = api.patch(f"{V1}/firmware/{firmware['id']}", json={"status": "decommissioned"})
-    assert r.status_code == 409
-    assert "still the expected version" in r.json()["error"]["message"]
-
-
-def test_assigning_a_decommissioned_build_is_409(api, device_type_id, unique, cleanup):
-    firmware = api.post(
-        f"{V1}/firmware",
-        json=_firmware_payload(device_type_id, unique, status="decommissioned"),
-    ).json()
-    cleanup.add("firmware", firmware["id"])
-
-    r = api.post(
-        f"{V1}/firmware/{firmware['id']}/assign", json={"device_ids": [str(uuid.uuid4())]}
-    )
-    assert r.status_code == 409
-
-
-def test_a_failed_assignment_rolls_back_every_device(
-    api, db, device_type_id, room_id, unique, cleanup
-):
-    """Two devices, the second unknown: neither may end up assigned."""
-    firmware = api.post(
-        f"{V1}/firmware", json=_firmware_payload(device_type_id, unique)
-    ).json()
-    device = api.post(
-        f"{V1}/devices", json=_device_payload(device_type_id, room_id, unique)
-    ).json()
-    cleanup.add("device", device["id"])
-    cleanup.add("firmware", firmware["id"])
-
-    r = api.post(
-        f"{V1}/firmware/{firmware['id']}/assign",
-        json={"device_ids": [device["id"], str(uuid.uuid4())]},
-    )
-    assert r.status_code == 404
-    db.rollback()
-    assert db.execute(
-        text("SELECT expected_firmware_version FROM device WHERE id = :i"),
-        {"i": device["id"]},
-    ).scalar_one() is None
-
-
-# ---------------------------------------------------------------------------
 # Incidents
 # ---------------------------------------------------------------------------
 
@@ -526,9 +383,11 @@ def test_duty_manager_cannot_change_the_device_network(
     """Read the grant, do not assume it.
 
     The seeded Duty Manager holds `caleido_network` with read_access true and
-    write_access FALSE, and no `firmware_management` grant at all -- so every
-    write in this module is refused for them. The assertion is derived from the
-    database so it stays true if the seeded grants change.
+    write_access FALSE, so every write in this module is refused for them.
+    `firmware_management` is asserted too: the module row outlives the removed
+    Firmware Management screen, and the Duty Manager never held it. The
+    assertion is derived from the database so it stays true if the grants
+    change.
     """
     writable = {
         row[0]
@@ -550,8 +409,3 @@ def test_duty_manager_cannot_change_the_device_network(
     )
     assert device.status_code == 403
     assert device.json()["error"]["code"] == "forbidden"
-
-    firmware = manager_api.post(
-        f"{V1}/firmware", json=_firmware_payload(device_type_id, unique)
-    )
-    assert firmware.status_code == 403

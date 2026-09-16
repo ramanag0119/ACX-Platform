@@ -238,7 +238,7 @@ export function RoomPowerEnergy({ amenityId }: RoomPowerEnergyProps) {
                     separate parameters and are never combined. */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-4 text-sm">
                     <div className="space-y-1">
-                        <span className={LABEL_CLASS}>Current Power :</span>
+                        <span className={LABEL_CLASS}>Power Consumed :</span>
                         <span className={VALUE_CLASS}>
                             {show(total(power), unitOf(power))}
                         </span>
@@ -281,7 +281,7 @@ export function RoomPowerEnergy({ amenityId }: RoomPowerEnergyProps) {
                         </span>
                     </div>
                     <div className="space-y-1">
-                        <span className={LABEL_CLASS}>Hourly Readings :</span>
+                        <span className={LABEL_CLASS}>Last Reading :</span>
                         <span className={VALUE_CLASS}>{recorded?.reading_count ?? "-"}</span>
                     </div>
                 </div>
@@ -311,9 +311,8 @@ export function RoomPowerEnergy({ amenityId }: RoomPowerEnergyProps) {
                         <Table>
                             <TableHeader className="bg-muted/40 dark:bg-[#0e1322]">
                                 <TableRow>
-                                    <TableHead className={`${HEAD_CLASS} w-[50px]`}>S.No</TableHead>
                                     <TableHead className={HEAD_CLASS}>Device</TableHead>
-                                    <TableHead className={HEAD_CLASS}>Current Power</TableHead>
+                                    <TableHead className={HEAD_CLASS}>Power Consumed</TableHead>
                                     <TableHead className={HEAD_CLASS}>Energy Consumed</TableHead>
                                     <TableHead className={`${HEAD_CLASS} text-right`}>
                                         Last Reading
@@ -321,9 +320,8 @@ export function RoomPowerEnergy({ amenityId }: RoomPowerEnergyProps) {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {meteredDevices.map((row, index) => (
+                                {meteredDevices.map((row) => (
                                     <TableRow key={row.deviceId} className="hover:bg-muted/5">
-                                        <TableCell className={VALUE_CLASS}>{index + 1}</TableCell>
                                         <TableCell>{row.label}</TableCell>
                                         <TableCell>
                                             {show(row.load?.value ?? null, row.load?.unit ?? null)}

@@ -12,9 +12,6 @@
 
 import { apiClient, type QueryParams } from "./client";
 import type {
-  DeviceRead,
-  FirmwareRead,
-  IncidentRead,
   OccupancyDetail,
   Page,
   RoleRead,
@@ -271,65 +268,13 @@ export const setRoomConditions = (amenityId: string, condition_ids: number[]) =>
   apiClient.put<RoomRead>(`/occupancy/${amenityId}/conditions`, { condition_ids });
 
 // ---------------------------------------------------------------------------
-// Devices, firmware, incidents, limit configs
+// Limit configs
+//
+// The device, firmware and incident write clients were removed with the
+// Device Management screens that were their only callers. The backend
+// device and incident write endpoints remain (shared, gated on
+// `caleido_network`); the /firmware endpoints were removed with them.
 // ---------------------------------------------------------------------------
-
-export interface DeviceWrite {
-  device_type: number;
-  amenity_id: string;
-  device_name?: string | null;
-  device_uid?: string | null;
-  appliance_name?: string | null;
-  manufacturer_name?: string | null;
-  model?: string | null;
-  part_number?: string | null;
-  mfg_date?: string | null;
-  installed_on?: string | null;
-  parent_device_id?: string | null;
-  /** NOTE: `authentication_code` is absent by design -- it is a credential. */
-}
-
-export const createDevice = (body: DeviceWrite) => apiClient.post<DeviceRead>("/devices", body);
-export const updateDevice = (
-  id: string,
-  body: Partial<Omit<DeviceWrite, "device_type">> & { expected_firmware_version?: string | null },
-) => apiClient.patch<DeviceRead>(`/devices/${id}`, body);
-export const commissionDevice = (id: string) =>
-  apiClient.post<DeviceRead>(`/devices/${id}/commission`, {});
-export const decommissionDevice = (id: string, reason?: string | null) =>
-  apiClient.post<DeviceRead>(`/devices/${id}/decommission`, { reason });
-export const deviceUnderMaintenance = (id: string) =>
-  apiClient.post<DeviceRead>(`/devices/${id}/maintenance`, {});
-
-export interface FirmwareWrite {
-  device_type_id: number;
-  firmware_version: string;
-  firmware_filename: string;
-  firmware_url: string;
-  crc: string;
-  release_notes?: string | null;
-  release_date?: string | null;
-  status?: "active" | "decommissioned";
-}
-
-export const createFirmware = (body: FirmwareWrite) =>
-  apiClient.post<FirmwareRead>("/firmware", body);
-export const updateFirmware = (id: string, body: Partial<FirmwareWrite>) =>
-  apiClient.patch<FirmwareRead>(`/firmware/${id}`, body);
-/** Sets `device.expected_firmware_version` (a firmware id) on each device. */
-export const assignFirmware = (id: string, device_ids: string[]) =>
-  apiClient.post<DeviceRead[]>(`/firmware/${id}/assign`, { device_ids });
-
-export interface IncidentWrite {
-  /** `incident_status`: 1 Unread, 2 Read, 3 Assigned, 4 Resolved. */
-  current_incident_status?: number;
-  assigned_to?: string | null;
-  subject?: string | null;
-  description?: string | null;
-}
-
-export const updateIncident = (id: string, body: IncidentWrite) =>
-  apiClient.patch<IncidentRead>(`/incidents/${id}`, body);
 
 export interface LimitConfigRead {
   id: string;

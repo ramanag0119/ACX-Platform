@@ -205,12 +205,6 @@ export const useDeviceTypes = (params?: QueryParams) =>
   useApiQuery(["device-types", params], () => api.listDeviceTypes(params));
 export const useDevices = (params?: QueryParams) =>
   useApiQuery(["devices", params], () => api.listDevices(params));
-export const useDeviceHealth = (deviceId: string | null) =>
-  useApiQuery(["devices", deviceId, "health"], () => api.getDeviceHealth(deviceId!), {
-    enabled: Boolean(deviceId),
-  });
-export const useFirmware = (params?: QueryParams) =>
-  useApiQuery(["firmware", params], () => api.listFirmware(params));
 
 // --- Alerts & notifications ------------------------------------------------
 
