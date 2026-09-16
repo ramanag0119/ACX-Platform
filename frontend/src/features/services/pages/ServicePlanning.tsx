@@ -22,7 +22,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Search, ChevronLeft, ChevronRight, Eye, Edit, Check, X, ChevronDown, ChevronUp } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Edit, X, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/core/contexts/AuthContext";
 import { DataState, TableLoading } from "@/core/components/DataState";
@@ -41,6 +41,7 @@ import {
 } from "@/lib/api/mutations";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
 import type { MaintenanceRequestWrite } from "@/lib/api/writes";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 type TabType = "scheduled" | "maintenance" | "disinfection";
 
@@ -1127,10 +1128,7 @@ const ServicePlanning = () => {
 
     return (
         <div className="space-y-6 animate-fade-in text-foreground">
-            {/* Page Header */}
-            <div className="mb-2">
-                <h1 className="text-xl font-semibold text-foreground tracking-tight">Services Planning</h1>
-            </div>
+            <PageHeader title="Services Planning" />
 
             {/* Tabs */}
             <div className="flex gap-6 border-b border-border dark:border-slate-800">

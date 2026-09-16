@@ -17,9 +17,8 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import { Search, ChevronLeft, ChevronRight, Eye, Edit, Share2, Pencil, Settings, X, ChevronDown, Bed, Briefcase, Building, Utensils, Wrench, HeartPulse, Sparkles } from "lucide-react";
-import { useTheme } from "@/core/contexts/ThemeContext";
+import { Card } from "@/components/ui/card";
+import { Search, Settings, X, ChevronDown, Bed, Briefcase, Building, Utensils, Wrench, HeartPulse, Sparkles } from "lucide-react";
 import {
     PieChart,
     Pie,
@@ -44,6 +43,7 @@ import {
   type ServiceRequestActionTarget,
 } from "../components/ServiceRequestActionsDialog";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 /**
  * Service Tracking, connected to the Phase 2.5 APIs.
@@ -579,7 +579,7 @@ const ServiceTracking = () => {
     };
 
     return (
-        <div className="space-y-5 animate-fade-in bg-[hsl(220,20%,96%)] min-h-full -mx-4 -my-3 px-4 py-3">
+        <div className="space-y-5 animate-fade-in text-foreground">
             <ServiceRequestActionsDialog
                 open={Boolean(actionTarget)}
                 onClose={() => setActionTarget(null)}
@@ -587,10 +587,7 @@ const ServiceTracking = () => {
                 canWrite={mayWriteTracking}
             />
 
-            {/* Page Header */}
-            <div className="mb-2">
-                <h1 className="text-xl font-semibold text-foreground tracking-tight">Services Tracking</h1>
-            </div>
+            <PageHeader title="Services Tracking" />
 
             {/* KPI Cards Row */}
             <div className="bg-card dark:bg-[#0c101d] rounded-2xl border border-border/80 dark:border-slate-800 p-4 shadow-md">

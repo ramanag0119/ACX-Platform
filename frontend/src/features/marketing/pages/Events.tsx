@@ -20,12 +20,13 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Pencil, Trash2, X, Edit, ChevronUp, ChevronDown } from "lucide-react";
+import { CalendarX2, X, Edit, ChevronUp, ChevronDown } from "lucide-react";
 import { DataState, TableLoading } from "@/core/components/DataState";
 import { useAuth } from "@/core/contexts/AuthContext";
 import { useEvents } from "@/lib/api/hooks";
 import { useCreateEvent, useUpdateEvent } from "@/lib/api/mutations";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 // Sample Events Data
 interface EventRow {
@@ -71,6 +72,7 @@ const Events = () => {
     }));
     const [isAddEventOpen, setIsAddEventOpen] = useState(false);
     const [cancellingEventId, setCancellingEventId] = useState<string | null>(null);
+    const [cancelReason, setCancelReason] = useState("");
     const [searchQuery, setSearchQuery] = useState("");
     const [entriesPerPage, setEntriesPerPage] = useState("10");
     const [currentPage, setCurrentPage] = useState(1);
@@ -95,13 +97,25 @@ const Events = () => {
 
     const handleReset = () => { setEventName(""); setVenue(""); setChiefGuests(""); setStartDate(""); setEndDate(""); setAttendees(""); setDescription(""); };
 
+    /**
+     * Closing has to clear the reason as well as the target. Leaving it behind
+     * pre-filled the next cancellation with the previous event's reason, which
+     * the required-field check would then happily accept.
+     */
+    const closeCancelDialog = () => {
+        setCancelEventOpen(false);
+        setCancellingEventId(null);
+        setCancelReason("");
+    };
+
     return (
         <div className="space-y-6 animate-fade-in text-foreground">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-2">
-                <h1 className="text-xl font-semibold text-foreground tracking-tight">Events Management</h1>
-                <Button onClick={() => setIsAddEventOpen(true)} className="h-10 px-6 rounded-xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">Add Events</Button>
-            </div>
+            <PageHeader
+                title="Events Management"
+                actions={
+                    <Button onClick={() => setIsAddEventOpen(true)} className="px-6 rounded-xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">Add Events</Button>
+                }
+            />
 
 
             {/* Table Section */}
@@ -126,6 +140,17 @@ const Events = () => {
                         </div>
                     </div>
 
+                    {/* Loading and error are handled here, not by the empty row
+                        below: without this a failed GET /events left `items` at
+                        [] and the table said "No events found", which reads as
+                        "this facility has no events" rather than "the request
+                        failed". `isEmpty` is deliberately not passed -- the row
+                        below states whether a search term is filtering it. */}
+                    <DataState
+                        isLoading={eventsQuery.isLoading}
+                        error={eventsQuery.error}
+                        loader={<TableLoading columns={12} />}
+                    >
                     <div className="rounded-lg overflow-hidden border border-border/80 dark:border-slate-800 overflow-x-auto scrollbar-thin">
                         <Table>
                             <TableHeader>
@@ -168,10 +193,15 @@ const Events = () => {
                                                         size="sm"
                                                         className="bg-red-500 hover:bg-red-600 text-white h-7 w-7 p-0 rounded-md"
                                                         disabled={!mayWrite}
-                                                        title="Cancel this event"
+                                                        aria-label={`Cancel event ${item.eventName}`}
+                                                        title="Cancel this event. The event is kept and marked cancelled -- it is never deleted."
                                                         onClick={() => { setCancellingEventId(item.id); setCancelEventOpen(true); }}
                                                     >
-                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                        {/* Deliberately NOT a trash icon. This action is a cancellation:
+                                                            it PATCHes `facility_event.status` to 0 and the row stays in
+                                                            the table. There is no delete path for an event anywhere in
+                                                            the client, and none should be added. */}
+                                                        <CalendarX2 className="h-3.5 w-3.5" />
                                                     </Button>
                                                 </div>
                                             </TableCell>
@@ -187,6 +217,7 @@ const Events = () => {
                             </TableBody>
                         </Table>
                     </div>
+                    </DataState>
 
                     <div className="flex flex-wrap items-center justify-between gap-4 mt-5">
                         <span className="text-muted-foreground text-xs">Showing {filteredData.length > 0 ? startIndex + 1 : 0} to {Math.min(startIndex + parseInt(entriesPerPage), filteredData.length)} of {filteredData.length} entries</span>
@@ -291,48 +322,48 @@ const Events = () => {
 
             {/* Edit Event Modal */}
             <Dialog open={editEventOpen} onOpenChange={setEditEventOpen}>
-                <DialogContent className="max-w-[750px] bg-white text-gray-900 border-0 p-0 overflow-hidden flex flex-col hide-close-button shadow-2xl [&>button]:hidden rounded-[4px]">
-                    <div className="flex justify-between items-center p-3 px-5 bg-white border-b border-gray-200">
-                        <h2 className="text-[17px] font-semibold text-gray-800 tracking-wide">Events Management</h2>
-                        <Button variant="ghost" className="h-7 w-7 p-0 border-[1.5px] border-gray-300 rounded-[2px] hover:bg-gray-100" onClick={() => setEditEventOpen(false)}>
-                            <X className="h-4 w-4 text-gray-500 stroke-[3]" />
+                <DialogContent className="max-w-[750px] bg-card text-card-foreground border-0 p-0 overflow-hidden flex flex-col hide-close-button shadow-2xl [&>button]:hidden rounded-[4px]">
+                    <div className="flex justify-between items-center p-3 px-5 bg-card border-b border-border">
+                        <h2 className="text-[17px] font-semibold text-foreground tracking-wide">Events Management</h2>
+                        <Button variant="ghost" className="h-7 w-7 p-0 border-[1.5px] border-border rounded-[2px] hover:bg-muted" onClick={() => setEditEventOpen(false)}>
+                            <X className="h-4 w-4 text-muted-foreground stroke-[3]" />
                         </Button>
                     </div>
                     <div className="p-8 px-12 space-y-7 max-h-[75vh] overflow-y-auto custom-scrollbar">
                         <div className="grid grid-cols-[160px_1fr] items-center gap-4">
-                            <Label className="text-sm font-medium text-gray-800">Event Name <span className="text-red-500">*</span></Label>
-                            <input type="text" defaultValue="Marriage" className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-500 focus:ring-0 px-0 pb-1 text-sm outline-none" />
+                            <Label className="text-sm font-medium text-foreground">Event Name <span className="text-red-500">*</span></Label>
+                            <input type="text" defaultValue="Marriage" className="w-full bg-transparent border-0 border-b border-border text-foreground focus:ring-0 px-0 pb-1 text-sm outline-none" />
                         </div>
                         <div className="grid grid-cols-[160px_1fr] items-center gap-4">
-                            <Label className="text-sm font-medium text-gray-800">Venue <span className="text-red-500">*</span></Label>
-                            <input type="text" defaultValue="Venue 5" className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-500 focus:ring-0 px-0 pb-1 text-sm outline-none" />
+                            <Label className="text-sm font-medium text-foreground">Venue <span className="text-red-500">*</span></Label>
+                            <input type="text" defaultValue="Venue 5" className="w-full bg-transparent border-0 border-b border-border text-foreground focus:ring-0 px-0 pb-1 text-sm outline-none" />
                         </div>
                         <div className="grid grid-cols-[160px_1fr] items-center gap-4">
-                            <Label className="text-sm font-medium text-gray-800">Chief Guests <span className="text-red-500">*</span></Label>
-                            <input type="text" defaultValue="Brindha" className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-500 focus:ring-0 px-0 pb-1 text-sm outline-none" />
+                            <Label className="text-sm font-medium text-foreground">Chief Guests <span className="text-red-500">*</span></Label>
+                            <input type="text" defaultValue="Brindha" className="w-full bg-transparent border-0 border-b border-border text-foreground focus:ring-0 px-0 pb-1 text-sm outline-none" />
                         </div>
                         <div className="grid grid-cols-[160px_1fr] items-center gap-4">
-                            <Label className="text-sm font-medium text-gray-800">Start Date <span className="text-red-500">*</span></Label>
-                            <input type="text" defaultValue="19-11-2024" className="w-full bg-gray-100 border border-gray-200 text-gray-600 focus:ring-0 px-3 py-2 text-sm outline-none" />
+                            <Label className="text-sm font-medium text-foreground">Start Date <span className="text-red-500">*</span></Label>
+                            <input type="text" defaultValue="19-11-2024" className="w-full bg-muted border border-border text-foreground focus:ring-0 px-3 py-2 text-sm outline-none" />
                         </div>
                         <div className="grid grid-cols-[160px_1fr] items-center gap-4">
-                            <Label className="text-sm font-medium text-gray-800">End Date <span className="text-red-500">*</span></Label>
-                            <input type="text" defaultValue="19-11-2024" className="w-full bg-gray-100 border border-gray-200 text-gray-600 focus:ring-0 px-3 py-2 text-sm outline-none" />
+                            <Label className="text-sm font-medium text-foreground">End Date <span className="text-red-500">*</span></Label>
+                            <input type="text" defaultValue="19-11-2024" className="w-full bg-muted border border-border text-foreground focus:ring-0 px-3 py-2 text-sm outline-none" />
                         </div>
 
                         {/* Start Time */}
                         <div className="grid grid-cols-[160px_1fr] items-center gap-4">
-                            <Label className="text-sm font-medium text-gray-800">Start Time <span className="text-red-500">*</span></Label>
+                            <Label className="text-sm font-medium text-foreground">Start Time <span className="text-red-500">*</span></Label>
                             <div className="flex items-center gap-4">
                                 <div className="flex flex-col items-center">
                                     <ChevronUp className="h-4 w-4 text-cyan-600 cursor-pointer" />
-                                    <span className="text-gray-600 text-sm mt-1 border-b border-gray-300 pb-1 px-2">01</span>
+                                    <span className="text-foreground text-sm mt-1 border-b border-border pb-1 px-2">01</span>
                                     <ChevronDown className="h-4 w-4 text-cyan-600 cursor-pointer mt-1" />
                                 </div>
-                                <span className="text-gray-800 font-medium pb-2">:</span>
+                                <span className="text-foreground font-medium pb-2">:</span>
                                 <div className="flex flex-col items-center">
                                     <ChevronUp className="h-4 w-4 text-cyan-600 cursor-pointer" />
-                                    <span className="text-gray-600 text-sm mt-1 border-b border-gray-300 pb-1 px-2">31</span>
+                                    <span className="text-foreground text-sm mt-1 border-b border-border pb-1 px-2">31</span>
                                     <ChevronDown className="h-4 w-4 text-cyan-600 cursor-pointer mt-1" />
                                 </div>
                                 <div className="ml-2 bg-brand hover:bg-brand-hover text-white rounded-xl px-3.5 py-1 text-sm font-semibold cursor-pointer shadow-sm">PM</div>
@@ -341,17 +372,17 @@ const Events = () => {
 
                         {/* End Time */}
                         <div className="grid grid-cols-[160px_1fr] items-center gap-4">
-                            <Label className="text-sm font-medium text-gray-800">End Time <span className="text-red-500">*</span></Label>
+                            <Label className="text-sm font-medium text-foreground">End Time <span className="text-red-500">*</span></Label>
                             <div className="flex items-center gap-4">
                                 <div className="flex flex-col items-center">
                                     <ChevronUp className="h-4 w-4 text-brand cursor-pointer" />
-                                    <span className="text-gray-600 text-sm mt-1 border-b border-gray-300 pb-1 px-2">09</span>
+                                    <span className="text-foreground text-sm mt-1 border-b border-border pb-1 px-2">09</span>
                                     <ChevronDown className="h-4 w-4 text-brand cursor-pointer mt-1" />
                                 </div>
-                                <span className="text-gray-800 font-medium pb-2">:</span>
+                                <span className="text-foreground font-medium pb-2">:</span>
                                 <div className="flex flex-col items-center">
                                     <ChevronUp className="h-4 w-4 text-brand cursor-pointer" />
-                                    <span className="text-gray-600 text-sm mt-1 border-b border-gray-300 pb-1 px-2">00</span>
+                                    <span className="text-foreground text-sm mt-1 border-b border-border pb-1 px-2">00</span>
                                     <ChevronDown className="h-4 w-4 text-brand cursor-pointer mt-1" />
                                 </div>
                                 <div className="ml-2 bg-brand hover:bg-brand-hover text-white rounded-xl px-3.5 py-1 text-sm font-semibold cursor-pointer shadow-sm">PM</div>
@@ -359,20 +390,20 @@ const Events = () => {
                         </div>
 
                         <div className="grid grid-cols-[160px_1fr] items-center gap-4">
-                            <Label className="text-sm font-medium text-gray-800">Attendees <span className="text-red-500">*</span></Label>
-                            <input type="text" defaultValue="500" className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-500 focus:ring-0 px-0 pb-1 text-sm outline-none" />
+                            <Label className="text-sm font-medium text-foreground">Attendees <span className="text-red-500">*</span></Label>
+                            <input type="text" defaultValue="500" className="w-full bg-transparent border-0 border-b border-border text-foreground focus:ring-0 px-0 pb-1 text-sm outline-none" />
                         </div>
                         <div className="grid grid-cols-[160px_1fr] items-center gap-4">
-                            <Label className="text-sm font-medium text-gray-800">Description</Label>
-                            <input type="text" placeholder="Enter Description" className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-500 focus:ring-0 px-0 pb-1 text-sm outline-none" />
+                            <Label className="text-sm font-medium text-foreground">Description</Label>
+                            <input type="text" placeholder="Enter Description" className="w-full bg-transparent border-0 border-b border-border text-foreground focus:ring-0 px-0 pb-1 text-sm outline-none" />
                         </div>
 
                         <div className="grid grid-cols-[160px_1fr] items-center gap-4 pt-2">
-                            <Label className="text-sm font-medium text-gray-800 text-left">Image</Label>
+                            <Label className="text-sm font-medium text-foreground text-left">Image</Label>
                             <div className="space-y-3">
-                                <div className="flex items-center border-b border-gray-300 pb-1">
-                                    <Button variant="outline" className="h-7 px-3 bg-gray-100 text-gray-700 text-xs border border-gray-300 rounded-[2px] font-normal">Choose file</Button>
-                                    <span className="ml-3 text-xs text-gray-400">No file chosen</span>
+                                <div className="flex items-center border-b border-border pb-1">
+                                    <Button variant="outline" className="h-7 px-3 bg-muted text-foreground text-xs border border-border rounded-[2px] font-normal">Choose file</Button>
+                                    <span className="ml-3 text-xs text-muted-foreground">No file chosen</span>
                                 </div>
                                 <div className="text-brand-teal text-xs cursor-pointer hover:underline">Click here to preview image</div>
                             </div>
@@ -382,20 +413,23 @@ const Events = () => {
             </Dialog>
 
             {/* Cancel Event Modal */}
-            <Dialog open={cancelEventOpen} onOpenChange={setCancelEventOpen}>
-                <DialogContent className="max-w-[500px] bg-white text-gray-900 border-0 p-0 overflow-hidden flex flex-col hide-close-button shadow-2xl [&>button]:hidden rounded-[4px]">
-                    <div className="flex justify-between items-center p-3 px-5 bg-white border-b border-gray-200">
-                        <h2 className="text-[17px] font-semibold text-gray-800 tracking-wide">Cancel Events Menu</h2>
-                        <Button variant="ghost" className="h-7 w-7 p-0 border-[1.5px] border-gray-300 rounded-[2px] hover:bg-gray-100" onClick={() => setCancelEventOpen(false)}>
-                            <X className="h-4 w-4 text-gray-500 stroke-[3]" />
+            <Dialog open={cancelEventOpen} onOpenChange={(open) => (open ? setCancelEventOpen(true) : closeCancelDialog())}>
+                <DialogContent className="max-w-[500px] bg-card text-card-foreground border-0 p-0 overflow-hidden flex flex-col hide-close-button shadow-2xl [&>button]:hidden rounded-[4px]">
+                    <div className="flex justify-between items-center p-3 px-5 bg-card border-b border-border">
+                        <h2 className="text-[17px] font-semibold text-foreground tracking-wide">Cancel Events Menu</h2>
+                        <Button variant="ghost" className="h-7 w-7 p-0 border-[1.5px] border-border rounded-[2px] hover:bg-muted" onClick={closeCancelDialog}>
+                            <X className="h-4 w-4 text-muted-foreground stroke-[3]" />
                         </Button>
                     </div>
                     <div className="p-8 px-10 space-y-7">
                         <div className="grid grid-cols-[160px_1fr] items-center gap-4">
-                            <Label className="text-sm font-medium text-gray-800">Reason for Cancel <span className="text-red-500">*</span></Label>
+                            <Label htmlFor="cancel-reason" className="text-sm font-medium text-foreground">Reason for Cancel <span className="text-red-500">*</span></Label>
                             <input
+                                id="cancel-reason"
                                 type="text"
-                                className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-500 focus:ring-0 px-0 pb-1 text-sm outline-none"
+                                value={cancelReason}
+                                onChange={(e) => setCancelReason(e.target.value)}
+                                className="w-full bg-transparent border-0 border-b border-border text-foreground focus:ring-0 px-0 pb-1 text-sm outline-none"
                             />
                         </div>
                     </div>
@@ -403,7 +437,12 @@ const Events = () => {
                     <div className="flex justify-center gap-4 pb-8">
                         <Button
                             className="bg-brand-teal hover:bg-cyan-600 text-white h-8 px-6 rounded-[3px] font-normal"
-                            disabled={!mayWrite || !cancellingEventId || updateEvent.isPending}
+                            disabled={
+                                !mayWrite ||
+                                !cancellingEventId ||
+                                !cancelReason.trim() ||
+                                updateEvent.isPending
+                            }
                             onClick={() =>
                                 cancellingEventId &&
                                 updateEvent.mutate(
@@ -411,10 +450,14 @@ const Events = () => {
                                         id: cancellingEventId,
                                         body: {
                                             // `facility_event` stores the reason and a status flag.
+                                            // The reason was previously collected and thrown away:
+                                            // the field is marked required, so submitting without
+                                            // it recorded a cancellation nobody could explain.
                                             status: 0,
+                                            cancellation_reason: cancelReason.trim(),
                                         },
                                     },
-                                    { onSuccess: () => setCancelEventOpen(false) },
+                                    { onSuccess: () => closeCancelDialog() },
                                 )
                             }
                         >

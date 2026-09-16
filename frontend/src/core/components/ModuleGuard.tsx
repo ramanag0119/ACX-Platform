@@ -2,18 +2,17 @@ import { useLocation } from "react-router-dom";
 import { ShieldOff } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { useAuth } from "@/core/contexts/AuthContext";
 import { moduleForPath } from "@/core/rbac/modules";
 
 /** Shown in place of a screen the signed-in role has no read grant for. */
 export const ModuleDenied = ({ moduleName }: { moduleName: string }) => (
   <div className="space-y-6 animate-fade-in">
-    <div className="page-header">
-      <h1 className="page-title">Access denied</h1>
-      <p className="page-description">
-        Your role does not grant access to this module.
-      </p>
-    </div>
+    <PageHeader
+      title="Access denied"
+      description="Your role does not grant access to this module."
+    />
     <Card>
       <CardContent className="flex flex-col items-center justify-center py-16 text-center">
         <div className="mb-4 rounded-full bg-muted p-4">

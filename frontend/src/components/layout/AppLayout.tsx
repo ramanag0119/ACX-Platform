@@ -72,7 +72,15 @@ const AppLayoutInner = () => {
           sidebarCollapsed ? "pl-[64px]" : "pl-[240px]"
         )}
       >
-        <div className="hms-content flex-1 min-h-0 overflow-y-auto px-4 py-3">
+        {/* NO `pt-*` here. The sticky page header must be flush with the top of
+            this scroll container: any top padding leaves a strip above it that
+            content scrolls through. The spacing it used to provide now lives
+            below the header (`.hms-page-header { margin-bottom }`).
+
+            The horizontal gutter is NOT a `px-*` class either: the header has
+            to cancel it exactly to sit full-bleed, so `.hms-content` owns it as
+            `--hms-content-gutter` in index.css and both read the one value. */}
+        <div className="hms-content flex-1 min-h-0 overflow-y-auto pb-3">
           <ModuleGuard>
             <Outlet />
           </ModuleGuard>

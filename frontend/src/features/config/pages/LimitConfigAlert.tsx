@@ -26,6 +26,7 @@ import { useDeviceParams, useDevices, useLimitConfigs } from "@/lib/api/hooks";
 import { useAuth } from "@/core/contexts/AuthContext";
 import { useCreateLimitConfig, useUpdateLimitConfig } from "@/lib/api/mutations";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 /**
  * Limit Config Alert, connected to the Phase 2.7 / 2.9 APIs.
@@ -155,10 +156,7 @@ const LimitConfigAlert = () => {
 
     return (
         <div className="space-y-6 animate-fade-in text-foreground">
-            {/* Header */}
-            <div className="mb-2">
-                <h1 className="text-xl font-semibold text-foreground tracking-tight">Limit Config Alert</h1>
-            </div>
+            <PageHeader title="Limit Config Alert" />
 
             {/* Form Section */}
             <Card className="border border-border/80 dark:border-slate-800 shadow-xl rounded-xl bg-card text-card-foreground">

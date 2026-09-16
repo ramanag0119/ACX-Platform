@@ -59,6 +59,7 @@ import {
   useSetStayDocumentApproval,
 } from "@/lib/api/mutations";
 import { useAuth } from "@/core/contexts/AuthContext";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 type BookingData = {
   id: string;
@@ -428,29 +429,29 @@ const Bookings = () => {
   if (viewMode === "add" || viewMode === "edit") {
     return (
       <div className="space-y-6 animate-fade-in text-foreground">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-4">
+        <PageHeader
+          title={viewMode === "edit" ? "Edit Booking" : "Add New Booking"}
+          leading={
             <Button
               variant="ghost"
               size="icon"
               className="hover:bg-muted"
               onClick={resetForm}
+              aria-label="Back to booking list"
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-2xl font-semibold text-foreground">
-              {viewMode === "edit" ? "Edit Booking" : "Add New Booking"}
-            </h1>
-          </div>
-          <Button
-            variant="ghost"
-            className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
-            onClick={resetForm}
-          >
-            Cancel
-          </Button>
-        </div>
+          }
+          actions={
+            <Button
+              variant="ghost"
+              className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
+              onClick={resetForm}
+            >
+              Cancel
+            </Button>
+          }
+        />
 
         {/* Form */}
         <Card className="border border-border/80 dark:border-slate-800 shadow-xl rounded-xl bg-card text-card-foreground">
@@ -836,26 +837,30 @@ const Bookings = () => {
   // List View
   return (
     <div className="space-y-6 animate-fade-in text-foreground">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-2">
-        <h1 className="text-xl font-semibold text-foreground tracking-tight">Booking Management</h1>
-        <div className="flex items-center gap-3">
-          <Button
-            onClick={() => { setEditingBooking(null); setFormData(EMPTY_FORM); setViewMode("add"); }}
-            className="bg-brand hover:bg-brand-hover text-white font-semibold px-5 h-10 rounded-xl shadow-md hover:shadow-lg transition-all"
-          >
-            <Plus className="h-4 w-4 mr-2 stroke-[2.5]" />
-            Add Bookings
-          </Button>
-          <Button
-            onClick={() => setBulkUploadOpen(true)}
-            className="bg-brand hover:bg-brand-hover text-white font-semibold px-5 h-10 rounded-xl shadow-md hover:shadow-lg transition-all"
-          >
-            <Upload className="h-4 w-4 mr-2 stroke-[2.5]" />
-            Bulk Upload
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Booking Management"
+        actions={
+          /* Siblings, NOT wrapped in a flex div: the header's actions slot
+             already lays its children out, and a wrapper would absorb the
+             shared 36px/9px control sizing meant for the buttons themselves. */
+          <>
+            <Button
+              onClick={() => { setEditingBooking(null); setFormData(EMPTY_FORM); setViewMode("add"); }}
+              className="bg-brand hover:bg-brand-hover text-white font-semibold px-5 rounded-xl shadow-md hover:shadow-lg transition-all"
+            >
+              <Plus className="h-4 w-4 mr-2 stroke-[2.5]" />
+              Add Bookings
+            </Button>
+            <Button
+              onClick={() => setBulkUploadOpen(true)}
+              className="bg-brand hover:bg-brand-hover text-white font-semibold px-5 rounded-xl shadow-md hover:shadow-lg transition-all"
+            >
+              <Upload className="h-4 w-4 mr-2 stroke-[2.5]" />
+              Bulk Upload
+            </Button>
+          </>
+        }
+      />
 
       {/* Table Container */}
       <Card className="border border-border/80 dark:border-slate-800 shadow-xl rounded-xl bg-card text-card-foreground overflow-hidden">

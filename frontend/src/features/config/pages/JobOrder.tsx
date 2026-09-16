@@ -33,6 +33,7 @@ import { describeApiError } from "@/lib/api/client";
 import { toast } from "@/hooks/use-toast";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
 import type { JobOrderRead, JobOrderTypeOfWork } from "@/lib/api/writes";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 /**
  * Job Order Management, connected to the Phase 3.0 job-order API.
@@ -754,10 +755,7 @@ const JobOrder = () => {
 
     return (
         <div className="space-y-6 animate-fade-in text-foreground">
-            {/* Header */}
-            <div className="mb-2">
-                <h1 className="text-xl font-semibold text-foreground tracking-tight">Job Order Management</h1>
-            </div>
+            <PageHeader title="Job Order Management" />
 
             {/* Tabs */}
             <div className="flex gap-6 border-b border-border dark:border-slate-800">

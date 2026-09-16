@@ -25,13 +25,14 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Pencil, Trash2, Hourglass } from "lucide-react";
+import { Hourglass, Pencil } from "lucide-react";
 import { DataState, TableLoading } from "@/core/components/DataState";
 import { useAuth } from "@/core/contexts/AuthContext";
 import { describeApiError } from "@/lib/api/client";
 import { useOffers, useRooms } from "@/lib/api/hooks";
 import { useCreateOffer, useUpdateOffer } from "@/lib/api/mutations";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 // Sample Offers Data
 /**
@@ -144,11 +145,12 @@ const Offers = () => {
 
     return (
         <div className="space-y-6 animate-fade-in text-foreground">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-2">
-                <h1 className="text-xl font-semibold text-foreground tracking-tight">Offers Management</h1>
-                <Button onClick={() => setIsModalOpen(true)} className="h-10 px-6 rounded-xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">Add Offers</Button>
-            </div>
+            <PageHeader
+              title="Offers Management"
+              actions={
+                <Button onClick={() => setIsModalOpen(true)} className="px-6 rounded-xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">Add Offers</Button>
+              }
+            />
 
 
             {/* Table Section */}
@@ -173,6 +175,15 @@ const Offers = () => {
                         </div>
                     </div>
 
+                    {/* Loading and error are handled here, not by the empty row
+                        below: without this a failed request left the list at []
+                        and the table reported "no records", which reads as an
+                        empty facility rather than a failed request. */}
+                    <DataState
+                        isLoading={offersQuery.isLoading}
+                        error={offersQuery.error}
+                        loader={<TableLoading columns={10} />}
+                    >
                     <div className="rounded-lg overflow-hidden border border-border/80 dark:border-slate-800 overflow-x-auto scrollbar-thin">
                         <Table>
                             <TableHeader>
@@ -229,6 +240,7 @@ const Offers = () => {
                             </TableBody>
                         </Table>
                     </div>
+                    </DataState>
 
                     <div className="flex flex-wrap items-center justify-between gap-4 mt-5">
                         <span className="text-muted-foreground text-xs">Showing {filteredData.length > 0 ? startIndex + 1 : 0} to {Math.min(startIndex + parseInt(entriesPerPage), filteredData.length)} of {filteredData.length} entries</span>

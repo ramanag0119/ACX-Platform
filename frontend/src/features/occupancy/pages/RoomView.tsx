@@ -6,6 +6,7 @@ import { DataState } from "@/core/components/DataState";
 import { useFloors, useOccupancy, useStays } from "@/lib/api/hooks";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
 import { roomStatusColor } from "../lib/roomStatus";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 /**
  * Room View, driven by GET /occupancy and GET /stays.
@@ -101,7 +102,6 @@ const RoomView = () => {
     { label: "End of Day", room: counts.available, percent: counts.availablePercent },
   ];
 
-  const pageBg = isDark ? "linear-gradient(180deg, #0f1117, #131824)" : "linear-gradient(180deg, #F4F2FA, #ECE9F6)";
   const cardBg = isDark
     ? "linear-gradient(180deg, #1e2233, #1a1e30)"
     : "linear-gradient(180deg, rgba(255,255,255,0.85), rgba(245,242,255,0.95))";
@@ -111,11 +111,8 @@ const RoomView = () => {
   const gridBorder = isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.08)";
 
   return (
-    <div className="space-y-5 animate-fade-in min-h-full -mx-4 -my-3 px-4 py-3" style={{ background: pageBg }}>
-      {/* Header */}
-      <div className="mb-2">
-        <h1 className="text-2xl font-semibold" style={{ color: titleColor }}>Room View</h1>
-      </div>
+    <div className="space-y-5 animate-fade-in text-foreground">
+      <PageHeader title="Room View" />
 
       <DataState isLoading={isLoading} error={error}>
         <div className="space-y-6">

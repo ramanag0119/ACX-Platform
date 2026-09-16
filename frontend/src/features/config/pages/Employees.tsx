@@ -18,7 +18,7 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
-import { Pencil, Trash2, Eye, EyeOff, X, Edit, ChevronDown } from "lucide-react";
+import { Trash2, Eye, EyeOff, X, Edit } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { DataState, TableLoading } from "@/core/components/DataState";
@@ -35,6 +35,7 @@ import {
   useUpdateUser,
 } from "@/lib/api/mutations";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 /**
  * Employees, connected to GET /users (module `employees`).
@@ -283,12 +284,14 @@ const Employees = () => {
     if (showAddEmployee) {
         return (
             <div className="space-y-6 animate-fade-in text-foreground">
-                <div className="flex items-center justify-between mb-2">
-                    <h1 className="text-xl font-semibold text-foreground tracking-tight">Employee Management</h1>
-                    <Button onClick={() => setShowAddEmployee(false)} variant="destructive" className="h-9 px-4 text-xs font-semibold rounded-xl shadow-sm">
+                <PageHeader
+                  title="Employee Management"
+                  actions={
+                    <Button onClick={() => setShowAddEmployee(false)} variant="destructive" className="px-4 text-xs font-semibold rounded-xl shadow-sm">
                         Cancel
                     </Button>
-                </div>
+                  }
+                />
 
                 <Card className="border border-border/80 dark:border-slate-800 shadow-xl rounded-xl bg-card text-card-foreground">
                     <CardContent className="p-8">
@@ -667,13 +670,14 @@ const Employees = () => {
 
     return (
         <div className="space-y-6 animate-fade-in text-foreground">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-2">
-                <h1 className="text-xl font-semibold text-foreground tracking-tight">Employee Management</h1>
-                <Button onClick={() => setShowAddEmployee(true)} className="h-9 px-4 text-xs font-semibold rounded-xl bg-brand hover:bg-brand-hover text-white shadow-md hover:shadow-lg transition-all">
+            <PageHeader
+              title="Employee Management"
+              actions={
+                <Button onClick={() => setShowAddEmployee(true)} className="px-4 text-xs font-semibold rounded-xl bg-brand hover:bg-brand-hover text-white shadow-md hover:shadow-lg transition-all">
                     Add Employee
                 </Button>
-            </div>
+              }
+            />
 
             {/* Tabs */}
             <div className="flex gap-6 border-b border-border dark:border-slate-800">
