@@ -1,0 +1,14 @@
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Local backups produced by the Phase 1.7 rebuild
+docs/archive/*.sql
