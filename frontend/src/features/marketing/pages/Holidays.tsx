@@ -26,6 +26,7 @@ import { useAuth } from "@/core/contexts/AuthContext";
 import { useHolidays, useOccasionTypes } from "@/lib/api/hooks";
 import { useCreateHoliday, useUpdateHoliday } from "@/lib/api/mutations";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 // Sample holidays data
 /**
@@ -142,10 +143,7 @@ const Holidays = () => {
 
     return (
         <div className="space-y-6 animate-fade-in text-foreground">
-            {/* Header */}
-            <div className="mb-2">
-                <h1 className="text-xl font-semibold text-foreground tracking-tight">Holidays Management</h1>
-            </div>
+            <PageHeader title="Holidays Management" />
 
 
             {/* Add Form */}

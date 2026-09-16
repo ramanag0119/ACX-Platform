@@ -30,6 +30,7 @@ import {
 } from "@/lib/api/mutations";
 import { toast } from "@/hooks/use-toast";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 type TabType = "room-service" | "travel-desk" | "business-center" | "food-order" | "facility-maintenance" | "health-fitness" | "sanitation-maintenance";
 
@@ -1994,10 +1995,7 @@ const ServicesSetup = () => {
 
     return (
         <div className="space-y-6 animate-fade-in text-foreground">
-            {/* Page Header */}
-            <div className="mb-2">
-                <h1 className="text-xl font-semibold text-foreground tracking-tight">Services</h1>
-            </div>
+            <PageHeader title="Services" />
 
             {/* Tab Navigation */}
             <div className="flex gap-6 border-b border-border dark:border-slate-800">

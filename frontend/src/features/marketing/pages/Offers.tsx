@@ -32,6 +32,7 @@ import { describeApiError } from "@/lib/api/client";
 import { useOffers, useRooms } from "@/lib/api/hooks";
 import { useCreateOffer, useUpdateOffer } from "@/lib/api/mutations";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 // Sample Offers Data
 /**
@@ -144,11 +145,12 @@ const Offers = () => {
 
     return (
         <div className="space-y-6 animate-fade-in text-foreground">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-2">
-                <h1 className="text-xl font-semibold text-foreground tracking-tight">Offers Management</h1>
+            <PageHeader
+              title="Offers Management"
+              actions={
                 <Button onClick={() => setIsModalOpen(true)} className="h-10 px-6 rounded-xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">Add Offers</Button>
-            </div>
+              }
+            />
 
 
             {/* Table Section */}

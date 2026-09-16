@@ -1859,21 +1859,148 @@ select option:focus {
    ========================================================================== */
 
 /* --- Sticky module heading ------------------------------------------------
-   Every HMS page already renders `space-y-* animate-fade-in` with its <h1>
-   in the first block, so the heading is pinned from here instead of editing
-   a dozen pages. `:has(h1)` is what keeps this off the fade-in CARDS that
-   are not page headings. No second heading is introduced -- this is the
-   page's own <h1>, held in place. */
-.hms-content .animate-fade-in > h1:first-child,
-.hms-content .animate-fade-in > :first-child:has(h1) {
+   Owned by the PageHeader component (components/layout/PageHeader.tsx), which
+   is the only thing that renders this class.
+
+   This replaces a pair of structural selectors that matched on document
+   shape:
+
+       .hms-content .animate-fade-in > h1:first-child,
+       .hms-content .animate-fade-in > :first-child:has(h1)
+
+   Those styled whatever happened to come first inside a page, so a heading
+   was pinned by accident of markup rather than by intent -- it missed any
+   page whose first child was not the heading, and it could not reach a page
+   using different class names. Every page inside `.hms-content` now renders
+   <PageHeader>, so the match is explicit and a page cannot silently opt out
+   by reordering its markup.
+
+   `.hms-content` (AppLayout) is the single scroll container, which is what
+   makes plain `position: sticky` work here. */
+.hms-page-header {
   position: sticky;
   top: 0;
-  z-index: 20;
-  padding-block: 0.5rem;
-  /* Fully opaque: a translucent heading lets table rows show through as they
-     scroll under it, which reads as text overlapping the heading. The colour
-     is the app's own surface token -- no new colour is introduced. */
-  background-color: hsl(var(--background));
+  z-index: 40;
+
+  /* NO `margin-top`, and no top offset. `.hms-content` no longer carries
+     `pt-*` either, so the bar's static position IS the top of the scroll
+     container and `top: 0` pins it to exactly that spot. An earlier version
+     cancelled the container's `py-3` with `margin-top: -0.75rem`; a negative
+     margin puts the box above its own containing block, which sticky then
+     clamps back down -- that clamp was the strip of KPI cards appearing above
+     the header mid-scroll.
+
+     `margin-inline` alone stays: it makes the bar full-bleed across the
+     container's `px-4`, edge to edge with no side gap. All top spacing now
+     hangs BELOW the bar, which is what the cards clear it by.
+
+     `sticky` -- never `fixed` -- is what keeps the bar in normal flow, so it
+     takes up real height and content starts BELOW it instead of underneath. */
+  margin-inline: -1rem;
+  margin-bottom: 1rem;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: nowrap;
+  gap: 1.5rem;
+
+  height: 74px;
+  padding-inline: 32px;
+
+  /* SOLID, deliberately. This was `backdrop-filter: blur()` over a
+     transparent fill, which washed out the KPI cards showing through as they
+     scrolled under the bar. `--card` is `0 0% 100%` in light (#FFFFFF exactly)
+     and a solid dark surface in dark mode, so one token covers both themes and
+     nothing behind the bar is ever dimmed or blurred. */
+  background-color: hsl(var(--card));
+  border-bottom: 1px solid hsl(var(--border));
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+}
+
+/* `min-width: 0` on both the flex row and the text column is what actually
+   lets the title clip: without it a flex item refuses to shrink below its
+   content, so a long title would push the actions off the bar instead of
+   ellipsing. */
+.hms-page-header__identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.hms-page-header__leading {
+  flex-shrink: 0;
+}
+
+.hms-page-header__text {
+  min-width: 0;
+}
+
+.hms-page-header__title {
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: hsl(var(--foreground));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* One line, always. Clipped rather than wrapped so the bar's height is fixed
+   and the page below it never shifts. */
+.hms-page-header__subtitle {
+  margin-top: 2px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.3;
+  color: hsl(var(--muted-foreground));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The page's OWN controls, put on one baseline. This sets height, radius and
+   rhythm only -- it never adds a control, and each button keeps its own
+   colour. These rules sit after `@tailwind utilities`, so they win over the
+   per-page `h-8` / `h-10` / `rounded-xl` utilities at equal specificity
+   without needing `!important`. */
+.hms-page-header__actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 10px;
+}
+
+.hms-page-header__actions > * {
+  height: 36px;
+  border-radius: 9px;
+}
+
+/* --- Keep the sticky header's ancestors transform-free -------------------
+   Every module page wraps itself in `animate-fade-in`, which tweens
+   `transform: translateY(8px) -> translateY(0)`. A transformed element becomes
+   the CONTAINING BLOCK for any `position: sticky` descendant, so for the first
+   300ms of every page load the header resolved against that wrapper instead of
+   `.hms-content` -- it scrolled away with the page rather than pinning, which
+   is the other half of the gap above it.
+
+   The entry animation keeps its fade and gives up only the 8px of travel, so
+   nothing else about the page changes. Overriding `animation-name` alone keeps
+   the existing duration and easing. */
+.hms-content .animate-fade-in {
+  animation-name: hmsPageFadeIn;
+}
+
+@keyframes hmsPageFadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 /* --- Table headers --------------------------------------------------------

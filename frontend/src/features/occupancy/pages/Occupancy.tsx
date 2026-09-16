@@ -38,6 +38,7 @@ import {
 } from "@/lib/api/hooks";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
 import type { OccupancyRead } from "@/lib/api/types";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 /**
  * The Occupancy Dashboard: live occupancy from GET /occupancy.
@@ -402,10 +403,7 @@ const Occupancy = () => {
 
   return (
     <div className="space-y-5 animate-fade-in text-foreground">
-      {/* Header */}
-      <div className="mb-2">
-        <h1 className="text-xl font-semibold text-foreground tracking-tight">Occupancy Dashboard</h1>
-      </div>
+      <PageHeader title="Occupancy Dashboard" />
 
       {/* Tabs */}
       <div className="flex gap-6 border-b border-border dark:border-slate-800">

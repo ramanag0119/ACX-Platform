@@ -31,6 +31,7 @@ import {
   useUpdateRole,
 } from "@/lib/api/mutations";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 /**
  * User Role Management, connected to the Phase 2.3 access APIs.
@@ -182,10 +183,7 @@ const UserRoles = () => {
 
     return (
         <div className="space-y-6 animate-fade-in text-foreground">
-            {/* Header */}
-            <div className="mb-2">
-                <h1 className="text-xl font-semibold text-foreground tracking-tight">User Role Management</h1>
-            </div>
+            <PageHeader title="User Role Management" />
 
             <Tabs defaultValue="user-role" className="w-full">
                 <TabsList className="bg-muted/30 p-1 rounded-xl w-fit mb-6 border border-border/50">

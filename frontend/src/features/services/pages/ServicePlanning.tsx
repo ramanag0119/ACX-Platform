@@ -41,6 +41,7 @@ import {
 } from "@/lib/api/mutations";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
 import type { MaintenanceRequestWrite } from "@/lib/api/writes";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 type TabType = "scheduled" | "maintenance" | "disinfection";
 
@@ -1127,10 +1128,7 @@ const ServicePlanning = () => {
 
     return (
         <div className="space-y-6 animate-fade-in text-foreground">
-            {/* Page Header */}
-            <div className="mb-2">
-                <h1 className="text-xl font-semibold text-foreground tracking-tight">Services Planning</h1>
-            </div>
+            <PageHeader title="Services Planning" />
 
             {/* Tabs */}
             <div className="flex gap-6 border-b border-border dark:border-slate-800">

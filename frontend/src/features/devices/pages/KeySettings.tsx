@@ -14,6 +14,7 @@ import { DataState } from "@/core/components/DataState";
 import { NoEndpointNotice } from "@/core/components/NoEndpointNotice";
 import { useFacilities, useUsers } from "@/lib/api/hooks";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 /**
  * Default Key Settings.
@@ -33,13 +34,10 @@ const KeySettings = () => {
 
   return (
     <div className="space-y-6 animate-fade-in max-w-2xl">
-      {/* Page Header */}
-      <div className="page-header">
-        <h1 className="page-title">Default Key Settings</h1>
-        <p className="page-description">
-          Configure default key management and access settings
-        </p>
-      </div>
+      <PageHeader
+        title="Default Key Settings"
+        description="Configure default key management and access settings"
+      />
 
       <NoEndpointNotice feature="Default key management" tables="access_key, key_type" />
 
