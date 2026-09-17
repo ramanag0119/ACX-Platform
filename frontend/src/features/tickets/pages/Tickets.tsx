@@ -208,9 +208,22 @@ const Tickets = () => {
   const endIndex = Math.min(startIndex + pageSize, totalEntries);
   const paginatedTickets = filteredTickets.slice(startIndex, endIndex);
 
+  /**
+   * The status pill.
+   *
+   * The classes here are MARKERS, not the finished appearance: the table-badge
+   * rules in index.css match on them and supply the real fill, border and text
+   * colour with !important, which is how every other status pill in the app
+   * gets its soft tinted look.
+   *
+   * Completed keys on `text-green-` / `border-green-` rather than `bg-green-`
+   * because index.css has no `bg-green-` variant -- only `border-green-` and
+   * `text-green-`. `bg-green-500` therefore matched nothing, kept its raw
+   * saturated fill, and was the one pill in the column shouting over the rest.
+   */
   const getStatusBadge = (status: string) => {
     if (status === "Completed") {
-      return <Badge className="bg-green-500 text-white hover:bg-green-600">{status}</Badge>;
+      return <Badge className="border-green-600 text-green-700">{status}</Badge>;
     }
     return <Badge className="bg-amber-500 text-white hover:bg-amber-600">{status}</Badge>;
   };
@@ -461,7 +474,7 @@ const Tickets = () => {
                     <TableCell className="text-center py-3 px-4">
                       <Button
                         size="sm"
-                        className="bg-cyan-600 hover:bg-cyan-700 h-7 w-7 p-0 rounded-md"
+                        className="h-7 w-7 p-0 rounded-md"
                         disabled={!mayWrite}
                         onClick={() =>
                           setActionTarget({

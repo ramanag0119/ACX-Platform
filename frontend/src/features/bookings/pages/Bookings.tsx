@@ -1019,11 +1019,16 @@ const Bookings = () => {
                       <div className="flex items-center justify-center gap-2">
                         <Button
                           size="sm"
-                          // `bg-brand-teal`, not raw `bg-cyan-600`: the
-                          // pagination rule in index.css matches
-                          // [class*="bg-cyan-600"] + [class*="p-0"] and would
-                          // repaint this indigo with a 12px radius.
-                          className="hms-action-on-fill bg-brand-teal hover:bg-brand-teal/90 text-white h-8 w-8 p-0 rounded-md"
+                          // `bg-brand` is the Submit-button colour (#5865f2,
+                          // see tailwind.config.ts), shared with the Occupancy
+                          // row actions so one token drives every non
+                          // destructive icon action.
+                          //
+                          // Never raw `bg-cyan-600` here: the pagination rule
+                          // in index.css matches [class*="bg-cyan-600"] +
+                          // [class*="p-0"] and would repaint it anyway, with a
+                          // 12px radius.
+                          className="h-8 w-8 p-0 rounded-md"
                           onClick={() => handleEdit(booking)}
                         >
                           <Edit className="h-4 w-4" />

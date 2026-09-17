@@ -688,10 +688,20 @@ const Occupancy = () => {
                       <TableCell className="text-center">
                         <Button
                           size="sm"
+                          // `bg-brand` is the Submit-button colour (#5865f2,
+                          // see tailwind.config.ts) rather than a second
+                          // accent invented for this one cell.
+                          //
+                          // It is also the safer token: the status-pill rules
+                          // in index.css match on `[class*="bg-amber-"]` and
+                          // friends, so the previous amber fill was repainted
+                          // to a 6%-opacity near-white surface. `bg-brand`
+                          // matches none of those selectors.
+                          //
                           // `hms-action-on-fill`: keeps its solid colour, so
                           // the icon stays white rather than taking the
                           // mid-grey meant for flattened action buttons.
-                          className="hms-action-on-fill bg-amber-500 hover:bg-amber-600 text-white w-8 h-8 p-0"
+                          className="hms-action-on-fill bg-brand hover:bg-brand-hover text-white w-8 h-8 p-0"
                           onClick={() => handleDetailsClick(room)}
                         >
                           <Info className="h-4 w-4" />
@@ -700,11 +710,15 @@ const Occupancy = () => {
                       <TableCell className="text-center">
                         <Button
                           size="sm"
-                          // Same as Details above, on the shared teal token.
-                          // (Raw `bg-cyan-600` is also caught by the
-                          // pagination rule in index.css, which would repaint
-                          // this indigo -- see Bookings' actions.)
-                          className="hms-action-on-fill bg-brand-teal hover:bg-brand-teal/90 text-white w-8 h-8 p-0"
+                          // Same as Details above: `bg-brand` is the
+                          // Submit-button colour (#5865f2, see
+                          // tailwind.config.ts), so the row's actions share one
+                          // token instead of each carrying its own accent.
+                          //
+                          // Never raw `bg-cyan-600` here -- that is caught by
+                          // the pagination rule in index.css and repainted
+                          // anyway (see Bookings' actions).
+                          className="hms-action-on-fill bg-brand hover:bg-brand-hover text-white w-8 h-8 p-0"
                           disabled={!mayWriteBookings || !room.stayId}
                           onClick={() => setReallocateRoom(room)}
                           title={

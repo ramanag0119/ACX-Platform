@@ -1297,7 +1297,7 @@ const ServicesSetup = () => {
                                                 <TableCell className="text-cyan-600 hover:underline text-center cursor-pointer">{item.category}</TableCell>
                                                 <TableCell className="text-center">
                                                     <div className="flex justify-center gap-2">
-                                                        <Button size="sm" className="bg-brand-teal hover:bg-brand-teal/90 text-white h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditFoodCategoryOpen(true)}>
+                                                        <Button size="sm" className="h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditFoodCategoryOpen(true)}>
                                                             <Edit className="h-[14px] w-[14px]" />
                                                         </Button>
                                                         <Button size="sm" className="bg-red-500 hover:bg-red-600 text-white h-7 w-7 p-0 rounded-[3px]">
@@ -1450,7 +1450,7 @@ const ServicesSetup = () => {
                                                 <TableCell className="text-foreground">{item.price}</TableCell>
                                                 <TableCell className="text-center">
                                                     <div className="flex justify-center gap-2">
-                                                        <Button size="sm" className="bg-brand-teal hover:bg-brand-teal/90 text-white h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditFoodMenuOpen(true)}>
+                                                        <Button size="sm" className="h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditFoodMenuOpen(true)}>
                                                             <Edit className="h-[14px] w-[14px]" />
                                                         </Button>
                                                         <Button size="sm" className="bg-red-500 hover:bg-red-600 text-white h-7 w-7 p-0 rounded-[3px]">
@@ -1646,7 +1646,7 @@ const ServicesSetup = () => {
                                                 <TableCell className="text-cyan-600 hover:underline cursor-pointer">{item.typeOfService}</TableCell>
                                                 <TableCell>30</TableCell>
                                                 <TableCell className="text-center">
-                                                    <Button size="sm" className="bg-brand-teal hover:bg-brand-teal/90 text-white h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditFacilityServiceOpen(true)}>
+                                                    <Button size="sm" className="h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditFacilityServiceOpen(true)}>
                                                         <Edit className="h-[14px] w-[14px]" />
                                                     </Button>
                                                 </TableCell>
@@ -1932,7 +1932,7 @@ const ServicesSetup = () => {
                                                 <TableCell className="text-cyan-600 hover:underline text-center cursor-pointer">{item.typeOfService}</TableCell>
                                                 <TableCell className="text-center">
                                                     <div className="flex justify-center gap-2">
-                                                        <Button size="sm" className="bg-brand-teal hover:bg-brand-teal/90 text-white h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditSanitationServiceOpen(true)}>
+                                                        <Button size="sm" className="h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditSanitationServiceOpen(true)}>
                                                             <Edit className="h-[14px] w-[14px]" />
                                                         </Button>
                                                         <Button size="sm" className="bg-red-500 hover:bg-red-600 text-white h-7 w-7 p-0 rounded-[3px]">

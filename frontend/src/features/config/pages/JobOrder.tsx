@@ -706,7 +706,7 @@ const JobOrder = () => {
                                         <TableCell className="text-center">
                                             <Button
                                                 size="sm"
-                                                className="bg-cyan-600 hover:bg-cyan-700 h-8 w-8 p-0"
+                                                className="h-8 w-8 p-0"
                                                 onClick={() => handleEditClick(job)}
                                                 disabled={!mayWrite}
                                                 title={mayWrite ? "Edit this job order" : "Your role cannot edit job orders"}

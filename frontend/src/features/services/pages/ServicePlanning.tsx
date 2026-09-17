@@ -1094,18 +1094,36 @@ const ServicePlanning = () => {
                                 ))}
                                 <TableCell>
                                     <div className="flex items-center justify-center gap-2">
+                                        {/* `hms-action-on-fill` is required, not
+                                            decoration: without it the compact
+                                            table-button rule in index.css
+                                            repaints every `tbody td button`
+                                            with an !important near-transparent
+                                            fill and greys the glyph, which is
+                                            what flattened both of these to
+                                            outline boxes.
+
+                                            `bg-brand` is the Submit-button
+                                            colour (#5865f2, tailwind.config.ts),
+                                            shared with the Occupancy and
+                                            Bookings row actions. */}
                                         <Button
                                             size="sm"
-                                            className="bg-brand-teal hover:bg-brand-teal/90 text-white h-7 w-7 p-0 rounded-[3px]"
+                                            className="h-7 w-7 p-0 rounded-[3px]"
                                             onClick={() => setEditModalOpen(true)}
                                         >
                                             <Edit className="h-[14px] w-[14px]" />
                                         </Button>
                                         {/* Soft delete -- DELETE sets status = 0 and
-                                            retires the room/assignee links with it. */}
+                                            retires the room/assignee links with it.
+
+                                            The shared `brand-danger` token, not a
+                                            raw `bg-[#d33]`: one red for every
+                                            destructive action, and it stays in
+                                            step with Bookings' delete. */}
                                         <Button
                                             size="sm"
-                                            className="bg-[#d33] hover:bg-brand-danger-hover text-white h-7 w-7 p-0 rounded-[3px]"
+                                            className="hms-action-on-fill bg-brand-danger hover:bg-brand-danger-hover text-white h-7 w-7 p-0 rounded-[3px]"
                                             disabled={!mayWrite || removePlan.isPending}
                                             title={
                                                 mayWrite
@@ -1304,70 +1322,70 @@ const ServicePlanning = () => {
 
             {/* Edit Service Planning Modal */}
             <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
-                <DialogContent className="max-w-[650px] bg-white text-gray-900 border-0 p-0 overflow-hidden flex flex-col hide-close-button shadow-2xl [&>button]:hidden rounded-none">
-                    <div className="flex justify-between items-center p-3 px-5 bg-white border-b border-gray-200 shadow-sm">
-                        <h2 className="text-[17px] font-semibold text-gray-800 tracking-wide">Edit Service Planning</h2>
-                        <Button variant="ghost" className="h-7 w-7 p-0 border-[1.5px] border-gray-300 rounded-[2px] hover:bg-gray-100" onClick={() => setEditModalOpen(false)}>
-                            <X className="h-4 w-4 text-gray-500 stroke-[3]" />
+                <DialogContent className="max-w-[650px] bg-card text-card-foreground border-0 p-0 overflow-hidden flex flex-col hide-close-button shadow-2xl [&>button]:hidden rounded-none">
+                    <div className="flex justify-between items-center p-3 px-5 bg-card border-b border-border shadow-sm">
+                        <h2 className="text-[17px] font-semibold text-foreground tracking-wide">Edit Service Planning</h2>
+                        <Button variant="ghost" className="h-7 w-7 p-0 border-[1.5px] border-border rounded-[2px] hover:bg-muted" onClick={() => setEditModalOpen(false)}>
+                            <X className="h-4 w-4 text-muted-foreground stroke-[3]" />
                         </Button>
                     </div>
 
                     <div className="px-12 py-10 space-y-6">
                         <div className="grid grid-cols-[140px_1fr] gap-6 items-center">
-                            <Label className="text-sm font-medium text-gray-800 text-left">Sanitation Services <span className="text-red-500">*</span></Label>
+                            <Label className="text-sm font-medium text-foreground text-left">Sanitation Services <span className="text-red-500">*</span></Label>
                             <div className="relative">
-                                <select className="w-full bg-gray-100 border-0 border-b border-gray-300 text-gray-900 focus:ring-0 px-3 py-2 text-sm appearance-none outline-none rounded-t-[2px]">
+                                <select className="w-full bg-muted border-0 border-b border-border text-card-foreground focus:ring-0 px-3 py-2 text-sm appearance-none outline-none rounded-t-[2px]">
                                     <option>Sanitation</option>
                                 </select>
-                                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
+                                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                             </div>
                         </div>
 
                         <div className="grid grid-cols-[140px_1fr] gap-6 items-center">
-                            <Label className="text-sm font-medium text-gray-800 text-left">Services Type <span className="text-red-500">*</span></Label>
+                            <Label className="text-sm font-medium text-foreground text-left">Services Type <span className="text-red-500">*</span></Label>
                             <div className="relative">
-                                <select className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-400 focus:ring-0 px-0 pb-2 text-sm appearance-none outline-none">
+                                <select className="w-full bg-transparent border-0 border-b border-border text-muted-foreground focus:ring-0 px-0 pb-2 text-sm appearance-none outline-none">
                                     <option>Guest Room sanitation</option>
                                 </select>
-                                <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
+                                <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                             </div>
                         </div>
 
                         <div className="grid grid-cols-[140px_1fr] gap-6 items-center">
-                            <Label className="text-sm font-medium text-gray-800 text-left">Department <span className="text-red-500">*</span></Label>
+                            <Label className="text-sm font-medium text-foreground text-left">Department <span className="text-red-500">*</span></Label>
                             <div className="relative">
-                                <select className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-400 focus:ring-0 px-0 pb-2 text-sm appearance-none outline-none">
+                                <select className="w-full bg-transparent border-0 border-b border-border text-muted-foreground focus:ring-0 px-0 pb-2 text-sm appearance-none outline-none">
                                     <option>Admin</option>
                                 </select>
-                                <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
+                                <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                             </div>
                         </div>
 
                         <div className="grid grid-cols-[140px_1fr] gap-6 items-center">
-                            <Label className="text-sm font-medium text-gray-800 text-left">Assign To <span className="text-red-500">*</span></Label>
-                            <div className="relative bg-gray-500 border border-gray-500 rounded-[2px] p-[2px] pr-8 flex items-center gap-1 h-[34px]">
+                            <Label className="text-sm font-medium text-foreground text-left">Assign To <span className="text-red-500">*</span></Label>
+                            <div className="relative bg-muted border border-border rounded-[2px] p-[2px] pr-8 flex items-center gap-1 h-[34px]">
                                 <div className="bg-brand-teal text-white text-xs px-2 py-0.5 rounded-[2px] flex items-center gap-1">
                                     System User <X className="h-3 w-3 cursor-pointer hover:opacity-80" />
                                 </div>
                                 <div className="bg-brand-teal text-white text-xs px-2 py-0.5 rounded-[2px] flex items-center gap-1">
                                     Namas s <X className="h-3 w-3 cursor-pointer hover:opacity-80" />
                                 </div>
-                                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-300 pointer-events-none" />
+                                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                             </div>
                         </div>
 
                         <div className="grid grid-cols-[140px_1fr] gap-6 items-start">
-                            <Label className="text-sm font-medium text-gray-800 text-left pt-6">Start Time <span className="text-red-500">*</span></Label>
+                            <Label className="text-sm font-medium text-foreground text-left pt-6">Start Time <span className="text-red-500">*</span></Label>
                             <div className="flex items-center gap-4">
                                 <div className="flex flex-col items-center">
                                     <ChevronUp className="h-5 w-5 text-brand-teal cursor-pointer" />
-                                    <input type="text" value="11" readOnly className="w-12 text-center bg-transparent border-0 border-b border-gray-300 text-gray-900 focus:ring-0 px-0 pb-1 text-base outline-none cursor-default" />
+                                    <input type="text" value="11" readOnly className="w-12 text-center bg-transparent border-0 border-b border-border text-card-foreground focus:ring-0 px-0 pb-1 text-base outline-none cursor-default" />
                                     <ChevronDown className="h-5 w-5 text-brand-teal cursor-pointer" />
                                 </div>
                                 <span className="text-xl font-bold pb-6">:</span>
                                 <div className="flex flex-col items-center">
                                     <ChevronUp className="h-5 w-5 text-brand-teal cursor-pointer" />
-                                    <input type="text" value="00" readOnly className="w-12 text-center bg-transparent border-0 border-b border-gray-300 text-gray-900 focus:ring-0 px-0 pb-1 text-base outline-none cursor-default" />
+                                    <input type="text" value="00" readOnly className="w-12 text-center bg-transparent border-0 border-b border-border text-card-foreground focus:ring-0 px-0 pb-1 text-base outline-none cursor-default" />
                                     <ChevronDown className="h-5 w-5 text-brand-teal cursor-pointer" />
                                 </div>
                                 <div className="pb-6">
@@ -1377,17 +1395,17 @@ const ServicePlanning = () => {
                         </div>
 
                         <div className="grid grid-cols-[140px_1fr] gap-6 items-start">
-                            <Label className="text-sm font-medium text-gray-800 text-left pt-6">End Time <span className="text-red-500">*</span></Label>
+                            <Label className="text-sm font-medium text-foreground text-left pt-6">End Time <span className="text-red-500">*</span></Label>
                             <div className="flex items-center gap-4">
                                 <div className="flex flex-col items-center">
                                     <ChevronUp className="h-5 w-5 text-brand cursor-pointer" />
-                                    <input type="text" value="12" readOnly className="w-12 text-center bg-transparent border-0 border-b border-gray-300 text-gray-900 focus:ring-0 px-0 pb-1 text-base outline-none cursor-default" />
+                                    <input type="text" value="12" readOnly className="w-12 text-center bg-transparent border-0 border-b border-border text-card-foreground focus:ring-0 px-0 pb-1 text-base outline-none cursor-default" />
                                     <ChevronDown className="h-5 w-5 text-brand cursor-pointer" />
                                 </div>
                                 <span className="text-xl font-bold pb-6">:</span>
                                 <div className="flex flex-col items-center">
                                     <ChevronUp className="h-5 w-5 text-brand cursor-pointer" />
-                                    <input type="text" value="00" readOnly className="w-12 text-center bg-transparent border-0 border-b border-gray-300 text-gray-900 focus:ring-0 px-0 pb-1 text-base outline-none cursor-default" />
+                                    <input type="text" value="00" readOnly className="w-12 text-center bg-transparent border-0 border-b border-border text-card-foreground focus:ring-0 px-0 pb-1 text-base outline-none cursor-default" />
                                     <ChevronDown className="h-5 w-5 text-brand cursor-pointer" />
                                 </div>
                                 <div className="pb-6">
@@ -1397,34 +1415,34 @@ const ServicePlanning = () => {
                         </div>
 
                         <div className="grid grid-cols-[140px_1fr] gap-6 items-center">
-                            <Label className="text-sm font-medium text-gray-800 text-left">Rooms <span className="text-red-500">*</span></Label>
+                            <Label className="text-sm font-medium text-foreground text-left">Rooms <span className="text-red-500">*</span></Label>
                             <RadioGroup defaultValue="rooms" className="flex flex-col gap-2">
                                 <div className="flex items-center space-x-2">
                                     <RadioGroupItem value="rooms" id="edit-rooms" className="text-brand-teal border-brand-teal" />
-                                    <Label htmlFor="edit-rooms" className="cursor-pointer text-gray-900 font-normal">Rooms</Label>
+                                    <Label htmlFor="edit-rooms" className="cursor-pointer text-card-foreground font-normal">Rooms</Label>
                                 </div>
                                 <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="non-rooms" id="edit-non-rooms" className="text-brand-teal border-gray-300" />
-                                    <Label htmlFor="edit-non-rooms" className="cursor-pointer text-gray-900 font-normal">Non Rooms</Label>
+                                    <RadioGroupItem value="non-rooms" id="edit-non-rooms" className="text-brand-teal border-border" />
+                                    <Label htmlFor="edit-non-rooms" className="cursor-pointer text-card-foreground font-normal">Non Rooms</Label>
                                 </div>
                             </RadioGroup>
                         </div>
 
                         <div className="grid grid-cols-[140px_1fr] gap-6 items-center">
-                            <Label className="text-sm font-medium text-gray-800 text-left">Room No <span className="text-red-500">*</span></Label>
-                            <div className="relative border border-gray-500 rounded-[2px] p-[2px] pr-8 flex items-center gap-1 h-[34px]">
+                            <Label className="text-sm font-medium text-foreground text-left">Room No <span className="text-red-500">*</span></Label>
+                            <div className="relative border border-border rounded-[2px] p-[2px] pr-8 flex items-center gap-1 h-[34px]">
                                 <div className="bg-brand-teal text-white text-xs px-2 py-0.5 rounded-[2px] flex items-center gap-1">
                                     211 <X className="h-3 w-3 cursor-pointer hover:opacity-80" />
                                 </div>
-                                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
+                                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                             </div>
                         </div>
 
                         <div className="grid grid-cols-[140px_1fr] gap-6 items-center">
-                            <Label className="text-sm font-medium text-gray-800 text-left">Frequency <span className="text-red-500">*</span></Label>
+                            <Label className="text-sm font-medium text-foreground text-left">Frequency <span className="text-red-500">*</span></Label>
                             <div className="flex bg-transparent border border-brand-teal rounded-[2px] w-fit overflow-hidden">
                                 {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day, idx) => (
-                                    <div key={day} className={`px-3 py-1 text-xs font-medium cursor-pointer border-r border-brand-teal last:border-r-0 ${idx === 6 ? "bg-brand-teal text-white" : "text-gray-800 hover:bg-gray-100"}`}>
+                                    <div key={day} className={`px-3 py-1 text-xs font-medium cursor-pointer border-r border-brand-teal last:border-r-0 ${idx === 6 ? "bg-brand-teal text-white" : "text-foreground hover:bg-muted"}`}>
                                         {day}
                                     </div>
                                 ))}
@@ -1432,7 +1450,7 @@ const ServicePlanning = () => {
                         </div>
 
                         <div className="grid grid-cols-[140px_1fr] gap-6 items-center">
-                            <Label className="text-sm font-medium text-gray-800 text-left">Repeat Weekly <span className="text-red-500">*</span></Label>
+                            <Label className="text-sm font-medium text-foreground text-left">Repeat Weekly <span className="text-red-500">*</span></Label>
                             <div className="flex items-center gap-2">
                                 <Switch checked={true} className="data-[state=checked]:bg-[#4ad970]" />
                             </div>
