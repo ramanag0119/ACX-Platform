@@ -658,7 +658,11 @@ const Occupancy = () => {
                           role="button"
                           aria-disabled={!mayWriteOccupancy}
                           tabIndex={mayWriteOccupancy ? 0 : -1}
-                          className={`flex w-full flex-wrap items-center justify-center gap-1.5 ${
+                          // `hms-cell-trigger`: a layout wrapper around the
+                          // condition pills, not a button, so it opts out of
+                          // the boxed table-action chrome in index.css. The
+                          // role is for keyboard activation only.
+                          className={`hms-cell-trigger flex w-full flex-wrap items-center justify-center gap-1.5 ${
                             mayWriteOccupancy ? "cursor-pointer" : "cursor-not-allowed"
                           }`}
                           onClick={() => mayWriteOccupancy && setConditionsRoom(room)}
@@ -684,7 +688,10 @@ const Occupancy = () => {
                       <TableCell className="text-center">
                         <Button
                           size="sm"
-                          className="bg-amber-500 hover:bg-amber-600 text-white w-8 h-8 p-0"
+                          // `hms-action-on-fill`: keeps its solid colour, so
+                          // the icon stays white rather than taking the
+                          // mid-grey meant for flattened action buttons.
+                          className="hms-action-on-fill bg-amber-500 hover:bg-amber-600 text-white w-8 h-8 p-0"
                           onClick={() => handleDetailsClick(room)}
                         >
                           <Info className="h-4 w-4" />
@@ -693,7 +700,11 @@ const Occupancy = () => {
                       <TableCell className="text-center">
                         <Button
                           size="sm"
-                          className="bg-cyan-600 hover:bg-cyan-700 text-white w-8 h-8 p-0"
+                          // Same as Details above, on the shared teal token.
+                          // (Raw `bg-cyan-600` is also caught by the
+                          // pagination rule in index.css, which would repaint
+                          // this indigo -- see Bookings' actions.)
+                          className="hms-action-on-fill bg-brand-teal hover:bg-brand-teal/90 text-white w-8 h-8 p-0"
                           disabled={!mayWriteBookings || !room.stayId}
                           onClick={() => setReallocateRoom(room)}
                           title={

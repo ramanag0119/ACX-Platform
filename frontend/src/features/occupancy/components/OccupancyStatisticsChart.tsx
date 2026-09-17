@@ -81,11 +81,14 @@ export const OccupancyStatisticsChart = () => {
   const tooltipBg = isDark ? "#1e2233" : "#FFFFFF";
 
   return (
+    /* h-full: this is the short panel beside the energy chart, so its cell
+       stretched while the card kept its natural height. The card now fills the
+       cell and the donut grows into the spare height. */
     <div
-      className="rounded-[16px] p-4 transition-all duration-250 hover:transform hover:-translate-y-0.5"
+      className="rounded-[16px] p-4 h-full min-w-0 flex flex-col transition-all duration-250 hover:transform hover:-translate-y-0.5"
       style={{ background: cardBg, border: cardBorder, boxShadow: "0 8px 24px rgba(17,12,46,0.12)" }}
     >
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 shrink-0 gap-3">
         <h3 className="font-medium" style={{ color: titleColor }}>Occupancy Statistics</h3>
         <div className="flex items-center gap-2">
           <span className="text-xs" style={{ color: mutedColor }}>
@@ -106,77 +109,90 @@ export const OccupancyStatisticsChart = () => {
         </div>
       </div>
 
-      <DataState
-        isLoading={isLoading}
-        error={error}
-        isEmpty={data.length === 0}
-        emptyTitle="No rooms found"
-      >
-        <div className="flex items-center justify-between">
-          <div className="relative w-[160px] h-[160px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={data}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={45}
-                  outerRadius={70}
-                  paddingAngle={2}
-                  dataKey="value"
-                  startAngle={90}
-                  endAngle={-270}
-                >
-                  {data.map((entry) => (
-                    <Cell key={entry.name} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    background: tooltipBg,
-                    border: "1px solid rgba(124,92,255,0.12)",
-                    borderRadius: "8px",
-                    color: titleColor,
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-[hsl(145,70%,45%)] text-lg font-bold">
-                {inHousePercent === null ? "-" : `${inHousePercent}%`}
-              </span>
-              <span className="text-[10px]" style={{ color: mutedColor }}>in house</span>
+      {/* DataState renders a fragment, so this wrapper is what carries the
+          growable height -- for the chart AND for the loading / empty / error
+          shells that replace it. */}
+      <div className="flex-1 min-h-0 min-w-0 flex flex-col">
+        <DataState
+          isLoading={isLoading}
+          error={error}
+          isEmpty={data.length === 0}
+          emptyTitle="No rooms found"
+        >
+          <div className="flex flex-1 min-h-0 min-w-0 items-center justify-between gap-4">
+            {/* `aspect-square h-full` sizes the donut from the card's spare
+                height. Bounded both ways: a square sized off height takes its
+                width from that height, so max-h caps it and max-w stops it
+                crushing the legend or widening the card. */}
+            <div className="relative aspect-square h-full min-h-[160px] max-h-[200px] max-w-[55%] shrink-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={data}
+                    cx="50%"
+                    cy="50%"
+                    /* Percentages, not px, so the ring scales with the box
+                       instead of floating at a fixed 160px inside it. */
+                    innerRadius="55%"
+                    outerRadius="85%"
+                    paddingAngle={2}
+                    dataKey="value"
+                    startAngle={90}
+                    endAngle={-270}
+                  >
+                    {data.map((entry) => (
+                      <Cell key={entry.name} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{
+                      background: tooltipBg,
+                      border: "1px solid rgba(124,92,255,0.12)",
+                      borderRadius: "8px",
+                      color: titleColor,
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <span className="text-[hsl(145,70%,45%)] text-lg font-bold">
+                  {inHousePercent === null ? "-" : `${inHousePercent}%`}
+                </span>
+                <span className="text-[10px]" style={{ color: mutedColor }}>in house</span>
+              </div>
+            </div>
+
+            {/* min-w-0, never shrink-0 -- two non-shrinking children in one
+                flex row is how a card ends up wider than its column. */}
+            <div className="space-y-2 min-w-0">
+              {data.map((entry) => (
+                <div key={entry.name} className="flex items-center gap-2 min-w-0">
+                  <div className="w-3 h-3 rounded-sm shrink-0" style={{ background: entry.color }} />
+                  <span className="text-sm truncate" style={{ color: mutedColor }} title={`${entry.name} (${entry.value})`}>
+                    {entry.name} ({entry.value})
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
 
-          <div className="space-y-2">
-            {data.map((entry) => (
-              <div key={entry.name} className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-sm" style={{ background: entry.color }} />
-                <span className="text-sm" style={{ color: mutedColor }}>
-                  {entry.name} ({entry.value})
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* The two sources of truth, stated rather than reconciled. */}
-        {inHouseCount !== null && flaggedOccupied !== null && (
-          <p
-            className="mt-3 flex items-start gap-1.5 text-[10px] leading-snug"
-            style={{ color: mutedColor }}
-          >
-            <Info className="mt-px h-3 w-3 shrink-0" />
-            <span>
-              Slices are the room's <span className="font-mono">amenity.status</span> flag.
-              The centre figure is the stay graph: {inHouseCount} guest
-              {inHouseCount === 1 ? "" : "s"} in house
-              {flaggedOccupied !== inHouseCount && `, against ${flaggedOccupied} flagged Occupied`}.
-            </span>
-          </p>
-        )}
-      </DataState>
+          {/* The two sources of truth, stated rather than reconciled. */}
+          {inHouseCount !== null && flaggedOccupied !== null && (
+            <p
+              className="mt-3 flex shrink-0 items-start gap-1.5 text-[10px] leading-snug"
+              style={{ color: mutedColor }}
+            >
+              <Info className="mt-px h-3 w-3 shrink-0" />
+              <span>
+                Slices are the room's <span className="font-mono">amenity.status</span> flag.
+                The centre figure is the stay graph: {inHouseCount} guest
+                {inHouseCount === 1 ? "" : "s"} in house
+                {flaggedOccupied !== inHouseCount && `, against ${flaggedOccupied} flagged Occupied`}.
+              </span>
+            </p>
+          )}
+        </DataState>
+      </div>
     </div>
   );
 };

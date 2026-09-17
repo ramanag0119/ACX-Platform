@@ -65,40 +65,34 @@ const Tile = ({ label, icon: Icon, accent, value, detail, isLoading, error }: Ti
     : "1px solid rgba(124,92,255,0.12)";
   const titleColor = isDark ? "#dde2ed" : "#1F1B3A";
   const mutedColor = isDark ? "#8b95a9" : "#5E5A7A";
+  const detailText = !isLoading && !error ? detail : undefined;
 
   return (
+    /*
+      Every slot below reserves its height, so a tile is the same size whatever
+      its text says -- the label wraps to two lines on some tiles and one on
+      others, the value slot swaps a spinner for error text for a 2xl number as
+      the query resolves, and not every tile passes a detail line. Without the
+      reserved heights each of those changed the height of the whole grid row.
+
+      h-full fills the grid cell, min-w-0 stops a long value widening the track
+      (and the page with it), min-h holds the floor on mobile where there is no
+      taller sibling to stretch against.
+    */
     <div
-      className="rounded-[16px] p-4 transition-all duration-250 hover:-translate-y-0.5"
+      className="rounded-[16px] p-4 h-full min-w-0 min-h-[136px] flex flex-col transition-all duration-250 hover:-translate-y-0.5"
       style={{ background: cardBg, border: cardBorder, boxShadow: "0 8px 24px rgba(17,12,46,0.12)" }}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-xs uppercase tracking-wide" style={{ color: mutedColor }}>
-            {label}
-          </p>
-
-          {isLoading ? (
-            <Loader2 className="mt-2 h-5 w-5 animate-spin" style={{ color: mutedColor }} />
-          ) : error ? (
-            <p className="mt-1 text-xs" style={{ color: mutedColor }} title={describeApiError(error)}>
-              {error.isForbidden
-                ? "No access"
-                : error.isUnauthorized
-                  ? "Session expired"
-                  : "Unavailable"}
-            </p>
-          ) : (
-            <p className="mt-0.5 text-2xl font-semibold" style={{ color: titleColor }}>
-              {value ?? "-"}
-            </p>
-          )}
-
-          {!isLoading && !error && detail && (
-            <p className="mt-1 text-[11px] truncate" style={{ color: mutedColor }} title={detail}>
-              {detail}
-            </p>
-          )}
-        </div>
+      <div className="flex items-start justify-between gap-3 shrink-0">
+        {/* Two lines always reserved; longer text wraps then clamps, so it
+            neither overflows nor grows the card. */}
+        <p
+          className="min-w-0 min-h-[2rem] text-xs uppercase tracking-wide leading-4 line-clamp-2"
+          style={{ color: mutedColor }}
+          title={label}
+        >
+          {label}
+        </p>
         <div
           className="h-9 w-9 shrink-0 rounded-xl flex items-center justify-center"
           style={{ background: `${accent}1f`, color: accent }}
@@ -106,6 +100,37 @@ const Tile = ({ label, icon: Icon, accent, value, detail, isLoading, error }: Ti
           <Icon className="h-4 w-4" />
         </div>
       </div>
+
+      {/* One 32px slot shared by all three states, so the number, the spinner
+          and the error message all sit at the same height. */}
+      <div className="mt-0.5 flex min-h-[2rem] min-w-0 items-center">
+        {isLoading ? (
+          <Loader2 className="h-5 w-5 animate-spin" style={{ color: mutedColor }} />
+        ) : error ? (
+          <p className="truncate text-xs" style={{ color: mutedColor }} title={describeApiError(error)}>
+            {error.isForbidden
+              ? "No access"
+              : error.isUnauthorized
+                ? "Session expired"
+                : "Unavailable"}
+          </p>
+        ) : (
+          <p className="truncate text-2xl font-semibold leading-8" style={{ color: titleColor }}>
+            {value ?? "-"}
+          </p>
+        )}
+      </div>
+
+      {/* Always rendered, even when empty: the reserved slot keeps the subtitle
+          row aligned across cards, and mt-auto pins it to the bottom when the
+          cell is stretched taller than this card needs. */}
+      <p
+        className="mt-auto min-h-[1rem] truncate pt-1 text-[11px] leading-4"
+        style={{ color: mutedColor }}
+        title={detailText}
+      >
+        {detailText}
+      </p>
     </div>
   );
 };
