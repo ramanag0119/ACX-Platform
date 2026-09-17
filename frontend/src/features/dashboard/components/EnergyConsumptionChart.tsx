@@ -64,11 +64,17 @@ export const EnergyConsumptionChart = () => {
   const gridStroke = isDark ? "rgba(255,255,255,0.06)" : "rgba(124,92,255,0.1)";
 
   return (
+    /*
+      h-full + flex-col: the card fills its grid cell (cells stretch to the
+      tallest panel in the row by default) and the plot below takes whatever
+      height the header and legend do not, so no dead space collects at the
+      bottom of either the cell or the card.
+    */
     <div
-      className="rounded-[16px] p-4 transition-all duration-250 hover:transform hover:-translate-y-0.5"
+      className="rounded-[16px] p-4 h-full min-w-0 flex flex-col transition-all duration-250 hover:transform hover:-translate-y-0.5"
       style={{ background: cardBg, border: cardBorder, boxShadow: "0 8px 24px rgba(17,12,46,0.12)" }}
     >
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 shrink-0 gap-3">
         <h3 className="font-medium" style={{ color: titleColor }}>Average Energy Consumption</h3>
         <div className="flex items-center gap-2">
           <select
@@ -92,21 +98,27 @@ export const EnergyConsumptionChart = () => {
         </div>
       </div>
 
-      <div className="flex items-center justify-center gap-6 mb-2">
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 bg-[hsl(35,90%,50%)] rounded-sm" />
-          <span className="text-xs" style={{ color: mutedColor }}>Total energy (all rooms)</span>
+      <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-1 mb-2 shrink-0">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-3 h-3 bg-[hsl(35,90%,50%)] rounded-sm shrink-0" />
+          <span className="text-xs truncate" style={{ color: mutedColor }}>Total energy (all rooms)</span>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 bg-[hsl(145,70%,45%)] rounded-sm" />
-          <span className="text-xs" style={{ color: mutedColor }}>Average per reading</span>
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-3 h-3 bg-[hsl(145,70%,45%)] rounded-sm shrink-0" />
+          <span className="text-xs truncate" style={{ color: mutedColor }}>Average per reading</span>
         </div>
       </div>
-      <p className="text-center text-[10px] mb-2" style={{ color: mutedColor }}>
+      <p className="text-center text-[10px] mb-2 shrink-0" style={{ color: mutedColor }}>
         Stored values, no unit recorded in the database
       </p>
 
-      <div className="h-[180px]">
+      {/*
+        Was a hard h-[180px]. 180px is now the FLOOR, not the height: flex-1
+        lets the plot grow into the rest of the card, and ResponsiveContainer
+        (height="100%") re-measures through its ResizeObserver, so the bars use
+        the space instead of leaving it blank underneath.
+      */}
+      <div className="flex-1 min-h-[180px] min-w-0">
         <DataState
           isLoading={query.isLoading}
           error={query.error}

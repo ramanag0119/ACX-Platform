@@ -1433,9 +1433,34 @@ html:not(.dark) td [class*="inline-flex"][class*="rounded-"][class*="text-gray-"
 }
 
 /* Compact Table Buttons - Restyled to match the professional, outline button style of FleetExplorer */
-tbody td button,
-tbody td .btn,
-tbody td [role="button"] {
+/* `.hms-cell-trigger` is excluded deliberately, on every arm.
+
+   This block draws the boxed chrome for table ACTION BUTTONS -- fill, border,
+   4px radius, a forced 28px height. Some cells hold an element that is
+   interactive but carries NO chrome of its own, because the thing inside it
+   is already the visual affordance:
+
+     - Occupancy > Condition: a container of condition pills, `role="button"`
+       only so the cell opens from the keyboard. The box painted a border
+       around the pills and the forced 28px clipped any room with more than
+       one condition.
+     - Bookings > Documents Approval: a bare <button> wrapping a Badge. The
+       Badge is the control's whole appearance; the box drew a second, larger
+       rectangle around it.
+
+   `.hms-cell-trigger` marks that case. Genuine action buttons are untouched.
+   The exclusion is repeated on the `button` and `.btn` arms, not just
+   `[role="button"]` -- a real <button> element needs it just as much.
+
+   `.hms-action-on-fill` is excluded for a different reason: those buttons KEEP
+   their own solid colour (Bookings' Extend Checkout, Occupancy's Details and
+   Reassign). The fill below is `!important`, so it beat the page's own
+   `bg-*` class and washed them out to a near-white square. Excluding them
+   lets the Tailwind background actually paint, which is the whole point of
+   marking them. Their icons are forced white further down. */
+tbody td button:not(.hms-cell-trigger):not(.hms-action-on-fill),
+tbody td .btn:not(.hms-cell-trigger):not(.hms-action-on-fill),
+tbody td [role="button"]:not(.hms-cell-trigger):not(.hms-action-on-fill) {
   background-color: rgba(255, 255, 255, 0.02) !important;
   background: rgba(255, 255, 255, 0.02) !important;
   border: 1px solid rgba(255, 255, 255, 0.08) !important;
@@ -1460,25 +1485,113 @@ tbody td button.w-8.h-8 {
 }
 
 /* Light mode overrides for table action buttons */
-html:not(.dark) tbody td button,
-html:not(.dark) tbody td .btn {
+html:not(.dark) tbody td button:not(.hms-cell-trigger):not(.hms-action-on-fill),
+html:not(.dark) tbody td .btn:not(.hms-cell-trigger):not(.hms-action-on-fill) {
   background-color: rgba(0, 0, 0, 0.02) !important;
   background: rgba(0, 0, 0, 0.02) !important;
   border: 1px solid rgba(0, 0, 0, 0.08) !important;
   color: #000000 !important;
 }
 
-/* Hover state matching FleetExplorer actions */
-tbody td button:hover,
-tbody td .btn:hover {
+/* The ICON inside those buttons has to follow the button's colour.
+
+   Pages set `text-white` directly on the <svg> because the button was
+   designed with a solid coloured fill -- teal on Offers withdrawal, salmon on
+   Offers edit, cyan and red on Limit Config Alert, and the Tickets edit
+   action. The block above deliberately replaces that fill with a near
+   transparent neutral so every table action looks the same, and in DARK mode
+   a white icon still reads against it. In LIGHT mode it left a white icon on
+   a white surface, which is why the actions looked blank.
+
+   The button's own colour could never reach the icon: `text-white` is applied
+   to the svg element itself, and a directly applied declaration always beats
+   an inherited one. Overriding the svg is what lets the button's colour win.
+
+   MID-GREY AT REST, not the button's full black. `--muted-foreground` is the
+   app's own medium tone (46.9% lightness in light mode), which reads clearly
+   against the near-white button fill without the harshness of solid black on
+   an icon this small. It darkens to the button's colour on hover below, so
+   the action still gains weight when you point at it.
+
+   Scoped to light mode on purpose: dark mode already renders correctly and is
+   left exactly as it is.
+
+   `.hms-cell-trigger` is excluded here too: its icon belongs to the Badge (or
+   pill) inside it and already carries that element's own colour -- Bookings'
+   approval check is green when approved and amber when pending, and the
+   mid-grey would have flattened both to the same neutral. */
+html:not(.dark) tbody td button:not(.hms-cell-trigger) svg,
+html:not(.dark) tbody td .btn:not(.hms-cell-trigger) svg {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+/* Full strength on hover -- `inherit` picks up the #000 the hover rule above
+   sets on the button, so the icon tracks it rather than restating it. */
+html:not(.dark) tbody td button:not(.hms-cell-trigger):hover svg,
+html:not(.dark) tbody td .btn:not(.hms-cell-trigger):hover svg {
+  color: inherit !important;
+}
+
+/* EXCEPTION: icon-only actions that keep a SOLID coloured fill.
+
+   The mid-grey above is correct for buttons whose fill is flattened to near
+   white. These are not flattened -- Occupancy's Details (amber) and Reassign
+   (cyan) render as solid coloured circles -- so a mid-grey glyph sits on a
+   saturated fill and washes out, which is the arrow that could not be seen.
+   They get back the white icon the button was designed around.
+
+   Marked with a class rather than detected: CSS cannot ask what an element's
+   computed background actually resolved to, and these buttons are the case
+   where the neutralising rule above does not win. */
+html:not(.dark) tbody td button.hms-action-on-fill svg {
+  color: #ffffff !important;
+}
+
+/* DISABLED solid-fill actions.
+
+   `disabled:opacity-50` fades the whole button, which on a coloured fill with
+   a white glyph fades BOTH halves of the contrast pair at once: Bookings'
+   Delete became a white trash icon on pale pink, which is the state that
+   could not be read. (Delete is disabled whenever the guest is checked in or
+   the booking is already cancelled, so most rows sit in it.)
+
+   A disabled control should read as muted, not as invisible. The fade is
+   cancelled and the button is given a flat neutral surface with a mid-tone
+   glyph instead -- clearly inert next to its coloured, enabled neighbours,
+   but still legible enough to see WHICH action is unavailable. */
+tbody td button.hms-action-on-fill:disabled {
+  opacity: 1 !important;
+  background-color: rgba(255, 255, 255, 0.04) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+tbody td button.hms-action-on-fill:disabled svg {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+html:not(.dark) tbody td button.hms-action-on-fill:disabled {
+  background-color: rgba(0, 0, 0, 0.04) !important;
+  background: rgba(0, 0, 0, 0.04) !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+}
+
+html:not(.dark) tbody td button.hms-action-on-fill:disabled svg {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+/* Hover state matching FleetExplorer actions. `.hms-cell-trigger` is excluded
+   here as well -- it has no resting box, so it must not grow one on hover. */
+tbody td button:not(.hms-cell-trigger):not(.hms-action-on-fill):hover,
+tbody td .btn:not(.hms-cell-trigger):not(.hms-action-on-fill):hover {
   background-color: rgba(255, 255, 255, 0.06) !important;
   background: rgba(255, 255, 255, 0.06) !important;
   border-color: rgba(255, 255, 255, 0.16) !important;
   color: #ffffff !important;
 }
 
-html:not(.dark) tbody td button:hover,
-html:not(.dark) tbody td .btn:hover {
+html:not(.dark) tbody td button:not(.hms-cell-trigger):not(.hms-action-on-fill):hover,
+html:not(.dark) tbody td .btn:not(.hms-cell-trigger):not(.hms-action-on-fill):hover {
   background-color: rgba(0, 0, 0, 0.05) !important;
   background: rgba(0, 0, 0, 0.05) !important;
   border-color: rgba(0, 0, 0, 0.15) !important;

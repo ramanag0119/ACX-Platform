@@ -58,10 +58,10 @@ export const RecentActivityPanel = () => {
 
   return (
     <div
-      className="rounded-[16px] p-4 h-full transition-all duration-250 hover:-translate-y-0.5"
+      className="rounded-[16px] p-4 h-full min-w-0 flex flex-col transition-all duration-250 hover:-translate-y-0.5"
       style={{ background: cardBg, border: cardBorder, boxShadow: "0 8px 24px rgba(17,12,46,0.12)" }}
     >
-      <div className="flex items-center justify-between mb-4 gap-2">
+      <div className="flex flex-wrap items-center justify-between mb-4 gap-2 shrink-0">
         <h3 className="font-medium" style={{ color: titleColor }}>Recent Activity</h3>
         <div className="flex items-center gap-3">
           <label className="flex items-center gap-1.5 text-xs cursor-pointer" style={{ color: mutedColor }}>
@@ -94,7 +94,7 @@ export const RecentActivityPanel = () => {
         </div>
       </div>
 
-      <div className="min-h-[120px]">
+      <div className="flex-1 min-h-[120px] min-w-0 flex flex-col">
         <DataState
           isLoading={query.isLoading}
           error={query.error}
@@ -102,7 +102,11 @@ export const RecentActivityPanel = () => {
           emptyTitle="No activity recorded"
           emptyDescription="Nothing in `activity` matches this window."
         >
-          <ul className="space-y-2 max-h-[260px] overflow-y-auto scrollbar-thin">
+          {/* Same treatment as Alerts: the cap becomes a ceiling on a flex-1
+              list rather than the list's only height. This panel is alone in
+              its row, so the cap is also what stops ten rows stretching the
+              dashboard. */}
+          <ul className="space-y-2 flex-1 min-h-0 max-h-[260px] overflow-y-auto overflow-x-hidden scrollbar-thin">
             {rows.map((row) => (
               <li key={row.id} className="flex items-start justify-between gap-3 text-sm">
                 <div className="min-w-0">

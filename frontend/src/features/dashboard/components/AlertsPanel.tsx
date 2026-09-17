@@ -71,10 +71,10 @@ export const AlertsPanel = () => {
 
   return (
     <div
-      className="rounded-lg p-4 h-full transition-all duration-250 ease hover:-translate-y-0.5"
+      className="rounded-lg p-4 h-full min-w-0 flex flex-col transition-all duration-250 ease hover:-translate-y-0.5"
       style={{ background: cardBg, border: cardBorder, boxShadow: "0 8px 24px rgba(17,12,46,0.12)" }}
     >
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between mb-4 shrink-0 gap-2">
         <h3 style={{ color: titleColor }} className="font-medium">Alerts</h3>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 text-sm">
@@ -107,14 +107,22 @@ export const AlertsPanel = () => {
         </div>
       </div>
 
-      <div className="min-h-[120px]">
+      <div className="flex-1 min-h-[120px] min-w-0 flex flex-col">
         <DataState
           isLoading={query.isLoading}
           error={query.error}
           isEmpty={rows.length === 0}
           emptyTitle="No alerts found"
         >
-          <ul className="space-y-2 max-h-[220px] overflow-y-auto scrollbar-thin">
+          {/*
+            max-h-[220px] was the list's ONLY height, so it scrolled at 220px
+            however tall the card was. It is now a CAP on a flex-1 list: the
+            list fills the card and scrolls only once it genuinely overflows.
+            The cap stays because this is the taller panel in its row --
+            dropping it entirely would let ten rows push the row (and the
+            short panel beside it) far taller than it is today.
+          */}
+          <ul className="space-y-2 flex-1 min-h-0 max-h-[220px] overflow-y-auto overflow-x-hidden scrollbar-thin">
             {rows.map((row) => (
               <li key={row.id} className="flex items-start justify-between gap-3 text-sm">
                 <div className="min-w-0">

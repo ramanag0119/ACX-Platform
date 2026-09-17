@@ -658,7 +658,11 @@ const Occupancy = () => {
                           role="button"
                           aria-disabled={!mayWriteOccupancy}
                           tabIndex={mayWriteOccupancy ? 0 : -1}
-                          className={`flex w-full flex-wrap items-center justify-center gap-1.5 ${
+                          // `hms-cell-trigger` opts this container OUT of the
+                          // boxed table-action-button chrome in index.css. It
+                          // is a layout wrapper, not a button; the role is
+                          // there for keyboard activation only.
+                          className={`hms-cell-trigger flex w-full flex-wrap items-center justify-center gap-1.5 ${
                             mayWriteOccupancy ? "cursor-pointer" : "cursor-not-allowed"
                           }`}
                           onClick={() => mayWriteOccupancy && setConditionsRoom(room)}
@@ -684,7 +688,10 @@ const Occupancy = () => {
                       <TableCell className="text-center">
                         <Button
                           size="sm"
-                          className="bg-amber-500 hover:bg-amber-600 text-white w-8 h-8 p-0"
+                          // `hms-action-on-fill`: this button keeps its solid
+                          // colour, so its icon stays white rather than taking
+                          // the mid-grey meant for flattened action buttons.
+                          className="hms-action-on-fill bg-amber-500 hover:bg-amber-600 text-white w-8 h-8 p-0"
                           onClick={() => handleDetailsClick(room)}
                         >
                           <Info className="h-4 w-4" />
@@ -693,7 +700,9 @@ const Occupancy = () => {
                       <TableCell className="text-center">
                         <Button
                           size="sm"
-                          className="bg-cyan-600 hover:bg-cyan-700 text-white w-8 h-8 p-0"
+                          // Same as Details above: solid fill, so the arrow
+                          // stays white and reads against it.
+                          className="hms-action-on-fill bg-cyan-600 hover:bg-cyan-700 text-white w-8 h-8 p-0"
                           disabled={!mayWriteBookings || !room.stayId}
                           onClick={() => setReallocateRoom(room)}
                           title={

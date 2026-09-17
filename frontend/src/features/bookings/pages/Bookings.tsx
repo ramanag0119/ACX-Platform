@@ -971,7 +971,11 @@ const Bookings = () => {
                     <TableCell className="text-center">
                       <Button
                         size="sm"
-                        className="bg-cyan-600 hover:bg-cyan-700 text-white h-8 w-8 p-0 rounded-md"
+                        // Brand fill, the same token the Submit buttons use.
+                        // `hms-action-on-fill` is what lets that fill survive
+                        // the neutralising rule in index.css and keeps the
+                        // chevron white against it.
+                        className="hms-action-on-fill bg-brand hover:bg-brand-hover text-white h-8 w-8 p-0 rounded-md"
                         onClick={() => handleExtendClick(booking)}
                         disabled={!mayWrite || booking.isCheckedOut}
                         title="Extend the expected check-out"
@@ -982,8 +986,13 @@ const Bookings = () => {
                     <TableCell>{booking.bookingDate}</TableCell>
                     <TableCell className="text-center">
                       {/* `stay.document_approval_status`: pending <-> approved. */}
+                      {/* `hms-cell-trigger`: the Badge inside IS this control's
+                          appearance, so the wrapper takes none of the boxed
+                          table-action chrome -- no rectangle around the pill,
+                          and the check keeps the Badge's green/amber. */}
                       <button
                         type="button"
+                        className="hms-cell-trigger"
                         disabled={!mayWrite || approveDocs.isPending}
                         onClick={() =>
                           approveDocs.mutate({
@@ -1011,14 +1020,19 @@ const Bookings = () => {
                       <div className="flex items-center justify-center gap-2">
                         <Button
                           size="sm"
-                          className="bg-cyan-600 hover:bg-cyan-700 text-white h-8 w-8 p-0 rounded-md"
+                          // Solid fill: keep the pencil white.
+                          className="hms-action-on-fill bg-cyan-600 hover:bg-cyan-700 text-white h-8 w-8 p-0 rounded-md"
                           onClick={() => handleEdit(booking)}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
                         <Button
                           size="sm"
-                          className="bg-red-500 hover:bg-red-600 text-white h-8 w-8 p-0 rounded-md"
+                          // red-600 rather than red-500: this is the ENABLED
+                          // state, and at 500 the fill sat too close to the
+                          // muted disabled treatment its neighbours use to
+                          // read as a live, destructive action.
+                          className="hms-action-on-fill bg-red-600 hover:bg-red-700 text-white h-8 w-8 p-0 rounded-md"
                           onClick={() => handleDelete(booking.id)}
                           disabled={
                             !mayWrite ||
