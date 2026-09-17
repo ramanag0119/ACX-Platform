@@ -1432,10 +1432,18 @@ html:not(.dark) td [class*="inline-flex"][class*="rounded-"][class*="text-gray-"
   color: #475569 !important;
 }
 
-/* Compact Table Buttons - Restyled to match the professional, outline button style of FleetExplorer */
-tbody td button,
-tbody td .btn,
-tbody td [role="button"] {
+/* Compact Table Buttons - Restyled to match the professional, outline button style of FleetExplorer
+
+   Two opt-out classes:
+     .hms-cell-trigger   - the cell's content is already the affordance
+                           (Occupancy condition pills, Bookings approval
+                           badge), so it takes no boxed chrome.
+     .hms-action-on-fill - icon actions that keep their own solid fill; the
+                           !important background below would otherwise wash
+                           them out. Their icons are forced white further down. */
+tbody td button:not(.hms-cell-trigger):not(.hms-action-on-fill),
+tbody td .btn:not(.hms-cell-trigger):not(.hms-action-on-fill),
+tbody td [role="button"]:not(.hms-cell-trigger):not(.hms-action-on-fill) {
   background-color: rgba(255, 255, 255, 0.02) !important;
   background: rgba(255, 255, 255, 0.02) !important;
   border: 1px solid rgba(255, 255, 255, 0.08) !important;
@@ -1460,25 +1468,71 @@ tbody td button.w-8.h-8 {
 }
 
 /* Light mode overrides for table action buttons */
-html:not(.dark) tbody td button,
-html:not(.dark) tbody td .btn {
+html:not(.dark) tbody td button:not(.hms-cell-trigger):not(.hms-action-on-fill),
+html:not(.dark) tbody td .btn:not(.hms-cell-trigger):not(.hms-action-on-fill) {
   background-color: rgba(0, 0, 0, 0.02) !important;
   background: rgba(0, 0, 0, 0.02) !important;
   border: 1px solid rgba(0, 0, 0, 0.08) !important;
   color: #000000 !important;
 }
 
-/* Hover state matching FleetExplorer actions */
-tbody td button:hover,
-tbody td .btn:hover {
+/* Pages set `text-white` on the <svg> itself, which beats the button's
+   inherited colour -- in light mode that left a white icon on the near-white
+   fill the rule above applies. Mid-grey at rest, full strength on hover. Dark
+   mode already reads correctly, so this is light mode only. `.hms-cell-trigger`
+   keeps its badge's own colour (green approved / amber pending). */
+html:not(.dark) tbody td button:not(.hms-cell-trigger) svg,
+html:not(.dark) tbody td .btn:not(.hms-cell-trigger) svg {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+/* `inherit` picks up the #000 the hover rule sets on the button. */
+html:not(.dark) tbody td button:not(.hms-cell-trigger):hover svg,
+html:not(.dark) tbody td .btn:not(.hms-cell-trigger):hover svg {
+  color: inherit !important;
+}
+
+/* Exception: these keep a solid coloured fill, so a mid-grey glyph would wash
+   out against it. They get back the white icon they were designed around.
+   `:not(:disabled)` is explicit so the disabled rule below does not have to
+   win on specificity -- a disabled button has no coloured fill to sit on. */
+html:not(.dark) tbody td button.hms-action-on-fill:not(:disabled) svg {
+  color: #ffffff !important;
+}
+
+/* Disabled solid-fill actions. `disabled:opacity-50` fades the fill and the
+   white glyph together, leaving the icon unreadable (Bookings' Delete is
+   disabled on most rows). A flat neutral surface reads as inert but still
+   shows WHICH action is unavailable. */
+tbody td button.hms-action-on-fill:disabled {
+  opacity: 1 !important;
+  background-color: rgba(255, 255, 255, 0.04) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+tbody td button.hms-action-on-fill:disabled svg {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+html:not(.dark) tbody td button.hms-action-on-fill:disabled {
+  background-color: rgba(0, 0, 0, 0.04) !important;
+  background: rgba(0, 0, 0, 0.04) !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Hover state matching FleetExplorer actions. `.hms-cell-trigger` has no
+   resting box, so it must not grow one on hover. */
+tbody td button:not(.hms-cell-trigger):not(.hms-action-on-fill):hover,
+tbody td .btn:not(.hms-cell-trigger):not(.hms-action-on-fill):hover {
   background-color: rgba(255, 255, 255, 0.06) !important;
   background: rgba(255, 255, 255, 0.06) !important;
   border-color: rgba(255, 255, 255, 0.16) !important;
   color: #ffffff !important;
 }
 
-html:not(.dark) tbody td button:hover,
-html:not(.dark) tbody td .btn:hover {
+html:not(.dark) tbody td button:not(.hms-cell-trigger):not(.hms-action-on-fill):hover,
+html:not(.dark) tbody td .btn:not(.hms-cell-trigger):not(.hms-action-on-fill):hover {
   background-color: rgba(0, 0, 0, 0.05) !important;
   background: rgba(0, 0, 0, 0.05) !important;
   border-color: rgba(0, 0, 0, 0.15) !important;

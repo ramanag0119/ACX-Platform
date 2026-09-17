@@ -68,22 +68,27 @@ const Dashboard = () => {
       {/* KPI row - every figure is a backend total */}
       <DashboardKPIs />
 
+      {/* `min-w-0` on every grid item below: the tracks are minmax(0, 1fr) but
+          a grid item still defaults to min-width:auto, so a wide chart or a
+          long unbroken string could push its column past its track and take
+          the page into horizontal scroll. */}
+
       {/* Top Row - Charts */}
       <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
-        <div className="lg:col-span-2">
+        <div className="min-w-0 lg:col-span-2">
           <EnergyConsumptionChart />
         </div>
-        <div>
+        <div className="min-w-0">
           <OccupancyStatisticsChart />
         </div>
       </div>
 
       {/* Second Row - Caleido & Alerts */}
       <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
-        <div className="lg:col-span-2">
+        <div className="min-w-0 lg:col-span-2">
           <CaleidoAtWork />
         </div>
-        <div>
+        <div className="min-w-0">
           <AlertsPanel />
         </div>
       </div>
@@ -91,7 +96,9 @@ const Dashboard = () => {
       {/* Third Row - Recent activity */}
       {canRead("dashboard") && (
         <div className="grid gap-4 grid-cols-1">
-          <RecentActivityPanel />
+          <div className="min-w-0">
+            <RecentActivityPanel />
+          </div>
         </div>
       )}
 
