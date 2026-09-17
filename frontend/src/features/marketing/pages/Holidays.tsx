@@ -240,7 +240,7 @@ const Holidays = () => {
                                         <TableCell>{item.description}</TableCell>
                                         <TableCell className="text-center">
                                             <div className="flex gap-2 justify-center">
-                                                <Button size="sm" className="bg-brand-teal hover:bg-brand-teal/90 text-white h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditModalOpen(true)}>
+                                                <Button size="sm" className="h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditModalOpen(true)}>
                                                     <Edit className="h-[14px] w-[14px]" />
                                                 </Button>
                                                 {/* Record WHICH occasion is being retired.

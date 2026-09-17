@@ -333,7 +333,7 @@ const UserRoles = () => {
                                                 <TableCell className="text-cyan-600">{role.notifications}</TableCell>
                                                 <TableCell className="text-center">
                                                     <div className="flex gap-2 justify-center">
-                                                        <Button size="sm" className="bg-brand-teal hover:bg-brand-teal/90 text-white h-7 w-7 p-0 rounded-[3px]" disabled={!mayWrite} onClick={() => { setEditingRole({ id: role.id, name: role.userRole, roleType: role.roleType }); setEditModalOpen(true); }}>
+                                                        <Button size="sm" className="h-7 w-7 p-0 rounded-[3px]" disabled={!mayWrite} onClick={() => { setEditingRole({ id: role.id, name: role.userRole, roleType: role.roleType }); setEditModalOpen(true); }}>
                                                             <Edit className="h-[14px] w-[14px]" />
                                                         </Button>
                                                         <Button size="sm" className="bg-red-500 hover:bg-red-600 text-white h-7 w-7 p-0 rounded-[3px]">

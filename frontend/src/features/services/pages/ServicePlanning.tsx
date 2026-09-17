@@ -1094,18 +1094,36 @@ const ServicePlanning = () => {
                                 ))}
                                 <TableCell>
                                     <div className="flex items-center justify-center gap-2">
+                                        {/* `hms-action-on-fill` is required, not
+                                            decoration: without it the compact
+                                            table-button rule in index.css
+                                            repaints every `tbody td button`
+                                            with an !important near-transparent
+                                            fill and greys the glyph, which is
+                                            what flattened both of these to
+                                            outline boxes.
+
+                                            `bg-brand` is the Submit-button
+                                            colour (#5865f2, tailwind.config.ts),
+                                            shared with the Occupancy and
+                                            Bookings row actions. */}
                                         <Button
                                             size="sm"
-                                            className="bg-brand-teal hover:bg-brand-teal/90 text-white h-7 w-7 p-0 rounded-[3px]"
+                                            className="h-7 w-7 p-0 rounded-[3px]"
                                             onClick={() => setEditModalOpen(true)}
                                         >
                                             <Edit className="h-[14px] w-[14px]" />
                                         </Button>
                                         {/* Soft delete -- DELETE sets status = 0 and
-                                            retires the room/assignee links with it. */}
+                                            retires the room/assignee links with it.
+
+                                            The shared `brand-danger` token, not a
+                                            raw `bg-[#d33]`: one red for every
+                                            destructive action, and it stays in
+                                            step with Bookings' delete. */}
                                         <Button
                                             size="sm"
-                                            className="bg-[#d33] hover:bg-brand-danger-hover text-white h-7 w-7 p-0 rounded-[3px]"
+                                            className="hms-action-on-fill bg-brand-danger hover:bg-brand-danger-hover text-white h-7 w-7 p-0 rounded-[3px]"
                                             disabled={!mayWrite || removePlan.isPending}
                                             title={
                                                 mayWrite

@@ -455,7 +455,7 @@ const Employees = () => {
                                     <TableRow key={item.id} className={`${index % 2 === 0 ? "bg-card dark:bg-[#101526]/80" : "bg-muted/10 dark:bg-[#0d1120]/80"} hover:bg-muted/30 dark:hover:bg-slate-800/50 border-b border-border/50 dark:border-slate-800/70 transition-colors`}>
                                         <TableCell className="text-cyan-600 hover:underline cursor-pointer">{item.name}</TableCell>
                                         <TableCell className="text-center">
-                                            <Button size="sm" className="bg-brand-teal hover:bg-brand-teal/90 text-white h-7 w-7 p-0 rounded-[3px]" disabled={!mayWrite} onClick={() => { setEditingDepartment(item); setEditDepartmentOpen(true); }}>
+                                            <Button size="sm" className="h-7 w-7 p-0 rounded-[3px]" disabled={!mayWrite} onClick={() => { setEditingDepartment(item); setEditDepartmentOpen(true); }}>
                                                 <Edit className="h-[14px] w-[14px]" />
                                             </Button>
                                         </TableCell>
@@ -527,7 +527,7 @@ const Employees = () => {
                                     <TableRow key={item.id} className={`${index % 2 === 0 ? "bg-card dark:bg-[#101526]/80" : "bg-muted/10 dark:bg-[#0d1120]/80"} hover:bg-muted/30 dark:hover:bg-slate-800/50 border-b border-border/50 dark:border-slate-800/70 transition-colors`}>
                                         <TableCell className="text-cyan-600 hover:underline cursor-pointer">{item.name}</TableCell>
                                         <TableCell className="text-center">
-                                            <Button size="sm" className="bg-brand-teal hover:bg-brand-teal/90 text-white h-7 w-7 p-0 rounded-[3px]" disabled={!mayWrite} onClick={() => { setEditingFunction(item); setEditFunctionOpen(true); }}>
+                                            <Button size="sm" className="h-7 w-7 p-0 rounded-[3px]" disabled={!mayWrite} onClick={() => { setEditingFunction(item); setEditFunctionOpen(true); }}>
                                                 <Edit className="h-[14px] w-[14px]" />
                                             </Button>
                                         </TableCell>

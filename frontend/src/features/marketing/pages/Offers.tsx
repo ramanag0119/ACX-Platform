@@ -223,7 +223,7 @@ const Offers = () => {
                                             </TableCell>
                                             <TableCell className="text-center py-3 px-4">
                                                 <div className="flex gap-2 justify-center">
-                                                    <Button size="sm" className="h-7 w-7 p-0 bg-[#f2716b] hover:bg-[#f2716b]/90 rounded-md" onClick={() => handleEditClick(item)}>
+                                                    <Button size="sm" className="h-7 w-7 p-0 rounded-md" onClick={() => handleEditClick(item)}>
                                                         <Pencil className="h-3.5 w-3.5 text-white" />
                                                     </Button>
                                                 </div>

@@ -186,7 +186,7 @@ const Events = () => {
                                             <TableCell className="text-cyan-600 dark:text-cyan-400 text-xs py-3 px-4 cursor-pointer hover:underline">{item.image}</TableCell>
                                             <TableCell className="text-center py-3 px-4">
                                                 <div className="flex gap-2 justify-center">
-                                                    <Button size="sm" className="bg-brand-teal hover:bg-brand-teal/90 text-white h-7 w-7 p-0 rounded-md" onClick={() => setEditEventOpen(true)}>
+                                                    <Button size="sm" className="h-7 w-7 p-0 rounded-md" onClick={() => setEditEventOpen(true)}>
                                                         <Edit className="h-3.5 w-3.5" />
                                                     </Button>
                                                     <Button

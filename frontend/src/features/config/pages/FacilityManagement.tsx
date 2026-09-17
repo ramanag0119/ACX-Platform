@@ -400,7 +400,7 @@ const FacilityManagement = () => {
                                     <TableCell>{row.connectToCaleido}</TableCell>
                                     <TableCell>
                                         <div className="flex items-center justify-center">
-                                            <Button size="sm" className="bg-brand-teal hover:bg-brand-teal/90 text-white h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditFacilityOpen(true)}>
+                                            <Button size="sm" className="h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditFacilityOpen(true)}>
                                                 <Edit className="h-[14px] w-[14px]" />
                                             </Button>
                                         </div>
@@ -517,7 +517,7 @@ const FacilityManagement = () => {
                                         <TableCell className="text-center capitalize">{row.icon}</TableCell>
                                         <TableCell>
                                             <div className="flex items-center justify-center gap-2">
-                                                <Button size="sm" className="bg-brand-teal hover:bg-brand-teal/90 text-white h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditAmenityOpen(true)}>
+                                                <Button size="sm" className="h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditAmenityOpen(true)}>
                                                     <Edit className="h-[14px] w-[14px]" />
                                                 </Button>
                                                 <Button size="sm" className="bg-red-500 hover:bg-red-600 text-white h-7 w-7 p-0 rounded-[3px]">
@@ -958,7 +958,7 @@ const FacilityManagement = () => {
                                             <TableCell>{row.image}</TableCell>
                                             <TableCell>
                                                 <div className="flex items-center justify-center gap-2">
-                                                    <Button size="sm" className="bg-brand-teal hover:bg-brand-teal/90 text-white h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditPackageOpen(true)}>
+                                                    <Button size="sm" className="h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditPackageOpen(true)}>
                                                         <Edit className="h-[14px] w-[14px]" />
                                                     </Button>
                                                     <Button
@@ -1010,7 +1010,7 @@ const FacilityManagement = () => {
                                             <TableCell>{row.image}</TableCell>
                                             <TableCell>
                                                 <div className="flex items-center justify-center gap-2">
-                                                    <Button size="sm" className="bg-cyan-600 hover:bg-cyan-700 text-white h-8 w-8 p-0 rounded-full">
+                                                    <Button size="sm" className="h-8 w-8 p-0 rounded-full">
                                                         <Edit className="h-4 w-4" />
                                                     </Button>
                                                     <Button
@@ -1292,7 +1292,7 @@ const FacilityManagement = () => {
                                         <TableCell>{row.poolFacing}</TableCell>
                                         <TableCell>
                                             <div className="flex items-center justify-center">
-                                                <Button size="sm" className="bg-brand-teal hover:bg-brand-teal/90 text-white h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditRoomOpen(true)}>
+                                                <Button size="sm" className="h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditRoomOpen(true)}>
                                                     <Edit className="h-[14px] w-[14px]" />
                                                 </Button>
                                             </div>

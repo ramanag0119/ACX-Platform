@@ -377,7 +377,7 @@ const LimitConfigAlert = () => {
                                             <TableCell className="whitespace-nowrap text-xs py-3 px-4 text-foreground/90">{item.limitHighValue}</TableCell>
                                             <TableCell className="text-center py-3 px-4">
                                                 <div className="flex gap-1.5 justify-center">
-                                                    <Button size="sm" className="bg-cyan-600 hover:bg-cyan-700 h-7 w-7 p-0 rounded-md">
+                                                    <Button size="sm" className="h-7 w-7 p-0 rounded-md">
                                                         <Pencil className="h-3.5 w-3.5 text-white" />
                                                     </Button>
                                                     <Button size="sm" className="bg-red-500 hover:bg-red-600 h-7 w-7 p-0 rounded-md">

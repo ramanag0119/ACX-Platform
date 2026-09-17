@@ -1340,46 +1340,58 @@ td div[class*="flex"][class*="flex-wrap"] {
   gap: 8px 6px !important;
 }
 
-/* Badge colors matching visual status states (Dark Mode defaults) */
-td [class*="inline-flex"][class*="rounded-"][class*="bg-blue-"],
-td [class*="inline-flex"][class*="rounded-"][class*="bg-sky-"] {
+/* Badge colors matching visual status states (Dark Mode defaults)
+
+   These target STATUS PILLS, but they match on utility classes rather than on
+   what the element is -- and a shadcn <Button> also renders `inline-flex`
+   `rounded-md`, so an icon action that sets a matching fill was caught too.
+   Occupancy's Details button (`bg-amber-500`) was repainted to 6% amber, a
+   near-white surface, while the rule further down still forced its icon white:
+   a white glyph on a white button, which is why the column looked empty.
+
+   `.hms-action-on-fill` is already the opt-out for "keeps its own solid fill"
+   -- the compact-button rules below honour it, these did not. The generic
+   badge rule above excludes buttons outright (`:not(button)`); these colour
+   variants simply never got the same treatment. */
+td [class*="inline-flex"][class*="rounded-"][class*="bg-blue-"]:not(.hms-action-on-fill),
+td [class*="inline-flex"][class*="rounded-"][class*="bg-sky-"]:not(.hms-action-on-fill) {
   border: 1px solid rgba(59, 130, 246, 0.3) !important;
   background-color: rgba(59, 130, 246, 0.08) !important;
   background: rgba(59, 130, 246, 0.08) !important;
   color: #60a5fa !important;
 }
 
-td [class*="inline-flex"][class*="rounded-"][class*="bg-purple-"] {
+td [class*="inline-flex"][class*="rounded-"][class*="bg-purple-"]:not(.hms-action-on-fill) {
   border: 1px solid rgba(168, 85, 247, 0.3) !important;
   background-color: rgba(168, 85, 247, 0.08) !important;
   background: rgba(168, 85, 247, 0.08) !important;
   color: #c084fc !important;
 }
 
-td [class*="inline-flex"][class*="rounded-"][class*="bg-amber-"] {
+td [class*="inline-flex"][class*="rounded-"][class*="bg-amber-"]:not(.hms-action-on-fill) {
   border: 1px solid rgba(245, 158, 11, 0.3) !important;
   background-color: rgba(245, 158, 11, 0.08) !important;
   background: rgba(245, 158, 11, 0.08) !important;
   color: #fbbf24 !important;
 }
 
-td [class*="inline-flex"][class*="rounded-"][class*="bg-red-"] {
+td [class*="inline-flex"][class*="rounded-"][class*="bg-red-"]:not(.hms-action-on-fill) {
   border: 1px solid rgba(244, 63, 94, 0.3) !important;
   background-color: rgba(244, 63, 94, 0.08) !important;
   background: rgba(244, 63, 94, 0.08) !important;
   color: #fb7185 !important;
 }
 
-td [class*="inline-flex"][class*="rounded-"][class*="border-green-"],
-td [class*="inline-flex"][class*="rounded-"][class*="text-green-"] {
+td [class*="inline-flex"][class*="rounded-"][class*="border-green-"]:not(.hms-action-on-fill),
+td [class*="inline-flex"][class*="rounded-"][class*="text-green-"]:not(.hms-action-on-fill) {
   border: 1px solid rgba(16, 185, 129, 0.3) !important;
   background-color: rgba(16, 185, 129, 0.08) !important;
   background: rgba(16, 185, 129, 0.08) !important;
   color: #34d399 !important;
 }
 
-td [class*="inline-flex"][class*="rounded-"][class*="border-gray-"],
-td [class*="inline-flex"][class*="rounded-"][class*="text-gray-"] {
+td [class*="inline-flex"][class*="rounded-"][class*="border-gray-"]:not(.hms-action-on-fill),
+td [class*="inline-flex"][class*="rounded-"][class*="text-gray-"]:not(.hms-action-on-fill) {
   border: 1px solid rgba(255, 255, 255, 0.15) !important;
   background-color: rgba(255, 255, 255, 0.04) !important;
   background: rgba(255, 255, 255, 0.04) !important;
@@ -1387,45 +1399,45 @@ td [class*="inline-flex"][class*="rounded-"][class*="text-gray-"] {
 }
 
 /* Light mode badge color overrides */
-html:not(.dark) td [class*="inline-flex"][class*="rounded-"][class*="bg-blue-"],
-html:not(.dark) td [class*="inline-flex"][class*="rounded-"][class*="bg-sky-"] {
+html:not(.dark) td [class*="inline-flex"][class*="rounded-"][class*="bg-blue-"]:not(.hms-action-on-fill),
+html:not(.dark) td [class*="inline-flex"][class*="rounded-"][class*="bg-sky-"]:not(.hms-action-on-fill) {
   border: 1px solid rgba(37, 99, 235, 0.25) !important;
   background-color: rgba(37, 99, 235, 0.06) !important;
   background: rgba(37, 99, 235, 0.06) !important;
   color: #1d4ed8 !important;
 }
 
-html:not(.dark) td [class*="inline-flex"][class*="rounded-"][class*="bg-purple-"] {
+html:not(.dark) td [class*="inline-flex"][class*="rounded-"][class*="bg-purple-"]:not(.hms-action-on-fill) {
   border: 1px solid rgba(124, 58, 237, 0.25) !important;
   background-color: rgba(124, 58, 237, 0.06) !important;
   background: rgba(124, 58, 237, 0.06) !important;
   color: #6d28d9 !important;
 }
 
-html:not(.dark) td [class*="inline-flex"][class*="rounded-"][class*="bg-amber-"] {
+html:not(.dark) td [class*="inline-flex"][class*="rounded-"][class*="bg-amber-"]:not(.hms-action-on-fill) {
   border: 1px solid rgba(217, 119, 6, 0.25) !important;
   background-color: rgba(217, 119, 6, 0.06) !important;
   background: rgba(217, 119, 6, 0.06) !important;
   color: #b45309 !important;
 }
 
-html:not(.dark) td [class*="inline-flex"][class*="rounded-"][class*="bg-red-"] {
+html:not(.dark) td [class*="inline-flex"][class*="rounded-"][class*="bg-red-"]:not(.hms-action-on-fill) {
   border: 1px solid rgba(225, 29, 72, 0.25) !important;
   background-color: rgba(225, 29, 72, 0.06) !important;
   background: rgba(225, 29, 72, 0.06) !important;
   color: #be123c !important;
 }
 
-html:not(.dark) td [class*="inline-flex"][class*="rounded-"][class*="border-green-"],
-html:not(.dark) td [class*="inline-flex"][class*="rounded-"][class*="text-green-"] {
+html:not(.dark) td [class*="inline-flex"][class*="rounded-"][class*="border-green-"]:not(.hms-action-on-fill),
+html:not(.dark) td [class*="inline-flex"][class*="rounded-"][class*="text-green-"]:not(.hms-action-on-fill) {
   border: 1px solid rgba(5, 150, 105, 0.25) !important;
   background-color: rgba(5, 150, 105, 0.06) !important;
   background: rgba(5, 150, 105, 0.06) !important;
   color: #047857 !important;
 }
 
-html:not(.dark) td [class*="inline-flex"][class*="rounded-"][class*="border-gray-"],
-html:not(.dark) td [class*="inline-flex"][class*="rounded-"][class*="text-gray-"] {
+html:not(.dark) td [class*="inline-flex"][class*="rounded-"][class*="border-gray-"]:not(.hms-action-on-fill),
+html:not(.dark) td [class*="inline-flex"][class*="rounded-"][class*="text-gray-"]:not(.hms-action-on-fill) {
   border: 1px solid rgba(0, 0, 0, 0.15) !important;
   background-color: rgba(0, 0, 0, 0.04) !important;
   background: rgba(0, 0, 0, 0.04) !important;
