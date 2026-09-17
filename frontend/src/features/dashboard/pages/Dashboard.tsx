@@ -68,13 +68,10 @@ const Dashboard = () => {
       {/* KPI row - every figure is a backend total */}
       <DashboardKPIs />
 
-      {/*
-        `min-w-0` on every grid item below. The tracks are already
-        minmax(0, 1fr) via grid-cols-*, but a grid ITEM still defaults to
-        min-width:auto, so a wide chart or a long unbroken string can push its
-        column past its track and take the whole page into horizontal scroll.
-        This is the safeguard against that; it does not change the layout.
-      */}
+      {/* `min-w-0` on every grid item below: the tracks are minmax(0, 1fr) but
+          a grid item still defaults to min-width:auto, so a wide chart or a
+          long unbroken string could push its column past its track and take
+          the page into horizontal scroll. */}
 
       {/* Top Row - Charts */}
       <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">

@@ -64,12 +64,8 @@ export const EnergyConsumptionChart = () => {
   const gridStroke = isDark ? "rgba(255,255,255,0.06)" : "rgba(124,92,255,0.1)";
 
   return (
-    /*
-      h-full + flex-col: the card fills its grid cell (cells stretch to the
-      tallest panel in the row by default) and the plot below takes whatever
-      height the header and legend do not, so no dead space collects at the
-      bottom of either the cell or the card.
-    */
+    /* h-full: the card fills its grid cell and the plot takes whatever height
+       the header and legend do not, so no dead space collects at the bottom. */
     <div
       className="rounded-[16px] p-4 h-full min-w-0 flex flex-col transition-all duration-250 hover:transform hover:-translate-y-0.5"
       style={{ background: cardBg, border: cardBorder, boxShadow: "0 8px 24px rgba(17,12,46,0.12)" }}
@@ -112,12 +108,8 @@ export const EnergyConsumptionChart = () => {
         Stored values, no unit recorded in the database
       </p>
 
-      {/*
-        Was a hard h-[180px]. 180px is now the FLOOR, not the height: flex-1
-        lets the plot grow into the rest of the card, and ResponsiveContainer
-        (height="100%") re-measures through its ResizeObserver, so the bars use
-        the space instead of leaving it blank underneath.
-      */}
+      {/* 180px is the floor, not the height: flex-1 grows the plot into the
+          rest of the card and ResponsiveContainer re-measures to match. */}
       <div className="flex-1 min-h-[180px] min-w-0">
         <DataState
           isLoading={query.isLoading}

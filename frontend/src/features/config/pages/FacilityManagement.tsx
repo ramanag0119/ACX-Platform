@@ -568,9 +568,8 @@ const FacilityManagement = () => {
                         <Button
                             onClick={handleSubmit}
                             disabled={!mayWrite || !newAmenityName.trim() || createFeatureMutation.isPending}
-                            // Same brand fill as the Submit button below. Size
-                            // and shape are left as they were -- only the
-                            // colour changes.
+                            // Same brand fill as the Submit button below; size
+                            // and shape unchanged.
                             className="h-10 px-6 bg-brand hover:bg-brand-hover text-white"
                         >
                             {createFeatureMutation.isPending ? "Adding..." : "Add"}
@@ -751,8 +750,7 @@ const FacilityManagement = () => {
                                                 <SelectItem value="pool">Pool package</SelectItem>
                                             </SelectContent>
                                         </Select>
-                                        {/* Brand fill, the same token the Submit
-                                            buttons use. Size and shape unchanged. */}
+                                        {/* Brand fill, the same token the Submit buttons use. */}
                                         <Button size="icon" className="bg-brand hover:bg-brand-hover h-10 w-10">
                                             +
                                         </Button>
@@ -844,8 +842,7 @@ const FacilityManagement = () => {
                                                 <SelectItem value="amenities">Amenities</SelectItem>
                                             </SelectContent>
                                         </Select>
-                                        {/* Brand fill, the same token the Submit
-                                            buttons use. Size and shape unchanged. */}
+                                        {/* Brand fill, the same token the Submit buttons use. */}
                                         <Button size="icon" className="bg-brand hover:bg-brand-hover h-10 w-10">
                                             +
                                         </Button>

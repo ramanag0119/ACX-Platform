@@ -114,14 +114,9 @@ export const AlertsPanel = () => {
           isEmpty={rows.length === 0}
           emptyTitle="No alerts found"
         >
-          {/*
-            max-h-[220px] was the list's ONLY height, so it scrolled at 220px
-            however tall the card was. It is now a CAP on a flex-1 list: the
-            list fills the card and scrolls only once it genuinely overflows.
-            The cap stays because this is the taller panel in its row --
-            dropping it entirely would let ten rows push the row (and the
-            short panel beside it) far taller than it is today.
-          */}
+          {/* max-h is a cap on a flex-1 list, not the list's only height: it
+              fills the card and scrolls only once it genuinely overflows. The
+              cap stays so a long list cannot stretch the whole row. */}
           <ul className="space-y-2 flex-1 min-h-0 max-h-[220px] overflow-y-auto overflow-x-hidden scrollbar-thin">
             {rows.map((row) => (
               <li key={row.id} className="flex items-start justify-between gap-3 text-sm">

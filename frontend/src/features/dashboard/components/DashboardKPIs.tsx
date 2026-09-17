@@ -65,37 +65,27 @@ const Tile = ({ label, icon: Icon, accent, value, detail, isLoading, error }: Ti
     : "1px solid rgba(124,92,255,0.12)";
   const titleColor = isDark ? "#dde2ed" : "#1F1B3A";
   const mutedColor = isDark ? "#8b95a9" : "#5E5A7A";
+  const detailText = !isLoading && !error ? detail : undefined;
 
   return (
     /*
-      EVERY SLOT BELOW RESERVES ITS HEIGHT, so a tile is the same size whatever
-      its text says. Three things used to vary with content and push the whole
-      grid row taller:
+      Every slot below reserves its height, so a tile is the same size whatever
+      its text says -- the label wraps to two lines on some tiles and one on
+      others, the value slot swaps a spinner for error text for a 2xl number as
+      the query resolves, and not every tile passes a detail line. Without the
+      reserved heights each of those changed the height of the whole grid row.
 
-        - the LABEL, which wraps to two lines on "Energy consumed (no unit)"
-          and one on "Incidents";
-        - the VALUE slot, which is a 20px spinner while loading, 16px of error
-          text on a 403, and 32px of `text-2xl` once the count arrives -- so a
-          tile changed height as its query resolved;
-        - the DETAIL line, which some tiles never pass at all.
-
-      Each now has a fixed min-height and the label is clamped to two lines, so
-      title / value / subtitle sit on the same baseline across all eight cards
-      and no card is taller because its wording is longer.
-
-      `h-full` makes the card fill its grid cell, `min-w-0` stops a long value
-      forcing the track wider (which is what would put the page into
-      horizontal scroll), and `min-h` holds the floor on mobile where there is
-      no taller sibling in the row to stretch against.
+      h-full fills the grid cell, min-w-0 stops a long value widening the track
+      (and the page with it), min-h holds the floor on mobile where there is no
+      taller sibling to stretch against.
     */
     <div
       className="rounded-[16px] p-4 h-full min-w-0 min-h-[136px] flex flex-col transition-all duration-250 hover:-translate-y-0.5"
       style={{ background: cardBg, border: cardBorder, boxShadow: "0 8px 24px rgba(17,12,46,0.12)" }}
     >
       <div className="flex items-start justify-between gap-3 shrink-0">
-        {/* Two lines are always reserved: a one-line label leaves the second
-            line empty rather than pulling the value up to meet it. Long text
-            wraps, then clamps -- it never overflows and never grows the card. */}
+        {/* Two lines always reserved; longer text wraps then clamps, so it
+            neither overflows nor grows the card. */}
         <p
           className="min-w-0 min-h-[2rem] text-xs uppercase tracking-wide leading-4 line-clamp-2"
           style={{ color: mutedColor }}
@@ -131,15 +121,15 @@ const Tile = ({ label, icon: Icon, accent, value, detail, isLoading, error }: Ti
         )}
       </div>
 
-      {/* Always rendered, even with no detail to show: the empty slot is what
-          keeps the subtitle row aligned across cards. `mt-auto` pins it to the
-          bottom if the row is ever stretched taller than this card needs. */}
+      {/* Always rendered, even when empty: the reserved slot keeps the subtitle
+          row aligned across cards, and mt-auto pins it to the bottom when the
+          cell is stretched taller than this card needs. */}
       <p
         className="mt-auto min-h-[1rem] truncate pt-1 text-[11px] leading-4"
         style={{ color: mutedColor }}
-        title={!isLoading && !error && detail ? detail : undefined}
+        title={detailText}
       >
-        {!isLoading && !error && detail ? detail : " "}
+        {detailText}
       </p>
     </div>
   );

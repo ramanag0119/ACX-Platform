@@ -102,10 +102,8 @@ export const RecentActivityPanel = () => {
           emptyTitle="No activity recorded"
           emptyDescription="Nothing in `activity` matches this window."
         >
-          {/* Same treatment as Alerts: the cap becomes a ceiling on a flex-1
-              list rather than the list's only height. This panel is alone in
-              its row, so the cap is also what stops ten rows stretching the
-              dashboard. */}
+          {/* Same treatment as Alerts: the cap is a ceiling on a flex-1 list
+              rather than the list's only height. */}
           <ul className="space-y-2 flex-1 min-h-0 max-h-[260px] overflow-y-auto overflow-x-hidden scrollbar-thin">
             {rows.map((row) => (
               <li key={row.id} className="flex items-start justify-between gap-3 text-sm">

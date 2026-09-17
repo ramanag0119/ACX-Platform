@@ -30,9 +30,8 @@ const CircularProgress = ({ value, label, color, showDash, isDark, detail }: Cir
   const mutedColor = isDark ? "#8b95a9" : "#8A86A8";
 
   return (
-    /* min-w-0 + shrink-0 on the dial: in a four-column grid a label like
-       "Service Request Status" is wider than its cell, and without this it
-       widens the track instead of truncating. */
+    /* min-w-0 + shrink-0: a long label ("Service Request Status") truncates
+       rather than widening the grid track. */
     <div className="flex items-center gap-3 min-w-0">
       <div className="relative w-12 h-12 shrink-0">
         <svg className="w-12 h-12 -rotate-90" viewBox="0 0 44 44">
@@ -110,12 +109,8 @@ export const CaleidoAtWork = () => {
   const selectBorder = isDark ? "1px solid rgba(255,255,255,0.1)" : "1px solid rgba(124,92,255,0.12)";
 
   return (
-    /*
-      h-full + flex-col. This card sits beside Alerts, which is the taller of
-      the two and so sets the row height. Without h-full it stopped at its
-      natural height and the page background showed through the rest of the
-      stretched grid cell -- the gap this removes.
-    */
+    /* h-full: Alerts sits beside this card and sets the row height, so without
+       it the card stopped short and the page showed through the grid cell. */
     <div
       className="rounded-lg p-4 h-full min-w-0 flex flex-col transition-all duration-250 ease hover:-translate-y-0.5"
       style={{ background: cardBg, border: cardBorder, boxShadow: "0 8px 24px rgba(17,12,46,0.12)" }}
@@ -144,35 +139,33 @@ export const CaleidoAtWork = () => {
         </div>
       </div>
 
-      {/*
-        The rings are fixed-size dials -- scaling them would only distort the
-        gauges -- so the spare height is distributed AROUND them with
-        justify-center rather than left to pool at the bottom of the card.
-      */}
+      {/* The dials are fixed size -- scaling them would distort the gauges --
+          so justify-center spreads the spare height around them instead of
+          letting it pool at the bottom of the card. */}
       <div className="flex-1 min-h-0 min-w-0 flex flex-col justify-center">
-      <DataState
-        isLoading={query.isLoading}
-        error={query.error}
-        isEmpty={latest.size === 0}
-        emptyTitle="No daily KPI data points recorded"
-      >
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {RINGS.map((ring) => {
-            const point = latest.get(ring.metricType);
-            return (
-              <CircularProgress
-                key={ring.metricType}
-                value={point?.value ?? 0}
-                detail={point?.detail}
-                label={ring.label}
-                color={ring.color}
-                showDash={!point}
-                isDark={isDark}
-              />
-            );
-          })}
-        </div>
-      </DataState>
+        <DataState
+          isLoading={query.isLoading}
+          error={query.error}
+          isEmpty={latest.size === 0}
+          emptyTitle="No daily KPI data points recorded"
+        >
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {RINGS.map((ring) => {
+              const point = latest.get(ring.metricType);
+              return (
+                <CircularProgress
+                  key={ring.metricType}
+                  value={point?.value ?? 0}
+                  detail={point?.detail}
+                  label={ring.label}
+                  color={ring.color}
+                  showDash={!point}
+                  isDark={isDark}
+                />
+              );
+            })}
+          </div>
+        </DataState>
       </div>
     </div>
   );

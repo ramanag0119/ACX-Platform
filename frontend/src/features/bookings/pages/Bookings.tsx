@@ -972,9 +972,8 @@ const Bookings = () => {
                       <Button
                         size="sm"
                         // Brand fill, the same token the Submit buttons use.
-                        // `hms-action-on-fill` is what lets that fill survive
-                        // the neutralising rule in index.css and keeps the
-                        // chevron white against it.
+                        // `hms-action-on-fill` lets that fill survive the
+                        // neutralising rule in index.css.
                         className="hms-action-on-fill bg-brand hover:bg-brand-hover text-white h-8 w-8 p-0 rounded-md"
                         onClick={() => handleExtendClick(booking)}
                         disabled={!mayWrite || booking.isCheckedOut}
@@ -986,10 +985,10 @@ const Bookings = () => {
                     <TableCell>{booking.bookingDate}</TableCell>
                     <TableCell className="text-center">
                       {/* `stay.document_approval_status`: pending <-> approved. */}
-                      {/* `hms-cell-trigger`: the Badge inside IS this control's
+                      {/* `hms-cell-trigger`: the Badge is this control's whole
                           appearance, so the wrapper takes none of the boxed
-                          table-action chrome -- no rectangle around the pill,
-                          and the check keeps the Badge's green/amber. */}
+                          table-action chrome and the check keeps the Badge's
+                          green/amber. */}
                       <button
                         type="button"
                         className="hms-cell-trigger"
@@ -1020,19 +1019,22 @@ const Bookings = () => {
                       <div className="flex items-center justify-center gap-2">
                         <Button
                           size="sm"
-                          // Solid fill: keep the pencil white.
-                          className="hms-action-on-fill bg-cyan-600 hover:bg-cyan-700 text-white h-8 w-8 p-0 rounded-md"
+                          // `bg-brand-teal`, not raw `bg-cyan-600`: the
+                          // pagination rule in index.css matches
+                          // [class*="bg-cyan-600"] + [class*="p-0"] and would
+                          // repaint this indigo with a 12px radius.
+                          className="hms-action-on-fill bg-brand-teal hover:bg-brand-teal/90 text-white h-8 w-8 p-0 rounded-md"
                           onClick={() => handleEdit(booking)}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
                         <Button
                           size="sm"
-                          // red-600 rather than red-500: this is the ENABLED
-                          // state, and at 500 the fill sat too close to the
-                          // muted disabled treatment its neighbours use to
-                          // read as a live, destructive action.
-                          className="hms-action-on-fill bg-red-600 hover:bg-red-700 text-white h-8 w-8 p-0 rounded-md"
+                          // The shared danger token rather than a raw red:
+                          // this is the ENABLED state and needs to read as a
+                          // live, destructive action next to the muted
+                          // disabled treatment its neighbours use.
+                          className="hms-action-on-fill bg-brand-danger hover:bg-brand-danger-hover text-white h-8 w-8 p-0 rounded-md"
                           onClick={() => handleDelete(booking.id)}
                           disabled={
                             !mayWrite ||
