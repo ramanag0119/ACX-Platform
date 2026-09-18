@@ -14,6 +14,9 @@ import { useAlerts, useServiceRequests } from "@/lib/api/hooks";
  * schema; an alert has no status and none is displayed for one.
  */
 
+/** Exported so the KPI tile that jumps here cannot drift from the element id. */
+export const ALERTS_PANEL_ID = "dashboard-alerts-panel";
+
 const RANGE_DAYS: Record<string, number> = { Today: 0, Week: 6, Month: 29 };
 
 const isoDaysAgo = (days: number) => {
@@ -70,7 +73,12 @@ export const AlertsPanel = () => {
       : "text-[hsl(199,89%,48%)] hover:underline cursor-pointer opacity-70";
 
   return (
+    /* The id is the jump target for the dashboard's "Device alerts" KPI tile:
+       this panel's Caleido source IS that tile's list (GET /alerts), so the
+       tile scrolls here rather than routing away. Renaming it means updating
+       ALERTS_PANEL_ID in DashboardKPIs. */
     <div
+      id={ALERTS_PANEL_ID}
       className="rounded-lg p-4 h-full min-w-0 flex flex-col transition-all duration-250 ease hover:-translate-y-0.5"
       style={{ background: cardBg, border: cardBorder, boxShadow: "0 8px 24px rgba(17,12,46,0.12)" }}
     >

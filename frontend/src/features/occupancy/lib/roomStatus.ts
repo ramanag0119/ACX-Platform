@@ -104,3 +104,23 @@ export const roomStatusColor = (statusName: string | null | undefined) =>
 
 export const roomStatusTint = (statusName: string | null | undefined) =>
     styleOf(statusName).tint;
+
+/**
+ * Display label for an `amenity_condition` name.
+ *
+ * The stored vocabulary is the backend's (Dirty, Low battery, Under
+ * maintenance, Sanitation) and is NOT changed here -- filters, writes and the
+ * condition picker all still work on the stored value. This maps the stored
+ * name to the wording operators use, in ONE place, so the room list, the
+ * dashboard tiles and the conditions dialog cannot disagree.
+ *
+ * Matching is case-insensitive on the stored name; anything without an entry
+ * falls through unchanged, so a condition added to the table later shows its
+ * real name rather than vanishing.
+ */
+const CONDITION_LABELS: Record<string, string> = {
+  dirty: "Need Maintenance",
+};
+
+export const conditionLabel = (name: string | null | undefined) =>
+  name ? CONDITION_LABELS[name.trim().toLowerCase()] ?? name : "";

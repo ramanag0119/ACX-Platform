@@ -33,6 +33,7 @@ import { useOffers, useRooms } from "@/lib/api/hooks";
 import { useCreateOffer, useUpdateOffer } from "@/lib/api/mutations";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { useScrollToTop } from "@/hooks/use-scroll-to-top";
 
 // Sample Offers Data
 /**
@@ -84,6 +85,10 @@ const Offers = () => {
     const [searchQuery, setSearchQuery] = useState("");
     const [entriesPerPage, setEntriesPerPage] = useState("10");
     const [currentPage, setCurrentPage] = useState(1);
+    // Pagination sits at the bottom of the table; without this the new
+    // page kept the old scroll offset and the sticky header stayed
+    // above the fold. See use-scroll-to-top.
+    useScrollToTop(currentPage);
 
     const [selectedItemToDelete, setSelectedItemToDelete] = useState<OfferRow | null>(null);
     const [selectedItemToEdit, setSelectedItemToEdit] = useState<OfferRow | null>(null);

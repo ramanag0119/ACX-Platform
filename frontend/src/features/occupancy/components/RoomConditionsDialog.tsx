@@ -13,6 +13,7 @@ import { DataState } from "@/core/components/DataState";
 import { useAmenityConditions } from "@/lib/api/hooks";
 import { useSetRoomConditions } from "@/lib/api/mutations";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
+import { conditionLabel } from "../lib/roomStatus";
 
 interface RoomConditionsDialogProps {
   open: boolean;
@@ -76,7 +77,7 @@ export const RoomConditionsDialog = ({
                   checked={checked.includes(condition.id)}
                   onCheckedChange={() => toggle(condition.id)}
                 />
-                {condition.name}
+                {conditionLabel(condition.name)}
               </label>
             ))}
             <p className="text-xs text-muted-foreground">

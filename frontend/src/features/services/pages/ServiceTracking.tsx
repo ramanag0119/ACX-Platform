@@ -44,6 +44,7 @@ import {
 } from "../components/ServiceRequestActionsDialog";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { useScrollToTop } from "@/hooks/use-scroll-to-top";
 
 /**
  * Service Tracking, connected to the Phase 2.5 APIs.
@@ -119,6 +120,10 @@ const ServiceTracking = () => {
     const [entriesPerPage, setEntriesPerPage] = useState("10");
     const [searchQuery, setSearchQuery] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
+    // Pagination sits at the bottom of the table; without this the new
+    // page kept the old scroll offset and the sticky header stayed
+    // above the fold. See use-scroll-to-top.
+    useScrollToTop(currentPage);
     const [statusModalConfig, setStatusModalConfig] = useState<{ isOpen: boolean; type: "yellow" | "red" | "blue" | null }>({ isOpen: false, type: null });
     // The real action target: assign / change status / cancel.
     const [actionTarget, setActionTarget] = useState<ServiceRequestActionTarget | null>(null);

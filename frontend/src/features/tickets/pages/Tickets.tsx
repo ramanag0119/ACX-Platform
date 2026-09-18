@@ -41,6 +41,7 @@ import {
   type ServiceRequestActionTarget,
 } from "@/features/services/components/ServiceRequestActionsDialog";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { useScrollToTop } from "@/hooks/use-scroll-to-top";
 
 /**
  * Tickets, connected to the Phase 2.5 service APIs.
@@ -122,6 +123,10 @@ const Tickets = () => {
   const [entriesPerPage, setEntriesPerPage] = useState("10");
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  // Pagination sits at the bottom of the table; without this the new
+  // page kept the old scroll offset and the sticky header stayed
+  // above the fold. See use-scroll-to-top.
+  useScrollToTop(currentPage);
 
   // Form state
   const [roomNo, setRoomNo] = useState("");

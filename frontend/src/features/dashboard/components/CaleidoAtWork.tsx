@@ -139,10 +139,16 @@ export const CaleidoAtWork = () => {
         </div>
       </div>
 
-      {/* The dials are fixed size -- scaling them would distort the gauges --
-          so justify-center spreads the spare height around them instead of
-          letting it pool at the bottom of the card. */}
-      <div className="flex-1 min-h-0 min-w-0 flex flex-col justify-center">
+      {/* Body starts at the top, the same contract every other dashboard panel
+          uses (Energy, Occupancy, Alerts, Recent Activity). This card used to
+          be the one exception -- `justify-center` floated the dials down the
+          middle so their spare height sat above AND below them, which left its
+          content on a different line from the Alerts list beside it.
+
+          The dials are fixed size, so spare height has to go somewhere; it now
+          collects at the bottom like any other short panel rather than pushing
+          the content out of alignment with its neighbour. */}
+      <div className="flex-1 min-h-0 min-w-0 flex flex-col">
         <DataState
           isLoading={query.isLoading}
           error={query.error}

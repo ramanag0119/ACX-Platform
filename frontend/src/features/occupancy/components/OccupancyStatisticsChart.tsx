@@ -1,11 +1,13 @@
 import { useMemo } from "react";
-import { Info, RefreshCw } from "lucide-react";
+import { Link } from "react-router-dom";
+import { RefreshCw } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { cn } from "@/lib/utils";
 import { useTheme } from "@/core/contexts/ThemeContext";
 import { DataState } from "@/core/components/DataState";
 import { useAmenityStatuses, useCount, useCounts } from "@/lib/api/hooks";
 import type { QueryParams } from "@/lib/api/client";
-import { MAX_PAGE_SIZE, ROOM_STATUS } from "@/lib/api/types";
+import { MAX_PAGE_SIZE } from "@/lib/api/types";
 import { roomStatusColor } from "../lib/roomStatus";
 
 /**
@@ -20,13 +22,17 @@ import { roomStatusColor } from "../lib/roomStatus";
  * a tally of one fetched page: a page holds at most 100 rows, and counting
  * client-side would quietly undercount a property with more rooms than that.
  *
- * THE CENTRE FIGURE IS A DIFFERENT SOURCE OF TRUTH, deliberately. Phase 2.8
+ * THE CENTRE FIGURE IS A DIFFERENT SOURCE OF TRUTH from the slices. Phase 2.8
  * defines in-house occupancy as a stay with `actual_checkin_time IS NOT NULL
  * AND actual_checkout_time IS NULL`, which is what `is_occupied=true` asks the
  * backend. `amenity.status` is a flag on the room and nothing in the schema
- * keeps the two in step -- in the current data 4 rooms are flagged Occupied
- * while 2 have a guest in house. Both are shown; neither is silently
- * substituted for the other.
+ * keeps the two in step, so the ring and the centre can disagree.
+ *
+ * A footnote used to spell that disagreement out on screen ("N guests in
+ * house, against M flagged Occupied"). It was removed by request, so the
+ * divergence is now recorded HERE and nowhere in the UI: a reader comparing
+ * the centre percentage against the Occupied slice has no on-screen
+ * explanation for why they differ.
  */
 
 export const OccupancyStatisticsChart = () => {
@@ -63,15 +69,13 @@ export const OccupancyStatisticsChart = () => {
   const inHousePercent =
     total && inHouseCount !== null ? Math.round((inHouseCount / total) * 100) : null;
 
-  // The amenity flag's own Occupied count, for the disagreement note.
-  const flaggedOccupied = useMemo(() => {
-    const index = statuses.findIndex((s) => s.amenity_status_name === ROOM_STATUS.OCCUPIED);
-    return index >= 0 ? perStatus.totals[index] : null;
-  }, [statuses, perStatus.totals]);
-
   const isLoading = statusesQuery.isLoading || perStatus.isLoading || roomTotal.isLoading;
   const error = statusesQuery.error ?? perStatus.error ?? roomTotal.error;
+  const isFetching = roomTotal.isFetching || inHouse.isFetching || statusesQuery.isFetching;
 
+  /** Green = settled, amber = refetching, red = last attempt failed. */
+  const dotColor = error ? "#ef4444" : isFetching ? "#f59e0b" : "#22c55e";
+  const dotLabel = error ? "Data unavailable" : isFetching ? "Refreshing" : "Data up to date";
   const cardBg = isDark
     ? "linear-gradient(180deg, #1e2233, #1a1e30)"
     : "linear-gradient(180deg, rgba(255,255,255,0.85), rgba(245,242,255,0.95))";
@@ -88,12 +92,22 @@ export const OccupancyStatisticsChart = () => {
       className="rounded-[16px] p-4 h-full min-w-0 flex flex-col transition-all duration-250 hover:transform hover:-translate-y-0.5"
       style={{ background: cardBg, border: cardBorder, boxShadow: "0 8px 24px rgba(17,12,46,0.12)" }}
     >
-      <div className="flex items-center justify-between mb-4 shrink-0 gap-3">
-        <h3 className="font-medium" style={{ color: titleColor }}>Occupancy Statistics</h3>
+      <div className="flex items-center justify-between mb-3 shrink-0 gap-3">
+        <h3 className="text-base font-semibold tracking-tight" style={{ color: titleColor }}>
+          Occupancy Statistics
+        </h3>
         <div className="flex items-center gap-2">
-          <span className="text-xs" style={{ color: mutedColor }}>
+          {/* The chart counts rooms per `amenity_status` from GET /occupancy;
+              the Occupancy screen lists those same rooms and filters by that
+              same status, so this is the panel's detail view rather than a
+              related-looking guess. */}
+          <Link
+            to="/occupancy"
+            className="text-xs underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+            style={{ color: mutedColor }}
+          >
             {total ?? "-"} rooms
-          </span>
+          </Link>
           <button
             className="transition-colors"
             style={{ color: mutedColor }}
@@ -104,8 +118,15 @@ export const OccupancyStatisticsChart = () => {
             }}
             title="Refresh"
           >
-            <RefreshCw className="h-4 w-4" />
+            <RefreshCw className={cn("h-4 w-4", isFetching && "animate-spin")} />
           </button>
+          <span
+            className="h-2 w-2 shrink-0 rounded-full"
+            style={{ background: dotColor }}
+            title={dotLabel}
+            aria-label={dotLabel}
+            role="img"
+          />
         </div>
       </div>
 
@@ -119,12 +140,25 @@ export const OccupancyStatisticsChart = () => {
           isEmpty={data.length === 0}
           emptyTitle="No rooms found"
         >
-          <div className="flex flex-1 min-h-0 min-w-0 items-center justify-between gap-4">
+            {/* `justify-center`, NOT `justify-between`: between pushed the legend
+                to the card's right edge and parked all the spare width in the
+                middle, which is the gap that opened up between the ring and its
+                labels. Centred, the two sit together as one block and the spare
+                width falls outside the pair. */}
+            <div className="flex flex-1 min-h-0 min-w-0 items-center justify-center gap-6">
             {/* `aspect-square h-full` sizes the donut from the card's spare
                 height. Bounded both ways: a square sized off height takes its
                 width from that height, so max-h caps it and max-w stops it
                 crushing the legend or widening the card. */}
-            <div className="relative aspect-square h-full min-h-[160px] max-h-[200px] max-w-[55%] shrink-0">
+            {/* `[&_*:focus:not(:focus-visible)]:outline-none`: Recharts makes the
+                chart surface and its sectors focusable, so CLICKING a slice gave
+                it focus and the browser drew a focus rectangle round the chart.
+                The slices carry no click action, so that outline told the user
+                nothing.
+
+                Scoped to mouse focus only -- `:focus-visible` is untouched, so a
+                keyboard user tabbing through still gets a visible ring. */}
+            <div className="relative aspect-square h-full min-h-[160px] max-h-[200px] max-w-[55%] shrink-0 [&_*:focus:not(:focus-visible)]:outline-none">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -133,9 +167,13 @@ export const OccupancyStatisticsChart = () => {
                     cy="50%"
                     /* Percentages, not px, so the ring scales with the box
                        instead of floating at a fixed 160px inside it. */
-                    innerRadius="55%"
-                    outerRadius="85%"
+                    innerRadius="62%"
+                    outerRadius="92%"
                     paddingAngle={2}
+                    /* Rounded caps read as one continuous band instead of four
+                       flat wedges butted against each other. */
+                    cornerRadius={5}
+                    stroke="none"
                     dataKey="value"
                     startAngle={90}
                     endAngle={-270}
@@ -155,42 +193,54 @@ export const OccupancyStatisticsChart = () => {
                 </PieChart>
               </ResponsiveContainer>
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span className="text-[hsl(145,70%,45%)] text-lg font-bold">
+                <span
+                  className="text-[28px] font-bold leading-none tracking-tight"
+                  style={{ color: titleColor }}
+                >
                   {inHousePercent === null ? "-" : `${inHousePercent}%`}
                 </span>
-                <span className="text-[10px]" style={{ color: mutedColor }}>in house</span>
+                <span className="mt-1.5 text-[11px]" style={{ color: mutedColor }}>
+                  in house
+                </span>
               </div>
             </div>
 
             {/* min-w-0, never shrink-0 -- two non-shrinking children in one
-                flex row is how a card ends up wider than its column. */}
-            <div className="space-y-2 min-w-0">
+                flex row is how a card ends up wider than its column.
+
+                `max-w` is what closes the gap between a label and its count:
+                an uncapped `flex-1` stretched each row to the full width of the
+                card, so the right-aligned number ended up far from "Available".
+                Capped, the number sits just past the longest label. */}
+            <ul className="min-w-0 max-w-[200px] flex-1 space-y-2.5">
               {data.map((entry) => (
-                <div key={entry.name} className="flex items-center gap-2 min-w-0">
-                  <div className="w-3 h-3 rounded-sm shrink-0" style={{ background: entry.color }} />
-                  <span className="text-sm truncate" style={{ color: mutedColor }} title={`${entry.name} (${entry.value})`}>
-                    {entry.name} ({entry.value})
+                <li key={entry.name} className="flex min-w-0 items-center gap-3">
+                  {/* A capsule, not a 12px square: it carries the slice colour
+                      at a size that reads next to the ring. */}
+                  <span
+                    className="h-3.5 w-7 shrink-0 rounded-full"
+                    style={{ background: entry.color }}
+                  />
+                  <span
+                    className="min-w-0 flex-1 truncate text-sm"
+                    style={{ color: titleColor }}
+                    title={entry.name}
+                  >
+                    {entry.name}
                   </span>
-                </div>
+                  {/* tabular-nums keeps the counts in a straight right-hand
+                      column instead of shifting with digit width. */}
+                  <span
+                    className="shrink-0 text-sm font-semibold tabular-nums"
+                    style={{ color: titleColor }}
+                  >
+                    {entry.value}
+                  </span>
+                </li>
               ))}
-            </div>
+            </ul>
           </div>
 
-          {/* The two sources of truth, stated rather than reconciled. */}
-          {inHouseCount !== null && flaggedOccupied !== null && (
-            <p
-              className="mt-3 flex shrink-0 items-start gap-1.5 text-[10px] leading-snug"
-              style={{ color: mutedColor }}
-            >
-              <Info className="mt-px h-3 w-3 shrink-0" />
-              <span>
-                Slices are the room's <span className="font-mono">amenity.status</span> flag.
-                The centre figure is the stay graph: {inHouseCount} guest
-                {inHouseCount === 1 ? "" : "s"} in house
-                {flaggedOccupied !== inHouseCount && `, against ${flaggedOccupied} flagged Occupied`}.
-              </span>
-            </p>
-          )}
         </DataState>
       </div>
     </div>
