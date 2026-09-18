@@ -28,6 +28,9 @@ const isoDaysAgo = (days: number) => {
   return date.toISOString();
 };
 
+/** Exported so the KPI tile that jumps here cannot drift from the element id. */
+export const ACTIVITY_PANEL_ID = "dashboard-activity-panel";
+
 export const RecentActivityPanel = () => {
   const { isDark } = useTheme();
   const [range, setRange] = useState<keyof typeof RANGE_DAYS>("Week");
@@ -57,7 +60,11 @@ export const RecentActivityPanel = () => {
     : "1px solid rgba(124,92,255,0.12)";
 
   return (
+    /* Jump target for the dashboard's "Activities" KPI tile: this panel IS
+       that tile's list (GET /activities), so the tile reveals it rather than
+       routing away. Renaming means updating ACTIVITY_PANEL_ID's usage. */
     <div
+      id={ACTIVITY_PANEL_ID}
       className="rounded-[16px] p-4 h-full min-w-0 flex flex-col transition-all duration-250 hover:-translate-y-0.5"
       style={{ background: cardBg, border: cardBorder, boxShadow: "0 8px 24px rgba(17,12,46,0.12)" }}
     >

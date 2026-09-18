@@ -20,7 +20,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Info, ArrowRight, Wrench, ShieldCheck, BatteryLow, Star, UserCheck, Clock, Minus, CheckCircle2 } from "lucide-react";
 import { RoomDetailsModal } from "../components/RoomDetailsModal";
-import { roomStatusBadgeClass } from "../lib/roomStatus";
+import { conditionLabel, roomStatusBadgeClass } from "../lib/roomStatus";
 import { DataState, TableLoading } from "@/core/components/DataState";
 import { useAuth } from "@/core/contexts/AuthContext";
 import { ReallocateRoomDialog } from "../components/ReallocateRoomDialog";
@@ -39,6 +39,7 @@ import {
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
 import type { OccupancyRead } from "@/lib/api/types";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { useScrollToTop } from "@/hooks/use-scroll-to-top";
 
 /**
  * The Occupancy Dashboard: live occupancy from GET /occupancy.
@@ -104,7 +105,9 @@ const toRow = (item: OccupancyRead): RoomRow => ({
   floorName: item.floor_name ?? "-",
   guestName: item.current_stay?.booker?.name ?? "-",
   statusName: item.status_name ?? "-",
-  conditions: item.conditions.map((condition) => condition.name),
+  // Display label only -- `conditionIds` below still carries the stored ids,
+  // so filtering and saving keep working on the backend vocabulary.
+  conditions: item.conditions.map((condition) => conditionLabel(condition.name)),
   stayId: item.current_stay?.stay_id ?? null,
   stayStatus: item.current_stay?.status ?? null,
   // `actual_checkin_time` is what makes a stay in-house.
@@ -152,6 +155,10 @@ const Occupancy = () => {
   const [buildingFilter, setBuildingFilter] = useState("all");
   const [floorFilter, setFloorFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
+  // Pagination sits at the bottom of the table; without this the new
+  // page kept the old scroll offset and the sticky header stayed
+  // above the fold. See use-scroll-to-top.
+  useScrollToTop(currentPage);
   const [selectedRoom, setSelectedRoom] = useState<RoomRow | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [reallocateRoom, setReallocateRoom] = useState<RoomRow | null>(null);

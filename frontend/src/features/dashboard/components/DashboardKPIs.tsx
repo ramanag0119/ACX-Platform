@@ -11,6 +11,12 @@ import {
   Zap,
 } from "lucide-react";
 
+import { Link } from "react-router-dom";
+
+import { cn } from "@/lib/utils";
+import { scrollPanelIntoView } from "@/hooks/use-scroll-to-top";
+import { ALERTS_PANEL_ID } from "./AlertsPanel";
+import { ACTIVITY_PANEL_ID } from "./RecentActivityPanel";
 import { useTheme } from "@/core/contexts/ThemeContext";
 import { useAuth } from "@/core/contexts/AuthContext";
 import { ApiError, describeApiError } from "@/lib/api/client";
@@ -53,9 +59,52 @@ interface TileProps {
   detail?: string;
   isLoading: boolean;
   error: ApiError | null;
+  /**
+   * The screen that lists what this figure counts, when one exists.
+   *
+   * Deliberately optional. Where the detail lives on this page instead of a
+   * route, use `panelId` -- Device alerts and Activities both do.
+   *
+   * TWO tiles still have nowhere to go, verified against every page's data
+   * hooks and all nine report definitions:
+   *
+   *   Incidents            no page reads `useIncidents`, and no report covers
+   *                        `device_incident`. The Alert Report only mentions
+   *                        incidents in prose ("the lifecycle lives on the
+   *                        incident").
+   *   Active value alerts  `useValueAlerts` is read only by useMeterHierarchy,
+   *                        which feeds Power/Energy View -- both RETIRED, their
+   *                        routes redirect to /occupancy. Limit Config Alert is
+   *                        NOT it: that screen reads device_params, devices and
+   *                        limit_configs, i.e. where thresholds are DEFINED,
+   *                        not where breaches are listed.
+   *
+   * Those stay plain, non-interactive cards. A link to a screen that does not
+   * show the data is worse than no link -- it looks answered and is not.
+   *
+   * Energy consumed has a real destination (`/reports/energy`) but is left
+   * unmapped on purpose, by request.
+   */
+  to?: string;
+  /**
+   * Id of a panel on THIS page that already lists what the tile counts, for a
+   * figure whose detail is on the dashboard itself rather than on a route.
+   * Mutually exclusive with `to`; `to` wins if both are somehow given.
+   */
+  panelId?: string;
 }
 
-const Tile = ({ label, icon: Icon, accent, value, detail, isLoading, error }: TileProps) => {
+const Tile = ({
+  label,
+  icon: Icon,
+  accent,
+  value,
+  detail,
+  isLoading,
+  error,
+  to,
+  panelId,
+}: TileProps) => {
   const { isDark } = useTheme();
   const cardBg = isDark
     ? "linear-gradient(180deg, #1e2233, #1a1e30)"
@@ -67,22 +116,32 @@ const Tile = ({ label, icon: Icon, accent, value, detail, isLoading, error }: Ti
   const mutedColor = isDark ? "#8b95a9" : "#5E5A7A";
   const detailText = !isLoading && !error ? detail : undefined;
 
-  return (
-    /*
-      Every slot below reserves its height, so a tile is the same size whatever
-      its text says -- the label wraps to two lines on some tiles and one on
-      others, the value slot swaps a spinner for error text for a 2xl number as
-      the query resolves, and not every tile passes a detail line. Without the
-      reserved heights each of those changed the height of the whole grid row.
+  /*
+    Every slot below reserves its height, so a tile is the same size whatever
+    its text says -- the label wraps to two lines on some tiles and one on
+    others, the value slot swaps a spinner for error text for a 2xl number as
+    the query resolves, and not every tile passes a detail line. Without the
+    reserved heights each of those changed the height of the whole grid row.
 
-      h-full fills the grid cell, min-w-0 stops a long value widening the track
-      (and the page with it), min-h holds the floor on mobile where there is no
-      taller sibling to stretch against.
-    */
-    <div
-      className="rounded-[16px] p-4 h-full min-w-0 min-h-[136px] flex flex-col transition-all duration-250 hover:-translate-y-0.5"
-      style={{ background: cardBg, border: cardBorder, boxShadow: "0 8px 24px rgba(17,12,46,0.12)" }}
-    >
+    h-full fills the grid cell, min-w-0 stops a long value widening the track
+    (and the page with it), min-h holds the floor on mobile where there is no
+    taller sibling to stretch against.
+  */
+  const interactive = Boolean(to || panelId);
+  const shellClass = cn(
+    "rounded-[16px] p-4 h-full min-w-0 min-h-[136px] flex flex-col transition-all duration-250 hover:-translate-y-0.5",
+    // Only a tile that actually goes somewhere advertises itself as clickable.
+    interactive &&
+      "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+  );
+  const shellStyle = {
+    background: cardBg,
+    border: cardBorder,
+    boxShadow: "0 8px 24px rgba(17,12,46,0.12)",
+  };
+
+  const body = (
+    <>
       <div className="flex items-start justify-between gap-3 shrink-0">
         {/* Two lines always reserved; longer text wraps then clamps, so it
             neither overflows nor grows the card. */}
@@ -131,7 +190,52 @@ const Tile = ({ label, icon: Icon, accent, value, detail, isLoading, error }: Ti
       >
         {detailText}
       </p>
-    </div>
+    </>
+  );
+
+  /*
+    A real <Link>, not a div with an onClick: it keeps middle-click and
+    "open in new tab" working, is reachable and activatable from the keyboard
+    for free, and is announced as a link. `aria-label` carries the figure as
+    well as the label, because the visible text alone ("Incidents") does not
+    say where the link goes.
+  */
+  /* Same-page target: a <button>, not a link. The detail is a panel further
+     down THIS page, so there is no URL to navigate to -- a link would have to
+     invent one. `type="button"` keeps it out of any enclosing form. */
+  if (!to && panelId) {
+    return (
+      <button
+        type="button"
+        onClick={() => scrollPanelIntoView(panelId)}
+        className={cn(shellClass, "text-left")}
+        style={shellStyle}
+        aria-label={
+          value === null ? `${label}, show panel` : `${label}: ${value}, show panel`
+        }
+      >
+        {body}
+      </button>
+    );
+  }
+
+  if (!to) {
+    return (
+      <div className={shellClass} style={shellStyle}>
+        {body}
+      </div>
+    );
+  }
+
+  return (
+    <Link
+      to={to}
+      className={shellClass}
+      style={shellStyle}
+      aria-label={value === null ? `${label}, open list` : `${label}: ${value}, open list`}
+    >
+      {body}
+    </Link>
   );
 };
 
@@ -156,6 +260,11 @@ const AlertTiles = ({ enabled }: { enabled: boolean }) => {
     <>
       <Tile
         label="Device alerts"
+        // The Alerts panel below on THIS page is the device-alert list: its
+        // "Caleido" source is GET /alerts, the same rows this tile counts, and
+        // it is the panel's default source. So the tile reveals that panel
+        // rather than routing away to the Alert Report.
+        panelId={ALERTS_PANEL_ID}
         icon={AlertTriangle}
         accent={critical.total ? RED : AMBER}
         value={all.total}
@@ -230,6 +339,7 @@ const OccupancyTile = ({ enabled }: { enabled: boolean }) => {
   return (
     <Tile
       label="Rooms in house"
+      to="/occupancy"
       icon={BedDouble}
       accent={GREEN}
       value={inHouse.total}
@@ -246,6 +356,7 @@ const StayTile = ({ enabled }: { enabled: boolean }) => {
   return (
     <Tile
       label="Stays in house"
+      to="/bookings"
       icon={UserCheck}
       accent={BLUE}
       value={inHouse.total}
@@ -262,6 +373,7 @@ const ServiceTile = ({ enabled }: { enabled: boolean }) => {
   return (
     <Tile
       label="Service requests"
+      to="/services/tracking"
       icon={ClipboardList}
       accent={VIOLET}
       value={all.total}
@@ -298,6 +410,10 @@ const ActivityTile = ({ enabled }: { enabled: boolean }) => {
   return (
     <Tile
       label="Activities"
+      // Recent Activity below on THIS page is the activity list (GET
+      // /activities) -- the same rows this tile counts. There is no activity
+      // log route, so the tile reveals that panel.
+      panelId={ACTIVITY_PANEL_ID}
       icon={Activity}
       accent={BLUE}
       value={all.total}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,6 +27,7 @@ import { useEvents } from "@/lib/api/hooks";
 import { useCreateEvent, useUpdateEvent } from "@/lib/api/mutations";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { useScrollToTop } from "@/hooks/use-scroll-to-top";
 
 // Sample Events Data
 interface EventRow {
@@ -71,11 +72,23 @@ const Events = () => {
         image: "-",
     }));
     const [isAddEventOpen, setIsAddEventOpen] = useState(false);
+    const [editingEventId, setEditingEventId] = useState<string | null>(null);
     const [cancellingEventId, setCancellingEventId] = useState<string | null>(null);
     const [cancelReason, setCancelReason] = useState("");
+    /** The four details, editable while cancelling. Seeded from the event. */
+    const [cancelForm, setCancelForm] = useState({
+        name: "",
+        venue: "",
+        startDateTime: "",
+        endDateTime: "",
+    });
     const [searchQuery, setSearchQuery] = useState("");
     const [entriesPerPage, setEntriesPerPage] = useState("10");
     const [currentPage, setCurrentPage] = useState(1);
+    // Pagination sits at the bottom of the table; without this the new
+    // page kept the old scroll offset and the sticky header stayed
+    // above the fold. See use-scroll-to-top.
+    useScrollToTop(currentPage);
 
     // Modal States
     const [editEventOpen, setEditEventOpen] = useState(false);
@@ -98,14 +111,54 @@ const Events = () => {
     const handleReset = () => { setEventName(""); setVenue(""); setChiefGuests(""); setStartDate(""); setEndDate(""); setAttendees(""); setDescription(""); };
 
     /**
+     * The row each dialog is acting on.
+     *
+     * Resolved from `eventsData` rather than copied into state when the button
+     * is clicked: a dialog then shows whatever the table currently holds, so a
+     * refetch between opening and submitting cannot leave stale details on
+     * screen beside a live id.
+     */
+    const editingEvent = eventsData.find((event) => event.id === editingEventId);
+    const cancellingEvent = eventsData.find((event) => event.id === cancellingEventId);
+
+    /**
      * Closing has to clear the reason as well as the target. Leaving it behind
      * pre-filled the next cancellation with the previous event's reason, which
      * the required-field check would then happily accept.
      */
+    /** `datetime-local` wants LOCAL `YYYY-MM-DDTHH:mm`. `toISOString()` would
+     *  shift every event by the timezone offset, so the parts are read locally. */
+    const toLocalInput = (iso: string | null | undefined) => {
+        if (!iso) return "";
+        const d = new Date(iso);
+        const pad = (n: number) => String(n).padStart(2, "0");
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    };
+
+    /* Seeded from the RAW row: the table's strings are toLocaleString() output,
+       which a datetime-local input cannot take and the API cannot parse back. */
+    const cancellingRaw = (eventsQuery.data?.items ?? []).find(
+        (event) => event.id === cancellingEventId,
+    );
+
+    useEffect(() => {
+        if (!cancellingRaw) return;
+        setCancelForm({
+            name: cancellingRaw.name ?? "",
+            venue: cancellingRaw.venue ?? "",
+            startDateTime: toLocalInput(cancellingRaw.start_date_time),
+            endDateTime: toLocalInput(cancellingRaw.end_date_time),
+        });
+        // Keyed on the id alone: seed once per targeted event, so a background
+        // refetch cannot overwrite what the operator has typed.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [cancellingEventId]);
+
     const closeCancelDialog = () => {
         setCancelEventOpen(false);
         setCancellingEventId(null);
         setCancelReason("");
+        setCancelForm({ name: "", venue: "", startDateTime: "", endDateTime: "" });
     };
 
     return (
@@ -186,7 +239,7 @@ const Events = () => {
                                             <TableCell className="text-cyan-600 dark:text-cyan-400 text-xs py-3 px-4 cursor-pointer hover:underline">{item.image}</TableCell>
                                             <TableCell className="text-center py-3 px-4">
                                                 <div className="flex gap-2 justify-center">
-                                                    <Button size="sm" className="h-7 w-7 p-0 rounded-md" onClick={() => setEditEventOpen(true)}>
+                                                    <Button size="sm" className="h-7 w-7 p-0 rounded-md" onClick={() => { setEditingEventId(item.id); setEditEventOpen(true); }}>
                                                         <Edit className="h-3.5 w-3.5" />
                                                     </Button>
                                                     <Button
@@ -325,89 +378,37 @@ const Events = () => {
                 <DialogContent className="max-w-[750px] bg-card text-card-foreground border-0 p-0 overflow-hidden flex flex-col hide-close-button shadow-2xl [&>button]:hidden rounded-[4px]">
                     <div className="flex justify-between items-center p-3 px-5 bg-card border-b border-border">
                         <h2 className="text-[17px] font-semibold text-foreground tracking-wide">Events Management</h2>
-                        <Button variant="ghost" className="h-7 w-7 p-0 border-[1.5px] border-border rounded-[2px] hover:bg-muted" onClick={() => setEditEventOpen(false)}>
+                        <Button variant="ghost" className="h-7 w-7 p-0 border-[1.5px] border-border rounded-[2px] hover:bg-muted" onClick={() => { setEditEventOpen(false); setEditingEventId(null); }}>
                             <X className="h-4 w-4 text-muted-foreground stroke-[3]" />
                         </Button>
                     </div>
-                    <div className="p-8 px-12 space-y-7 max-h-[75vh] overflow-y-auto custom-scrollbar">
-                        <div className="grid grid-cols-[160px_1fr] items-center gap-4">
-                            <Label className="text-sm font-medium text-foreground">Event Name <span className="text-red-500">*</span></Label>
-                            <input type="text" defaultValue="Marriage" className="w-full bg-transparent border-0 border-b border-border text-foreground focus:ring-0 px-0 pb-1 text-sm outline-none" />
-                        </div>
-                        <div className="grid grid-cols-[160px_1fr] items-center gap-4">
-                            <Label className="text-sm font-medium text-foreground">Venue <span className="text-red-500">*</span></Label>
-                            <input type="text" defaultValue="Venue 5" className="w-full bg-transparent border-0 border-b border-border text-foreground focus:ring-0 px-0 pb-1 text-sm outline-none" />
-                        </div>
-                        <div className="grid grid-cols-[160px_1fr] items-center gap-4">
-                            <Label className="text-sm font-medium text-foreground">Chief Guests <span className="text-red-500">*</span></Label>
-                            <input type="text" defaultValue="Brindha" className="w-full bg-transparent border-0 border-b border-border text-foreground focus:ring-0 px-0 pb-1 text-sm outline-none" />
-                        </div>
-                        <div className="grid grid-cols-[160px_1fr] items-center gap-4">
-                            <Label className="text-sm font-medium text-foreground">Start Date <span className="text-red-500">*</span></Label>
-                            <input type="text" defaultValue="19-11-2024" className="w-full bg-muted border border-border text-foreground focus:ring-0 px-3 py-2 text-sm outline-none" />
-                        </div>
-                        <div className="grid grid-cols-[160px_1fr] items-center gap-4">
-                            <Label className="text-sm font-medium text-foreground">End Date <span className="text-red-500">*</span></Label>
-                            <input type="text" defaultValue="19-11-2024" className="w-full bg-muted border border-border text-foreground focus:ring-0 px-3 py-2 text-sm outline-none" />
-                        </div>
+                    {/* Only the four details asked for. Chief Guests, Start/End
+                        Time, Attendees, Description and Image were removed.
 
-                        {/* Start Time */}
-                        <div className="grid grid-cols-[160px_1fr] items-center gap-4">
-                            <Label className="text-sm font-medium text-foreground">Start Time <span className="text-red-500">*</span></Label>
-                            <div className="flex items-center gap-4">
-                                <div className="flex flex-col items-center">
-                                    <ChevronUp className="h-4 w-4 text-cyan-600 cursor-pointer" />
-                                    <span className="text-foreground text-sm mt-1 border-b border-border pb-1 px-2">01</span>
-                                    <ChevronDown className="h-4 w-4 text-cyan-600 cursor-pointer mt-1" />
-                                </div>
-                                <span className="text-foreground font-medium pb-2">:</span>
-                                <div className="flex flex-col items-center">
-                                    <ChevronUp className="h-4 w-4 text-cyan-600 cursor-pointer" />
-                                    <span className="text-foreground text-sm mt-1 border-b border-border pb-1 px-2">31</span>
-                                    <ChevronDown className="h-4 w-4 text-cyan-600 cursor-pointer mt-1" />
-                                </div>
-                                <div className="ml-2 bg-brand hover:bg-brand-hover text-white rounded-xl px-3.5 py-1 text-sm font-semibold cursor-pointer shadow-sm">PM</div>
-                            </div>
-                        </div>
+                        READ-ONLY, and that is not a downgrade: the fields here
+                        were `defaultValue="Marriage"` / `"Venue 5"` / `"19-11-2024"`
+                        hardcoded placeholders, the dialog never recorded which
+                        row was clicked, and it has no submit button -- nothing
+                        typed into it could ever be saved. These values now come
+                        from the row that opened it. */}
+                    <div className="p-8 px-12">
+                        {editingEvent ? (
+                            <dl className="grid grid-cols-[160px_1fr] gap-x-4 gap-y-5">
+                                <dt className="text-sm font-medium text-muted-foreground">Event Name</dt>
+                                <dd className="text-sm font-medium text-foreground">{editingEvent.eventName}</dd>
 
-                        {/* End Time */}
-                        <div className="grid grid-cols-[160px_1fr] items-center gap-4">
-                            <Label className="text-sm font-medium text-foreground">End Time <span className="text-red-500">*</span></Label>
-                            <div className="flex items-center gap-4">
-                                <div className="flex flex-col items-center">
-                                    <ChevronUp className="h-4 w-4 text-brand cursor-pointer" />
-                                    <span className="text-foreground text-sm mt-1 border-b border-border pb-1 px-2">09</span>
-                                    <ChevronDown className="h-4 w-4 text-brand cursor-pointer mt-1" />
-                                </div>
-                                <span className="text-foreground font-medium pb-2">:</span>
-                                <div className="flex flex-col items-center">
-                                    <ChevronUp className="h-4 w-4 text-brand cursor-pointer" />
-                                    <span className="text-foreground text-sm mt-1 border-b border-border pb-1 px-2">00</span>
-                                    <ChevronDown className="h-4 w-4 text-brand cursor-pointer mt-1" />
-                                </div>
-                                <div className="ml-2 bg-brand hover:bg-brand-hover text-white rounded-xl px-3.5 py-1 text-sm font-semibold cursor-pointer shadow-sm">PM</div>
-                            </div>
-                        </div>
+                                <dt className="text-sm font-medium text-muted-foreground">Venue</dt>
+                                <dd className="text-sm text-foreground">{editingEvent.venue}</dd>
 
-                        <div className="grid grid-cols-[160px_1fr] items-center gap-4">
-                            <Label className="text-sm font-medium text-foreground">Attendees <span className="text-red-500">*</span></Label>
-                            <input type="text" defaultValue="500" className="w-full bg-transparent border-0 border-b border-border text-foreground focus:ring-0 px-0 pb-1 text-sm outline-none" />
-                        </div>
-                        <div className="grid grid-cols-[160px_1fr] items-center gap-4">
-                            <Label className="text-sm font-medium text-foreground">Description</Label>
-                            <input type="text" placeholder="Enter Description" className="w-full bg-transparent border-0 border-b border-border text-foreground focus:ring-0 px-0 pb-1 text-sm outline-none" />
-                        </div>
+                                <dt className="text-sm font-medium text-muted-foreground">Start Date</dt>
+                                <dd className="text-sm text-foreground">{editingEvent.startDateTime}</dd>
 
-                        <div className="grid grid-cols-[160px_1fr] items-center gap-4 pt-2">
-                            <Label className="text-sm font-medium text-foreground text-left">Image</Label>
-                            <div className="space-y-3">
-                                <div className="flex items-center border-b border-border pb-1">
-                                    <Button variant="outline" className="h-7 px-3 bg-muted text-foreground text-xs border border-border rounded-[2px] font-normal">Choose file</Button>
-                                    <span className="ml-3 text-xs text-muted-foreground">No file chosen</span>
-                                </div>
-                                <div className="text-brand-teal text-xs cursor-pointer hover:underline">Click here to preview image</div>
-                            </div>
-                        </div>
+                                <dt className="text-sm font-medium text-muted-foreground">End Date</dt>
+                                <dd className="text-sm text-foreground">{editingEvent.endDateTime}</dd>
+                            </dl>
+                        ) : (
+                            <p className="text-sm text-muted-foreground">No event selected.</p>
+                        )}
                     </div>
                 </DialogContent>
             </Dialog>
@@ -422,6 +423,59 @@ const Events = () => {
                         </Button>
                     </div>
                     <div className="p-8 px-10 space-y-7">
+                        {/* Which event is being cancelled. Read-only: this is a
+                            confirmation surface, not an edit form -- the only
+                            thing the operator supplies here is the reason.
+                            Values come from the row that opened the dialog, so
+                            they cannot disagree with the table behind it. */}
+                        {cancellingEvent && (
+                            <div className="space-y-5">
+                                <div className="grid grid-cols-[160px_1fr] items-center gap-4">
+                                    <Label htmlFor="cancel-name" className="text-sm font-medium text-foreground">Event Name</Label>
+                                    <input
+                                        id="cancel-name"
+                                        type="text"
+                                        value={cancelForm.name}
+                                        onChange={(e) => setCancelForm((f) => ({ ...f, name: e.target.value }))}
+                                        className="w-full bg-transparent border-0 border-b border-border text-foreground focus:ring-0 px-0 pb-1 text-sm outline-none"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-[160px_1fr] items-center gap-4">
+                                    <Label htmlFor="cancel-venue" className="text-sm font-medium text-foreground">Venue</Label>
+                                    <input
+                                        id="cancel-venue"
+                                        type="text"
+                                        value={cancelForm.venue}
+                                        onChange={(e) => setCancelForm((f) => ({ ...f, venue: e.target.value }))}
+                                        className="w-full bg-transparent border-0 border-b border-border text-foreground focus:ring-0 px-0 pb-1 text-sm outline-none"
+                                    />
+                                </div>
+                                {/* datetime-local, not text: the value must return to
+                                    the API as ISO, and free-text dates cannot be parsed
+                                    reliably. */}
+                                <div className="grid grid-cols-[160px_1fr] items-center gap-4">
+                                    <Label htmlFor="cancel-start" className="text-sm font-medium text-foreground">Start Date</Label>
+                                    <input
+                                        id="cancel-start"
+                                        type="datetime-local"
+                                        value={cancelForm.startDateTime}
+                                        onChange={(e) => setCancelForm((f) => ({ ...f, startDateTime: e.target.value }))}
+                                        className="w-full bg-transparent border-0 border-b border-border text-foreground focus:ring-0 px-0 pb-1 text-sm outline-none"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-[160px_1fr] items-center gap-4">
+                                    <Label htmlFor="cancel-end" className="text-sm font-medium text-foreground">End Date</Label>
+                                    <input
+                                        id="cancel-end"
+                                        type="datetime-local"
+                                        value={cancelForm.endDateTime}
+                                        onChange={(e) => setCancelForm((f) => ({ ...f, endDateTime: e.target.value }))}
+                                        className="w-full bg-transparent border-0 border-b border-border text-foreground focus:ring-0 px-0 pb-1 text-sm outline-none"
+                                    />
+                                </div>
+                            </div>
+                        )}
+
                         <div className="grid grid-cols-[160px_1fr] items-center gap-4">
                             <Label htmlFor="cancel-reason" className="text-sm font-medium text-foreground">Reason for Cancel <span className="text-red-500">*</span></Label>
                             <input
@@ -455,6 +509,15 @@ const Events = () => {
                                             // it recorded a cancellation nobody could explain.
                                             status: 0,
                                             cancellation_reason: cancelReason.trim(),
+                                            // The edited details go up with the cancellation.
+                                            name: cancelForm.name.trim(),
+                                            venue: cancelForm.venue.trim() || null,
+                                            start_date_time: cancelForm.startDateTime
+                                                ? new Date(cancelForm.startDateTime).toISOString()
+                                                : null,
+                                            end_date_time: cancelForm.endDateTime
+                                                ? new Date(cancelForm.endDateTime).toISOString()
+                                                : null,
                                         },
                                     },
                                     { onSuccess: () => closeCancelDialog() },

@@ -7,7 +7,11 @@ import { DataState, InlineLoading } from "@/core/components/DataState";
 import { useCount, useFloors, useOccupancy } from "@/lib/api/hooks";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
 import type { QueryParams } from "@/lib/api/client";
-import { KNOWN_AMENITY_STATUSES, roomStatusTint } from "@/features/occupancy/lib/roomStatus";
+import {
+  KNOWN_AMENITY_STATUSES,
+  conditionLabel,
+  roomStatusTint,
+} from "@/features/occupancy/lib/roomStatus";
 
 /**
  * Building -> floor -> room drill-down, filtered BY THE BACKEND at every level.
@@ -124,7 +128,7 @@ export const StatusSection = ({
       number: item.room_name,
       type: item.amenity_type_name ?? "-",
       statusName: item.status_name ?? "-",
-      conditions: item.conditions.map((condition) => condition.name),
+      conditions: item.conditions.map((condition) => conditionLabel(condition.name)),
     }));
     return affectedOnly ? mapped.filter((room) => room.conditions.length > 0) : mapped;
   }, [roomsQuery.data, affectedOnly]);

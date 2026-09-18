@@ -1953,14 +1953,35 @@ select option:focus {
   --hms-content-gutter: 1rem;
   --hms-header-height: 74px;
   --hms-header-gutter: 32px;
+  /* Ceiling on a long list before it scrolls inside its own card, which is
+     what lets its column header float. Deliberately viewport-relative: a fixed
+     px value would leave a short list stranded on a tall screen. */
+  --hms-table-max-height: 60vh;
 
   padding-inline: var(--hms-content-gutter);
 }
 
+/*
+  LAYER LADDER. Every fixed/sticky surface in the shell, highest first, so a
+  new one can be slotted in rather than guessed at:
+
+      100  toasts                     (components/ui/toast)
+       50  app header, footer         (AppHeader, AppLayout)
+       40  sidebar                    (.sidebar-futuristic / AppSidebar)
+       30  page header                (this rule)
+       20  sticky table head          (.hms-content thead th)
+
+  The page header used to also be 40, tying with the sidebar. They do not
+  overlap today -- the sidebar is fixed to the left and the header is full-bleed
+  only within `.hms-content`, which starts after it -- so equal values resolved
+  by DOM order and nothing showed. It is still a tie that would decide itself
+  silently the first time the layout changed, so the header takes its own rung
+  BELOW the sidebar: the sidebar is app chrome and should win if they ever meet.
+*/
 .hms-page-header {
   position: sticky;
   top: 0;
-  z-index: 40;
+  z-index: 30;
 
   /* NO `margin-top`, and no top offset. `.hms-content` no longer carries
      `pt-*` either, so the bar's static position IS the top of the scroll
@@ -2083,15 +2104,49 @@ select option:focus {
   }
 }
 
-/* --- Table headers --------------------------------------------------------
-   NOT sticky, and deliberately so. A global `position: sticky` on `thead th`
-   needs a fixed top offset, which is only correct on pages whose heading is
-   exactly that tall -- everywhere else the header floats down over the rows,
-   which reads as the header overlapping the data. It also has to paint an
-   opaque background, which overrides whatever header colour each table
-   already sets. Both are page-specific guesses dressed up as a global rule,
-   so the rule is gone; each table keeps its own header styling.
+/* --- Floating table headers -----------------------------------------------
+   The column header stays visible while a long list scrolls.
+
+   This was previously rejected as a global rule, for two reasons that no
+   longer hold:
+
+     "needs a fixed top offset, only correct on pages whose heading is that
+      tall" -- the header is not pinned against the PAGE any more. Each list
+      scrolls inside its own wrapper and the columns pin to `top: 0` of that
+      wrapper, so there is no page-dependent offset to guess at.
+
+     "has to paint an opaque background, overriding each table's own header
+      colour" -- true, and unavoidable: a translucent header lets rows scroll
+      through it. `--muted` is the token the tables already tint their header
+      row with (`bg-muted/40`), so this is the same colour at full opacity
+      rather than a new one, and it follows the theme.
+
+   WHY THE WRAPPER SCROLLS, rather than the columns pinning to the page. The
+   wrapper is `overflow-hidden` + `overflow-x-auto` for its rounded corners and
+   wide tables. An ancestor with a non-visible overflow is the scroll container
+   a sticky child resolves against, and CSS cannot give one axis `auto` and the
+   other `visible` -- so a `thead` inside it can never pin to the page scroll.
+   Making the wrapper the vertical scroller resolves that tension instead of
+   fighting it, and it keeps the page header (which pins to `.hms-content`)
+   and the column header independent of one another.
+
+   `max-height` only engages once a list is genuinely long; short tables are
+   untouched. Dialog tables are unaffected -- Radix portals them to <body>,
+   outside `.hms-content`.
    ========================================================================== */
+.hms-content div[class*="overflow-x-auto"]:has(> table) {
+  max-height: var(--hms-table-max-height);
+  overflow-y: auto;
+}
+
+.hms-content div[class*="overflow-x-auto"] > table thead th {
+  position: sticky;
+  top: 0;
+  /* Below the page header (30) so it tucks under rather than over it.
+     See the layer ladder on `.hms-page-header`. */
+  z-index: 20;
+  background-color: hsl(var(--muted));
+}
 
 /* --- Viewport fit ---------------------------------------------------------
    A page inside the scroll container must not claim a whole viewport of its
@@ -2099,4 +2154,41 @@ select option:focus {
    fix removed. */
 .hms-content .min-h-screen {
   min-height: 100%;
+}
+
+/* --- Jump-target highlight ------------------------------------------------
+   Added briefly by `scrollPanelIntoView` when a dashboard KPI tile reveals the
+   panel that holds its detail. Scrolling on its own is ambiguous -- several
+   cards are in view at once -- so the target names itself for a moment.
+
+   `outline`, not `box-shadow`: these panels set their shadow as an inline
+   style, and outline sits outside the box so it cannot shift any layout.
+   Kept in step with PANEL_FLASH_MS in hooks/use-scroll-to-top.ts.
+   ========================================================================== */
+.hms-panel-flash {
+  outline: 2px solid transparent;
+  outline-offset: 3px;
+  border-radius: inherit;
+  animation: hmsPanelFlash 1.6s ease-out 1;
+}
+
+@keyframes hmsPanelFlash {
+  0%,
+  100% {
+    outline-color: transparent;
+  }
+
+  10%,
+  65% {
+    outline-color: hsl(var(--primary));
+  }
+}
+
+/* Reduced motion keeps the cue -- it is information, not decoration -- but
+   holds it steady instead of pulsing it in and out. */
+@media (prefers-reduced-motion: reduce) {
+  .hms-panel-flash {
+    outline-color: hsl(var(--primary));
+    animation: none;
+  }
 }

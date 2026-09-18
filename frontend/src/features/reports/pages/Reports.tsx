@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -222,6 +223,9 @@ const Reports = () => {
   const mayRead = canRead("reports");
   const { toast } = useToast();
 
+  const location = useLocation();
+  const navigate = useNavigate();
+
   const definitionsQuery = useReportDefinitions();
   // Memoised: a fresh [] each render would retrigger the effect below.
   const definitions = useMemo(
@@ -237,10 +241,25 @@ const Reports = () => {
   const [pageSize, setPageSize] = useState<string>("25");
   const [exporting, setExporting] = useState(false);
 
-  // Land on the first report the backend declares rather than a hardcoded tab.
+  /*
+    The tab is addressable: `/reports/energy` opens the energy report.
+
+    The route is `/reports/*`, but the page used to ignore the URL entirely and
+    always land on `definitions[0]` -- which the backend declares as `occupancy`
+    -- so every link into Reports arrived on the same tab no matter what it
+    meant to show.
+
+    The key is matched against the definitions the backend returned rather than
+    trusted: an unknown or absent segment falls back to the first declared
+    report, exactly as before.
+  */
+  const urlKey = decodeURIComponent(location.pathname.replace(/^\/reports\/?/, "")).split("/")[0];
+
   useEffect(() => {
-    if (!activeKey && definitions.length) setActiveKey(definitions[0].key);
-  }, [activeKey, definitions]);
+    if (activeKey || !definitions.length) return;
+    const fromUrl = definitions.find((d) => d.key === urlKey);
+    setActiveKey(fromUrl ? fromUrl.key : definitions[0].key);
+  }, [activeKey, definitions, urlKey]);
 
   const definition = definitions.find((d) => d.key === activeKey);
   const filters = useMemo(
@@ -283,6 +302,10 @@ const Reports = () => {
   const selectTab = (key: string) => {
     setActiveKey(key);
     setPage(1);
+    // Keep the address bar on the tab being read, so a report can be linked to
+    // and the back button steps through tabs. `replace` deliberately: switching
+    // tabs is not a navigation worth its own history entry per click.
+    navigate(`/reports/${key}`, { replace: true });
   };
 
   const generate = () => {

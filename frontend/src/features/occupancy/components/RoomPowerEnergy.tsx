@@ -301,7 +301,7 @@ export function RoomPowerEnergy({ amenityId }: RoomPowerEnergyProps) {
 
                 {/* Per-device breakdown, so a room total can be traced to the
                     device that produced it. */}
-                <div className="rounded-lg overflow-hidden border border-border/80 dark:border-slate-800">
+                <div className="rounded-lg overflow-hidden overflow-x-auto scrollbar-thin border border-border/80 dark:border-slate-800">
                     <DataState
                         isLoading={false}
                         error={null}

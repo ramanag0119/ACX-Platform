@@ -60,6 +60,7 @@ import {
 } from "@/lib/api/mutations";
 import { useAuth } from "@/core/contexts/AuthContext";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { useScrollToTop } from "@/hooks/use-scroll-to-top";
 
 type BookingData = {
   id: string;
@@ -227,6 +228,10 @@ const Bookings = () => {
   const [entriesPerPage, setEntriesPerPage] = useState("10");
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  // Pagination sits at the bottom of the table; without this the new
+  // page kept the old scroll offset and the sticky header stayed
+  // above the fold. See use-scroll-to-top.
+  useScrollToTop(currentPage);
   const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [editingBooking, setEditingBooking] = useState<BookingData | null>(null);
