@@ -20,7 +20,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { CalendarX2, X, Edit, ChevronUp, ChevronDown } from "lucide-react";
+import { CalendarX2, X, Edit } from "lucide-react";
 import { DataState, TableLoading } from "@/core/components/DataState";
 import { useAuth } from "@/core/contexts/AuthContext";
 import { useEvents } from "@/lib/api/hooks";
@@ -149,10 +149,14 @@ const Events = () => {
             startDateTime: toLocalInput(cancellingRaw.start_date_time),
             endDateTime: toLocalInput(cancellingRaw.end_date_time),
         });
-        // Keyed on the id alone: seed once per targeted event, so a background
-        // refetch cannot overwrite what the operator has typed.
+        // Keyed on the RESOLVED row's id, not on `cancellingEventId`. Keying on
+        // the target id alone meant that if the dialog opened while the list was
+        // still refetching, `cancellingRaw` was undefined, the effect returned
+        // early, and it never ran again -- the dep had not changed -- leaving a
+        // blank form. Keying on the resolved id seeds as soon as the row exists,
+        // and is still stable across refetches, so it cannot overwrite typing.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [cancellingEventId]);
+    }, [cancellingRaw?.id]);
 
     const closeCancelDialog = () => {
         setCancelEventOpen(false);

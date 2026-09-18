@@ -2134,12 +2134,23 @@ select option:focus {
    untouched. Dialog tables are unaffected -- Radix portals them to <body>,
    outside `.hms-content`.
    ========================================================================== */
-.hms-content div[class*="overflow-x-auto"]:has(> table) {
+/* The cap goes on the div shadcn's <Table> renders, NOT on the page's own
+   wrapper. The real DOM is:
+
+       div.overflow-x-auto        <- the page's wrapper
+         div.relative.overflow-auto   <- rendered by ui/table.tsx
+           table
+
+   Two things follow. A `> table` child selector never matches, because that
+   inner div sits between; and the inner div already carries `overflow: auto`,
+   which makes IT the scroll container a sticky `thead` resolves against. Give
+   it the height cap and the header pins to the right box. */
+.hms-content div[class*="overflow-x-auto"] > div:has(> table) {
   max-height: var(--hms-table-max-height);
-  overflow-y: auto;
 }
 
-.hms-content div[class*="overflow-x-auto"] > table thead th {
+/* Descendant, not child -- see above. */
+.hms-content div[class*="overflow-x-auto"] table thead th {
   position: sticky;
   top: 0;
   /* Below the page header (30) so it tucks under rather than over it.
