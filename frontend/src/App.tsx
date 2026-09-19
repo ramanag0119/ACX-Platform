@@ -17,7 +17,6 @@ import ServiceTracking from "@/features/services/pages/ServiceTracking";
 import ServicePlanning from "@/features/services/pages/ServicePlanning";
 import FacilityManagement from "@/features/config/pages/FacilityManagement";
 import ServicesSetup from "@/features/config/pages/ServicesSetup";
-import Placeholder from "@/features/common/pages/Placeholder";
 import NotFound from "@/features/common/pages/NotFound";
 import UserRoles from "@/features/config/pages/UserRoles";
 import Employees from "@/features/config/pages/Employees";

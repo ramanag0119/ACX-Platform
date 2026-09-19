@@ -3,11 +3,11 @@ import { Link } from "react-router-dom";
 import { RefreshCw } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { cn } from "@/lib/utils";
-import { useTheme } from "@/core/contexts/ThemeContext";
 import { DataState } from "@/core/components/DataState";
 import { useAmenityStatuses, useCount, useCounts } from "@/lib/api/hooks";
 import type { QueryParams } from "@/lib/api/client";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
+import { useSurfaceTokens } from "@/core/styles/surfaceTokens";
 import { roomStatusColor } from "../lib/roomStatus";
 
 /**
@@ -36,7 +36,6 @@ import { roomStatusColor } from "../lib/roomStatus";
  */
 
 export const OccupancyStatisticsChart = () => {
-  const { isDark } = useTheme();
 
   const statusesQuery = useAmenityStatuses({ page: 1, page_size: MAX_PAGE_SIZE });
   // Memoised so the identity is stable between renders: a bare `?? []` hands a
@@ -76,13 +75,14 @@ export const OccupancyStatisticsChart = () => {
   /** Green = settled, amber = refetching, red = last attempt failed. */
   const dotColor = error ? "#ef4444" : isFetching ? "#f59e0b" : "#22c55e";
   const dotLabel = error ? "Data unavailable" : isFetching ? "Refreshing" : "Data up to date";
-  const cardBg = isDark
-    ? "linear-gradient(180deg, #1e2233, #1a1e30)"
-    : "linear-gradient(180deg, rgba(255,255,255,0.85), rgba(245,242,255,0.95))";
-  const cardBorder = isDark ? "1px solid rgba(255,255,255,0.07)" : "1px solid rgba(124,92,255,0.12)";
-  const titleColor = isDark ? "#dde2ed" : "#1F1B3A";
-  const mutedColor = isDark ? "#8b95a9" : "#5E5A7A";
-  const tooltipBg = isDark ? "#1e2233" : "#FFFFFF";
+  const {
+    cardBg,
+    cardBorder,
+    cardShadow,
+    titleColor,
+    textMuted: mutedColor,
+    tooltipBg,
+  } = useSurfaceTokens();
 
   return (
     /* h-full: this is the short panel beside the energy chart, so its cell
@@ -90,7 +90,7 @@ export const OccupancyStatisticsChart = () => {
        cell and the donut grows into the spare height. */
     <div
       className="rounded-[16px] p-4 h-full min-w-0 flex flex-col transition-all duration-250 hover:transform hover:-translate-y-0.5"
-      style={{ background: cardBg, border: cardBorder, boxShadow: "0 8px 24px rgba(17,12,46,0.12)" }}
+      style={{ background: cardBg, border: cardBorder, boxShadow: cardShadow }}
     >
       <div className="flex items-center justify-between mb-3 shrink-0 gap-3">
         <h3 className="text-base font-semibold tracking-tight" style={{ color: titleColor }}>

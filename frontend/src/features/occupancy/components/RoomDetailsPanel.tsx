@@ -4,6 +4,7 @@ import { useTheme } from "@/core/contexts/ThemeContext";
 import { DataState } from "@/core/components/DataState";
 import { useDeviceStats, useDevices, useOccupancyDetail } from "@/lib/api/hooks";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
+import { useSurfaceTokens } from "@/core/styles/surfaceTokens";
 import { roomStatusTextClass } from "../lib/roomStatus";
 
 interface RoomDetailsPanelProps {
@@ -34,15 +35,18 @@ export const RoomDetailsPanel = ({ amenityId, roomNumber, roomType }: RoomDetail
   const statsQuery = useDeviceStats({ amenity_id: amenityId, page: 1, page_size: MAX_PAGE_SIZE });
 
   // Theme tokens
-  const cardBg = isDark ? "linear-gradient(180deg, #1e2233, #1a1e30)" : "linear-gradient(180deg, rgba(255,255,255,0.85), rgba(245,242,255,0.95))";
-  const cardBorder = isDark ? "1px solid rgba(255,255,255,0.07)" : "1px solid rgba(124,92,255,0.12)";
+  const {
+    cardBg,
+    cardBorder,
+    cardShadow,
+    titleColor,
+    textMuted: subTitleColor,
+    textSubtle: labelColor,
+  } = useSurfaceTokens();
   const devCardBg = isDark ? "#1e2233" : "#ffffff";
   const devCardBorder = isDark ? "rgba(255,255,255,0.07)" : "rgba(124,92,255,0.12)";
   const devHeaderBg = isDark ? "#252a3e" : "#EEF2FF";
   const devHeaderBorder = isDark ? "#2a2f42" : "#e5e7eb";
-  const titleColor = isDark ? "#dde2ed" : "#1F1B3A";
-  const subTitleColor = isDark ? "#8b95a9" : "#5E5A7A";
-  const labelColor = isDark ? "#8b95a9" : "#8A86A8";
   const valueColor = isDark ? "#dde2ed" : "#1F1B3A";
   const rowBorder = isDark ? "rgba(255,255,255,0.06)" : "rgba(124,92,255,0.1)";
 
@@ -104,7 +108,7 @@ export const RoomDetailsPanel = ({ amenityId, roomNumber, roomType }: RoomDetail
       {/* Room Details Card */}
       <div
         className="rounded-lg p-6 transition-all duration-250 ease hover:-translate-y-0.5"
-        style={{ background: cardBg, border: cardBorder, boxShadow: "0 8px 24px rgba(17,12,46,0.12)" }}
+        style={{ background: cardBg, border: cardBorder, boxShadow: cardShadow }}
       >
         <h3 style={{ color: titleColor }} className="font-medium mb-6">Room Details</h3>
 

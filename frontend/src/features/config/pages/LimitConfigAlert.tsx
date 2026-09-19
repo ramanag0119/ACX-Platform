@@ -23,8 +23,7 @@ import { Pencil, Trash2 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { DataState, TableLoading } from "@/core/components/DataState";
 import { useDeviceParams, useDevices, useLimitConfigs } from "@/lib/api/hooks";
-import { useAuth } from "@/core/contexts/AuthContext";
-import { useCreateLimitConfig, useUpdateLimitConfig } from "@/lib/api/mutations";
+import { useCreateLimitConfig } from "@/lib/api/mutations";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useScrollToTop } from "@/hooks/use-scroll-to-top";
@@ -52,10 +51,7 @@ const LimitConfigAlert = () => {
     const configsQuery = useLimitConfigs({ page: 1, page_size: MAX_PAGE_SIZE });
 
     // --- Mutations
-    const { canWrite } = useAuth();
-    const mayWrite = canWrite("caleido_network");
     const createConfig = useCreateLimitConfig();
-    const updateConfig = useUpdateLimitConfig();
 
     // `param_name` is not unique across device types, so de-duplicate by name.
     const parameterOptions = [

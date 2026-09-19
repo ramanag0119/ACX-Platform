@@ -15,9 +15,9 @@ import { Link } from "react-router-dom";
 
 import { cn } from "@/lib/utils";
 import { scrollPanelIntoView } from "@/hooks/use-scroll-to-top";
+import { useCardSurfaceStyle, useSurfaceTokens } from "@/core/styles/surfaceTokens";
 import { ALERTS_PANEL_ID } from "./AlertsPanel";
 import { ACTIVITY_PANEL_ID } from "./RecentActivityPanel";
-import { useTheme } from "@/core/contexts/ThemeContext";
 import { useAuth } from "@/core/contexts/AuthContext";
 import { ApiError, describeApiError } from "@/lib/api/client";
 import { useAmenityStatuses, useCount, useEnergySummary } from "@/lib/api/hooks";
@@ -105,15 +105,8 @@ const Tile = ({
   to,
   panelId,
 }: TileProps) => {
-  const { isDark } = useTheme();
-  const cardBg = isDark
-    ? "linear-gradient(180deg, #1e2233, #1a1e30)"
-    : "linear-gradient(180deg, rgba(255,255,255,0.85), rgba(245,242,255,0.95))";
-  const cardBorder = isDark
-    ? "1px solid rgba(255,255,255,0.07)"
-    : "1px solid rgba(124,92,255,0.12)";
-  const titleColor = isDark ? "#dde2ed" : "#1F1B3A";
-  const mutedColor = isDark ? "#8b95a9" : "#5E5A7A";
+  const { titleColor, textMuted: mutedColor } = useSurfaceTokens();
+  const shellStyle = useCardSurfaceStyle();
   const detailText = !isLoading && !error ? detail : undefined;
 
   /*
@@ -134,12 +127,6 @@ const Tile = ({
     interactive &&
       "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
   );
-  const shellStyle = {
-    background: cardBg,
-    border: cardBorder,
-    boxShadow: "0 8px 24px rgba(17,12,46,0.12)",
-  };
-
   const body = (
     <>
       <div className="flex items-start justify-between gap-3 shrink-0">

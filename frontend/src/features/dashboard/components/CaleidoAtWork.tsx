@@ -3,6 +3,7 @@ import { RefreshCw } from "lucide-react";
 import { useTheme } from "@/core/contexts/ThemeContext";
 import { DataState } from "@/core/components/DataState";
 import { useDailyDataPoints } from "@/lib/api/hooks";
+import { useSurfaceTokens } from "@/core/styles/surfaceTokens";
 
 /**
  * The four rings are the real `daily_dual_data_point` KPI rows.
@@ -99,21 +100,22 @@ export const CaleidoAtWork = () => {
     return map;
   }, [query.data]);
 
-  const cardBg = isDark
-    ? "linear-gradient(180deg, #1e2233, #1a1e30)"
-    : "linear-gradient(180deg, rgba(255,255,255,0.85), rgba(245,242,255,0.95))";
-  const cardBorder = isDark ? "1px solid rgba(255,255,255,0.07)" : "1px solid rgba(124,92,255,0.12)";
-  const titleColor = isDark ? "#dde2ed" : "#1F1B3A";
-  const mutedColor = isDark ? "#8b95a9" : "#5E5A7A";
-  const selectBg = isDark ? "#252a3e" : "#FFFFFF";
-  const selectBorder = isDark ? "1px solid rgba(255,255,255,0.1)" : "1px solid rgba(124,92,255,0.12)";
+  const {
+    cardBg,
+    cardBorder,
+    cardShadow,
+    titleColor,
+    textMuted: mutedColor,
+    controlBg: selectBg,
+    controlBorder: selectBorder,
+  } = useSurfaceTokens();
 
   return (
     /* h-full: Alerts sits beside this card and sets the row height, so without
        it the card stopped short and the page showed through the grid cell. */
     <div
       className="rounded-lg p-4 h-full min-w-0 flex flex-col transition-all duration-250 ease hover:-translate-y-0.5"
-      style={{ background: cardBg, border: cardBorder, boxShadow: "0 8px 24px rgba(17,12,46,0.12)" }}
+      style={{ background: cardBg, border: cardBorder, boxShadow: cardShadow }}
     >
       <div className="flex items-center justify-between mb-4 shrink-0 gap-3">
         <h3 style={{ color: titleColor }} className="font-medium">Caleido At work</h3>

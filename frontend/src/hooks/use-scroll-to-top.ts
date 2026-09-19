@@ -19,18 +19,27 @@ import { useEffect } from "react";
  * and it keeps the effect free of a "first render" flag that would have to be
  * kept correct.
  */
-export const useScrollToTop = (dependency: unknown) => {
+/** The single scroll container, named in one place rather than at each lookup. */
+const CONTENT_SELECTOR = ".hms-content";
+
+const contentEl = () => document.querySelector<HTMLElement>(CONTENT_SELECTOR);
+
+/**
+ * Honour the OS setting: an involuntary smooth scroll is exactly the kind of
+ * motion `prefers-reduced-motion` exists to suppress. Read per call, not once
+ * at module load, so toggling the setting takes effect without a reload.
+ */
+const scrollBehavior = (): ScrollBehavior =>
+  window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+
+/**
+ * `dependency` is the value whose change means "new page" -- every caller
+ * passes its page number. Typed to primitives on purpose: an object or array
+ * would be a new reference each render and re-scroll the list continuously.
+ */
+export const useScrollToTop = (dependency: string | number | boolean | null | undefined) => {
   useEffect(() => {
-    const container = document.querySelector(".hms-content");
-    if (!container) return;
-
-    // Honour the OS setting: an involuntary smooth scroll is exactly the kind
-    // of motion `prefers-reduced-motion` exists to suppress.
-    const prefersReducedMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
-
-    container.scrollTo({ top: 0, behavior: prefersReducedMotion ? "auto" : "smooth" });
+    contentEl()?.scrollTo({ top: 0, behavior: scrollBehavior() });
   }, [dependency]);
 };
 
@@ -48,10 +57,12 @@ export const useScrollToTop = (dependency: unknown) => {
  */
 /** Styled in index.css; kept in step with the timeout below. */
 const PANEL_FLASH_CLASS = "hms-panel-flash";
+/** Breathing room so the panel does not sit flush against the sticky bar. */
+const PANEL_GAP = 12;
 const PANEL_FLASH_MS = 1600;
 
 export const scrollPanelIntoView = (elementId: string) => {
-  const container = document.querySelector<HTMLElement>(".hms-content");
+  const container = contentEl();
   const target = document.getElementById(elementId);
   if (!container || !target) return;
 
@@ -67,14 +78,9 @@ export const scrollPanelIntoView = (elementId: string) => {
   const delta =
     target.getBoundingClientRect().top - container.getBoundingClientRect().top;
 
-  const prefersReducedMotion = window.matchMedia(
-    "(prefers-reduced-motion: reduce)",
-  ).matches;
-
   container.scrollTo({
-    // 12px of breathing room so the panel does not sit flush against the bar.
-    top: Math.max(0, container.scrollTop + delta - headerHeight - 12),
-    behavior: prefersReducedMotion ? "auto" : "smooth",
+    top: Math.max(0, container.scrollTop + delta - headerHeight - PANEL_GAP),
+    behavior: scrollBehavior(),
   });
 
   /*

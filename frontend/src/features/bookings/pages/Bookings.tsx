@@ -38,7 +38,6 @@ import {
   ChevronRight,
   Download,
   FileText,
-  X,
   ArrowLeft,
   LogIn,
   Wallet,
@@ -46,7 +45,7 @@ import {
 import { DataState, TableLoading } from "@/core/components/DataState";
 import { toast } from "@/hooks/use-toast";
 import { MAX_PAGE_SIZE, ROOM_STATUS } from "@/lib/api/types";
-import { useRooms, useStays, useUsers } from "@/lib/api/hooks";
+import { useRooms, useStays } from "@/lib/api/hooks";
 import { describeApiError } from "@/lib/api/client";
 import {
   useCancelStay,
@@ -212,7 +211,6 @@ const Bookings = () => {
   // Rooms to allocate with the booking; `room_ids` are handled in the same
   // transaction as the stay, so each becomes Allotted immediately.
   const roomsQuery = useRooms({ page: 1, page_size: MAX_PAGE_SIZE });
-  const guestsQuery = useUsers({ page: 1, page_size: MAX_PAGE_SIZE, is_staff: 0 });
 
   /**
    * Rooms the backend will actually accept for allocation. `amenity_status`
@@ -241,7 +239,6 @@ const Bookings = () => {
   const [extendModalOpen, setExtendModalOpen] = useState(false);
   const [extendUntil, setExtendUntil] = useState("");
   const [selectedBooking, setSelectedBooking] = useState<BookingData | null>(null);
-  const [extendDate, setExtendDate] = useState("");
 
   // Form state
   const [formData, setFormData] = useState(EMPTY_FORM);
@@ -426,7 +423,6 @@ const Bookings = () => {
   const handleExtendClick = (booking: BookingData) => {
     setExtendUntil(booking.expectedCheckout ? toDateTimeLocal(booking.expectedCheckout) : "");
     setSelectedBooking(booking);
-    setExtendDate("");
     setExtendModalOpen(true);
   };
 
