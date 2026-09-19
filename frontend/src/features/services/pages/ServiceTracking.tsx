@@ -17,7 +17,6 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
 import { Search, Settings, X, ChevronDown, Bed, Briefcase, Building, Utensils, Wrench, HeartPulse, Sparkles } from "lucide-react";
 import {
     PieChart,
@@ -30,12 +29,10 @@ import {
 import {
     Dialog,
     DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { DataState, TableLoading } from "@/core/components/DataState";
+import { TablePagination } from "@/core/components/TablePagination";
 import { useServiceRequests, useServiceStatuses, useServiceTypes } from "@/lib/api/hooks";
 import { useAuth } from "@/core/contexts/AuthContext";
 import {
@@ -44,6 +41,7 @@ import {
 } from "../components/ServiceRequestActionsDialog";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { useScrollToTop } from "@/hooks/use-scroll-to-top";
 
 /**
  * Service Tracking, connected to the Phase 2.5 APIs.
@@ -119,6 +117,10 @@ const ServiceTracking = () => {
     const [entriesPerPage, setEntriesPerPage] = useState("10");
     const [searchQuery, setSearchQuery] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
+    // Pagination sits at the bottom of the table; without this the new
+    // page kept the old scroll offset and the sticky header stayed
+    // above the fold. See use-scroll-to-top.
+    useScrollToTop(currentPage);
     const [statusModalConfig, setStatusModalConfig] = useState<{ isOpen: boolean; type: "yellow" | "red" | "blue" | null }>({ isOpen: false, type: null });
     // The real action target: assign / change status / cancel.
     const [actionTarget, setActionTarget] = useState<ServiceRequestActionTarget | null>(null);
@@ -239,11 +241,10 @@ const ServiceTracking = () => {
 
     const renderAction = (status: string, row?: (typeof rows)[number]) => {
         let bgColor = "bg-[#808080] hover:bg-[#666666]"; // Default for Completed etc
-        let modalType: "yellow" | "red" | "blue" | null = null;
         const normalised = status.toLowerCase();
-        if (normalised === "assigned") { bgColor = "bg-[#e5a910] hover:bg-[#cc960e]"; modalType = "yellow"; }
-        else if (normalised === "pending" || normalised.startsWith("cancel")) { bgColor = "bg-[#ed5565] hover:bg-[#da4453]"; modalType = "red"; }
-        else if (normalised === "partially completed") { bgColor = "bg-brand-teal hover:bg-[#2e93a8]"; modalType = "blue"; }
+        if (normalised === "assigned") { bgColor = "bg-[#e5a910] hover:bg-[#cc960e]"; }
+        else if (normalised === "pending" || normalised.startsWith("cancel")) { bgColor = "bg-[#ed5565] hover:bg-[#da4453]"; }
+        else if (normalised === "partially completed") { bgColor = "bg-brand-teal hover:bg-[#2e93a8]"; }
 
         return (
             <div className="flex justify-center gap-2">
@@ -286,7 +287,6 @@ const ServiceTracking = () => {
     const filteredData = filterData(rows);
     const totalEntries = filteredData.length;
     const pageSize = parseInt(entriesPerPage) || 10;
-    const totalPages = Math.max(1, Math.ceil(totalEntries / pageSize));
     const startIndex = (currentPage - 1) * pageSize;
     const endIndex = Math.min(startIndex + pageSize, totalEntries);
     const paginatedData = filteredData.slice(startIndex, endIndex);
@@ -766,26 +766,13 @@ const ServiceTracking = () => {
                     {renderTable()}
                 </DataState>
             </div>
-            {/* Footer */}
-            <div className="flex items-center justify-between mt-4 text-muted-foreground">
-                <span className="text-sm">
-                    Showing 1 to {Math.min(parseInt(entriesPerPage), 10)} of {136} entries
-                </span>
-
-                <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">First</Button>
-                    <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">Previous</Button>
-                    <Button variant="ghost" size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 w-8 h-8 p-0">1</Button>
-                    <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground w-8 h-8 p-0">2</Button>
-                    <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground w-8 h-8 p-0">3</Button>
-                    <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground w-8 h-8 p-0">4</Button>
-                    <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground w-8 h-8 p-0">5</Button>
-                    <span className="px-2">...</span>
-                    <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground w-8 h-8 p-0">14</Button>
-                    <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">Next</Button>
-                    <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">Last</Button>
-                </div>
-            </div>
+            <TablePagination
+                currentPage={currentPage}
+                onPageChange={setCurrentPage}
+                totalEntries={totalEntries}
+                pageSize={pageSize}
+                className="mt-4"
+            />
 
             {/* Status Update Modal */}
             <Dialog open={statusModalConfig.isOpen} onOpenChange={(open) => setStatusModalConfig({ ...statusModalConfig, isOpen: open })}>

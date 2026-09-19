@@ -33,6 +33,7 @@ import { useOffers, useRooms } from "@/lib/api/hooks";
 import { useCreateOffer, useUpdateOffer } from "@/lib/api/mutations";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { useScrollToTop } from "@/hooks/use-scroll-to-top";
 
 // Sample Offers Data
 /**
@@ -84,8 +85,11 @@ const Offers = () => {
     const [searchQuery, setSearchQuery] = useState("");
     const [entriesPerPage, setEntriesPerPage] = useState("10");
     const [currentPage, setCurrentPage] = useState(1);
+    // Pagination sits at the bottom of the table; without this the new
+    // page kept the old scroll offset and the sticky header stayed
+    // above the fold. See use-scroll-to-top.
+    useScrollToTop(currentPage);
 
-    const [selectedItemToDelete, setSelectedItemToDelete] = useState<OfferRow | null>(null);
     const [selectedItemToEdit, setSelectedItemToEdit] = useState<OfferRow | null>(null);
     /** The Edit Offer form, seeded from the selected `promo_code` row. */
     const [editForm, setEditForm] = useState({
@@ -115,8 +119,15 @@ const Offers = () => {
         }));
     };
 
-    const handleWithdrawClick = (item: OfferRow) => {
-        setSelectedItemToDelete(item);
+    /*
+      NOT IMPLEMENTED. This opens the "Are you sure?" dialog, but its
+      "Yes, delete it!" button only closes it again -- no withdrawal is sent
+      and no offer changes. The row was being recorded into a
+      `selectedItemToDelete` state that nothing read, which is removed rather
+      than left looking wired. Implementing this needs a withdraw mutation and
+      the chosen row carried into the dialog.
+    */
+    const handleWithdrawClick = (_item: OfferRow) => {
         setIsDeleteModalOpen(true);
     };
 

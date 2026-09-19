@@ -58,11 +58,21 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-4 animate-fade-in text-foreground">
-      {/* Descriptor and tagline are ONE line: the header bar is a fixed height
-          and clips its subtitle, so a <br /> here would drop the tagline. */}
+      {/* The module name is spelled out rather than abbreviated to "HMS", and
+          the tagline sits in the actions slot so it reads on the RIGHT of the
+          bar instead of as a subtitle under the title.
+
+          `flex items-center` on the span is load-bearing: the actions slot puts
+          its children on a shared 36px control baseline, and a flex item is
+          blockified, so without it the text would sit at the top of that 36px
+          box rather than on the title's centre line. */}
       <PageHeader
-        title="HMS"
-        description="Hospitality Management System · Smart Buildings. Smarter Operations."
+        title="Hospitality Management System"
+        actions={
+          <span className="hidden items-center whitespace-nowrap text-sm font-medium text-muted-foreground lg:flex">
+            Smart buildings,Smart Operations.
+          </span>
+        }
       />
 
       {/* KPI row - every figure is a backend total */}

@@ -19,7 +19,7 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
-import { Trash2, X, Edit } from "lucide-react";
+import { Trash2, Edit } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { DataState, TableLoading } from "@/core/components/DataState";
 import { useAuth } from "@/core/contexts/AuthContext";
@@ -27,6 +27,7 @@ import { useHolidays, useOccasionTypes } from "@/lib/api/hooks";
 import { useCreateHoliday, useUpdateHoliday } from "@/lib/api/mutations";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { useScrollToTop } from "@/hooks/use-scroll-to-top";
 
 // Sample holidays data
 /**
@@ -64,8 +65,11 @@ const Holidays = () => {
     const [search, setSearch] = useState("");
     const [entriesPerPage, setEntriesPerPage] = useState("10");
     const [currentPage, setCurrentPage] = useState(1);
+    // Pagination sits at the bottom of the table; without this the new
+    // page kept the old scroll offset and the sticky header stayed
+    // above the fold. See use-scroll-to-top.
+    useScrollToTop(currentPage);
 
-    const [editModalOpen, setEditModalOpen] = useState(false);
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     /** Which `occasion` the delete dialog is about to retire. */
     const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -78,12 +82,6 @@ const Holidays = () => {
         if (!description.trim()) newErrors.description = "Description is required";
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
-    };
-
-    const formatDate = (dateString: string) => {
-        if (!dateString) return "";
-        const date = new Date(dateString);
-        return `${String(date.getDate()).padStart(2, '0')}-${String(date.getMonth() + 1).padStart(2, '0')}-${date.getFullYear()}`;
     };
 
     /**
@@ -240,7 +238,12 @@ const Holidays = () => {
                                         <TableCell>{item.description}</TableCell>
                                         <TableCell className="text-center">
                                             <div className="flex gap-2 justify-center">
-                                                <Button size="sm" className="h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditModalOpen(true)}>
+                                                {/* Seeds the form above, which is the real create/update path: with
+    `editingId` set, its Submit button reads "Update" and calls
+    updateHoliday. This used to open a separate "Edit Holiday" dialog
+    that had no bound inputs and whose Submit only closed it, so an
+    edit silently created a duplicate occasion instead. */}
+                                                <Button size="sm" className="h-7 w-7 p-0 rounded-[3px]" onClick={() => handleEdit(item)}>
                                                     <Edit className="h-[14px] w-[14px]" />
                                                 </Button>
                                                 {/* Record WHICH occasion is being retired.
@@ -280,59 +283,6 @@ const Holidays = () => {
                     </div>
                 </CardContent>
             </Card>
-
-            {/* Edit Holiday Modal */}
-            <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
-                <DialogContent className="max-w-[600px] bg-white text-gray-900 border-0 p-0 overflow-hidden flex flex-col hide-close-button shadow-2xl [&>button]:hidden rounded-[4px]">
-                    <div className="flex justify-between items-center p-3 px-5 bg-white border-b border-gray-200">
-                        <h2 className="text-[17px] font-semibold text-gray-800 tracking-wide">Edit Holiday</h2>
-                        <Button variant="ghost" className="h-7 w-7 p-0 border-[1.5px] border-gray-300 rounded-[2px] hover:bg-gray-100" onClick={() => setEditModalOpen(false)}>
-                            <X className="h-4 w-4 text-gray-500 stroke-[3]" />
-                        </Button>
-                    </div>
-                    <div className="p-8 px-10 space-y-6">
-                        <div className="grid grid-cols-[140px_1fr] items-center gap-4">
-                            <Label className="text-sm font-medium text-gray-800">Start Date <span className="text-red-500">*</span></Label>
-                            <input
-                                type="text"
-                                defaultValue="29-10-2024"
-                                className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-500 focus:ring-0 px-0 pb-1 text-sm outline-none"
-                            />
-                        </div>
-
-                        <div className="grid grid-cols-[140px_1fr] items-center gap-4">
-                            <Label className="text-sm font-medium text-gray-800">End Date <span className="text-red-500">*</span></Label>
-                            <input
-                                type="text"
-                                defaultValue="05-11-2024"
-                                className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-500 focus:ring-0 px-0 pb-1 text-sm outline-none"
-                            />
-                        </div>
-
-                        <div className="grid grid-cols-[140px_1fr] items-center gap-4">
-                            <Label className="text-sm font-medium text-gray-800">Lock message <span className="text-red-500">*</span></Label>
-                            <input
-                                type="text"
-                                defaultValue="Diwali Holiday"
-                                className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-500 focus:ring-0 px-0 pb-1 text-sm outline-none"
-                            />
-                        </div>
-
-                        <div className="grid grid-cols-[140px_1fr] items-start gap-4 h-24 pt-2">
-                            <Label className="text-sm font-medium text-gray-800 pt-1">Description <span className="text-red-500">*</span></Label>
-                            <textarea
-                                defaultValue="test test test"
-                                className="w-full h-full bg-transparent border-0 border-b border-gray-300 text-gray-500 focus:ring-0 px-0 text-sm outline-none resize-none pt-1"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="flex justify-center gap-4 pb-8">
-                        <Button variant="outline" className="text-amber-500 border-amber-500 hover:bg-amber-50 hover:text-amber-600 h-8 px-6 rounded-[3px] font-normal" onClick={() => setEditModalOpen(false)}>Reset</Button>
-                        <Button className="bg-transparent text-brand-teal border border-brand-teal hover:bg-cyan-50 h-8 px-6 rounded-[3px] font-normal" onClick={() => setEditModalOpen(false)}>Submit</Button>
-                    </div>
-                </DialogContent>
-            </Dialog>
 
             {/* Delete Confirmation Modal */}
             <Dialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>

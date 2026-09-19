@@ -102,7 +102,20 @@ export function RoomDetailsModal({
                     </div>
                 </DialogHeader>
 
-                <ScrollArea className="flex-1 px-6">
+                {/* `[&>[data-radix-scroll-area-viewport]>div]:!block` is what makes
+                    the tables below scroll sideways.
+
+                    Radix's ScrollArea viewport wraps its children in a div with
+                    `display: table`, which shrink-wraps to the WIDEST child. The
+                    device/energy/service tables are wider than the modal, so that
+                    wrapper grew to fit them and the `overflow-x-auto` containers
+                    inside never had anything to scroll -- the columns were simply
+                    pushed past the modal edge and clipped.
+
+                    Forcing it to `block` makes it take the viewport's width, so
+                    each table now scrolls within its own container. Scoped to this
+                    modal; other ScrollAreas are untouched. */}
+                <ScrollArea className="flex-1 px-6 [&>[data-radix-scroll-area-viewport]>div]:!block">
                     <div className="py-6 space-y-8">
                         {/* Room Details Section */}
                         <section>
@@ -243,7 +256,7 @@ export function RoomDetailsModal({
                             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
                                 Device Details
                             </h3>
-                            <div className="rounded-lg overflow-hidden border border-border/80 dark:border-slate-800">
+                            <div className="rounded-lg overflow-hidden overflow-x-auto scrollbar-thin border border-border/80 dark:border-slate-800">
                                 <DataState
                                     isLoading={devicesQuery.isLoading}
                                     error={devicesQuery.error}
@@ -324,7 +337,7 @@ export function RoomDetailsModal({
                             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
                                 Service Requests
                             </h3>
-                            <div className="rounded-lg overflow-hidden border border-border/80 dark:border-slate-800">
+                            <div className="rounded-lg overflow-hidden overflow-x-auto scrollbar-thin border border-border/80 dark:border-slate-800">
                                 <DataState
                                     isLoading={requestsQuery.isLoading}
                                     error={requestsQuery.error}

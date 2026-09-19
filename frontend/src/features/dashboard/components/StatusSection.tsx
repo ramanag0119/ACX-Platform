@@ -7,7 +7,12 @@ import { DataState, InlineLoading } from "@/core/components/DataState";
 import { useCount, useFloors, useOccupancy } from "@/lib/api/hooks";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
 import type { QueryParams } from "@/lib/api/client";
-import { KNOWN_AMENITY_STATUSES, roomStatusTint } from "@/features/occupancy/lib/roomStatus";
+import { useSurfaceTokens } from "@/core/styles/surfaceTokens";
+import {
+  KNOWN_AMENITY_STATUSES,
+  conditionLabel,
+  roomStatusTint,
+} from "@/features/occupancy/lib/roomStatus";
 
 /**
  * Building -> floor -> room drill-down, filtered BY THE BACKEND at every level.
@@ -124,7 +129,7 @@ export const StatusSection = ({
       number: item.room_name,
       type: item.amenity_type_name ?? "-",
       statusName: item.status_name ?? "-",
-      conditions: item.conditions.map((condition) => condition.name),
+      conditions: item.conditions.map((condition) => conditionLabel(condition.name)),
     }));
     return affectedOnly ? mapped.filter((room) => room.conditions.length > 0) : mapped;
   }, [roomsQuery.data, affectedOnly]);
@@ -133,12 +138,13 @@ export const StatusSection = ({
   const roomsTruncated =
     (roomsQuery.data?.total ?? 0) > (roomsQuery.data?.items.length ?? 0);
 
-  const cardBg = isDark
-    ? "linear-gradient(180deg, #1e2233, #1a1e30)"
-    : "linear-gradient(180deg, rgba(255,255,255,0.85), rgba(245,242,255,0.95))";
-  const cardBorder = isDark ? "1px solid rgba(255,255,255,0.07)" : "1px solid rgba(124,92,255,0.12)";
-  const titleColor = isDark ? "#dde2ed" : "#1F1B3A";
-  const mutedColor = isDark ? "#8b95a9" : "#8A86A8";
+  const {
+    cardBg,
+    cardBorder,
+    cardShadow,
+    titleColor,
+    textSubtle: mutedColor,
+  } = useSurfaceTokens();
 
   // Building card colors
   const bldDefaultBg = isDark ? "#252a3e" : "#F9FAFB";
@@ -167,7 +173,7 @@ export const StatusSection = ({
   const cardStyle = {
     background: cardBg,
     border: cardBorder,
-    boxShadow: "0 8px 24px rgba(17,12,46,0.12)",
+    boxShadow: cardShadow,
   };
 
   /** The scope the health legend and room list currently describe. */

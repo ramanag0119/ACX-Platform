@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,12 +38,11 @@ import {
   useCreatePackage,
   useCreateRoom,
   useRemovePackage,
-  useUpdateAmenityType,
-  useUpdateFacility,
-  useUpdateRoom,
 } from "@/lib/api/mutations";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { useScrollToTop } from "@/hooks/use-scroll-to-top";
+import { TablePagination } from "@/core/components/TablePagination";
 
 type TabType = "facility" | "amenity" | "roomAmenities" | "packages" | "roomSetup";
 
@@ -76,6 +75,28 @@ const FacilityManagement = () => {
     const [entriesPerPage, setEntriesPerPage] = useState("10");
     const [searchQuery, setSearchQuery] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
+    // Pagination sits at the bottom of the table; without this the new
+    // page kept the old scroll offset and the sticky header stayed
+    // above the fold. See use-scroll-to-top.
+    useScrollToTop(currentPage);
+
+    /* Every tab on this screen listed its whole dataset under a footer whose
+       First/Previous/Next/Last carried no onClick and whose page button was a
+       literal "1", and beside an entries-per-page select nothing read. Both
+       controls are real now: rows are sliced to the selected size and the
+       footer drives the page.
+
+       The tabs share one page index, and changing tab, page size or search
+       resets it -- otherwise leaving the Rooms tab on page 7 and opening the
+       Facility tab, which has far fewer rows, landed past the end on an
+       empty table. */
+    const pageSize = parseInt(entriesPerPage, 10) || 10;
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [activeTab, entriesPerPage, searchQuery]);
+
+    /** The slice of `rows` belonging to the current page. */
+    const pageOf = <T,>(rows: T[]) => rows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
     const [editFacilityOpen, setEditFacilityOpen] = useState(false);
     const [editAmenityOpen, setEditAmenityOpen] = useState(false);
@@ -118,13 +139,10 @@ const FacilityManagement = () => {
     const { canWrite } = useAuth();
     const mayWrite = canWrite("facility_management");
     const createAmenityType = useCreateAmenityType();
-    const updateAmenityTypeMutation = useUpdateAmenityType();
     const createPackageMutation = useCreatePackage();
     const removePackageMutation = useRemovePackage();
     const createFeatureMutation = useCreateFeature();
     const createRoomMutation = useCreateRoom();
-    const updateRoomMutation = useUpdateRoom();
-    const updateFacilityMutation = useUpdateFacility();
 
     const facilitySetupData = (facilitiesQuery.data?.items ?? []).map((facility) => ({
         id: facility.id,
@@ -379,7 +397,7 @@ const FacilityManagement = () => {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {facilitySetupData.map((row, index) => (
+                            {pageOf(facilitySetupData).map((row, index) => (
                                 <TableRow
                                     key={row.id}
                                     className={`${index % 2 === 0 ? "bg-muted/20" : "bg-background"} hover:bg-muted/40 transition-colors`}
@@ -411,16 +429,13 @@ const FacilityManagement = () => {
                     </Table>
                 </div>
 
-                <div className="flex items-center justify-between mt-6">
-                    <span className="text-muted-foreground text-sm">Showing {facilitySetupData.length} of {facilitiesQuery.data?.total ?? 0} entries</span>
-                    <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="sm" className="text-muted-foreground">First</Button>
-                        <Button variant="ghost" size="sm" className="text-muted-foreground">Previous</Button>
-                        <Button variant="default" size="sm" className="w-9 h-9 p-0 bg-primary text-white">1</Button>
-                        <Button variant="ghost" size="sm" className="text-muted-foreground">Next</Button>
-                        <Button variant="ghost" size="sm" className="text-muted-foreground">Last</Button>
-                    </div>
-                </div>
+                <TablePagination
+                    currentPage={currentPage}
+                    onPageChange={setCurrentPage}
+                    totalEntries={facilitySetupData.length}
+                    pageSize={pageSize}
+                    className="mt-6"
+                />
             </CardContent>
         </Card>
     );
@@ -506,7 +521,7 @@ const FacilityManagement = () => {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {amenityTypeData.map((row, index) => (
+                                {pageOf(amenityTypeData).map((row, index) => (
                                     <TableRow
                                         key={row.id}
                                         className={`${index % 2 === 0 ? "bg-muted/20" : "bg-background"} hover:bg-muted/40 transition-colors`}
@@ -531,18 +546,13 @@ const FacilityManagement = () => {
                         </Table>
                     </div>
 
-                    <div className="flex items-center justify-between mt-6">
-                        <span className="text-muted-foreground text-sm">Showing {amenityTypeData.length} of {amenityTypeData.length} entries</span>
-                        <div className="flex items-center gap-1">
-                            <Button variant="ghost" size="sm" className="text-muted-foreground">First</Button>
-                            <Button variant="ghost" size="sm" className="text-muted-foreground">Previous</Button>
-                            <Button variant="default" size="sm" className="w-9 h-9 p-0 bg-primary text-white">1</Button>
-                            <Button variant="ghost" size="sm" className="text-muted-foreground">2</Button>
-                            <Button variant="ghost" size="sm" className="text-muted-foreground">3</Button>
-                            <Button variant="ghost" size="sm" className="text-muted-foreground">Next</Button>
-                            <Button variant="ghost" size="sm" className="text-muted-foreground">Last</Button>
-                        </div>
-                    </div>
+                    <TablePagination
+                        currentPage={currentPage}
+                        onPageChange={setCurrentPage}
+                        totalEntries={amenityTypeData.length}
+                        pageSize={pageSize}
+                        className="mt-6"
+                    />
                 </CardContent>
             </Card>
         </>
@@ -635,7 +645,7 @@ const FacilityManagement = () => {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {roomAmenitiesData.map((row, index) => (
+                                {pageOf(roomAmenitiesData).map((row, index) => (
                                     <TableRow
                                         key={row.id}
                                         className={`${index % 2 === 0 ? "bg-muted/20" : "bg-background"} hover:bg-muted/40 transition-colors`}
@@ -647,18 +657,13 @@ const FacilityManagement = () => {
                         </Table>
                     </div>
 
-                    <div className="flex items-center justify-between mt-6">
-                        <span className="text-muted-foreground text-sm">Showing {roomAmenitiesData.length} of {roomAmenitiesData.length} entries</span>
-                        <div className="flex items-center gap-1">
-                            <Button variant="ghost" size="sm" className="text-muted-foreground">First</Button>
-                            <Button variant="ghost" size="sm" className="text-muted-foreground">Previous</Button>
-                            <Button variant="default" size="sm" className="w-9 h-9 p-0 bg-primary text-white">1</Button>
-                            <Button variant="ghost" size="sm" className="text-muted-foreground">2</Button>
-                            <Button variant="ghost" size="sm" className="text-muted-foreground">3</Button>
-                            <Button variant="ghost" size="sm" className="text-muted-foreground">Next</Button>
-                            <Button variant="ghost" size="sm" className="text-muted-foreground">Last</Button>
-                        </div>
-                    </div>
+                    <TablePagination
+                        currentPage={currentPage}
+                        onPageChange={setCurrentPage}
+                        totalEntries={roomAmenitiesData.length}
+                        pageSize={pageSize}
+                        className="mt-6"
+                    />
                 </CardContent>
             </Card>
         </>
@@ -942,7 +947,7 @@ const FacilityManagement = () => {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {packagesData.map((row, index) => (
+                                    {pageOf(packagesData).map((row, index) => (
                                         <TableRow
                                             key={row.id}
                                             className={`${index % 2 === 0 ? "bg-muted/20" : "bg-background"} hover:bg-muted/40 transition-colors`}
@@ -998,7 +1003,7 @@ const FacilityManagement = () => {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {subPackagesData.map((row, index) => (
+                                    {pageOf(subPackagesData).map((row, index) => (
                                         <TableRow
                                             key={row.id}
                                             className={`${index % 2 === 0 ? "bg-muted/20" : "bg-background"} hover:bg-muted/40 transition-colors`}
@@ -1037,21 +1042,13 @@ const FacilityManagement = () => {
                         </div>
                     )}
 
-                    <div className="flex items-center justify-between mt-6">
-                        <span className="text-muted-foreground text-sm">
-                            Showing {packagesSubTab === "parent" ? packagesData.length : subPackagesData.length} of {packagesSubTab === "parent" ? packagesData.length : subPackagesData.length} entries
-                        </span>
-                        <div className="flex items-center gap-1">
-                            <Button variant="ghost" size="sm" className="text-muted-foreground">First</Button>
-                            <Button variant="ghost" size="sm" className="text-muted-foreground">Previous</Button>
-                            <Button variant="default" size="sm" className="w-9 h-9 p-0 bg-primary text-white rounded-full">1</Button>
-                            {packagesSubTab === "parent" && (
-                                <Button variant="ghost" size="sm" className="text-muted-foreground">2</Button>
-                            )}
-                            <Button variant="ghost" size="sm" className="text-muted-foreground">Next</Button>
-                            <Button variant="ghost" size="sm" className="text-muted-foreground">Last</Button>
-                        </div>
-                    </div>
+                    <TablePagination
+                        currentPage={currentPage}
+                        onPageChange={setCurrentPage}
+                        totalEntries={packagesSubTab === "parent" ? packagesData.length : subPackagesData.length}
+                        pageSize={pageSize}
+                        className="mt-6"
+                    />
                 </CardContent>
             </Card>
         </>
@@ -1276,7 +1273,7 @@ const FacilityManagement = () => {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {roomSetupData.map((row, index) => (
+                                {pageOf(roomSetupData).map((row, index) => (
                                     <TableRow
                                         key={row.id}
                                         className={`${index % 2 === 0 ? "bg-muted/20" : "bg-background"} hover:bg-muted/40 transition-colors`}
@@ -1303,20 +1300,13 @@ const FacilityManagement = () => {
                         </Table>
                     </div>
 
-                    <div className="flex items-center justify-between mt-6">
-                        <span className="text-muted-foreground text-sm">Showing {roomSetupData.length} of {roomsQuery.data?.total ?? 0} entries</span>
-                        <div className="flex items-center gap-1">
-                            <Button variant="ghost" size="sm" className="text-muted-foreground">First</Button>
-                            <Button variant="ghost" size="sm" className="text-muted-foreground">Previous</Button>
-                            <Button variant="default" size="sm" className="w-9 h-9 p-0 bg-primary text-white">1</Button>
-                            <Button variant="ghost" size="sm" className="text-muted-foreground">2</Button>
-                            <Button variant="ghost" size="sm" className="text-muted-foreground">3</Button>
-                            <Button variant="ghost" size="sm" className="text-muted-foreground">...</Button>
-                            <Button variant="ghost" size="sm" className="text-muted-foreground">8</Button>
-                            <Button variant="ghost" size="sm" className="text-muted-foreground">Next</Button>
-                            <Button variant="ghost" size="sm" className="text-muted-foreground">Last</Button>
-                        </div>
-                    </div>
+                    <TablePagination
+                        currentPage={currentPage}
+                        onPageChange={setCurrentPage}
+                        totalEntries={roomSetupData.length}
+                        pageSize={pageSize}
+                        className="mt-6"
+                    />
                 </CardContent>
             </Card>
         </>

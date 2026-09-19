@@ -34,6 +34,7 @@ import { toast } from "@/hooks/use-toast";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
 import type { JobOrderRead, JobOrderTypeOfWork } from "@/lib/api/writes";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { useScrollToTop } from "@/hooks/use-scroll-to-top";
 
 /**
  * Job Order Management, connected to the Phase 3.0 job-order API.
@@ -129,6 +130,10 @@ const JobOrder = () => {
     const [searchQuery, setSearchQuery] = useState("");
     const [entriesPerPage, setEntriesPerPage] = useState("10");
     const [currentPage, setCurrentPage] = useState(1);
+    // Pagination sits at the bottom of the table; without this the new
+    // page kept the old scroll offset and the sticky header stayed
+    // above the fold. See use-scroll-to-top.
+    useScrollToTop(currentPage);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingJob, setEditingJob] = useState<JobOrderRead | null>(null);
     const [editForm, setEditForm] = useState({

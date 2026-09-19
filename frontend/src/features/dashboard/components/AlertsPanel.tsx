@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { List } from "lucide-react";
-import { useTheme } from "@/core/contexts/ThemeContext";
 import { DataState } from "@/core/components/DataState";
 import { useAlerts, useServiceRequests } from "@/lib/api/hooks";
+import { useSurfaceTokens } from "@/core/styles/surfaceTokens";
 
 /**
  * The existing Service | Caleido toggle, backed by the two real sources:
@@ -14,6 +14,9 @@ import { useAlerts, useServiceRequests } from "@/lib/api/hooks";
  * schema; an alert has no status and none is displayed for one.
  */
 
+/** Exported so the KPI tile that jumps here cannot drift from the element id. */
+export const ALERTS_PANEL_ID = "dashboard-alerts-panel";
+
 const RANGE_DAYS: Record<string, number> = { Today: 0, Week: 6, Month: 29 };
 
 const isoDaysAgo = (days: number) => {
@@ -24,7 +27,6 @@ const isoDaysAgo = (days: number) => {
 };
 
 export const AlertsPanel = () => {
-  const { isDark } = useTheme();
   const [source, setSource] = useState<"caleido" | "service">("caleido");
   const [range, setRange] = useState<keyof typeof RANGE_DAYS>("Month");
 
@@ -55,14 +57,15 @@ export const AlertsPanel = () => {
           at: request.created_on,
         }));
 
-  const cardBg = isDark
-    ? "linear-gradient(180deg, #1e2233, #1a1e30)"
-    : "linear-gradient(180deg, rgba(255,255,255,0.85), rgba(245,242,255,0.95))";
-  const cardBorder = isDark ? "1px solid rgba(255,255,255,0.07)" : "1px solid rgba(124,92,255,0.12)";
-  const titleColor = isDark ? "#dde2ed" : "#1F1B3A";
-  const mutedColor = isDark ? "#8b95a9" : "#5E5A7A";
-  const selectBg = isDark ? "#252a3e" : "#FFFFFF";
-  const selectBorder = isDark ? "1px solid rgba(255,255,255,0.1)" : "1px solid rgba(124,92,255,0.12)";
+  const {
+    cardBg,
+    cardBorder,
+    cardShadow,
+    titleColor,
+    textMuted: mutedColor,
+    controlBg: selectBg,
+    controlBorder: selectBorder,
+  } = useSurfaceTokens();
 
   const linkClass = (active: boolean) =>
     active
@@ -70,9 +73,14 @@ export const AlertsPanel = () => {
       : "text-[hsl(199,89%,48%)] hover:underline cursor-pointer opacity-70";
 
   return (
+    /* The id is the jump target for the dashboard's "Device alerts" KPI tile:
+       this panel's Caleido source IS that tile's list (GET /alerts), so the
+       tile scrolls here rather than routing away. Renaming it means updating
+       ALERTS_PANEL_ID in DashboardKPIs. */
     <div
+      id={ALERTS_PANEL_ID}
       className="rounded-lg p-4 h-full min-w-0 flex flex-col transition-all duration-250 ease hover:-translate-y-0.5"
-      style={{ background: cardBg, border: cardBorder, boxShadow: "0 8px 24px rgba(17,12,46,0.12)" }}
+      style={{ background: cardBg, border: cardBorder, boxShadow: cardShadow }}
     >
       <div className="flex flex-wrap items-center justify-between mb-4 shrink-0 gap-2">
         <h3 style={{ color: titleColor }} className="font-medium">Alerts</h3>
