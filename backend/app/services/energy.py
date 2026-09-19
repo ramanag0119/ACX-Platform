@@ -11,12 +11,13 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, date, datetime, timedelta
 
-from sqlalchemy import Select, Integer, cast, func, select
+from sqlalchemy import Select, func, select
 from sqlalchemy.orm import Session, aliased
 
 from app.models import (
     Amenity,
     DailyDualDataPoint,
+    DeviceParam,
     EnergyStat,
     Property,
     PropertyChain,
@@ -30,6 +31,38 @@ FloorProp = aliased(Property, name="floor_property")
 ENERGY_EPOCH = datetime(2000, 1, 1, tzinfo=UTC)
 
 GROUP_BY_CHOICES = ("hour", "day", "amenity", "device")
+
+#: `energy_stat.energy_consumed` is the stored ACTIVE energy reading, and
+#: `device_param` is the telemetry parameter registry that records each
+#: parameter's unit. This is the `param_name` that describes it.
+ACTIVE_ENERGY_PARAM = "active_energy"
+
+
+def active_energy_unit(db: Session) -> str | None:
+    """The unit `energy_stat.energy_consumed` is recorded in.
+
+    RESOLVED FROM CONFIGURATION, NOT PER READING, and deliberately so.
+    `energy_stat` has no unit column and cannot be joined to `device`: its
+    `device_name` is free text and none of its values match `device.device_name`
+    or `device.device_uid`. So there is no path from a reading to the device
+    type that would carry a per-row unit. What the schema does register is the
+    unit of the `active_energy` parameter itself, in `device_param`.
+
+    Returns None when the registry holds no unit for the parameter, or when
+    device types disagree on it -- one label cannot honestly describe every
+    reading in that case, and a null keeps the caller from implying otherwise.
+    """
+    units = (
+        db.execute(
+            select(DeviceParam.unit)
+            .where(DeviceParam.param_name == ACTIVE_ENERGY_PARAM)
+            .where(DeviceParam.unit.is_not(None))
+            .distinct()
+        )
+        .scalars()
+        .all()
+    )
+    return units[0] if len(units) == 1 else None
 
 
 def hour_to_timestamp(hour: int) -> datetime:
@@ -147,11 +180,35 @@ def energy_summary(
     device_name: str | None = None,
     hour_from: int | None = None,
     hour_to: int | None = None,
+    date_from: datetime | None = None,
+    date_to: datetime | None = None,
 ) -> dict:
     """SUM/COUNT rollup. IKANOS stores energy hourly only; day and per-room
-    views are aggregated here at query time, never precomputed."""
+    views are aggregated here at query time, never precomputed.
+
+    `date_from` / `date_to` are the caller-facing way to bound the period. They
+    are converted to the stored `hour` (hours elapsed from 2000) with
+    `timestamp_to_hour`, so the filter runs against the real stored column and
+    uses `ix_energy_stat_amenity_id_hour` rather than computing a timestamp per
+    row. Callers that already hold raw hour numbers can still pass
+    `hour_from` / `hour_to`; when both forms are given the NARROWER bound wins,
+    so neither can silently widen the other's window.
+
+    Every figure returned -- `total_energy_consumed`, `reading_count` and the
+    buckets -- is summed from the rows this filter selects. There is no
+    all-time aggregate in the response.
+    """
     if group_by not in GROUP_BY_CHOICES:
         raise ValueError(f"group_by must be one of {GROUP_BY_CHOICES}")
+
+    if date_from is not None:
+        bound = timestamp_to_hour(date_from)
+        hour_from = bound if hour_from is None else max(hour_from, bound)
+    if date_to is not None:
+        bound = timestamp_to_hour(date_to)
+        hour_to = bound if hour_to is None else min(hour_to, bound)
+    if hour_from is not None and hour_to is not None and hour_from > hour_to:
+        raise ValueError("date_from/hour_from must not be later than date_to/hour_to")
 
     total_energy = func.sum(EnergyStat.energy_consumed).label("total_energy_consumed")
     reading_count = func.count().label("reading_count")
@@ -159,8 +216,17 @@ def energy_summary(
     if group_by == "hour":
         key, label = EnergyStat.hour, None
     elif group_by == "day":
-        # Whole days since the epoch: integer division of the stored hour.
-        key, label = cast(EnergyStat.hour / 24, Integer), None
+        # Whole days since the epoch: FLOOR division of the stored hour.
+        #
+        # `//` is deliberate. `cast(hour / 24, Integer)` looks equivalent but is
+        # not: SQLAlchemy renders `/` as true division
+        # (`hour / CAST(24 AS NUMERIC)`) and PostgreSQL ROUNDS when casting
+        # numeric to integer, so hour 233388 (2026-08-16 12:00) produced 9724.5
+        # -> 9725 and was reported under 2026-08-17. Every reading from midday
+        # onward was attributed to the following day, and two calendar days of
+        # data collapsed into one bucket. `//` emits plain integer division,
+        # which truncates; `hour` is never negative, so truncation is floor.
+        key, label = EnergyStat.hour // 24, None
     elif group_by == "amenity":
         key, label = EnergyStat.amenity_id, Amenity.name
     else:
@@ -211,6 +277,8 @@ def energy_summary(
             sum(b["total_energy_consumed"] for b in buckets), 6
         ),
         "reading_count": sum(b["reading_count"] for b in buckets),
+        # Read from `device_param`, never a literal -- see active_energy_unit.
+        "energy_unit": active_energy_unit(db),
         "buckets": buckets,
     }
 
@@ -244,6 +312,73 @@ def list_daily_data_points(
     total = _count(db, stmt)
     rows = db.execute(_page(stmt, page=page, page_size=page_size)).scalars().all()
     return rows, total
+
+
+def caleido_at_work(
+    db: Session,
+    *,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    facility_id: uuid.UUID | None = None,
+) -> list[dict]:
+    """The Caleido At Work rings, one aggregated row per metric.
+
+    WHY THIS EXISTS. The dashboard needs four ratios. It used to fetch a PAGE
+    of raw `daily_dual_data_point` rows -- every metric type, up to twenty rows
+    -- and then pick the newest row per type and divide dp_1 by dp_2 in the
+    browser. That put both the record selection and the percentage in the
+    frontend, over a dataset it had to receive in full to choose from.
+
+    The business rule is unchanged and is NOT reinvented here: these are daily
+    snapshots, so the ring shows the MOST RECENT snapshot inside the selected
+    window, never an average or a sum across days. `DISTINCT ON (metric_type)`
+    with a descending date order is that rule expressed once, in SQL, so the
+    database returns one row per metric instead of a page to sift through.
+
+    dp_1 is the numerator ("online", "resolved", ...) and dp_2 the denominator,
+    exactly as the table stores them. The percentage is computed from those two
+    stored values and nothing else -- no constant, no fallback, no default.
+    """
+    stmt = (
+        select(
+            DailyDualDataPoint.metric_type,
+            DailyDualDataPoint.metric_date,
+            DailyDualDataPoint.dp_1,
+            DailyDualDataPoint.dp_2,
+        )
+        .distinct(DailyDualDataPoint.metric_type)
+        .order_by(
+            DailyDualDataPoint.metric_type,
+            DailyDualDataPoint.metric_date.desc(),
+        )
+    )
+    if facility_id:
+        stmt = stmt.where(DailyDualDataPoint.facility_id == facility_id)
+    if date_from:
+        stmt = stmt.where(DailyDualDataPoint.metric_date >= date_from)
+    if date_to:
+        stmt = stmt.where(DailyDualDataPoint.metric_date <= date_to)
+
+    metrics = []
+    for row in db.execute(stmt).mappings().all():
+        numerator = float(row["dp_1"])
+        denominator = float(row["dp_2"])
+        metrics.append(
+            {
+                "metric_type": row["metric_type"],
+                "metric_date": row["metric_date"],
+                "dp_1": numerator,
+                "dp_2": denominator,
+                # floor(x + 0.5), not round(): Python's round() is
+                # banker's rounding, so round(2.5) is 2 and the ring would
+                # disagree with the value the browser used to show for the
+                # same stored pair. Percentages here are never negative.
+                "percentage": (
+                    int((numerator / denominator) * 100 + 0.5) if denominator > 0 else 0
+                ),
+            }
+        )
+    return metrics
 
 
 def get_daily_data_point(db: Session, metric_date: date, metric_type: str):

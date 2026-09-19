@@ -2,15 +2,17 @@ import { useMemo, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { useTheme } from "@/core/contexts/ThemeContext";
 import { DataState } from "@/core/components/DataState";
-import { useDailyDataPoints } from "@/lib/api/hooks";
+import { useCaleidoAtWork } from "@/lib/api/hooks";
 
 /**
  * The four rings are the real `daily_dual_data_point` KPI rows.
  *
- * dp_1 / dp_2 are the stored numerator and denominator; the percentage is a
- * FRONTEND PRESENTATION calculation over those two stored values, not a
- * backend aggregation and not a business rule. The metric_type strings are
- * exactly the ones the table stores.
+ * dp_1 / dp_2 are the stored numerator and denominator, and the percentage the
+ * ring draws is computed FROM THEM BY THE BACKEND -- GET
+ * /daily-data-points/summary returns one aggregated row per metric_type (the
+ * most recent snapshot in the window) with the ratio already resolved. Nothing
+ * here selects a record or does arithmetic on the data. The metric_type strings
+ * are exactly the ones the table stores.
  */
 
 interface CircularProgressProps {
@@ -74,26 +76,28 @@ export const CaleidoAtWork = () => {
   const { isDark } = useTheme();
   const [range, setRange] = useState<keyof typeof RANGE_DAYS>("Today");
 
-  // The most recent stored point within the chosen window. Points are daily
-  // snapshots, so they are selected, never averaged together.
-  const query = useDailyDataPoints({
-    page: 1,
-    page_size: 20,
+  /**
+   * One aggregated row per metric, straight from the backend.
+   *
+   * This used to request a PAGE of raw `daily_dual_data_point` rows -- every
+   * metric type, up to twenty of them -- then pick the newest row per type
+   * here and divide dp_1 by dp_2 in the browser. Both the record selection and
+   * the percentage now happen in SQL, so the component receives exactly the
+   * four ratios it draws and nothing to choose between.
+   *
+   * The window is sent to the API and is part of the query key, so switching
+   * period refetches instead of re-reading the previous period's rows.
+   */
+  const query = useCaleidoAtWork({
     metric_date_from: isoDaysAgo(RANGE_DAYS[range]),
   });
 
   const latest = useMemo(() => {
-    const items = query.data?.items ?? [];
-    if (!items.length) return new Map<string, { value: number; detail: string }>();
-    // The API sorts by metric_date descending, so the first row per type wins.
     const map = new Map<string, { value: number; detail: string }>();
-    for (const item of items) {
-      if (map.has(item.metric_type)) continue;
-      const numerator = Number(item.dp_1);
-      const denominator = Number(item.dp_2);
-      map.set(item.metric_type, {
-        value: denominator > 0 ? Math.round((numerator / denominator) * 100) : 0,
-        detail: `${numerator} / ${denominator}`,
+    for (const metric of query.data?.metrics ?? []) {
+      map.set(metric.metric_type, {
+        value: metric.percentage,
+        detail: `${metric.dp_1} / ${metric.dp_2}`,
       });
     }
     return map;

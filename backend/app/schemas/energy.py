@@ -114,8 +114,17 @@ class EnergySummaryRead(BaseModel):
     bucket_count: int
     total_energy_consumed: float = Field(description="SUM across every bucket")
     reading_count: int
-    energy_unit: None = Field(
-        default=None, description="Always null: no unit is stored on `energy_stat`."
+    energy_unit: str | None = Field(
+        default=None,
+        examples=["kWh"],
+        description=(
+            "The unit `energy_consumed` is recorded in, read from `device_param` "
+            "where `param_name = 'active_energy'`. `energy_stat` itself stores no "
+            "unit and cannot be joined to `device` (`device_name` is free text), "
+            "so this describes the PARAMETER's configured unit rather than a "
+            "per-reading one. Null when the registry has no unit for the "
+            "parameter or when device types disagree on it."
+        ),
     )
     buckets: list[EnergySummaryBucket]
 
@@ -123,6 +132,34 @@ class EnergySummaryRead(BaseModel):
 # ---------------------------------------------------------------------------
 # daily_dual_data_point
 # ---------------------------------------------------------------------------
+
+
+class CaleidoMetricRead(BaseModel):
+    """One Caleido At Work ring: the newest daily snapshot in the window.
+
+    Dashboard-shaped on purpose -- the ratio the ring draws, already resolved.
+    `dp_1` / `dp_2` are carried through because the ring prints them as its
+    "n / m" caption; nothing else from `daily_dual_data_point` is exposed.
+    """
+
+    metric_type: str = Field(examples=["smart room"])
+    metric_date: date = Field(description="The snapshot this ring represents")
+    dp_1: float = Field(description="Numerator as stored, e.g. rooms online")
+    dp_2: float = Field(description="Denominator as stored, e.g. rooms total")
+    percentage: int = Field(
+        examples=[79],
+        description="dp_1 / dp_2 as a whole percent; 0 when dp_2 is 0",
+    )
+
+
+class CaleidoAtWorkRead(BaseModel):
+    """The Caleido At Work widget's whole payload: one row per metric.
+
+    At most one row per `metric_type`, so the caller renders what it is given
+    rather than selecting a record out of a page.
+    """
+
+    metrics: list[CaleidoMetricRead]
 
 
 class DailyDataPointRead(ORMModel):

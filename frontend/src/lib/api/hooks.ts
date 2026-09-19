@@ -268,6 +268,10 @@ export const useEnergySummary = (params?: QueryParams, options?: EnabledOption) 
   useApiQuery(["energy-summary", params], () => api.getEnergySummary(params), options);
 export const useDailyDataPoints = (params?: QueryParams) =>
   useApiQuery(["daily-data-points", params], () => api.listDailyDataPoints(params));
+/** `params` is in the key, so changing the period refetches rather than
+ *  reusing the previous window's metrics. */
+export const useCaleidoAtWork = (params?: QueryParams) =>
+  useApiQuery(["caleido-at-work", params], () => api.getCaleidoAtWork(params));
 
 // ---------------------------------------------------------------------------
 // Phase 3.0 reads: tables that gained an endpoint alongside their writes
