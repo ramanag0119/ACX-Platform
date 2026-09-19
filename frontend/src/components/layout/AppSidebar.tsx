@@ -128,7 +128,7 @@ export const AppSidebar = ({ collapsed }: AppSidebarProps) => {
   const { canRead } = useAuth();
 
   const allNavItems = [
-    { to: "/dashboard", icon: LayoutDashboard, label: "HMS" },
+    { to: "/HMS", icon: LayoutDashboard, label: "HMS" },
     { to: "/occupancy", icon: Users, label: "Occupancy" },
     // Stay groups the two screens a stay is made of. `/stay` is a nav-only
     // prefix with no route of its own -- the parent is a disclosure button,
