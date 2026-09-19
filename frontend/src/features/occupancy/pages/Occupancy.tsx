@@ -28,7 +28,6 @@ import { RoomConditionsDialog } from "../components/RoomConditionsDialog";
 import {
   useCheckInStay,
   useCheckOutStay,
-  useUpdateRoomState,
 } from "@/lib/api/mutations";
 import {
   useAmenityStatuses,
@@ -171,7 +170,6 @@ const Occupancy = () => {
   const mayWriteBookings = canWrite("bookings");
   const checkIn = useCheckInStay();
   const checkOut = useCheckOutStay();
-  const roomState = useUpdateRoomState();
 
   const pageSize = Number(entriesPerPage);
 

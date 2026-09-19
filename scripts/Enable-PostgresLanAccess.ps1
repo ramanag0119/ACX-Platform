@@ -60,6 +60,37 @@ function Warn ($m) { Write-Host "   [warn] $m" -ForegroundColor Yellow }
 function Fail ($m) { Write-Host "   [FAIL] $m" -ForegroundColor Red }
 function Nz   ($v, $alt) { if ($null -ne $v -and "$v" -ne '') { "$v" } else { $alt } }
 
+# Real CIDR containment. The obvious shortcut -- trim the last octet off the
+# network address and wildcard-match on the rest -- is only ever right for a
+# /24: it reads 10.0.0.0/8 as '10.0.0.*' and so rejects 10.5.3.7, an address
+# squarely inside the subnet the script just opened.
+function Test-IpInCidr ([string] $Ip, [string] $Cidr) {
+    $parts = $Cidr.Split('/')
+    if ($parts.Count -ne 2) { return $false }
+
+    [ipaddress] $network = $null
+    [ipaddress] $address = $null
+    if (-not [ipaddress]::TryParse($parts[0], [ref] $network)) { return $false }
+    if (-not [ipaddress]::TryParse($Ip,       [ref] $address)) { return $false }
+    if ($network.AddressFamily -ne $address.AddressFamily)      { return $false }
+
+    $bits = 0
+    if (-not [int]::TryParse($parts[1], [ref] $bits)) { return $false }
+    if ($bits -lt 0 -or $bits -gt 32)                 { return $false }
+
+    # Big-endian so the mask below shifts off the host bits, not the network ones.
+    $netBytes  = $network.GetAddressBytes(); [array]::Reverse($netBytes)
+    $addrBytes = $address.GetAddressBytes(); [array]::Reverse($addrBytes)
+    $netInt  = [uint32][System.BitConverter]::ToUInt32($netBytes, 0)
+    $addrInt = [uint32][System.BitConverter]::ToUInt32($addrBytes, 0)
+
+    # /0 matches everything; shifting a uint32 by 32 is undefined, so special-case it.
+    if ($bits -eq 0) { return $true }
+    $mask = [uint32]([uint32]::MaxValue -shl (32 - $bits))
+
+    return ($netInt -band $mask) -eq ($addrInt -band $mask)
+}
+
 # ------------------------------------------------------------- elevation
 Step 'Checking privileges'
 $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -405,7 +436,10 @@ Step 'Verifying that PostgreSQL is listening'
 $listening = @(Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue)
 if ($listening.Count -eq 0) {
     Fail "Nothing is listening on TCP/$Port."
-    if ($svcName) { Info "service status: $((Get-Service -Name $svcName).Status)" }
+    if ($svcName) {
+        $svcNow = Get-Service -Name $svcName -ErrorAction SilentlyContinue
+        Info "service status: $(if ($svcNow) { $svcNow.Status } else { 'not found' })"
+    }
     $script:Problems += "no listener on TCP/$Port"
 }
 else {
@@ -456,7 +490,7 @@ Say ''
 Say '  Not touched: no database, table, row, role, or password was created,'
 Say '               dropped, or modified. No SQL was run and hms_db was never opened.'
 Say ''
-$hostLanIP = @($lanIPs | Where-Object { $_ -like ($Subnet.Split('/')[0].Substring(0, $Subnet.Split('/')[0].LastIndexOf('.') + 1) + '*') })
+$hostLanIP = @($lanIPs | Where-Object { Test-IpInCidr $_ $Subnet })
 if ($hostLanIP.Count -gt 0) {
     Say "  Connect from another machine on the LAN using host: $($hostLanIP[0])  port: $Port"
 }

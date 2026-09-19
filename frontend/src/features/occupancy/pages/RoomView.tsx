@@ -7,6 +7,7 @@ import { useFloors, useOccupancy, useStays } from "@/lib/api/hooks";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
 import { roomStatusColor } from "../lib/roomStatus";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { useSurfaceTokens } from "@/core/styles/surfaceTokens";
 
 /**
  * Room View, driven by GET /occupancy and GET /stays.
@@ -102,12 +103,13 @@ const RoomView = () => {
     { label: "End of Day", room: counts.available, percent: counts.availablePercent },
   ];
 
-  const cardBg = isDark
-    ? "linear-gradient(180deg, #1e2233, #1a1e30)"
-    : "linear-gradient(180deg, rgba(255,255,255,0.85), rgba(245,242,255,0.95))";
-  const cardBorder = isDark ? "1px solid rgba(255,255,255,0.07)" : "1px solid rgba(124,92,255,0.12)";
-  const titleColor = isDark ? "#dde2ed" : "#1F1B3A";
-  const mutedColor = isDark ? "#8b95a9" : "#5E5A7A";
+  const {
+    cardBg,
+    cardBorder,
+    cardShadow,
+    titleColor,
+    textMuted: mutedColor,
+  } = useSurfaceTokens();
   const gridBorder = isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.08)";
 
   return (
@@ -152,7 +154,7 @@ const RoomView = () => {
             {/* Current Status Table */}
             <div
               className="rounded-lg p-5 transition-all duration-250 ease hover:-translate-y-0.5"
-              style={{ background: cardBg, border: cardBorder, boxShadow: "0 8px 24px rgba(17,12,46,0.12)" }}
+              style={{ background: cardBg, border: cardBorder, boxShadow: cardShadow }}
             >
               <div className="flex items-center justify-between mb-4">
                 <h3 style={{ color: titleColor }} className="font-medium">Current Status</h3>
@@ -185,7 +187,7 @@ const RoomView = () => {
             {/* Room Status Pie Chart */}
             <div
               className="rounded-lg p-5 transition-all duration-250 ease hover:-translate-y-0.5"
-              style={{ background: cardBg, border: cardBorder, boxShadow: "0 8px 24px rgba(17,12,46,0.12)" }}
+              style={{ background: cardBg, border: cardBorder, boxShadow: cardShadow }}
             >
               <div className="flex items-center justify-between mb-4">
                 <h3 style={{ color: titleColor }} className="font-medium">Room Status</h3>

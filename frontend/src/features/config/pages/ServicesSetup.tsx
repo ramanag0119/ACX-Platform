@@ -427,7 +427,6 @@ const ServicesSetup = () => {
 
     // Modal states
     const [editFoodCategoryOpen, setEditFoodCategoryOpen] = useState(false);
-    const [editFacilityServiceOpen, setEditFacilityServiceOpen] = useState(false);
     const [editSanitationServiceOpen, setEditSanitationServiceOpen] = useState(false);
     const [editFoodMenuOpen, setEditFoodMenuOpen] = useState(false);
 
@@ -1646,7 +1645,10 @@ const ServicesSetup = () => {
                                                 <TableCell className="text-cyan-600 hover:underline cursor-pointer">{item.typeOfService}</TableCell>
                                                 <TableCell>30</TableCell>
                                                 <TableCell className="text-center">
-                                                    <Button size="sm" className="h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditFacilityServiceOpen(true)}>
+                                                    {/* NOT IMPLEMENTED: there is no facility-service edit dialog on this
+    tab. The click was setting an `editFacilityServiceOpen` flag nothing
+    rendered, so the button has never opened anything. */}
+                                                    <Button size="sm" className="h-7 w-7 p-0 rounded-[3px]" disabled title="Editing a facility service is not available yet">
                                                         <Edit className="h-[14px] w-[14px]" />
                                                     </Button>
                                                 </TableCell>
@@ -1962,14 +1964,6 @@ const ServicesSetup = () => {
                 </div>
             )}
         </div>
-    );
-
-    const renderPlaceholderTab = (tabName: string) => (
-        <Card className="border-0 shadow-lg rounded-2xl bg-white">
-            <CardContent className="p-12 text-center">
-                <p className="text-muted-foreground text-lg">{tabName} content coming soon...</p>
-            </CardContent>
-        </Card>
     );
 
     const renderTabContent = () => {

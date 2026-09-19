@@ -29,11 +29,8 @@ import {
   useUsers,
 } from "@/lib/api/hooks";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
-import { useServiceCategories } from "@/lib/api/hooks";
 import {
-  useCancelServiceRequest,
   useCreateServiceRequest,
-  useUpdateServiceRequest,
 } from "@/lib/api/mutations";
 import { useAuth } from "@/core/contexts/AuthContext";
 import {
@@ -91,15 +88,11 @@ const Tickets = () => {
     label: [user.first_name, user.last_name].filter(Boolean).join(" "),
   }));
 
-  const categoriesQuery = useServiceCategories({ page: 1, page_size: MAX_PAGE_SIZE });
-  const serviceCategories = categoriesQuery.data?.items ?? [];
 
   // --- Mutations
   const { canWrite } = useAuth();
   const mayWrite = canWrite("service_tracking");
   const createRequest = useCreateServiceRequest();
-  const updateRequest = useUpdateServiceRequest();
-  const cancelRequest = useCancelServiceRequest();
   const [actionTarget, setActionTarget] = useState<ServiceRequestActionTarget | null>(null);
 
   const ticketsData = (requestsQuery.data?.items ?? []).map((request) => ({
