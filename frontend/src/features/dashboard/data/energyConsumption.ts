@@ -6,9 +6,10 @@
  * the divide-by-zero guard on the average -- is defined here so the chart
  * cannot grow a second, differing copy of it.
  *
- * NO UNIT IS RECORDED: `energy_stat` has no unit column and the API returns
- * `energy_unit: null`. Nothing here may be labelled kWh, costed or
- * carbon-weighted, and there is no efficiency or baseline figure to report.
+ * NO UNIT IS APPLIED HERE. `energy_stat` has no unit column; the API resolves
+ * `energy_unit` from `device_param` and the chart appends it at render time, so
+ * these selectors deal in bare numbers and must not label, convert, cost or
+ * carbon-weight them. There is no efficiency or baseline figure to report.
  */
 
 import type { EnergySummaryBucket } from "@/lib/api/types";

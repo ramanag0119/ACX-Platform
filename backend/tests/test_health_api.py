@@ -314,6 +314,9 @@ DELIVERED_PATHS = {
     f"{V1}/energy-stats",
     f"{V1}/energy-stats/summary",
     f"{V1}/daily-data-points",
+    # The Caleido At Work rings, aggregated server-side: one row per
+    # metric_type instead of a page of rows for the caller to select from.
+    f"{V1}/daily-data-points/summary",
     f"{V1}/daily-data-points/{{metric_date}}/{{metric_type}}",
     # Phase 3.0 -- write workflows, plus the reads those screens needed
     # Access

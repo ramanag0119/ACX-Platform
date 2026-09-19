@@ -15,7 +15,7 @@ const Login = () => {
 
   // A live session should never sit on the login screen.
   useEffect(() => {
-    if (isAuthenticated) navigate("/dashboard", { replace: true });
+    if (isAuthenticated) navigate("/HMS", { replace: true });
   }, [isAuthenticated, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -25,7 +25,7 @@ const Login = () => {
 
     try {
       await login(username, password);
-      navigate("/dashboard");
+      navigate("/HMS");
     } catch (err) {
       // The backend distinguishes bad credentials (401) from an account that
       // exists but belongs to a mobile platform (403). Both messages come from

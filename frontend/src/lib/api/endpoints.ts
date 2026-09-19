@@ -23,6 +23,7 @@ import type {
   AmenityStatusRead,
   BuildingRead,
   CurrentUser,
+  CaleidoAtWorkRead,
   DailyDataPointRead,
   DeviceCurrentStatRead,
   DeviceParamRead,
@@ -176,3 +177,6 @@ export const getEnergySummary = (params?: QueryParams) =>
   apiClient.get<EnergySummaryRead>("/energy-stats/summary", params);
 export const listDailyDataPoints = (params?: QueryParams) =>
   apiClient.get<Page<DailyDataPointRead>>("/daily-data-points", params);
+/** The Caleido At Work rings, aggregated backend-side -- one row per metric. */
+export const getCaleidoAtWork = (params?: QueryParams) =>
+  apiClient.get<CaleidoAtWorkRead>("/daily-data-points/summary", params);

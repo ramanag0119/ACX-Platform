@@ -37,7 +37,7 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/" element={<Navigate to="/HMS" replace />} />
             <Route
               element={
                 <ProtectedRoute>
@@ -45,7 +45,14 @@ const App = () => (
                 </ProtectedRoute>
               }
             >
-              <Route path="/dashboard" element={<Dashboard />} />
+              {/* The HMS dashboard. React Router matches case-SENSITIVELY, so
+                  `/hms` is a separate path from `/HMS` and is redirected rather
+                  than left to fall through to NotFound. `/dashboard` is kept as
+                  a retired route for existing links, the same treatment
+                  /power-view and friends get below. */}
+              <Route path="/HMS" element={<Dashboard />} />
+              <Route path="/hms" element={<Navigate to="/HMS" replace />} />
+              <Route path="/dashboard" element={<Navigate to="/HMS" replace />} />
               <Route path="/occupancy" element={<Occupancy />} />
               <Route path="/bookings" element={<Bookings />} />
               <Route path="/services" element={<Navigate to="/services/tracking" replace />} />

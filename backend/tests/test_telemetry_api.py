@@ -363,12 +363,39 @@ def test_energy_unit_is_always_null(client):
 
 
 def test_no_cost_carbon_or_efficiency_is_ever_returned(client):
+    """No derived commercial figure is ever returned, and no unit is invented.
+
+    "kwh" stays forbidden in the per-row listing, where `energy_unit` is always
+    null -- a unit appearing there could only have been made up.
+
+    The summary is scanned with the same list MINUS "kwh", because it now
+    carries a real `energy_unit` read from `device_param`, and the seeded value
+    for `active_energy` is "kWh". Banning the substring outright would forbid
+    reporting the registry's own unit. What the guard protects is unchanged:
+    nothing is costed, carbon-weighted or converted. The unit is asserted to
+    equal the registry in test_energy_summary_is_only_sum_and_count, and it is
+    checked here to be a unit rather than a smuggled-in derived figure.
+    """
+    derived = ("cost", "tariff", "carbon", "co2", "saving", "efficiency",
+               "currency", "price", "baseline")
+
     raw = client.get(f"{V1}/energy-stats?page_size=100").text.lower()
-    summary = client.get(f"{V1}/energy-stats/summary?group_by=day").text.lower()
-    for forbidden in ("cost", "tariff", "carbon", "co2", "saving", "efficiency",
-                      "currency", "price", "baseline", "kwh"):
+    for forbidden in (*derived, "kwh"):
         assert forbidden not in raw, f"{forbidden!r} appeared in /energy-stats"
+
+    body = client.get(f"{V1}/energy-stats/summary?group_by=day").json()
+    summary = client.get(f"{V1}/energy-stats/summary?group_by=day").text.lower()
+    for forbidden in derived:
         assert forbidden not in summary, f"{forbidden!r} appeared in the summary"
+
+    # The only place an energy unit may appear is `energy_unit` itself.
+    unit = body["energy_unit"]
+    assert unit is None or isinstance(unit, str)
+    if unit is not None:
+        assert summary.count(unit.lower()) == 1, (
+            "the unit must appear only as `energy_unit`, never baked into a "
+            "bucket label or a formatted value"
+        )
 
 
 def test_energy_resolves_its_room_and_floor(client, db):
@@ -380,7 +407,20 @@ def test_energy_resolves_its_room_and_floor(client, db):
 
 def test_energy_summary_is_only_sum_and_count(client, db):
     body = client.get(f"{V1}/energy-stats/summary?group_by=day").json()
-    assert body["energy_unit"] is None
+    # The summary now carries the unit of the `active_energy` parameter, read
+    # from `device_param`. `energy_stat` still stores none of its own -- the
+    # per-row endpoint keeps returning null, which
+    # test_energy_unit_is_always_null covers. What must never happen is a
+    # literal: the expected value is looked up from the same registry.
+    expected_unit = db.execute(
+        text(
+            "SELECT DISTINCT unit FROM device_param "
+            "WHERE param_name = 'active_energy' AND unit IS NOT NULL"
+        )
+    ).scalars().all()
+    assert body["energy_unit"] == (
+        expected_unit[0] if len(expected_unit) == 1 else None
+    )
     db_total, db_count = db.execute(
         text("SELECT sum(energy_consumed), count(*) FROM energy_stat")
     ).one()

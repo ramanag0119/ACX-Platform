@@ -43,6 +43,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status as http_sta
 from app.api.deps import DbSession, require_permission
 from app.schemas.common import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, Page
 from app.schemas.energy import (
+    CaleidoAtWorkRead,
     DailyDataPointRead,
     EnergyStatRead,
     EnergySummaryRead,
@@ -86,8 +87,10 @@ daily_data_points_router = APIRouter(
     description=(
         "SUM and COUNT over the stored `energy_consumed`, grouped at query "
         "time. IKANOS stores energy hourly only, so day and per-room views are "
-        "aggregated on read. No tariff, carbon factor or baseline is applied, "
-        "and the result carries no unit because the table stores none."
+        "aggregated on read. No tariff, carbon factor or baseline is applied. "
+        "`energy_unit` describes the `active_energy` PARAMETER's configured "
+        "unit, read from `device_param`; `energy_stat` itself stores none, so "
+        "the per-row endpoint still returns null. Nothing is converted."
     ),
 )
 def energy_summary(
@@ -102,12 +105,24 @@ def energy_summary(
     device_name: str | None = Query(None),
     hour_from: int | None = Query(None, description="Raw `hour` lower bound"),
     hour_to: int | None = Query(None, description="Raw `hour` upper bound"),
+    date_from: datetime | None = Query(
+        None,
+        description=(
+            "Inclusive start of the period. Converted to the stored `hour` "
+            "(hours elapsed from 2000), so it filters the real column. Send an "
+            "offset-aware value -- a naive one is read as UTC."
+        ),
+    ),
+    date_to: datetime | None = Query(
+        None, description="Inclusive end of the period; same conversion as date_from."
+    ),
 ) -> EnergySummaryRead:
     try:
         data = svc.energy_summary(
             db, group_by=group_by, facility_id=facility_id, amenity_id=amenity_id,
             building_id=building_id, floor_id=floor_id, device_name=device_name,
             hour_from=hour_from, hour_to=hour_to,
+            date_from=date_from, date_to=date_to,
         )
     except ValueError as exc:
         raise HTTPException(
@@ -163,6 +178,38 @@ def list_energy_stats(
 # ---------------------------------------------------------------------------
 # daily_dual_data_point
 # ---------------------------------------------------------------------------
+
+
+# `/summary` is declared BEFORE `/{metric_date}/{metric_type}` so the literal
+# path can never be captured by the parameterised one, the same ordering rule
+# /energy-stats/summary follows above.
+@daily_data_points_router.get(
+    "/summary",
+    response_model=CaleidoAtWorkRead,
+    summary="Caleido At Work rings",
+    description=(
+        "One aggregated row per `metric_type` -- the most recent daily "
+        "snapshot inside the requested window, with dp_1/dp_2 and the "
+        "percentage the ring draws already resolved. Callers render what they "
+        "are given; they do not receive a page of rows to select from. "
+        "Omit both dates to read the latest snapshot on record."
+    ),
+)
+def caleido_at_work(
+    db: DbSession,
+    facility_id: uuid.UUID | None = Query(None),
+    metric_date_from: date | None = Query(
+        None, description="Inclusive start of the period"
+    ),
+    metric_date_to: date | None = Query(None, description="Inclusive end of the period"),
+) -> CaleidoAtWorkRead:
+    metrics = svc.caleido_at_work(
+        db,
+        date_from=metric_date_from,
+        date_to=metric_date_to,
+        facility_id=facility_id,
+    )
+    return CaleidoAtWorkRead(metrics=metrics)
 
 
 @daily_data_points_router.get(

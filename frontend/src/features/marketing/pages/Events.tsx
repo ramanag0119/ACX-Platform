@@ -206,17 +206,15 @@ const Events = () => {
                     <DataState
                         isLoading={eventsQuery.isLoading}
                         error={eventsQuery.error}
-                        loader={<TableLoading columns={12} />}
+                        loader={<TableLoading columns={10} />}
                     >
                     <div className="rounded-lg overflow-hidden border border-border/80 dark:border-slate-800 overflow-x-auto scrollbar-thin">
                         <Table>
                             <TableHeader>
                                 <TableRow className="bg-muted/40 dark:bg-[#0e1322] border-b border-border dark:border-slate-800">
                                     <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap">Event Name</TableHead>
-                                    <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">#</TableHead>
                                     <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Description</TableHead>
                                     <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Venue</TableHead>
-                                    <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">#</TableHead>
                                     <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap">Chief Guests</TableHead>
                                     <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap">Start date and time</TableHead>
                                     <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap">End date and time</TableHead>
@@ -231,10 +229,8 @@ const Events = () => {
                                     paginatedData.map((item, index) => (
                                         <TableRow key={item.id} className={`${index % 2 === 0 ? "bg-card dark:bg-[#101526]/80" : "bg-muted/10 dark:bg-[#0d1120]/80"} hover:bg-muted/30 dark:hover:bg-slate-800/50 border-b border-border/50 dark:border-slate-800/70 transition-colors`}>
                                             <TableCell className="text-cyan-600 dark:text-cyan-400 text-xs py-3 px-4 whitespace-nowrap font-medium">{item.eventName}</TableCell>
-                                            <TableCell className="text-xs py-3 px-4 text-foreground/90">{item.id}</TableCell>
                                             <TableCell className="text-xs py-3 px-4 text-muted-foreground">{item.description || "-"}</TableCell>
                                             <TableCell className="text-cyan-600 dark:text-cyan-400 text-xs py-3 px-4 whitespace-nowrap">{item.venue}</TableCell>
-                                            <TableCell className="text-xs py-3 px-4 text-foreground/90">{item.id}</TableCell>
                                             <TableCell className="whitespace-nowrap text-xs py-3 px-4 text-foreground/90">{item.chiefGuests}</TableCell>
                                             <TableCell className="whitespace-nowrap text-xs py-3 px-4 text-foreground/90">{item.startDateTime}</TableCell>
                                             <TableCell className="whitespace-nowrap text-xs py-3 px-4 text-foreground/90">{item.endDateTime}</TableCell>
@@ -266,7 +262,7 @@ const Events = () => {
                                     ))
                                 ) : (
                                     <TableRow>
-                                        <TableCell colSpan={12} className="text-center py-6 text-muted-foreground text-xs">
+                                        <TableCell colSpan={10} className="text-center py-6 text-muted-foreground text-xs">
                                             No events found {searchQuery ? `matching "${searchQuery}"` : ""}
                                         </TableCell>
                                     </TableRow>

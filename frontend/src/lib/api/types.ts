@@ -862,8 +862,32 @@ export interface EnergySummaryRead {
   bucket_count: number;
   total_energy_consumed: number;
   reading_count: number;
-  energy_unit: null;
+  /**
+   * From `device_param` (`param_name = 'active_energy'`), not from
+   * `energy_stat` -- that table stores no unit. Null when the registry has no
+   * unit for the parameter or when device types disagree, so the UI must not
+   * assume a label is always present.
+   */
+  energy_unit: string | null;
   buckets: EnergySummaryBucket[];
+}
+
+/**
+ * One Caleido At Work ring, already aggregated by the backend: the newest
+ * daily snapshot inside the requested window. `percentage` is computed from
+ * dp_1/dp_2 server-side, so the ring renders what it is given.
+ */
+export interface CaleidoMetricRead {
+  metric_type: DailyMetricType;
+  metric_date: string;
+  dp_1: number;
+  dp_2: number;
+  percentage: number;
+}
+
+export interface CaleidoAtWorkRead {
+  /** At most one entry per metric_type. */
+  metrics: CaleidoMetricRead[];
 }
 
 export interface DailyDataPointRead {

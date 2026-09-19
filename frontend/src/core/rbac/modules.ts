@@ -51,7 +51,9 @@ export type HmsModule = (typeof HMS_MODULES)[number];
  * actually enforces on the endpoints that route calls.
  */
 export const ROUTE_MODULE: Record<string, HmsModule> = {
-  "/dashboard": "dashboard",
+  // The ROUTE is /HMS; the MODULE stays `dashboard` -- that name is a
+  // `role_module.module_name` value the backend gates on, not a URL.
+  "/HMS": "dashboard",
   "/occupancy": "occupancy",
   "/bookings": "bookings",
   "/services/tracking": "service_tracking",
