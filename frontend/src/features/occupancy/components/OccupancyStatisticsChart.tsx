@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { RefreshCw } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
@@ -35,6 +35,29 @@ import { roomStatusColor } from "../lib/roomStatus";
  * explanation for why they differ.
  */
 
+/**
+ * The inactive treatment is OPACITY, not a fixed grey.
+ *
+ * The spec offered either a muted slate (#2D3748 / #374151) or a fade. This
+ * card is themed -- `useSurfaceTokens` returns a LIGHT palette as well as the
+ * dark one -- so a hardcoded slate would sit on a white card as a dark smudge
+ * and read as a fifth, darker status rather than as "dimmed". Fading the real
+ * accent colour dims correctly against either background and keeps each slice
+ * recognisable as its own status while muted.
+ */
+/**
+ * The one `amenity_status` row whose centre reading comes from the stay-based
+ * in-house count rather than from its own slice share.
+ *
+ * Named once because it is a claim about the lookup table's vocabulary, and a
+ * claim this component does not own: if the row is ever renamed, this is the
+ * single line to change. Compared case-insensitively against the stored name.
+ */
+const IN_HOUSE_STATUS = "occupied";
+
+const INACTIVE_SLICE_OPACITY = 0.2;
+const INACTIVE_LEGEND_OPACITY = 0.45;
+
 export const OccupancyStatisticsChart = () => {
 
   const statusesQuery = useAmenityStatuses({ page: 1, page_size: MAX_PAGE_SIZE });
@@ -68,13 +91,76 @@ export const OccupancyStatisticsChart = () => {
   const inHousePercent =
     total && inHouseCount !== null ? Math.round((inHouseCount / total) * 100) : null;
 
+  /**
+   * Which status is highlighted. `null` means "nobody has pointed at anything
+   * yet", which resolves to the default below rather than being stored as a
+   * literal "occupied": the slice names come from the `amenity_status` lookup
+   * table, so this component must not assume a spelling the table owns.
+   *
+   * Hover and click both write it. On a pointer device hover already does the
+   * work, so the click handler is what makes the chart usable on touch, where
+   * there is no hover at all.
+   */
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+
+  /**
+   * The highlighted slice, resolved against the data actually on screen.
+   *
+   * `data` drops any status with zero rooms, so a property with nothing
+   * Occupied has no Occupied slice -- defaulting blindly to it would highlight
+   * nothing and blank the centre. Falling through to the first slice keeps the
+   * card meaningful. The same guard re-resolves if a refetch removes the slice
+   * the user had selected.
+   */
+  const activeName = useMemo(() => {
+    if (activeCategory && data.some((slice) => slice.name === activeCategory)) {
+      return activeCategory;
+    }
+    const occupied = data.find((slice) => slice.name.toLowerCase() === IN_HOUSE_STATUS);
+    return occupied?.name ?? data[0]?.name ?? null;
+  }, [activeCategory, data]);
+
+  /**
+   * THE CENTRE KEEPS TWO DIFFERENT FORMULAS, deliberately.
+   *
+   * Occupied shows the in-house figure (`is_occupied=true`, a stay-based
+   * count) with the "in house" label, exactly as this card has always read.
+   * Every other status is its own slice share, `value / total`.
+   *
+   * Those are the two sources of truth the header comment above describes, and
+   * they can disagree: the Occupied percentage shown here is NOT the Occupied
+   * slice's share of the ring. Hovering Occupied and then Available therefore
+   * compares a stay-derived number against a room-flag-derived one. That is
+   * what the spec asked for -- it named both the 11% and the "in house"
+   * wording -- and it is recorded here because nothing on screen says it.
+   */
+  const activeSlice = data.find((slice) => slice.name === activeName);
+  const isInHouseActive = activeName?.toLowerCase() === IN_HOUSE_STATUS;
+  const activePercent = isInHouseActive
+    ? inHousePercent
+    : total && activeSlice
+      ? Math.round((activeSlice.value / total) * 100)
+      : null;
+  const activeLabel = isInHouseActive ? "in house" : (activeName ?? "");
+
   const isLoading = statusesQuery.isLoading || perStatus.isLoading || roomTotal.isLoading;
   const error = statusesQuery.error ?? perStatus.error ?? roomTotal.error;
   const isFetching = roomTotal.isFetching || inHouse.isFetching || statusesQuery.isFetching;
 
-  /** Green = settled, amber = refetching, red = last attempt failed. */
-  const dotColor = error ? "#ef4444" : isFetching ? "#f59e0b" : "#22c55e";
-  const dotLabel = error ? "Data unavailable" : isFetching ? "Refreshing" : "Data up to date";
+  /**
+   * Green = settled, amber = refetching, red = last attempt failed.
+   *
+   * `inHouse` is folded in HERE rather than into `error` above, on purpose.
+   * The dot summarises every request this card makes, and `inHouse` already
+   * counts toward `isFetching` -- leaving it out of the failure signal meant a
+   * failed in-house request showed a green "Data up to date" dot while the
+   * centre read "-". Widening `error` itself would instead replace the whole
+   * card with an error shell and throw away a ring that loaded fine, so the
+   * correction belongs to the indicator alone.
+   */
+  const dotError = error ?? inHouse.error;
+  const dotColor = dotError ? "#ef4444" : isFetching ? "#f59e0b" : "#22c55e";
+  const dotLabel = dotError ? "Data unavailable" : isFetching ? "Refreshing" : "Data up to date";
   const {
     cardBg,
     cardBorder,
@@ -158,7 +244,12 @@ export const OccupancyStatisticsChart = () => {
 
                 Scoped to mouse focus only -- `:focus-visible` is untouched, so a
                 keyboard user tabbing through still gets a visible ring. */}
-            <div className="relative aspect-square h-full min-h-[160px] max-h-[200px] max-w-[55%] shrink-0 [&_*:focus:not(:focus-visible)]:outline-none">
+            {/* The 0.3s transition is scoped to `fill-opacity` rather than
+                `all`: a Recharts sector is an SVG <path>, and transitioning
+                `all` would drag the arc geometry (`d`) into the animation
+                alongside Recharts' own enter animation. Fading only the
+                opacity keeps the ring geometry crisp. */}
+            <div className="relative aspect-square h-full min-h-[160px] max-h-[200px] max-w-[55%] shrink-0 [&_*:focus:not(:focus-visible)]:outline-none [&_.recharts-sector]:transition-[fill-opacity] [&_.recharts-sector]:duration-300 [&_.recharts-sector]:ease-out">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -177,9 +268,16 @@ export const OccupancyStatisticsChart = () => {
                     dataKey="value"
                     startAngle={90}
                     endAngle={-270}
+                    className="cursor-pointer"
+                    onMouseEnter={(_, index) => setActiveCategory(data[index]?.name ?? null)}
+                    onClick={(_, index) => setActiveCategory(data[index]?.name ?? null)}
                   >
                     {data.map((entry) => (
-                      <Cell key={entry.name} fill={entry.color} />
+                      <Cell
+                        key={entry.name}
+                        fill={entry.color}
+                        fillOpacity={entry.name === activeName ? 1 : INACTIVE_SLICE_OPACITY}
+                      />
                     ))}
                   </Pie>
                   <Tooltip
@@ -197,10 +295,16 @@ export const OccupancyStatisticsChart = () => {
                   className="text-[28px] font-bold leading-none tracking-tight"
                   style={{ color: titleColor }}
                 >
-                  {inHousePercent === null ? "-" : `${inHousePercent}%`}
+                  {activePercent === null ? "-" : `${activePercent}%`}
                 </span>
+                {/* No `capitalize` here. `amenity_status` already stores
+                    display-cased names ("Available", "Occupied"), so the class
+                    bought nothing for a status -- and it actively broke the
+                    other branch, rendering the specified "in house" as
+                    "In House". No opacity transition either: this element's
+                    opacity never changes, so it was dead styling. */}
                 <span className="mt-1.5 text-[11px]" style={{ color: mutedColor }}>
-                  in house
+                  {activeLabel}
                 </span>
               </div>
             </div>
@@ -213,31 +317,52 @@ export const OccupancyStatisticsChart = () => {
                 card, so the right-aligned number ended up far from "Available".
                 Capped, the number sits just past the longest label. */}
             <ul className="min-w-0 max-w-[200px] flex-1 space-y-2.5">
-              {data.map((entry) => (
-                <li key={entry.name} className="flex min-w-0 items-center gap-3">
-                  {/* A capsule, not a 12px square: it carries the slice colour
-                      at a size that reads next to the ring. */}
-                  <span
-                    className="h-3.5 w-7 shrink-0 rounded-full"
-                    style={{ background: entry.color }}
-                  />
-                  <span
-                    className="min-w-0 flex-1 truncate text-sm"
-                    style={{ color: titleColor }}
-                    title={entry.name}
-                  >
-                    {entry.name}
-                  </span>
-                  {/* tabular-nums keeps the counts in a straight right-hand
-                      column instead of shifting with digit width. */}
-                  <span
-                    className="shrink-0 text-sm font-semibold tabular-nums"
-                    style={{ color: titleColor }}
-                  >
-                    {entry.value}
-                  </span>
-                </li>
-              ))}
+              {data.map((entry) => {
+                const isActive = entry.name === activeName;
+                return (
+                  <li key={entry.name} className="flex min-w-0">
+                    {/* A real <button>, so the same highlight is reachable by
+                        keyboard and announced as pressable -- the ring's SVG
+                        sectors cannot carry that. `aria-pressed` is what tells
+                        a screen-reader user which status is highlighted, since
+                        the cue is otherwise purely visual. */}
+                    <button
+                      type="button"
+                      aria-pressed={isActive}
+                      onMouseEnter={() => setActiveCategory(entry.name)}
+                      onFocus={() => setActiveCategory(entry.name)}
+                      onClick={() => setActiveCategory(entry.name)}
+                      className="flex min-w-0 w-full items-center gap-3 rounded-sm text-left transition-opacity duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      style={{ opacity: isActive ? 1 : INACTIVE_LEGEND_OPACITY }}
+                    >
+                      {/* A capsule, not a 12px square: it carries the slice colour
+                          at a size that reads next to the ring. */}
+                      <span
+                        className="h-3.5 w-7 shrink-0 rounded-full"
+                        style={{ background: entry.color }}
+                      />
+                      <span
+                        className={cn(
+                          "min-w-0 flex-1 truncate text-sm",
+                          isActive ? "font-semibold" : "font-normal",
+                        )}
+                        style={{ color: titleColor }}
+                        title={entry.name}
+                      >
+                        {entry.name}
+                      </span>
+                      {/* tabular-nums keeps the counts in a straight right-hand
+                          column instead of shifting with digit width. */}
+                      <span
+                        className="shrink-0 text-sm font-semibold tabular-nums"
+                        style={{ color: titleColor }}
+                      >
+                        {entry.value}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           </div>
 
