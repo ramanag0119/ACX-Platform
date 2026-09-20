@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import {
     Dialog,
     DialogContent,
@@ -18,7 +19,7 @@ import { CheckCircle, XCircle } from "lucide-react";
 import { DataState } from "@/core/components/DataState";
 import { useDevices, useOccupancyDetail, useServiceRequests } from "@/lib/api/hooks";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
-import { roomStatusBadgeClass, roomStatusTextClass } from "../lib/roomStatus";
+import { roomStatusBadgeClass } from "../lib/roomStatus";
 import { RoomPowerEnergy } from "./RoomPowerEnergy";
 
 interface RoomDetailsModalProps {
@@ -32,11 +33,62 @@ interface RoomDetailsModalProps {
     status?: string;
 }
 
+/**
+ * The dash shown wherever a value is absent.
+ *
+ * It was spelled out 21 times across this file: in the two date formatters, in
+ * three prop defaults, and in sixteen inline fallbacks. Naming it once means
+ * the dialog cannot drift into two different spellings of "no value", and
+ * there is a single place to change should it ever become an em dash or
+ * wording like "Not recorded".
+ */
+const EMPTY_VALUE = "-";
+
+/**
+ * Label and value styling for the two detail grids, written once.
+ *
+ * Every field used to carry its own copy of these class strings, lifted from
+ * TableHead -- `py-2.5 px-3` included. That padding is table-cell padding and
+ * it did two unhelpful things in a grid: the horizontal half indented each
+ * VALUE 12px past the LABEL above it, so no column actually lined up, and the
+ * vertical half padded out a dialog that is already tall enough to scroll.
+ *
+ * `block` matters too. The values were inline spans, and vertical margin does
+ * not apply to an inline box, so the `space-y-1` gap between label and value
+ * was never being honoured either.
+ *
+ * Colour, size, weight and casing are unchanged -- that is the typography the
+ * brief says to retain.
+ */
+const FIELD_LABEL = "text-muted-foreground block text-xs uppercase tracking-wider";
+const FIELD_VALUE =
+    "text-muted-foreground dark:text-slate-400 block text-[11px] font-semibold uppercase tracking-wider";
+
+/** One label/value pair in either detail grid. */
+const Field = ({
+    label,
+    value,
+    valueClassName = FIELD_VALUE,
+    title,
+}: {
+    label: string;
+    value: ReactNode;
+    valueClassName?: string;
+    title?: string;
+}) => (
+    <div className="space-y-1">
+        <span className={FIELD_LABEL}>{label} :</span>
+        <span className={valueClassName} title={title}>
+            {value}
+        </span>
+    </div>
+);
+
 const formatDate = (value: string | null | undefined) =>
-    value ? new Date(value).toLocaleDateString() : "-";
+    value ? new Date(value).toLocaleDateString() : EMPTY_VALUE;
 
 const formatDateTime = (value: string | null | undefined) =>
-    value ? new Date(value).toLocaleString() : "-";
+    value ? new Date(value).toLocaleString() : EMPTY_VALUE;
 
 /**
  * Room detail dialog, fully backend-driven.
@@ -63,9 +115,9 @@ export function RoomDetailsModal({
     roomNo,
     isOpen,
     onClose,
-    roomType = "-",
-    guestName = "-",
-    status = "-",
+    roomType = EMPTY_VALUE,
+    guestName = EMPTY_VALUE,
+    status = EMPTY_VALUE,
 }: RoomDetailsModalProps) {
     const enabled = isOpen ? amenityId : null;
     const occupancyQuery = useOccupancyDetail(enabled);
@@ -82,7 +134,6 @@ export function RoomDetailsModal({
     const stay = occupancy?.current_stay;
     const devices = devicesQuery.data?.items ?? [];
     const requests = requestsQuery.data?.items ?? [];
-    const occupants = occupancy?.occupants ?? [];
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
@@ -124,83 +175,63 @@ export function RoomDetailsModal({
                             </h3>
                             <DataState isLoading={occupancyQuery.isLoading} error={occupancyQuery.error}>
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-4 text-sm">
-                                    <div className="space-y-1">
-                                        <span className="text-muted-foreground block text-xs uppercase tracking-wider">
-                                            Room Allotted :
-                                        </span>
-                                        <span className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">{occupancy?.room_name ?? roomNo}</span>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <span className="text-muted-foreground block text-xs uppercase tracking-wider">
-                                            Room Category :
-                                        </span>
-                                        <span className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">
-                                            {occupancy?.amenity_type_name ?? roomType}
-                                        </span>
-                                    </div>
+                                    {/* Row 1. "Room Allotted" is gone: the room
+                                        number is already the dialog's title.
+                                        "Room Status" is gone too -- the header
+                                        badge top-right carries the same value. */}
+                                    <Field
+                                        label="Category"
+                                        value={occupancy?.amenity_type_name ?? roomType}
+                                    />
                                     {/* Building and floor are separate columns on
                                         the occupancy projection, so they are shown
                                         separately rather than concatenated. */}
-                                    <div className="space-y-1">
-                                        <span className="text-muted-foreground block text-xs uppercase tracking-wider">
-                                            Tower / Building :
-                                        </span>
-                                        <span className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">
-                                            {occupancy?.building_name ?? "-"}
-                                        </span>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <span className="text-muted-foreground block text-xs uppercase tracking-wider">
-                                            Floor :
-                                        </span>
-                                        <span className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">
-                                            {occupancy?.floor_name ?? "-"}
-                                        </span>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <span className="text-muted-foreground block text-xs uppercase tracking-wider">
-                                            Room Status :
-                                        </span>
-                                        <span
-                                            className={`text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3 ${roomStatusTextClass(
-                                                occupancy?.status_name ?? status,
-                                            )}`}
-                                        >
-                                            {occupancy?.status_name ?? status}
-                                        </span>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <span className="text-muted-foreground block text-xs uppercase tracking-wider">
-                                            Room Allocations :
-                                        </span>
-                                        <span className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">
-                                            {occupancy?.allocation_count ?? "-"}
-                                        </span>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <span className="text-muted-foreground block text-xs uppercase tracking-wider">
-                                            Checkin Date :
-                                        </span>
-                                        <span className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">
-                                            {formatDateTime(stay?.actual_checkin_time)}
-                                        </span>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <span className="text-muted-foreground block text-xs uppercase tracking-wider">
-                                            Expected Checkin :
-                                        </span>
-                                        <span className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">
-                                            {formatDateTime(stay?.expected_checkin_time)}
-                                        </span>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <span className="text-muted-foreground block text-xs uppercase tracking-wider">
-                                            Expected Checkout :
-                                        </span>
-                                        <span className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">
-                                            {formatDateTime(stay?.expected_checkout_time)}
-                                        </span>
-                                    </div>
+                                    <Field
+                                        label="Tower / Building"
+                                        value={occupancy?.building_name ?? EMPTY_VALUE}
+                                    />
+                                    <Field label="Floor" value={occupancy?.floor_name ?? EMPTY_VALUE} />
+                                    <Field
+                                        label="Room Allocations"
+                                        value={occupancy?.allocation_count ?? EMPTY_VALUE}
+                                    />
+
+                                    {/* Row 2 -- the four dates, in one row. */}
+                                    <Field
+                                        label="Expected Check-In"
+                                        value={formatDateTime(stay?.expected_checkin_time)}
+                                    />
+                                    <Field
+                                        label="Actual Check-In"
+                                        value={formatDateTime(stay?.actual_checkin_time)}
+                                    />
+                                    <Field
+                                        label="Expected Check-Out"
+                                        value={formatDateTime(stay?.expected_checkout_time)}
+                                    />
+                                    {/* ACTUAL CHECK-OUT IS STRUCTURALLY ALWAYS "-" HERE.
+                                        Not an oversight and not fixable in this file.
+
+                                        `current_stay` is selected by the IN_HOUSE
+                                        predicate in services/occupancy.py --
+                                        `actual_checkin_time IS NOT NULL AND
+                                        actual_checkout_time IS NULL`. A stay that
+                                        satisfies it has BY DEFINITION not checked
+                                        out, so the column is null for every stay
+                                        this dialog can ever display, and
+                                        CurrentStayRef does not project it at all.
+
+                                        Rendered because the brief asks for the
+                                        four-column row, and shown as "-" rather
+                                        than invented. The tooltip is what stops an
+                                        operator reading the dash as missing data.
+                                        Filling it needs the projection widened,
+                                        which is a backend change this task forbids. */}
+                                    <Field
+                                        label="Actual Check-Out"
+                                        value={EMPTY_VALUE}
+                                        title="This room's stay is still in house, so it has no actual check-out time yet."
+                                    />
                                 </div>
                             </DataState>
                         </section>
@@ -210,42 +241,37 @@ export function RoomDetailsModal({
                             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
                                 Occupants Details
                             </h3>
+                            {/* `isEmpty={!stay}`: every field in this section is
+                                stay-derived now that the occupant name list is
+                                gone, so "no stay" is exactly what makes it empty.
+                                The old `&& occupants.length === 0` could not
+                                change the result either way -- the backend only
+                                populates occupants when a current stay exists, so
+                                that term was always true here. */}
                             <DataState
                                 isLoading={occupancyQuery.isLoading}
                                 error={occupancyQuery.error}
-                                isEmpty={!stay && occupants.length === 0}
+                                isEmpty={!stay}
                                 emptyTitle="No active occupants recorded for this room."
                             >
                                 <div className="rounded-md border border-border p-4">
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
-                                        <div className="flex flex-col gap-1">
-                                            <span className="text-xs text-muted-foreground uppercase tracking-wider">Primary Guest</span>
-                                            <span className="font-medium text-base">
-                                                {stay?.booker?.name ?? guestName}
-                                            </span>
-                                        </div>
-                                        <div className="flex flex-col gap-1">
-                                            <span className="text-xs text-muted-foreground uppercase tracking-wider">Stay Reference</span>
-                                            <span className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">
-                                                {stay?.internal_stay_ref_number ?? "-"}
-                                            </span>
-                                        </div>
-                                        <div className="flex flex-col gap-1">
-                                            <span className="text-xs text-muted-foreground uppercase tracking-wider">Stay Status</span>
-                                            <span className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">{stay?.status ?? "-"}</span>
-                                        </div>
-                                        <div className="flex flex-col gap-1">
-                                            <span className="text-xs text-muted-foreground uppercase tracking-wider">Guests</span>
-                                            <span className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">{stay?.no_of_guests ?? "-"}</span>
-                                        </div>
-                                        <div className="flex flex-col gap-1 md:col-span-2">
-                                            <span className="text-xs text-muted-foreground uppercase tracking-wider">Occupants</span>
-                                            <span className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">
-                                                {occupants.length
-                                                    ? occupants.map((occupant) => occupant.guest.name).join(", ")
-                                                    : "-"}
-                                            </span>
-                                        </div>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-4 text-sm">
+                                        {/* The "Occupants" name list is gone: it
+                                            restated the same party that "Guests"
+                                            already counts. The four primary fields
+                                            now sit on one row, matching the grid
+                                            used by Room Details above. */}
+                                        <Field
+                                            label="Primary Guest"
+                                            value={stay?.booker?.name ?? guestName}
+                                            valueClassName="block font-medium text-base"
+                                        />
+                                        <Field
+                                            label="Stay Reference"
+                                            value={stay?.internal_stay_ref_number ?? EMPTY_VALUE}
+                                        />
+                                        <Field label="Stay Status" value={stay?.status ?? EMPTY_VALUE} />
+                                        <Field label="Guests" value={stay?.no_of_guests ?? EMPTY_VALUE} />
                                     </div>
                                 </div>
                             </DataState>
@@ -284,11 +310,11 @@ export function RoomDetailsModal({
                                         <TableBody>
                                             {devices.map((device) => (
                                                 <TableRow key={device.id} className="hover:bg-muted/5">
-                                                    <TableCell>{device.device_type_name ?? "-"}</TableCell>
+                                                    <TableCell>{device.device_type_name ?? EMPTY_VALUE}</TableCell>
                                                     <TableCell>{device.amenity_name ?? roomNo}</TableCell>
-                                                    <TableCell>{device.device_name ?? "-"}</TableCell>
+                                                    <TableCell>{device.device_name ?? EMPTY_VALUE}</TableCell>
                                                     <TableCell className="font-mono text-xs">
-                                                        {device.device_uid || "-"}
+                                                        {device.device_uid || EMPTY_VALUE}
                                                     </TableCell>
                                                     <TableCell>
                                                         <span
@@ -300,7 +326,7 @@ export function RoomDetailsModal({
                                                                     : "text-muted-foreground"
                                                             }
                                                         >
-                                                            {device.device_config_status ?? "-"}
+                                                            {device.device_config_status ?? EMPTY_VALUE}
                                                         </span>
                                                     </TableCell>
                                                     <TableCell className="text-center">
@@ -368,25 +394,25 @@ export function RoomDetailsModal({
                                         <TableBody>
                                             {requests.map((item) => (
                                                 <TableRow key={item.id} className="hover:bg-muted/5">
-                                                    <TableCell>{item.category_name ?? "-"}</TableCell>
-                                                    <TableCell>{item.service_type_name ?? "-"}</TableCell>
+                                                    <TableCell>{item.category_name ?? EMPTY_VALUE}</TableCell>
+                                                    <TableCell>{item.service_type_name ?? EMPTY_VALUE}</TableCell>
                                                     <TableCell>{formatDate(item.created_on)}</TableCell>
                                                     <TableCell>{formatDate(item.expected_date)}</TableCell>
                                                     <TableCell>{formatDate(item.completed_on)}</TableCell>
-                                                    <TableCell>{item.department_name ?? "-"}</TableCell>
+                                                    <TableCell>{item.department_name ?? EMPTY_VALUE}</TableCell>
                                                     <TableCell>
                                                         {item.assignee
                                                             ? [item.assignee.emp_id, item.assignee.name]
                                                                   .filter(Boolean)
                                                                   .join(" / ")
-                                                            : "-"}
+                                                            : EMPTY_VALUE}
                                                     </TableCell>
                                                     <TableCell className="text-right">
                                                         <Badge
                                                             variant="secondary"
                                                             className="bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400"
                                                         >
-                                                            {item.status_name ?? "-"}
+                                                            {item.status_name ?? EMPTY_VALUE}
                                                         </Badge>
                                                     </TableCell>
                                                 </TableRow>
