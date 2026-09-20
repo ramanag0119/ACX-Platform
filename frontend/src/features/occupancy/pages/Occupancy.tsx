@@ -17,10 +17,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Info, ArrowRight, Wrench, ShieldCheck, BatteryLow, Star, UserCheck, Clock, Minus, CheckCircle2 } from "lucide-react";
+import { ArrowRight, Wrench, ShieldCheck, BatteryLow, Star, UserCheck, Clock, Minus, CheckCircle2 } from "lucide-react";
 import { RoomDetailsModal } from "../components/RoomDetailsModal";
-import { conditionLabel, roomStatusBadgeClass } from "../lib/roomStatus";
+import { conditionLabel } from "../lib/roomStatus";
 import { DataState, TableLoading } from "@/core/components/DataState";
 import { useAuth } from "@/core/contexts/AuthContext";
 import { ReallocateRoomDialog } from "../components/ReallocateRoomDialog";
@@ -548,7 +547,7 @@ const Occupancy = () => {
               error={error}
               isEmpty={filteredRooms.length === 0}
               emptyTitle="No Rooms match this view"
-              loader={<TableLoading columns={13} />}
+              loader={<TableLoading columns={11} />}
             >
               <Table>
                 <TableHeader>
@@ -562,8 +561,6 @@ const Occupancy = () => {
                     <TableHead className="text-gray-600 dark:text-slate-300 font-medium">Check-Out</TableHead>
                     <TableHead className="text-gray-600 dark:text-slate-300 font-medium text-center">Generate <span className="text-gray-400 dark:text-slate-500">↓</span></TableHead>
                     <TableHead className="text-gray-600 dark:text-slate-300 font-medium text-center">Status</TableHead>
-                    <TableHead className="text-gray-600 dark:text-slate-300 font-medium text-center">Condition</TableHead>
-                    <TableHead className="text-gray-600 dark:text-slate-300 font-medium text-center">Details</TableHead>
                     <TableHead className="text-gray-600 dark:text-slate-300 font-medium text-center">Reassign</TableHead>
                     <TableHead className="text-gray-600 dark:text-slate-300 font-medium text-center">Invoice <span className="text-gray-400 dark:text-slate-500">↓</span></TableHead>
                   </TableRow>
@@ -648,11 +645,6 @@ const Occupancy = () => {
                         )}
                       </TableCell>
                       <TableCell className="text-center">
-                        <Badge variant="outline" className={roomStatusBadgeClass(room.statusName)}>
-                          {room.statusName}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-center">
                         {/* A div, not a button: the condition pills inside are
                             interactive-looking elements and a button may not
                             nest one. `disabled` does not exist on a div, so the
@@ -693,30 +685,7 @@ const Occupancy = () => {
                       <TableCell className="text-center">
                         <Button
                           size="sm"
-                          // `bg-brand` is the Submit-button colour (#5865f2,
-                          // see tailwind.config.ts) rather than a second
-                          // accent invented for this one cell.
-                          //
-                          // It is also the safer token: the status-pill rules
-                          // in index.css match on `[class*="bg-amber-"]` and
-                          // friends, so the previous amber fill was repainted
-                          // to a 6%-opacity near-white surface. `bg-brand`
-                          // matches none of those selectors.
-                          //
-                          // `hms-action-on-fill`: keeps its solid colour, so
-                          // the icon stays white rather than taking the
-                          // mid-grey meant for flattened action buttons.
-                          className="hms-action-on-fill bg-brand hover:bg-brand-hover text-white w-8 h-8 p-0"
-                          onClick={() => handleDetailsClick(room)}
-                        >
-                          <Info className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Button
-                          size="sm"
-                          // Same as Details above: `bg-brand` is the
-                          // Submit-button colour (#5865f2, see
+                          // `bg-brand` is the Submit-button colour (#5865f2, see
                           // tailwind.config.ts), so the row's actions share one
                           // token instead of each carrying its own accent.
                           //
