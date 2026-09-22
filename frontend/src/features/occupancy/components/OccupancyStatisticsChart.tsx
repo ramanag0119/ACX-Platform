@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { RefreshCw } from "lucide-react";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { cn } from "@/lib/utils";
 import { DataState } from "@/core/components/DataState";
 import { useAmenityStatuses, useCount, useCounts } from "@/lib/api/hooks";
@@ -9,6 +9,7 @@ import type { QueryParams } from "@/lib/api/client";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
 import { useSurfaceTokens } from "@/core/styles/surfaceTokens";
 import { roomStatusColor } from "../lib/roomStatus";
+import { OCCUPANCY_PATH, statusDetailPath } from "../lib/occupancyLinks";
 
 /**
  * Room counts by the real `amenity_status` row, from GET /occupancy.
@@ -36,16 +37,6 @@ import { roomStatusColor } from "../lib/roomStatus";
  */
 
 /**
- * The inactive treatment is OPACITY, not a fixed grey.
- *
- * The spec offered either a muted slate (#2D3748 / #374151) or a fade. This
- * card is themed -- `useSurfaceTokens` returns a LIGHT palette as well as the
- * dark one -- so a hardcoded slate would sit on a white card as a dark smudge
- * and read as a fifth, darker status rather than as "dimmed". Fading the real
- * accent colour dims correctly against either background and keeps each slice
- * recognisable as its own status while muted.
- */
-/**
  * The one `amenity_status` row whose centre reading comes from the stay-based
  * in-house count rather than from its own slice share.
  *
@@ -55,10 +46,25 @@ import { roomStatusColor } from "../lib/roomStatus";
  */
 const IN_HOUSE_STATUS = "occupied";
 
+/**
+ * The inactive treatment is OPACITY, not a fixed grey.
+ *
+ * The spec offered either a muted slate (#2D3748 / #374151) or a fade. This
+ * card is themed -- `useSurfaceTokens` returns a LIGHT palette as well as the
+ * dark one -- so a hardcoded slate would sit on a white card as a dark smudge
+ * and read as a fifth, darker status rather than as "dimmed". Fading the real
+ * accent colour dims correctly against either background and keeps each slice
+ * recognisable as its own status while muted.
+ *
+ * Two values, because the ring and the legend need different depths: a faded
+ * arc still has to read as a coloured band, while faded text only has to stay
+ * legible.
+ */
 const INACTIVE_SLICE_OPACITY = 0.2;
 const INACTIVE_LEGEND_OPACITY = 0.45;
 
 export const OccupancyStatisticsChart = () => {
+  const navigate = useNavigate();
 
   const statusesQuery = useAmenityStatuses({ page: 1, page_size: MAX_PAGE_SIZE });
   // Memoised so the identity is stable between renders: a bare `?? []` hands a
@@ -92,33 +98,52 @@ export const OccupancyStatisticsChart = () => {
     total && inHouseCount !== null ? Math.round((inHouseCount / total) * 100) : null;
 
   /**
-   * Which status is highlighted. `null` means "nobody has pointed at anything
-   * yet", which resolves to the default below rather than being stored as a
-   * literal "occupied": the slice names come from the `amenity_status` lookup
-   * table, so this component must not assume a spelling the table owns.
+   * Which status the pointer is on. `null` means "the pointer is nowhere near
+   * this card", and that is the RESTING state -- not a status.
    *
-   * Hover and click both write it. On a pointer device hover already does the
-   * work, so the click handler is what makes the chart usable on touch, where
-   * there is no hover at all.
+   * It used to fall through to a default, so one slice was always singled out
+   * and the other three sat permanently faded. The card opened looking as
+   * though a filter had been applied that nobody had asked for. Dimming now
+   * happens only while something is genuinely hovered or focused, and clearing
+   * this restores every slice and legend row to full strength.
+   *
+   * The slice names come from the `amenity_status` lookup table, so nothing
+   * here assumes a spelling that table owns.
    */
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
 
   /**
-   * The highlighted slice, resolved against the data actually on screen.
+   * The hovered status, resolved against the data actually on screen.
    *
-   * `data` drops any status with zero rooms, so a property with nothing
-   * Occupied has no Occupied slice -- defaulting blindly to it would highlight
-   * nothing and blank the centre. Falling through to the first slice keeps the
-   * card meaningful. The same guard re-resolves if a refetch removes the slice
-   * the user had selected.
+   * `data` drops any status with zero rooms, so a refetch can remove the slice
+   * the pointer was on. Re-resolving here means the highlight disappears with
+   * it rather than dimming everything against a status that is no longer drawn.
    */
-  const activeName = useMemo(() => {
-    if (activeCategory && data.some((slice) => slice.name === activeCategory)) {
-      return activeCategory;
-    }
+  const hoveredName = useMemo(
+    () =>
+      hoveredCategory && data.some((slice) => slice.name === hoveredCategory)
+        ? hoveredCategory
+        : null,
+    [hoveredCategory, data],
+  );
+
+  /** A slice fades only when a DIFFERENT one is being pointed at. */
+  const isDimmed = (name: string) => hoveredName !== null && name !== hoveredName;
+
+  /**
+   * Which status the centre figure describes.
+   *
+   * Separate from the highlight on purpose: the ring resting undimmed must
+   * still read something in the middle, so with no pointer this falls back to
+   * the in-house status exactly as the card always opened. Hovering overrides
+   * it, which is what makes the centre a readout of whatever is under the
+   * pointer.
+   */
+  const centreName = useMemo(() => {
+    if (hoveredName) return hoveredName;
     const occupied = data.find((slice) => slice.name.toLowerCase() === IN_HOUSE_STATUS);
     return occupied?.name ?? data[0]?.name ?? null;
-  }, [activeCategory, data]);
+  }, [hoveredName, data]);
 
   /**
    * THE CENTRE KEEPS TWO DIFFERENT FORMULAS, deliberately.
@@ -134,14 +159,14 @@ export const OccupancyStatisticsChart = () => {
    * what the spec asked for -- it named both the 11% and the "in house"
    * wording -- and it is recorded here because nothing on screen says it.
    */
-  const activeSlice = data.find((slice) => slice.name === activeName);
-  const isInHouseActive = activeName?.toLowerCase() === IN_HOUSE_STATUS;
-  const activePercent = isInHouseActive
+  const centreSlice = data.find((slice) => slice.name === centreName);
+  const isInHouseCentre = centreName?.toLowerCase() === IN_HOUSE_STATUS;
+  const centrePercent = isInHouseCentre
     ? inHousePercent
-    : total && activeSlice
-      ? Math.round((activeSlice.value / total) * 100)
+    : total && centreSlice
+      ? Math.round((centreSlice.value / total) * 100)
       : null;
-  const activeLabel = isInHouseActive ? "in house" : (activeName ?? "");
+  const centreLabel = isInHouseCentre ? "in house" : (centreName ?? "");
 
   const isLoading = statusesQuery.isLoading || perStatus.isLoading || roomTotal.isLoading;
   const error = statusesQuery.error ?? perStatus.error ?? roomTotal.error;
@@ -167,7 +192,6 @@ export const OccupancyStatisticsChart = () => {
     cardShadow,
     titleColor,
     textMuted: mutedColor,
-    tooltipBg,
   } = useSurfaceTokens();
 
   return (
@@ -188,7 +212,7 @@ export const OccupancyStatisticsChart = () => {
               same status, so this is the panel's detail view rather than a
               related-looking guess. */}
           <Link
-            to="/occupancy"
+            to={OCCUPANCY_PATH}
             className="text-xs underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
             style={{ color: mutedColor }}
           >
@@ -231,7 +255,16 @@ export const OccupancyStatisticsChart = () => {
                 middle, which is the gap that opened up between the ring and its
                 labels. Centred, the two sit together as one block and the spare
                 width falls outside the pair. */}
-            <div className="flex flex-1 min-h-0 min-w-0 items-center justify-center gap-6">
+            {/* onMouseLeave sits on the pair, not on the ring and the legend
+                separately: moving the pointer from a slice to its legend row
+                crosses the gap between them, and a reset on each child would
+                flash every slice back to full strength on the way past. One
+                handler here means the card returns to its resting state when
+                the pointer actually leaves it. */}
+            <div
+              className="flex flex-1 min-h-0 min-w-0 items-center justify-center gap-6"
+              onMouseLeave={() => setHoveredCategory(null)}
+            >
             {/* `aspect-square h-full` sizes the donut from the card's spare
                 height. Bounded both ways: a square sized off height takes its
                 width from that height, so max-h caps it and max-w stops it
@@ -249,6 +282,11 @@ export const OccupancyStatisticsChart = () => {
                 `all` would drag the arc geometry (`d`) into the animation
                 alongside Recharts' own enter animation. Fading only the
                 opacity keeps the ring geometry crisp. */}
+            {/* No <Tooltip>. Hovering a slice now writes the centre readout, so
+                a floating "Available : 19" restated what the middle of the ring
+                was already saying -- and Recharts anchors a pie tooltip over the
+                hole, so it said it ON TOP of the figure it was duplicating. The
+                centre is the readout; the ring does not need a second one. */}
             <div className="relative aspect-square h-full min-h-[160px] max-h-[200px] max-w-[55%] shrink-0 [&_*:focus:not(:focus-visible)]:outline-none [&_.recharts-sector]:transition-[fill-opacity] [&_.recharts-sector]:duration-300 [&_.recharts-sector]:ease-out">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -269,25 +307,20 @@ export const OccupancyStatisticsChart = () => {
                     startAngle={90}
                     endAngle={-270}
                     className="cursor-pointer"
-                    onMouseEnter={(_, index) => setActiveCategory(data[index]?.name ?? null)}
-                    onClick={(_, index) => setActiveCategory(data[index]?.name ?? null)}
+                    onMouseEnter={(_, index) => setHoveredCategory(data[index]?.name ?? null)}
+                    onClick={(_, index) => {
+                      const name = data[index]?.name;
+                      if (name) navigate(statusDetailPath(name));
+                    }}
                   >
                     {data.map((entry) => (
                       <Cell
                         key={entry.name}
                         fill={entry.color}
-                        fillOpacity={entry.name === activeName ? 1 : INACTIVE_SLICE_OPACITY}
+                        fillOpacity={isDimmed(entry.name) ? INACTIVE_SLICE_OPACITY : 1}
                       />
                     ))}
                   </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      background: tooltipBg,
-                      border: "1px solid rgba(124,92,255,0.12)",
-                      borderRadius: "8px",
-                      color: titleColor,
-                    }}
-                  />
                 </PieChart>
               </ResponsiveContainer>
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
@@ -295,7 +328,7 @@ export const OccupancyStatisticsChart = () => {
                   className="text-[28px] font-bold leading-none tracking-tight"
                   style={{ color: titleColor }}
                 >
-                  {activePercent === null ? "-" : `${activePercent}%`}
+                  {centrePercent === null ? "-" : `${centrePercent}%`}
                 </span>
                 {/* No `capitalize` here. `amenity_status` already stores
                     display-cased names ("Available", "Occupied"), so the class
@@ -304,7 +337,7 @@ export const OccupancyStatisticsChart = () => {
                     "In House". No opacity transition either: this element's
                     opacity never changes, so it was dead styling. */}
                 <span className="mt-1.5 text-[11px]" style={{ color: mutedColor }}>
-                  {activeLabel}
+                  {centreLabel}
                 </span>
               </div>
             </div>
@@ -318,22 +351,24 @@ export const OccupancyStatisticsChart = () => {
                 Capped, the number sits just past the longest label. */}
             <ul className="min-w-0 max-w-[200px] flex-1 space-y-2.5">
               {data.map((entry) => {
-                const isActive = entry.name === activeName;
+                const isHovered = entry.name === hoveredName;
                 return (
                   <li key={entry.name} className="flex min-w-0">
-                    {/* A real <button>, so the same highlight is reachable by
-                        keyboard and announced as pressable -- the ring's SVG
-                        sectors cannot carry that. `aria-pressed` is what tells
-                        a screen-reader user which status is highlighted, since
-                        the cue is otherwise purely visual. */}
-                    <button
-                      type="button"
-                      aria-pressed={isActive}
-                      onMouseEnter={() => setActiveCategory(entry.name)}
-                      onFocus={() => setActiveCategory(entry.name)}
-                      onClick={() => setActiveCategory(entry.name)}
+                    {/* A real <Link>, not a button: clicking a status now opens
+                        that status's rooms on /occupancy, so this is navigation
+                        and should behave like it -- a real href the browser can
+                        show, open in a new tab or middle-click. Keyboard users
+                        reach it in tab order and get the same highlight through
+                        onFocus, which onBlur clears so the card does not stay
+                        dimmed after focus moves on. */}
+                    <Link
+                      to={statusDetailPath(entry.name)}
+                      title={`Show ${entry.value} ${entry.name} rooms`}
+                      onMouseEnter={() => setHoveredCategory(entry.name)}
+                      onFocus={() => setHoveredCategory(entry.name)}
+                      onBlur={() => setHoveredCategory(null)}
                       className="flex min-w-0 w-full items-center gap-3 rounded-sm text-left transition-opacity duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      style={{ opacity: isActive ? 1 : INACTIVE_LEGEND_OPACITY }}
+                      style={{ opacity: isDimmed(entry.name) ? INACTIVE_LEGEND_OPACITY : 1 }}
                     >
                       {/* A capsule, not a 12px square: it carries the slice colour
                           at a size that reads next to the ring. */}
@@ -344,10 +379,9 @@ export const OccupancyStatisticsChart = () => {
                       <span
                         className={cn(
                           "min-w-0 flex-1 truncate text-sm",
-                          isActive ? "font-semibold" : "font-normal",
+                          isHovered ? "font-semibold" : "font-normal",
                         )}
                         style={{ color: titleColor }}
-                        title={entry.name}
                       >
                         {entry.name}
                       </span>
@@ -359,7 +393,7 @@ export const OccupancyStatisticsChart = () => {
                       >
                         {entry.value}
                       </span>
-                    </button>
+                    </Link>
                   </li>
                 );
               })}

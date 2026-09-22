@@ -372,17 +372,40 @@ export const StatusSection = ({
                       boxShadow: isSelected ? "0 4px 12px rgba(17,12,46,0.18)" : "none",
                     }}
                   >
+                    {/* Dot and label share one flex row. `min-w-0` + `truncate`
+                        on the label is what keeps the dot fixed: without it a
+                        long identifier wraps, the row grows to two lines and
+                        `items-center` re-centres the dot against the taller
+                        box, so the dot sits at a different height on "101" than
+                        on "CONF01". The dot itself is `shrink-0`, so it stays a
+                        circle rather than being squeezed into an ellipse. */}
                     <div className="flex items-center gap-2">
                       <span
                         className="h-2.5 w-2.5 shrink-0 rounded-full"
                         style={{ background: dotColor }}
                       />
-                      <p className="font-bold text-lg leading-none" style={{ color: roomNumberText }}>
+                      {/* `font-semibold` with `tracking-wide`, not `font-bold`.
+                          Every tile already used one class string, so the
+                          alphanumeric identifiers were never a larger size than
+                          the numeric ones -- they just carry more visual mass at
+                          700 weight, because six all-caps glyphs set solid read
+                          heavier than three digits. Dropping to 600 and opening
+                          the letter-spacing evens them out and stops the caps
+                          running together. */}
+                      <p
+                        className="min-w-0 truncate font-semibold text-lg leading-none tracking-wide"
+                        style={{ color: roomNumberText }}
+                      >
                         {room.number}
                       </p>
                     </div>
-                    <p className="text-xs mt-2.5" style={{ color: roomTypeText }}>{room.type}</p>
-                    <p className="text-sm mt-2" style={{ color: roomStatusText }}>
+                    {/* Category sits below the identifier in the muted tone;
+                        status one step brighter and at medium weight, so the
+                        three lines read as a hierarchy rather than a stack. */}
+                    <p className="text-xs font-normal mt-2.5" style={{ color: roomTypeText }}>
+                      {room.type}
+                    </p>
+                    <p className="text-sm font-medium mt-2" style={{ color: roomStatusText }}>
                       {room.statusName}
                     </p>
                     {room.conditions.length > 0 && (
