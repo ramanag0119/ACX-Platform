@@ -21,6 +21,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ArrowRight, Wrench, ShieldCheck, BatteryLow, Star, UserCheck, Clock, Minus, CheckCircle2 } from "lucide-react";
 import { RoomDetailsModal } from "../components/RoomDetailsModal";
 import { conditionLabel } from "../lib/roomStatus";
+import { STATUS_QUERY_PARAM } from "../lib/occupancyLinks";
 import { DataState, TableLoading } from "@/core/components/DataState";
 import { useAuth } from "@/core/contexts/AuthContext";
 import { ReallocateRoomDialog } from "../components/ReallocateRoomDialog";
@@ -146,6 +147,19 @@ const isOverdueCheckout = (room: RoomRow) =>
   room.checkOutTime !== null &&
   new Date(room.checkOutTime).getTime() < Date.now();
 
+/**
+ * The "no filter applied" sentinel shared by the status, building and floor
+ * selects.
+ *
+ * It was the bare string "all" in ten places -- three `useState` defaults, four
+ * conditionals that decide whether to send a query param, a reset, and three
+ * `<SelectItem value>`s. Those have to agree exactly or a select silently stops
+ * clearing its filter, so the literal is named once. It is deliberately NOT a
+ * status name: `amenity_status` owns that vocabulary, and this value must never
+ * collide with a row in it.
+ */
+const ALL_FILTER_VALUE = "all";
+
 const Occupancy = () => {
   const [activeTab, setActiveTab] = useState<"guest" | "nonGuest">("guest");
   const [entriesPerPage, setEntriesPerPage] = useState("10");
@@ -164,9 +178,11 @@ const Occupancy = () => {
    * resolves to no id and simply leaves the list unfiltered.
    */
   const [searchParams] = useSearchParams();
-  const [filterBy, setFilterBy] = useState(() => searchParams.get("status") || "all");
-  const [buildingFilter, setBuildingFilter] = useState("all");
-  const [floorFilter, setFloorFilter] = useState("all");
+  const [filterBy, setFilterBy] = useState(
+    () => searchParams.get(STATUS_QUERY_PARAM) || ALL_FILTER_VALUE,
+  );
+  const [buildingFilter, setBuildingFilter] = useState(ALL_FILTER_VALUE);
+  const [floorFilter, setFloorFilter] = useState(ALL_FILTER_VALUE);
   const [currentPage, setCurrentPage] = useState(1);
   // Pagination sits at the bottom of the table; without this the new
   // page kept the old scroll offset and the sticky header stayed
@@ -191,7 +207,7 @@ const Occupancy = () => {
   const statusesQuery = useAmenityStatuses({ page: 1, page_size: MAX_PAGE_SIZE });
   const statuses = statusesQuery.data?.items ?? [];
   const selectedStatusId =
-    filterBy === "all"
+    filterBy === ALL_FILTER_VALUE
       ? undefined
       : statuses.find((status) => status.amenity_status_name === filterBy)?.id;
 
@@ -212,7 +228,7 @@ const Occupancy = () => {
           page: 1,
           page_size: MAX_PAGE_SIZE,
           // Floors follow the chosen building; the endpoint owns the join.
-          ...(buildingFilter !== "all" ? { building_id: buildingFilter } : {}),
+          ...(buildingFilter !== ALL_FILTER_VALUE ? { building_id: buildingFilter } : {}),
         }
       : undefined,
     { enabled: mayReadFacility },
@@ -222,8 +238,8 @@ const Occupancy = () => {
 
   /** The drill-down, as the endpoint's own query parameters. */
   const scopeParams = {
-    ...(buildingFilter !== "all" ? { building_id: buildingFilter } : {}),
-    ...(floorFilter !== "all" ? { floor_id: floorFilter } : {}),
+    ...(buildingFilter !== ALL_FILTER_VALUE ? { building_id: buildingFilter } : {}),
+    ...(floorFilter !== ALL_FILTER_VALUE ? { floor_id: floorFilter } : {}),
     ...(selectedStatusId !== undefined ? { status: selectedStatusId } : {}),
   };
 
@@ -309,7 +325,7 @@ const Occupancy = () => {
    */
   const changeBuilding = (value: string) => {
     setBuildingFilter(value);
-    setFloorFilter("all");
+    setFloorFilter(ALL_FILTER_VALUE);
     setCurrentPage(1);
   };
 
@@ -491,7 +507,7 @@ const Occupancy = () => {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="bg-popover text-popover-foreground border-border text-xs">
-                        <SelectItem value="all">All Buildings</SelectItem>
+                        <SelectItem value={ALL_FILTER_VALUE}>All Buildings</SelectItem>
                         {buildings.map((building) => (
                           <SelectItem key={building.id} value={building.id}>
                             {building.name}
@@ -508,7 +524,7 @@ const Occupancy = () => {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="bg-popover text-popover-foreground border-border text-xs">
-                        <SelectItem value="all">All Floors</SelectItem>
+                        <SelectItem value={ALL_FILTER_VALUE}>All Floors</SelectItem>
                         {floors.map((floor) => (
                           <SelectItem key={floor.id} value={floor.id}>
                             {floor.name}
@@ -533,7 +549,7 @@ const Occupancy = () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="bg-popover text-popover-foreground border-border text-xs">
-                    <SelectItem value="all">Show All</SelectItem>
+                    <SelectItem value={ALL_FILTER_VALUE}>Show All</SelectItem>
                     {statuses.map((status) => (
                       <SelectItem key={status.id} value={status.amenity_status_name}>
                         {status.amenity_status_name}

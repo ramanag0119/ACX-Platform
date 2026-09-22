@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { RefreshCw } from "lucide-react";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { cn } from "@/lib/utils";
 import { DataState } from "@/core/components/DataState";
 import { useAmenityStatuses, useCount, useCounts } from "@/lib/api/hooks";
@@ -9,6 +9,7 @@ import type { QueryParams } from "@/lib/api/client";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
 import { useSurfaceTokens } from "@/core/styles/surfaceTokens";
 import { roomStatusColor } from "../lib/roomStatus";
+import { OCCUPANCY_PATH, statusDetailPath } from "../lib/occupancyLinks";
 
 /**
  * Room counts by the real `amenity_status` row, from GET /occupancy.
@@ -36,16 +37,6 @@ import { roomStatusColor } from "../lib/roomStatus";
  */
 
 /**
- * The inactive treatment is OPACITY, not a fixed grey.
- *
- * The spec offered either a muted slate (#2D3748 / #374151) or a fade. This
- * card is themed -- `useSurfaceTokens` returns a LIGHT palette as well as the
- * dark one -- so a hardcoded slate would sit on a white card as a dark smudge
- * and read as a fifth, darker status rather than as "dimmed". Fading the real
- * accent colour dims correctly against either background and keeps each slice
- * recognisable as its own status while muted.
- */
-/**
  * The one `amenity_status` row whose centre reading comes from the stay-based
  * in-house count rather than from its own slice share.
  *
@@ -55,20 +46,22 @@ import { roomStatusColor } from "../lib/roomStatus";
  */
 const IN_HOUSE_STATUS = "occupied";
 
+/**
+ * The inactive treatment is OPACITY, not a fixed grey.
+ *
+ * The spec offered either a muted slate (#2D3748 / #374151) or a fade. This
+ * card is themed -- `useSurfaceTokens` returns a LIGHT palette as well as the
+ * dark one -- so a hardcoded slate would sit on a white card as a dark smudge
+ * and read as a fifth, darker status rather than as "dimmed". Fading the real
+ * accent colour dims correctly against either background and keeps each slice
+ * recognisable as its own status while muted.
+ *
+ * Two values, because the ring and the legend need different depths: a faded
+ * arc still has to read as a coloured band, while faded text only has to stay
+ * legible.
+ */
 const INACTIVE_SLICE_OPACITY = 0.2;
 const INACTIVE_LEGEND_OPACITY = 0.45;
-
-/**
- * Where a status drills through to.
- *
- * /occupancy lists the same rooms this card counts and filters by the same
- * `amenity_status` row, so it is this panel's detail view rather than a
- * related-looking guess. The status travels as its NAME because that is what
- * the screen's own filter is keyed on; the id is a lookup-table detail neither
- * end should hardcode in a URL.
- */
-const statusDetailPath = (statusName: string) =>
-    `/occupancy?status=${encodeURIComponent(statusName)}`;
 
 export const OccupancyStatisticsChart = () => {
   const navigate = useNavigate();
@@ -199,7 +192,6 @@ export const OccupancyStatisticsChart = () => {
     cardShadow,
     titleColor,
     textMuted: mutedColor,
-    tooltipBg,
   } = useSurfaceTokens();
 
   return (
@@ -220,7 +212,7 @@ export const OccupancyStatisticsChart = () => {
               same status, so this is the panel's detail view rather than a
               related-looking guess. */}
           <Link
-            to="/occupancy"
+            to={OCCUPANCY_PATH}
             className="text-xs underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
             style={{ color: mutedColor }}
           >
@@ -290,6 +282,11 @@ export const OccupancyStatisticsChart = () => {
                 `all` would drag the arc geometry (`d`) into the animation
                 alongside Recharts' own enter animation. Fading only the
                 opacity keeps the ring geometry crisp. */}
+            {/* No <Tooltip>. Hovering a slice now writes the centre readout, so
+                a floating "Available : 19" restated what the middle of the ring
+                was already saying -- and Recharts anchors a pie tooltip over the
+                hole, so it said it ON TOP of the figure it was duplicating. The
+                centre is the readout; the ring does not need a second one. */}
             <div className="relative aspect-square h-full min-h-[160px] max-h-[200px] max-w-[55%] shrink-0 [&_*:focus:not(:focus-visible)]:outline-none [&_.recharts-sector]:transition-[fill-opacity] [&_.recharts-sector]:duration-300 [&_.recharts-sector]:ease-out">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -324,14 +321,6 @@ export const OccupancyStatisticsChart = () => {
                       />
                     ))}
                   </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      background: tooltipBg,
-                      border: "1px solid rgba(124,92,255,0.12)",
-                      borderRadius: "8px",
-                      color: titleColor,
-                    }}
-                  />
                 </PieChart>
               </ResponsiveContainer>
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
