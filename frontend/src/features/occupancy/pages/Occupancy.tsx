@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -149,7 +150,21 @@ const Occupancy = () => {
   const [activeTab, setActiveTab] = useState<"guest" | "nonGuest">("guest");
   const [entriesPerPage, setEntriesPerPage] = useState("10");
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterBy, setFilterBy] = useState("all");
+  /**
+   * The status filter, seeded from `?status=` so the Occupancy Statistics donut
+   * can drill through to it. Clicking Available there lands here already
+   * filtered to Available rather than on the unfiltered list.
+   *
+   * Read once, as the initial value only: this is a starting point, not a bound
+   * parameter, so changing the select afterwards does not fight the URL and the
+   * user is free to widen the filter on the screen they just landed on.
+   *
+   * The value is an `amenity_status_name`, matched against the lookup table
+   * below exactly as a hand-picked selection is. A name the table does not hold
+   * resolves to no id and simply leaves the list unfiltered.
+   */
+  const [searchParams] = useSearchParams();
+  const [filterBy, setFilterBy] = useState(() => searchParams.get("status") || "all");
   const [buildingFilter, setBuildingFilter] = useState("all");
   const [floorFilter, setFloorFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
