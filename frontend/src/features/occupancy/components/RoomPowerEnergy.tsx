@@ -40,16 +40,22 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { DataState } from "@/core/components/DataState";
+import { DETAIL_GRID, EMPTY_VALUE, Field } from "./DetailField";
 import { useAuth } from "@/core/contexts/AuthContext";
 import { useDeviceStats, useEnergySummary } from "@/lib/api/hooks";
 import { MAX_PAGE_SIZE, type DeviceStatRead } from "@/lib/api/types";
 
 const PAGE = { page: 1, page_size: MAX_PAGE_SIZE };
 
-const LABEL_CLASS =
-    "text-muted-foreground block text-xs uppercase tracking-wider";
-const VALUE_CLASS =
-    "text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3";
+/**
+ * Column heading styling for the per-device table below the totals.
+ *
+ * The grid above it no longer declares styles of its own: its labels and values
+ * come from the shared `Field`, so this tab matches the Details tab instead of
+ * inventing a second typography for the same kind of data. The two constants
+ * that used to live here were byte-identical to each other, and the one applied
+ * to VALUES carried this table padding -- see DetailField for what that did.
+ */
 const HEAD_CLASS =
     "text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3";
 
@@ -129,10 +135,10 @@ const unitOf = (readings: Map<string, Reading>) => {
 };
 
 const show = (value: number | null, unit: string | null) =>
-    value === null ? "-" : unit ? `${value} ${unit}` : String(value);
+    value === null ? EMPTY_VALUE : unit ? `${value} ${unit}` : String(value);
 
 const formatDateTime = (value: string | null | undefined) =>
-    value ? new Date(value).toLocaleString() : "-";
+    value ? new Date(value).toLocaleString() : EMPTY_VALUE;
 
 const Note = ({ children }: { children: React.ReactNode }) => (
     <p className="text-xs text-muted-foreground">{children}</p>
@@ -234,55 +240,57 @@ export function RoomPowerEnergy({ amenityId }: RoomPowerEnergyProps) {
     return (
         <DataState isLoading={isLoading} error={error}>
             <div className="space-y-4">
-                {/* Room totals. Power and energy are separate figures from
-                    separate parameters and are never combined. */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-4 text-sm">
-                    <div className="space-y-1">
-                        <span className={LABEL_CLASS}>Power Consumed :</span>
-                        <span className={VALUE_CLASS}>
-                            {show(total(power), unitOf(power))}
-                        </span>
-                    </div>
-                    <div className="space-y-1">
-                        <span className={LABEL_CLASS}>Energy Consumed :</span>
-                        <span className={VALUE_CLASS}>
-                            {show(total(energy), unitOf(energy))}
-                        </span>
-                    </div>
-                    <div className="space-y-1">
-                        <span className={LABEL_CLASS}>Room Temperature :</span>
-                        <span className={VALUE_CLASS}>
-                            {show(
+                {/* Room totals, grouped by domain rather than by the order the
+                    reads happen to be declared in: the ambient conditions the
+                    environment sensor reports first, then everything the meters
+                    report. Both rows use the shared DETAIL_GRID, so these values
+                    sit on the same four columns -- and in the same typography --
+                    as the Details tab. Power and energy remain separate figures
+                    from separate parameters and are never combined. */}
+                <div className="space-y-6">
+                    {/* Environmental. Two items on the first two tracks; the
+                        remaining two stay empty so the power row underneath
+                        keeps its own columns. */}
+                    <div className={DETAIL_GRID}>
+                        <Field
+                            label="Room Temperature"
+                            value={show(
                                 latest(temperature)?.value ?? null,
                                 latest(temperature)?.unit ?? null,
                             )}
-                        </span>
-                    </div>
-                    <div className="space-y-1">
-                        <span className={LABEL_CLASS}>Air Quality :</span>
-                        <span className={VALUE_CLASS}>
-                            {show(
+                        />
+                        <Field
+                            label="Air Quality"
+                            value={show(
                                 latest(airQuality)?.value ?? null,
                                 latest(airQuality)?.unit ?? null,
                             )}
-                        </span>
+                        />
                     </div>
-                    <div
-                        className="space-y-1"
-                        title={
-                            "SUM over energy_stat for this room. That table has no unit " +
-                            "column, so the API returns energy_unit: null and the figure " +
-                            "is shown unlabelled."
-                        }
-                    >
-                        <span className={LABEL_CLASS}>Recorded Consumption :</span>
-                        <span className={VALUE_CLASS}>
-                            {show(recordedTotal, recorded?.energy_unit ?? null)}
-                        </span>
-                    </div>
-                    <div className="space-y-1">
-                        <span className={LABEL_CLASS}>Last Reading :</span>
-                        <span className={VALUE_CLASS}>{recorded?.reading_count ?? "-"}</span>
+
+                    {/* Electrical. */}
+                    <div className={DETAIL_GRID}>
+                        <Field
+                            label="Power Consumed"
+                            value={show(total(power), unitOf(power))}
+                        />
+                        <Field
+                            label="Energy Consumed"
+                            value={show(total(energy), unitOf(energy))}
+                        />
+                        <Field
+                            label="Recorded Consumption"
+                            value={show(recordedTotal, recorded?.energy_unit ?? null)}
+                            title={
+                                "SUM over energy_stat for this room. That table has no unit " +
+                                "column, so the API returns energy_unit: null and the figure " +
+                                "is shown unlabelled."
+                            }
+                        />
+                        <Field
+                            label="Last Reading"
+                            value={recorded?.reading_count ?? EMPTY_VALUE}
+                        />
                     </div>
                 </div>
 
