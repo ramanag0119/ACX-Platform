@@ -117,8 +117,53 @@ const toRow = (item: OccupancyRead): RoomRow => ({
   conditionIds: item.conditions.map((condition) => condition.id),
 });
 
-const formatDateTime = (value: string | null) =>
-  value ? new Date(value).toLocaleString() : "-";
+/**
+ * An empty table value, drawn as a muted em dash. Display only: the row keeps
+ * its "-" (search and the mapping above are unchanged).
+ */
+const EmptyDash = () => (
+  <span className="badge hms-muted" aria-label="Not set">
+    —
+  </span>
+);
+
+const cellValue = (value: string) => (value === "-" ? <EmptyDash /> : value);
+
+/**
+ * Check-In / Check-Out for the table cell: two tight lines, the date over the
+ * time, so the row keeps the table's fixed height. An overdue checkout turns
+ * the date red and tucks a micro "Overdue" tag beside the time rather than on
+ * a third line.
+ *
+ * Colours live in index.css (`hms-*`). A global sweep there repaints every
+ * span in `main` pure black / white with !important; `badge` is that sweep's
+ * own opt-out (it carries no styles), so these spans keep their muted / red
+ * colour. EmptyDash and "No stay" use it for the same reason.
+ */
+const DateTimeStack = ({ value, overdue = false }: { value: string | null; overdue?: boolean }) => {
+  if (!value) return <EmptyDash />;
+  const date = new Date(value);
+  return (
+    <span className="flex flex-col leading-tight">
+      <span className={`whitespace-nowrap text-[11px] ${overdue ? "badge hms-overdue-text font-medium" : ""}`}>
+        {date.toLocaleDateString()}
+      </span>
+      <span className="flex items-center gap-1 whitespace-nowrap">
+        <span className="badge hms-muted text-[10px]">
+          {date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+        </span>
+        {overdue && (
+          <span
+            className="badge hms-overdue-tag"
+            title="Expected check-out has passed but the stay is still checked in"
+          >
+            <Clock className="h-2 w-2" /> Overdue
+          </span>
+        )}
+      </span>
+    </span>
+  );
+};
 
 /**
  * Room Type, shortened for the table cell only.
@@ -580,7 +625,27 @@ const Occupancy = () => {
               emptyTitle="No Rooms match this view"
               loader={<TableLoading columns={11} />}
             >
-              <Table>
+              {/* `min-w-0` drops the shared Table's `min-w-max`, so the 11
+                  columns share the container width instead of scrolling;
+                  `hms-occupancy-table` fixes the layout and row height and
+                  compacts cells, buttons and badges (index.css). */}
+              <Table className="hms-occupancy-table min-w-0">
+                {/* Proportions of a 65/55/85/75/120/120/135/95/150/60/75px
+                    split, as percentages so the fixed layout scales with the
+                    container instead of reintroducing a horizontal scroll. */}
+                <colgroup>
+                  <col style={{ width: "6.3%" }} />
+                  <col style={{ width: "5.3%" }} />
+                  <col style={{ width: "8.2%" }} />
+                  <col style={{ width: "7.2%" }} />
+                  <col style={{ width: "11.6%" }} />
+                  <col style={{ width: "11.6%" }} />
+                  <col style={{ width: "13%" }} />
+                  <col style={{ width: "9.2%" }} />
+                  <col style={{ width: "14.5%" }} />
+                  <col style={{ width: "5.8%" }} />
+                  <col style={{ width: "7.3%" }} />
+                </colgroup>
                 <TableHeader>
                   <TableRow className="bg-gray-50/80 dark:bg-slate-800/60 hover:bg-gray-50 dark:hover:bg-slate-800/60 border-b border-gray-200 dark:border-slate-800">
                     <TableHead className="text-gray-600 dark:text-slate-300 font-medium">Room No</TableHead>
@@ -615,30 +680,25 @@ const Occupancy = () => {
                       </TableCell>
                       {/* Shortened for width; the full type is on the title. */}
                       <TableCell className="text-foreground" title={room.roomType}>
-                        {shortRoomType(room.roomType)}
+                        {cellValue(shortRoomType(room.roomType))}
                       </TableCell>
-                      <TableCell className="text-foreground">{room.buildingName}</TableCell>
-                      <TableCell className="text-foreground">{room.floorName}</TableCell>
-                      <TableCell className="text-foreground">{room.guestName}</TableCell>
-                      <TableCell className="text-foreground whitespace-nowrap">
-                        {formatDateTime(room.checkInTime)}
+                      {/* Single-line cells: a long name truncates with an
+                          ellipsis instead of growing the row; the full value
+                          is on the title. */}
+                      <TableCell className="hms-truncate text-foreground" title={room.buildingName}>
+                        {cellValue(room.buildingName)}
                       </TableCell>
-                      <TableCell
-                        className={`whitespace-nowrap ${
-                          isOverdueCheckout(room)
-                            ? "text-red-600 dark:text-red-400 font-medium"
-                            : "text-foreground"
-                        }`}
-                      >
-                        {formatDateTime(room.checkOutTime)}
-                        {isOverdueCheckout(room) && (
-                          <span
-                            className="ml-1.5 inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[10.5px] font-semibold text-red-700 dark:border-red-500/40 dark:bg-red-950/60 dark:text-red-400"
-                            title="Expected check-out has passed but the stay is still checked in"
-                          >
-                            <Clock className="h-3 w-3" /> Overdue
-                          </span>
-                        )}
+                      <TableCell className="hms-truncate text-foreground" title={room.floorName}>
+                        {cellValue(room.floorName)}
+                      </TableCell>
+                      <TableCell className="hms-truncate text-foreground" title={room.guestName}>
+                        {cellValue(room.guestName)}
+                      </TableCell>
+                      <TableCell className="text-foreground">
+                        <DateTimeStack value={room.checkInTime} />
+                      </TableCell>
+                      <TableCell className="text-foreground">
+                        <DateTimeStack value={room.checkOutTime} overdue={isOverdueCheckout(room)} />
                       </TableCell>
                       <TableCell className="text-center">
                         {/* Check-in / check-out: the real stay workflow. Room
@@ -672,7 +732,7 @@ const Occupancy = () => {
                             Check-Out
                           </Button>
                         ) : (
-                          <span className="text-xs text-muted-foreground">No stay</span>
+                          <span className="badge hms-muted text-[11px]">No stay</span>
                         )}
                       </TableCell>
                       <TableCell className="text-center">

@@ -875,7 +875,7 @@ const FacilityManagement = () => {
                         >
                             Reset
                         </Button>
-                        <Button onClick={handleSubmit} className="h-10 px-8 bg-amber-500 hover:bg-amber-600 text-white">
+                        <Button onClick={handleSubmit} className="h-10 px-8 bg-brand hover:bg-brand-hover text-white">
                             Submit
                         </Button>
                     </div>
@@ -1213,11 +1213,6 @@ const FacilityManagement = () => {
                                     </div>
                                 </RadioGroup>
                             </div>
-
-                            {/* Room Image Preview */}
-                            <div className="w-16 h-32 bg-muted/30 border border-gray-200 rounded-lg flex items-center justify-center">
-                                <div className="w-8 h-24 bg-muted/50 rounded" />
-                            </div>
                         </div>
                     </div>
 
@@ -1225,7 +1220,7 @@ const FacilityManagement = () => {
                         <Button onClick={handleReset} variant="outline" className="h-10 px-8 bg-cyan-600 text-white border-0 hover:bg-cyan-700">
                             Reset
                         </Button>
-                        <Button onClick={handleSubmit} className="h-10 px-8 bg-amber-500 hover:bg-amber-600 text-white">
+                        <Button onClick={handleSubmit} className="h-10 px-8 bg-brand hover:bg-brand-hover text-white">
                             Submit
                         </Button>
                     </div>

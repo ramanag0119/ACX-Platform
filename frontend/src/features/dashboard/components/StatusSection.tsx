@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Building2, Info } from "lucide-react";
+import { Building2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useTheme } from "@/core/contexts/ThemeContext";
 import { useAuth } from "@/core/contexts/AuthContext";
@@ -204,14 +204,6 @@ export const StatusSection = ({
             </div>
           </div>
         </div>
-        <p className="mt-2 flex items-start gap-1.5 text-[11px]" style={{ color: mutedColor }}>
-          <Info className="mt-px h-3 w-3 shrink-0" />
-          <span>
-            Health is the real <span className="font-mono">device_health_status</span> enum
-            (Active / Inactive). "Affected" means the room carries at least one active
-            amenity condition.
-          </span>
-        </p>
       </div>
 
       {/* Buildings Section */}

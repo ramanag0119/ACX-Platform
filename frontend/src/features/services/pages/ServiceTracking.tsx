@@ -597,7 +597,12 @@ const ServiceTracking = () => {
                         return (
                             <button
                                 key={card.id}
-                                onClick={() => setActiveService(card.id)}
+                                onClick={() => {
+                                    setActiveService(card.id);
+                                    // Drop any hover left on the old chart, so the
+                                    // centre shows the newly selected type.
+                                    setActiveChartIndex(undefined);
+                                }}
                                 className={`relative bg-white rounded-xl border-2 border-gray-100 shadow-sm overflow-hidden px-5 pt-5 pb-4 transition-all duration-200 cursor-pointer text-left flex flex-col gap-2 ${card.hoverBorder} ${card.id === selectedTypeId ? "ring-2 ring-primary shadow-md" : ""}`}
                             >
                                 {/* Icon Badge */}
@@ -619,9 +624,24 @@ const ServiceTracking = () => {
             {/* Donut Chart Section */}
             <div className="bg-card dark:bg-[#0c101d] rounded-2xl border border-border/80 dark:border-slate-800 p-6 shadow-md max-w-lg mx-auto transition-all">
                 <div className="flex flex-col items-center">
+                    {/* Which type the chart describes. Keyed so it fades in again
+                        on every selection, even when the numbers do not change. */}
+                    {selectedType && (
+                        <p
+                            key={selectedTypeId ?? "none"}
+                            className="animate-fade-in mb-2 text-sm text-muted-foreground"
+                        >
+                            Viewing: <span className="font-semibold text-foreground">{selectedType.name}</span>
+                        </p>
+                    )}
                     <div className="relative w-64 h-64 flex items-center justify-center">
                         <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
+                            {/* Keyed on the selected type: Recharts only animates a
+                                Pie on mount or on a data change, so two types with
+                                the same split (2 and 2) would otherwise show no
+                                movement at all. A new key remounts it and the
+                                segments redraw from zero on every card click. */}
+                            <PieChart key={selectedTypeId ?? "none"}>
                                 <Pie
                                     data={currentChartData}
                                     cx="50%"
@@ -677,8 +697,13 @@ const ServiceTracking = () => {
                                     <span className="text-3xl font-bold tracking-tight text-foreground transition-all">
                                         {totalServices.toLocaleString()}
                                     </span>
-                                    <span className="text-sm text-muted-foreground font-normal mt-0.5">
-                                        services
+                                    {/* The type's name in place of the generic word;
+                                        clamped to the donut's 112px hole. */}
+                                    <span
+                                        className="text-xs text-muted-foreground font-medium mt-0.5 max-w-[100px] leading-tight line-clamp-2"
+                                        title={selectedType?.name}
+                                    >
+                                        {selectedType?.name ?? "services"}
                                     </span>
                                 </>
                             )}
