@@ -122,12 +122,28 @@ const toRow = (item: OccupancyRead): RoomRow => ({
  * its "-" (search and the mapping above are unchanged).
  */
 const EmptyDash = () => (
-  <span className="badge hms-muted" aria-label="Not set">
-    —
-  </span>
+  <>
+    <span className="badge hms-muted" aria-hidden="true">
+      —
+    </span>
+    <span className="sr-only">Not set</span>
+  </>
 );
 
 const cellValue = (value: string) => (value === "-" ? <EmptyDash /> : value);
+
+/** A cell's hover text: the full value, or none for an empty one. */
+const cellTitle = (value: string) => (value === "-" ? undefined : value);
+
+/**
+ * Relative column widths, in table order: Room No, Room Type, Building, Floor,
+ * Guest name, Check-In, Check-Out, Generate, Status, Reassign, Invoice.
+ * Percentages rather than pixels so the fixed layout scales with the container
+ * instead of reintroducing a horizontal scroll.
+ */
+const COLUMN_WIDTHS = [
+  "6.3%", "5.3%", "8.2%", "7.2%", "11.6%", "11.6%", "13%", "9.2%", "14.5%", "5.8%", "7.3%",
+];
 
 /**
  * Check-In / Check-Out for the table cell: two tight lines, the date over the
@@ -150,7 +166,7 @@ const DateTimeStack = ({ value, overdue = false }: { value: string | null; overd
       </span>
       <span className="flex items-center gap-1 whitespace-nowrap">
         <span className="badge hms-muted text-[10px]">
-          {date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+          {date.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
         </span>
         {overdue && (
           <span
@@ -623,28 +639,18 @@ const Occupancy = () => {
               error={error}
               isEmpty={filteredRooms.length === 0}
               emptyTitle="No Rooms match this view"
-              loader={<TableLoading columns={11} />}
+              loader={<TableLoading columns={COLUMN_WIDTHS.length} />}
             >
-              {/* `min-w-0` drops the shared Table's `min-w-max`, so the 11
-                  columns share the container width instead of scrolling;
-                  `hms-occupancy-table` fixes the layout and row height and
-                  compacts cells, buttons and badges (index.css). */}
-              <Table className="hms-occupancy-table min-w-0">
-                {/* Proportions of a 65/55/85/75/120/120/135/95/150/60/75px
-                    split, as percentages so the fixed layout scales with the
-                    container instead of reintroducing a horizontal scroll. */}
+              {/* `min-w-0` drops the shared Table's `min-w-max` and
+                  `table-fixed` applies COLUMN_WIDTHS, so the columns share the
+                  container width instead of scrolling. `hms-occupancy-table`
+                  sets the row height and compacts cells, buttons and badges
+                  (index.css). */}
+              <Table className="hms-occupancy-table table-fixed min-w-0">
                 <colgroup>
-                  <col style={{ width: "6.3%" }} />
-                  <col style={{ width: "5.3%" }} />
-                  <col style={{ width: "8.2%" }} />
-                  <col style={{ width: "7.2%" }} />
-                  <col style={{ width: "11.6%" }} />
-                  <col style={{ width: "11.6%" }} />
-                  <col style={{ width: "13%" }} />
-                  <col style={{ width: "9.2%" }} />
-                  <col style={{ width: "14.5%" }} />
-                  <col style={{ width: "5.8%" }} />
-                  <col style={{ width: "7.3%" }} />
+                  {COLUMN_WIDTHS.map((width, index) => (
+                    <col key={index} style={{ width }} />
+                  ))}
                 </colgroup>
                 <TableHeader>
                   <TableRow className="bg-gray-50/80 dark:bg-slate-800/60 hover:bg-gray-50 dark:hover:bg-slate-800/60 border-b border-gray-200 dark:border-slate-800">
@@ -679,19 +685,19 @@ const Occupancy = () => {
                         </button>
                       </TableCell>
                       {/* Shortened for width; the full type is on the title. */}
-                      <TableCell className="text-foreground" title={room.roomType}>
+                      <TableCell className="text-foreground" title={cellTitle(room.roomType)}>
                         {cellValue(shortRoomType(room.roomType))}
                       </TableCell>
                       {/* Single-line cells: a long name truncates with an
                           ellipsis instead of growing the row; the full value
                           is on the title. */}
-                      <TableCell className="hms-truncate text-foreground" title={room.buildingName}>
+                      <TableCell className="hms-truncate text-foreground" title={cellTitle(room.buildingName)}>
                         {cellValue(room.buildingName)}
                       </TableCell>
-                      <TableCell className="hms-truncate text-foreground" title={room.floorName}>
+                      <TableCell className="hms-truncate text-foreground" title={cellTitle(room.floorName)}>
                         {cellValue(room.floorName)}
                       </TableCell>
-                      <TableCell className="hms-truncate text-foreground" title={room.guestName}>
+                      <TableCell className="hms-truncate text-foreground" title={cellTitle(room.guestName)}>
                         {cellValue(room.guestName)}
                       </TableCell>
                       <TableCell className="text-foreground">

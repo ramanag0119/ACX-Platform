@@ -628,7 +628,7 @@ const ServiceTracking = () => {
                         on every selection, even when the numbers do not change. */}
                     {selectedType && (
                         <p
-                            key={selectedTypeId ?? "none"}
+                            key={selectedTypeId ?? undefined}
                             className="animate-fade-in mb-2 text-sm text-muted-foreground"
                         >
                             Viewing: <span className="font-semibold text-foreground">{selectedType.name}</span>
@@ -641,7 +641,7 @@ const ServiceTracking = () => {
                                 the same split (2 and 2) would otherwise show no
                                 movement at all. A new key remounts it and the
                                 segments redraw from zero on every card click. */}
-                            <PieChart key={selectedTypeId ?? "none"}>
+                            <PieChart key={selectedTypeId ?? undefined}>
                                 <Pie
                                     data={currentChartData}
                                     cx="50%"

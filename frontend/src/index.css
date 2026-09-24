@@ -1479,16 +1479,12 @@ tbody td button.w-8.h-8 {
   padding: 0 !important;
 }
 
-/* Occupancy table: 11 columns that must fit the container without a
-   horizontal scrollbar. Each selector is the global rule above prefixed with
-   `.hms-occupancy-table`, so it wins on specificity and no other table changes.
-   Headers may wrap here -- the page drops the shared Table's `min-w-max`, and a
-   header that could neither wrap nor shrink would overflow its column. */
-.hms-occupancy-table {
-  table-layout: fixed;
-  width: 100%;
-}
-
+/* Occupancy table: 11 columns that fit the container without a horizontal
+   scrollbar, at one row height. The page sets the fixed layout and column
+   widths; the overrides of global table rules below repeat those rules'
+   selectors under `.hms-occupancy-table`, so they win on specificity and no
+   other table changes. Headers may wrap here: a header that could neither wrap
+   nor shrink would overflow its fixed-width column. */
 .hms-occupancy-table th {
   padding: 8px 6px !important;
   white-space: normal !important;
@@ -1517,26 +1513,24 @@ tbody td button.w-8.h-8 {
 /* Muted and overdue text. The typography sweep further down repaints every
    span in `main` pure black / white at full opacity with !important -- which is
    why the empty hyphens read at full contrast. The page puts `badge` (the
-   sweep's own opt-out, unstyled) on these spans, so the rules below apply in
-   both themes (`:is()` covers `.dark` and `:not(.dark)` in one selector). */
-html:is(.dark, :not(.dark)) main .hms-occupancy-table tbody td span.hms-muted:not(.meter-view *) {
-  color: #64748b !important;
-  opacity: 1 !important;
+   sweep's own opt-out, unstyled) on these spans, so plain rules apply. */
+.hms-occupancy-table .hms-muted {
+  color: theme("colors.slate.500");
 }
 
-html:not(.dark) main .hms-occupancy-table tbody td span.hms-overdue-text:not(.meter-view *) {
-  color: #dc2626 !important;
+.hms-occupancy-table .hms-overdue-text {
+  color: theme("colors.red.600");
 }
 
-html.dark main .hms-occupancy-table tbody td span.hms-overdue-text:not(.meter-view *) {
-  color: #f87171 !important;
+.dark .hms-occupancy-table .hms-overdue-text {
+  color: theme("colors.red.400");
 }
 
 /* Micro-badge beside the check-out time. Styled here rather than with
    `inline-flex rounded-* border-*` utilities, because those class names are
    what the global status-pill rule matches on, and it would size this back up
    to a full pill. */
-html:is(.dark, :not(.dark)) main .hms-occupancy-table tbody td span.hms-overdue-tag:not(.meter-view *) {
+.hms-occupancy-table .hms-overdue-tag {
   display: inline-flex;
   align-items: center;
   gap: 2px;
@@ -1547,15 +1541,15 @@ html:is(.dark, :not(.dark)) main .hms-occupancy-table tbody td span.hms-overdue-
   letter-spacing: 0.04em;
   text-transform: uppercase;
   border-radius: 9999px;
-  border: 1px solid #fecaca;
-  background-color: #fef2f2;
-  color: #b91c1c !important;
+  border: 1px solid theme("colors.red.200");
+  background-color: theme("colors.red.50");
+  color: theme("colors.red.700");
 }
 
-html.dark main .hms-occupancy-table tbody td span.hms-overdue-tag:not(.meter-view *) {
-  border-color: rgba(239, 68, 68, 0.4);
-  background-color: rgba(69, 10, 10, 0.6);
-  color: #f87171 !important;
+.dark .hms-occupancy-table .hms-overdue-tag {
+  border-color: theme("colors.red.500 / 40%");
+  background-color: theme("colors.red.950 / 60%");
+  color: theme("colors.red.400");
 }
 
 .hms-occupancy-table tbody td button:not(.hms-cell-trigger):not(.hms-action-on-fill),
@@ -1958,26 +1952,12 @@ html.dark .btn-reset:hover {
   transition: box-shadow 0.2s ease !important;
 }
 
-/* Focus and press keep the brand fill; the focus cue is a brand-coloured
-   ring, never a theme or browser-default colour. */
-.btn-submit:focus,
-.btn-submit:focus-visible,
-.btn-submit:active {
-  background-color: #5865F2 !important;
-  background: #5865F2 !important;
-  border: none !important;
-  color: #ffffff !important;
-}
-
+/* The fill above already holds in every state (it is !important). What focus
+   needs is a visible cue: the shadow above replaces the Button's focus ring,
+   so keyboard focus gets a brand-coloured outline instead. */
 .btn-submit:focus-visible {
-  outline: 2px solid #5865F2 !important;
+  outline: 2px solid theme("colors.brand.DEFAULT") !important;
   outline-offset: 2px !important;
-  box-shadow: 0 4px 14px rgba(88, 101, 242, 0.35) !important;
-}
-
-.btn-submit:active {
-  background-color: #4752c4 !important;
-  background: #4752c4 !important;
 }
 
 .btn-submit:hover {
