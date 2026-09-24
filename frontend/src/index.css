@@ -1479,6 +1479,102 @@ tbody td button.w-8.h-8 {
   padding: 0 !important;
 }
 
+/* Occupancy table: 11 columns that fit the container without a horizontal
+   scrollbar, at one row height. The page sets the fixed layout and column
+   widths; the overrides of global table rules below repeat those rules'
+   selectors under `.hms-occupancy-table`, so they win on specificity and no
+   other table changes. Headers may wrap here: a header that could neither wrap
+   nor shrink would overflow its fixed-width column. */
+.hms-occupancy-table th {
+  padding: 8px 6px !important;
+  white-space: normal !important;
+  line-height: 1.25;
+  vertical-align: middle;
+}
+
+/* One height for every row. A table row's height is a minimum, so this holds
+   only because each cell's content is kept to two tight lines (dates) or one
+   (truncated text, buttons, badges). */
+.hms-occupancy-table tbody tr {
+  height: 48px;
+}
+
+.hms-occupancy-table td {
+  padding: 4px 6px;
+  vertical-align: middle;
+}
+
+.hms-occupancy-table td.hms-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Muted and overdue text. The typography sweep further down repaints every
+   span in `main` pure black / white at full opacity with !important -- which is
+   why the empty hyphens read at full contrast. The page puts `badge` (the
+   sweep's own opt-out, unstyled) on these spans, so plain rules apply. */
+.hms-occupancy-table .hms-muted {
+  color: theme("colors.slate.500");
+}
+
+.hms-occupancy-table .hms-overdue-text {
+  color: theme("colors.red.600");
+}
+
+.dark .hms-occupancy-table .hms-overdue-text {
+  color: theme("colors.red.400");
+}
+
+/* Micro-badge beside the check-out time. Styled here rather than with
+   `inline-flex rounded-* border-*` utilities, because those class names are
+   what the global status-pill rule matches on, and it would size this back up
+   to a full pill. */
+.hms-occupancy-table .hms-overdue-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 4px;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-radius: 9999px;
+  border: 1px solid theme("colors.red.200");
+  background-color: theme("colors.red.50");
+  color: theme("colors.red.700");
+}
+
+.dark .hms-occupancy-table .hms-overdue-tag {
+  border-color: theme("colors.red.500 / 40%");
+  background-color: theme("colors.red.950 / 60%");
+  color: theme("colors.red.400");
+}
+
+.hms-occupancy-table tbody td button:not(.hms-cell-trigger):not(.hms-action-on-fill),
+.hms-occupancy-table tbody td .btn:not(.hms-cell-trigger):not(.hms-action-on-fill) {
+  padding: 3px 8px !important;
+  height: 26px !important;
+  font-size: 10.5px !important;
+  gap: 4px !important;
+}
+
+.hms-occupancy-table td [class*="inline-flex"][class*="rounded-"]:not(button):not(.btn):not([role="button"]):not(a),
+.hms-occupancy-table td span[class*="border-"]:not(button):not(.btn):not([role="button"]):not(a) {
+  /* One pill height across every status, whatever its padding utilities. */
+  height: 22px !important;
+  padding: 0 7px !important;
+  font-size: 9.5px !important;
+  line-height: 1 !important;
+  gap: 4px !important;
+  max-width: 100%;
+}
+
+.hms-occupancy-table td div[class*="flex"][class*="flex-wrap"] {
+  gap: 4px !important;
+}
+
 /* Light mode overrides for table action buttons */
 html:not(.dark) tbody td button:not(.hms-cell-trigger):not(.hms-action-on-fill),
 html:not(.dark) tbody td .btn:not(.hms-cell-trigger):not(.hms-action-on-fill) {
@@ -1850,7 +1946,18 @@ html.dark .btn-reset:hover {
   align-items: center !important;
   justify-content: center !important;
   box-shadow: 0 4px 14px rgba(88, 101, 242, 0.35) !important;
-  transition: all 0.2s ease !important;
+  /* Not `all`: AppLayout adds this class after the button mounts, so a
+     background transition would fade in from whatever fill the page gave it
+     (the orange flash on Facility Management's tabs). Only the shadow eases. */
+  transition: box-shadow 0.2s ease !important;
+}
+
+/* The fill above already holds in every state (it is !important). What focus
+   needs is a visible cue: the shadow above replaces the Button's focus ring,
+   so keyboard focus gets a brand-coloured outline instead. */
+.btn-submit:focus-visible {
+  outline: 2px solid theme("colors.brand.DEFAULT") !important;
+  outline-offset: 2px !important;
 }
 
 .btn-submit:hover {
