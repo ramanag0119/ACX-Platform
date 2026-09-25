@@ -227,8 +227,35 @@ export const useActivities = (params?: QueryParams) =>
 
 export const useOccupancy = (params?: QueryParams, options?: EnabledOption) =>
   useApiQuery(["occupancy", params], () => api.listOccupancy(params), options);
+/**
+ * Every row of /occupancy for the given filters, for screens that render one
+ * scrollable list instead of paging. The endpoint still caps `page_size` at
+ * MAX_PAGE_SIZE, so this walks its pages client-side until `total` is reached.
+ * Under the "occupancy" prefix, so mutations invalidate it like the list.
+ */
+export const useAllOccupancy = (params: QueryParams, options?: EnabledOption) =>
+  useApiQuery(
+    ["occupancy", "all", params],
+    async () => {
+      const first = await api.listOccupancy({ ...params, page: 1, page_size: MAX_PAGE_SIZE });
+      const items = [...first.items];
+      const pages = Math.ceil(first.total / MAX_PAGE_SIZE);
+      for (let page = 2; page <= pages; page++) {
+        const next = await api.listOccupancy({ ...params, page, page_size: MAX_PAGE_SIZE });
+        if (next.items.length === 0) break;
+        items.push(...next.items);
+      }
+      return items;
+    },
+    options,
+  );
+// "detail" keeps this key apart from the list's. Keys hash through JSON, which
+// writes an `undefined` array slot as null, so ["occupancy", undefined] (a list
+// with no params) and ["occupancy", null] (a closed detail) were ONE cache entry:
+// a closed Room Details dialog was handed a list page as its room and crashed.
+// Still under the "occupancy" prefix, so mutations invalidate it as before.
 export const useOccupancyDetail = (amenityId: string | null) =>
-  useApiQuery(["occupancy", amenityId], () => api.getOccupancy(amenityId!), {
+  useApiQuery(["occupancy", "detail", amenityId], () => api.getOccupancy(amenityId!), {
     enabled: Boolean(amenityId),
   });
 export const useAmenityStatuses = (params?: QueryParams, options?: EnabledOption) =>
