@@ -238,8 +238,13 @@ const Occupancy = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [reallocateRoom, setReallocateRoom] = useState<RoomRow | null>(null);
   const [conditionsRoom, setConditionsRoom] = useState<RoomRow | null>(null);
-  /** The row whose Check-Out awaits confirmation; the dialog sends the request. */
+  /**
+   * The row whose Check-Out awaits confirmation; the dialog sends the request.
+   * Kept apart from the open flag (as with Room Details) so the dialog still
+   * names the room while it fades out, instead of flashing "Room ".
+   */
   const [checkOutRoom, setCheckOutRoom] = useState<RoomRow | null>(null);
+  const [isCheckOutOpen, setIsCheckOutOpen] = useState(false);
 
   // Write actions live in the dialogs below; each mutation refetches
   // occupancy, so the table shows the database's state, not a patched row.
@@ -552,7 +557,10 @@ const Occupancy = () => {
                             disabled={!mayWriteBookings}
                             // Step one only: opens the confirmation, which is
                             // the sole place the check-out request is sent.
-                            onClick={() => setCheckOutRoom(room)}
+                            onClick={() => {
+                              setCheckOutRoom(room);
+                              setIsCheckOutOpen(true);
+                            }}
                             title={
                               mayWriteBookings
                                 ? "Check this stay out and release the Room"
@@ -666,8 +674,8 @@ const Occupancy = () => {
       />
 
       <CheckOutConfirmDialog
-        open={Boolean(checkOutRoom)}
-        onClose={() => setCheckOutRoom(null)}
+        open={isCheckOutOpen}
+        onClose={() => setIsCheckOutOpen(false)}
         stayId={checkOutRoom?.stayId ?? null}
         roomName={checkOutRoom?.roomNo ?? ""}
         guestName={checkOutRoom?.guestName ?? "-"}

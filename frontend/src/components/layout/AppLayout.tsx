@@ -6,6 +6,9 @@ import { cn } from "@/lib/utils";
 import { ThemeProvider, useTheme } from "@/core/contexts/ThemeContext";
 import { ModuleGuard } from "@/core/components/ModuleGuard";
 
+/** Read once at load; a session left open across New Year keeps the old year. */
+const COPYRIGHT_YEAR = new Date().getFullYear();
+
 const AppLayoutInner = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { isDark } = useTheme();
@@ -87,11 +90,10 @@ const AppLayoutInner = () => {
         </div>
       </main>
 
-      {/* Full-width fixed bottom footer spanning 100% from left to right edge */}
-      <footer className="fixed bottom-0 left-0 right-0 w-full h-[28px] z-50 flex items-center justify-between px-4 text-[11.5px] font-normal text-slate-500 dark:text-slate-400 border-t border-slate-200/90 dark:border-slate-800 bg-[#F0F4F8] dark:bg-[#0f1117] select-none">
-        <div className="flex items-center">
-          <span className="text-[11px] text-gray-400">© 2026 Inspironics Corporation, USA</span>
-        </div>
+      {/* Full-width fixed bottom footer spanning 100% from left to right edge.
+          The year is the current one, so the notice never goes stale. */}
+      <footer className="fixed bottom-0 left-0 right-0 w-full h-[28px] z-50 flex items-center px-4 text-[11px] font-normal text-gray-400 border-t border-slate-200/90 dark:border-slate-800 bg-[#F0F4F8] dark:bg-[#0f1117] select-none">
+        © {COPYRIGHT_YEAR} Inspironics Corporation, USA
       </footer>
     </div>
   );
