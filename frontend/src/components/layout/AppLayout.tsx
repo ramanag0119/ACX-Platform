@@ -90,10 +90,7 @@ const AppLayoutInner = () => {
       {/* Full-width fixed bottom footer spanning 100% from left to right edge */}
       <footer className="fixed bottom-0 left-0 right-0 w-full h-[28px] z-50 flex items-center justify-between px-4 text-[11.5px] font-normal text-slate-500 dark:text-slate-400 border-t border-slate-200/90 dark:border-slate-800 bg-[#F0F4F8] dark:bg-[#0f1117] select-none">
         <div className="flex items-center">
-          <span>© 2026 IKANOS Portal</span>
-        </div>
-        <div className="flex items-center">
-          <span>Version : 2.1.0</span>
+          <span className="text-[11px] text-gray-400">© 2026 Inspironics Corporation, USA</span>
         </div>
       </footer>
     </div>

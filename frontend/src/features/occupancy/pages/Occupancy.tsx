@@ -26,7 +26,7 @@ import { DataState, TableLoading } from "@/core/components/DataState";
 import { useAuth } from "@/core/contexts/AuthContext";
 import { ReallocateRoomDialog } from "../components/ReallocateRoomDialog";
 import { RoomConditionsDialog } from "../components/RoomConditionsDialog";
-import { useCheckOutStay } from "@/lib/api/mutations";
+import { CheckOutConfirmDialog } from "../components/CheckOutConfirmDialog";
 import {
   useAllOccupancy,
   useBuildings,
@@ -238,13 +238,14 @@ const Occupancy = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [reallocateRoom, setReallocateRoom] = useState<RoomRow | null>(null);
   const [conditionsRoom, setConditionsRoom] = useState<RoomRow | null>(null);
+  /** The row whose Check-Out awaits confirmation; the dialog sends the request. */
+  const [checkOutRoom, setCheckOutRoom] = useState<RoomRow | null>(null);
 
-  // --- Mutations. Each one refetches occupancy, so the table shows the
-  // database's state rather than a locally patched row.
+  // Write actions live in the dialogs below; each mutation refetches
+  // occupancy, so the table shows the database's state, not a patched row.
   const { canRead, canWrite } = useAuth();
   const mayWriteOccupancy = canWrite("occupancy");
   const mayWriteBookings = canWrite("bookings");
-  const checkOut = useCheckOutStay();
 
   // Building / Floor options. /buildings and /floors are gated on
   // `facility_management`, which is not the `occupancy` grant that opens this
@@ -548,8 +549,10 @@ const Occupancy = () => {
                             // repaints `bg-purple-*` pills in table cells (both
                             // themes, hover included) to this same tint.
                             className="rounded-full border border-purple-200 bg-purple-50 text-purple-700 text-xs font-semibold px-3"
-                            disabled={!mayWriteBookings || checkOut.isPending}
-                            onClick={() => checkOut.mutate({ id: room.stayId as string })}
+                            disabled={!mayWriteBookings}
+                            // Step one only: opens the confirmation, which is
+                            // the sole place the check-out request is sent.
+                            onClick={() => setCheckOutRoom(room)}
                             title={
                               mayWriteBookings
                                 ? "Check this stay out and release the Room"
@@ -660,6 +663,14 @@ const Occupancy = () => {
         onClose={() => setReallocateRoom(null)}
         stayId={reallocateRoom?.stayId ?? null}
         currentRoomName={reallocateRoom?.roomNo ?? ""}
+      />
+
+      <CheckOutConfirmDialog
+        open={Boolean(checkOutRoom)}
+        onClose={() => setCheckOutRoom(null)}
+        stayId={checkOutRoom?.stayId ?? null}
+        roomName={checkOutRoom?.roomNo ?? ""}
+        guestName={checkOutRoom?.guestName ?? "-"}
       />
 
       <RoomConditionsDialog
