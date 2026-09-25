@@ -121,13 +121,8 @@ export const OccupancyStatisticsChart = () => {
    * so the figure in the middle always matches the arc under the pointer.
    */
   const hoveredSlice = hoveredName ? data.find((slice) => slice.name === hoveredName) : undefined;
-  const centrePercent = hoveredSlice
-    ? total
-      ? Math.round((hoveredSlice.value / total) * 100)
-      : null
-    : total
-      ? 100
-      : null;
+  const centreValue = hoveredSlice ? hoveredSlice.value : total;
+  const centrePercent = total ? Math.round((centreValue / total) * 100) : null;
   const centreLabel = hoveredSlice ? hoveredSlice.name : "Total Rooms";
 
   const isLoading = statusesQuery.isLoading || perStatus.isLoading || roomTotal.isLoading;

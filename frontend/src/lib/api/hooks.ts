@@ -230,22 +230,21 @@ export const useOccupancy = (params?: QueryParams, options?: EnabledOption) =>
 /**
  * Every row of /occupancy for the given filters, for screens that render one
  * scrollable list instead of paging. The endpoint still caps `page_size` at
- * MAX_PAGE_SIZE, so this walks its pages client-side until `total` is reached.
- * Under the "occupancy" prefix, so mutations invalidate it like the list.
+ * MAX_PAGE_SIZE, so page 1 supplies `total` and the remaining pages are then
+ * requested together. Under the "occupancy" prefix, so mutations invalidate it
+ * like the list.
  */
 export const useAllOccupancy = (params: QueryParams, options?: EnabledOption) =>
   useApiQuery(
     ["occupancy", "all", params],
     async () => {
-      const first = await api.listOccupancy({ ...params, page: 1, page_size: MAX_PAGE_SIZE });
-      const items = [...first.items];
-      const pages = Math.ceil(first.total / MAX_PAGE_SIZE);
-      for (let page = 2; page <= pages; page++) {
-        const next = await api.listOccupancy({ ...params, page, page_size: MAX_PAGE_SIZE });
-        if (next.items.length === 0) break;
-        items.push(...next.items);
-      }
-      return items;
+      const page = (n: number) => api.listOccupancy(pageParams(n, MAX_PAGE_SIZE, params));
+      const first = await page(1);
+      const pageCount = Math.ceil(first.total / MAX_PAGE_SIZE);
+      const rest = await Promise.all(
+        Array.from({ length: Math.max(0, pageCount - 1) }, (_, index) => page(index + 2)),
+      );
+      return [first, ...rest].flatMap((result) => result.items);
     },
     options,
   );

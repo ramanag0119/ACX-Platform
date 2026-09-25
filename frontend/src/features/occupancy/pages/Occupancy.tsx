@@ -26,10 +26,7 @@ import { DataState, TableLoading } from "@/core/components/DataState";
 import { useAuth } from "@/core/contexts/AuthContext";
 import { ReallocateRoomDialog } from "../components/ReallocateRoomDialog";
 import { RoomConditionsDialog } from "../components/RoomConditionsDialog";
-import {
-  useCheckInStay,
-  useCheckOutStay,
-} from "@/lib/api/mutations";
+import { useCheckOutStay } from "@/lib/api/mutations";
 import {
   useAllOccupancy,
   useBuildings,
@@ -81,9 +78,8 @@ type RoomRow = {
   guestName: string;
   statusName: string;
   conditions: string[];
-  /** Present when a stay currently holds the room -- drives check-in/out. */
+  /** Present only while a stay is in house -- drives Check-Out. */
   stayId: string | null;
-  stayStatus: string | null;
   checkedIn: boolean;
   /** The stay's realized check-in; null until the guest is in house. */
   checkInTime: string | null;
@@ -104,7 +100,6 @@ const toRow = (item: OccupancyRead): RoomRow => ({
   // so filtering and saving keep working on the backend vocabulary.
   conditions: item.conditions.map((condition) => conditionLabel(condition.name)),
   stayId: item.current_stay?.stay_id ?? null,
-  stayStatus: item.current_stay?.status ?? null,
   // `actual_checkin_time` is what makes a stay in-house.
   checkedIn: Boolean(item.current_stay?.actual_checkin_time),
   checkInTime: item.current_stay?.actual_checkin_time ?? null,
@@ -114,7 +109,7 @@ const toRow = (item: OccupancyRead): RoomRow => ({
 
 /**
  * An empty table value, drawn as a muted em dash. Display only: the row keeps
- * its "-" (search and the mapping above are unchanged).
+ * its "-" (the mapping above is unchanged).
  */
 const EmptyDash = () => (
   <>
@@ -180,8 +175,8 @@ const DateTimeStack = ({ value, overdue = false }: { value: string | null; overd
  * Room Type, shortened for the table cell only.
  *
  * The stored `amenity_type.name` ("Guest Room", "Suite") is untouched: the row
- * still carries it, search still matches on it, and the cell keeps it in its
- * `title` so the meaning is never lost. The initial is taken FROM that name
+ * still carries it and the cell keeps it in its `title`, so the meaning is
+ * never lost. The initial is taken FROM that name
  * rather than from a map of known types, so a type added to `amenity_type`
  * later shortens itself without a change here.
  */
@@ -205,14 +200,10 @@ const isOverdueCheckout = (room: RoomRow) =>
 
 /**
  * The "no filter applied" sentinel shared by the status, building and floor
- * selects.
- *
- * It was the bare string "all" in ten places -- three `useState` defaults, four
- * conditionals that decide whether to send a query param, a reset, and three
- * `<SelectItem value>`s. Those have to agree exactly or a select silently stops
- * clearing its filter, so the literal is named once. It is deliberately NOT a
- * status name: `amenity_status` owns that vocabulary, and this value must never
- * collide with a row in it.
+ * selects. Every select, default and param check has to agree on it exactly or
+ * a select silently stops clearing its filter, so the literal is named once.
+ * It must never collide with a real option: a building / floor id or an
+ * `amenity_condition` label.
  */
 const ALL_FILTER_VALUE = "all";
 
@@ -253,7 +244,6 @@ const Occupancy = () => {
   const { canRead, canWrite } = useAuth();
   const mayWriteOccupancy = canWrite("occupancy");
   const mayWriteBookings = canWrite("bookings");
-  const checkIn = useCheckInStay();
   const checkOut = useCheckOutStay();
 
   // Building / Floor options. /buildings and /floors are gated on
@@ -543,23 +533,21 @@ const Occupancy = () => {
                         <DateTimeStack value={room.checkOutTime} overdue={isOverdueCheckout(room)} />
                       </TableCell>
                       <TableCell className="text-center">
-                        {/* Check-in / check-out: the real stay workflow. Room
-                            state follows automatically (Occupied / Available). */}
-                        {/* Occupied = a stay with a realized check-in. The API
-                            sends `current_stay` only for an in-house stay, so
-                            that is also exactly when a guest name, a check-in
-                            time and the stay id Check-Out needs are present.
-                            A room whose stored status says Occupied but that
-                            has no in-house stay has nothing to check out, and
-                            stays "No stay". */}
-                        {room.stayId && room.checkedIn ? (
+                        {/* Check-Out for an in-house stay, "No stay" otherwise.
+                            The API sends `current_stay` only while a stay is
+                            checked in and not out, so a stay id here always
+                            means a guest in house -- there is no pre-arrival
+                            Check-In state to show (that lives in Bookings). A
+                            room whose stored status says Occupied without an
+                            in-house stay has nothing to check out. */}
+                        {room.stayId ? (
                           <Button
                             size="sm"
                             // Light purple box, purple text: the actionable
                             // state, against the muted "No stay". index.css
-                            // repaints `bg-purple-*` pills in table cells to
-                            // this same tint, so the classes and the result agree.
-                            className="rounded-full border border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100 dark:border-purple-500/40 dark:bg-purple-950/40 dark:text-purple-300 text-xs font-semibold px-3"
+                            // repaints `bg-purple-*` pills in table cells (both
+                            // themes, hover included) to this same tint.
+                            className="rounded-full border border-purple-200 bg-purple-50 text-purple-700 text-xs font-semibold px-3"
                             disabled={!mayWriteBookings || checkOut.isPending}
                             onClick={() => checkOut.mutate({ id: room.stayId as string })}
                             title={
@@ -569,20 +557,6 @@ const Occupancy = () => {
                             }
                           >
                             Check-Out
-                          </Button>
-                        ) : room.stayId ? (
-                          <Button
-                            size="sm"
-                            className="rounded-full bg-teal-600 hover:bg-teal-700 text-white text-xs px-3"
-                            disabled={!mayWriteBookings || checkIn.isPending}
-                            onClick={() => checkIn.mutate({ id: room.stayId as string })}
-                            title={
-                              mayWriteBookings
-                                ? "Check this stay in"
-                                : "Your role cannot change bookings"
-                            }
-                          >
-                            Check-In
                           </Button>
                         ) : (
                           <span className="badge hms-muted text-[11px]">No stay</span>
