@@ -62,10 +62,15 @@ interface FieldProps {
     title?: string;
 }
 
-/** One label/value pair in any detail grid. */
+/**
+ * One label/value pair in any detail grid.
+ *
+ * No trailing colon on the label: the value sits on its own line underneath, so
+ * the label reads as a heading, not the key half of an inline "Label: Value".
+ */
 export const Field = ({ label, value, title }: FieldProps) => (
     <div className="space-y-1.5">
-        <span className={FIELD_LABEL}>{label} :</span>
+        <span className={FIELD_LABEL}>{label}</span>
         <span className={FIELD_VALUE} title={title}>
             {value}
         </span>

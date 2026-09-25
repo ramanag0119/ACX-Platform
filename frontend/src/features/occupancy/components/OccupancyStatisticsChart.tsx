@@ -23,28 +23,11 @@ import { OCCUPANCY_PATH, statusDetailPath } from "../lib/occupancyLinks";
  * a tally of one fetched page: a page holds at most 100 rows, and counting
  * client-side would quietly undercount a property with more rooms than that.
  *
- * THE CENTRE FIGURE IS A DIFFERENT SOURCE OF TRUTH from the slices. Phase 2.8
- * defines in-house occupancy as a stay with `actual_checkin_time IS NOT NULL
- * AND actual_checkout_time IS NULL`, which is what `is_occupied=true` asks the
- * backend. `amenity.status` is a flag on the room and nothing in the schema
- * keeps the two in step, so the ring and the centre can disagree.
- *
- * A footnote used to spell that disagreement out on screen ("N guests in
- * house, against M flagged Occupied"). It was removed by request, so the
- * divergence is now recorded HERE and nowhere in the UI: a reader comparing
- * the centre percentage against the Occupied slice has no on-screen
- * explanation for why they differ.
+ * The centre figure comes from the same counts as the slices. It used to show
+ * a stay-based in-house figure (`is_occupied=true`) for Occupied, which could
+ * disagree with the Occupied arc it sat inside; that request is gone, and the
+ * centre now reads only what the ring draws.
  */
-
-/**
- * The one `amenity_status` row whose centre reading comes from the stay-based
- * in-house count rather than from its own slice share.
- *
- * Named once because it is a claim about the lookup table's vocabulary, and a
- * claim this component does not own: if the row is ever renamed, this is the
- * single line to change. Compared case-insensitively against the stored name.
- */
-const IN_HOUSE_STATUS = "occupied";
 
 /**
  * The inactive treatment is OPACITY, not a fixed grey.
@@ -78,7 +61,6 @@ export const OccupancyStatisticsChart = () => {
   const perStatus = useCounts("occupancy", filterSets, statuses.length > 0);
 
   const roomTotal = useCount("occupancy");
-  const inHouse = useCount("occupancy", { is_occupied: true });
 
   const data = useMemo(
     () =>
@@ -93,9 +75,6 @@ export const OccupancyStatisticsChart = () => {
   );
 
   const total = roomTotal.total;
-  const inHouseCount = inHouse.total;
-  const inHousePercent =
-    total && inHouseCount !== null ? Math.round((inHouseCount / total) * 100) : null;
 
   /**
    * Which status the pointer is on. `null` means "the pointer is nowhere near
@@ -131,61 +110,28 @@ export const OccupancyStatisticsChart = () => {
   const isDimmed = (name: string) => hoveredName !== null && name !== hoveredName;
 
   /**
-   * Which status the centre figure describes.
+   * The centre readout: the whole ring at rest, the hovered slice otherwise.
    *
-   * Separate from the highlight on purpose: the ring resting undimmed must
-   * still read something in the middle, so with no pointer this falls back to
-   * the in-house status exactly as the card always opened. Hovering overrides
-   * it, which is what makes the centre a readout of whatever is under the
-   * pointer.
+   * At rest it reads "100% / Total Rooms" -- the ring as a whole -- rather than
+   * singling out one status. It used to default to Occupied, so the card
+   * opened on a lone "7%" that looked like the headline figure for the whole
+   * chart.
+   *
+   * Hovered, every slice uses the SAME formula, its own share `value / total`,
+   * so the figure in the middle always matches the arc under the pointer.
    */
-  const centreName = useMemo(() => {
-    if (hoveredName) return hoveredName;
-    const occupied = data.find((slice) => slice.name.toLowerCase() === IN_HOUSE_STATUS);
-    return occupied?.name ?? data[0]?.name ?? null;
-  }, [hoveredName, data]);
-
-  /**
-   * THE CENTRE KEEPS TWO DIFFERENT FORMULAS, deliberately.
-   *
-   * Occupied shows the in-house figure (`is_occupied=true`, a stay-based
-   * count) with the "in house" label, exactly as this card has always read.
-   * Every other status is its own slice share, `value / total`.
-   *
-   * Those are the two sources of truth the header comment above describes, and
-   * they can disagree: the Occupied percentage shown here is NOT the Occupied
-   * slice's share of the ring. Hovering Occupied and then Available therefore
-   * compares a stay-derived number against a room-flag-derived one. That is
-   * what the spec asked for -- it named both the 11% and the "in house"
-   * wording -- and it is recorded here because nothing on screen says it.
-   */
-  const centreSlice = data.find((slice) => slice.name === centreName);
-  const isInHouseCentre = centreName?.toLowerCase() === IN_HOUSE_STATUS;
-  const centrePercent = isInHouseCentre
-    ? inHousePercent
-    : total && centreSlice
-      ? Math.round((centreSlice.value / total) * 100)
-      : null;
-  const centreLabel = isInHouseCentre ? "in house" : (centreName ?? "");
+  const hoveredSlice = hoveredName ? data.find((slice) => slice.name === hoveredName) : undefined;
+  const centreValue = hoveredSlice ? hoveredSlice.value : total;
+  const centrePercent = total ? Math.round((centreValue / total) * 100) : null;
+  const centreLabel = hoveredSlice ? hoveredSlice.name : "Total Rooms";
 
   const isLoading = statusesQuery.isLoading || perStatus.isLoading || roomTotal.isLoading;
   const error = statusesQuery.error ?? perStatus.error ?? roomTotal.error;
-  const isFetching = roomTotal.isFetching || inHouse.isFetching || statusesQuery.isFetching;
+  const isFetching = roomTotal.isFetching || statusesQuery.isFetching;
 
-  /**
-   * Green = settled, amber = refetching, red = last attempt failed.
-   *
-   * `inHouse` is folded in HERE rather than into `error` above, on purpose.
-   * The dot summarises every request this card makes, and `inHouse` already
-   * counts toward `isFetching` -- leaving it out of the failure signal meant a
-   * failed in-house request showed a green "Data up to date" dot while the
-   * centre read "-". Widening `error` itself would instead replace the whole
-   * card with an error shell and throw away a ring that loaded fine, so the
-   * correction belongs to the indicator alone.
-   */
-  const dotError = error ?? inHouse.error;
-  const dotColor = dotError ? "#ef4444" : isFetching ? "#f59e0b" : "#22c55e";
-  const dotLabel = dotError ? "Data unavailable" : isFetching ? "Refreshing" : "Data up to date";
+  /** Green = settled, amber = refetching, red = last attempt failed. */
+  const dotColor = error ? "#ef4444" : isFetching ? "#f59e0b" : "#22c55e";
+  const dotLabel = error ? "Data unavailable" : isFetching ? "Refreshing" : "Data up to date";
   const {
     cardBg,
     cardBorder,
@@ -223,7 +169,6 @@ export const OccupancyStatisticsChart = () => {
             style={{ color: mutedColor }}
             onClick={() => {
               void roomTotal.refetch();
-              void inHouse.refetch();
               void statusesQuery.refetch();
             }}
             title="Refresh"
@@ -330,12 +275,8 @@ export const OccupancyStatisticsChart = () => {
                 >
                   {centrePercent === null ? "-" : `${centrePercent}%`}
                 </span>
-                {/* No `capitalize` here. `amenity_status` already stores
-                    display-cased names ("Available", "Occupied"), so the class
-                    bought nothing for a status -- and it actively broke the
-                    other branch, rendering the specified "in house" as
-                    "In House". No opacity transition either: this element's
-                    opacity never changes, so it was dead styling. */}
+                {/* No `capitalize` here: `amenity_status` already stores
+                    display-cased names ("Available", "Occupied"). */}
                 <span className="mt-1.5 text-[11px]" style={{ color: mutedColor }}>
                   {centreLabel}
                 </span>

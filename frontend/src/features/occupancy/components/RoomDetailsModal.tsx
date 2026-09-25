@@ -19,7 +19,8 @@ import { CheckCircle, XCircle } from "lucide-react";
 import { DataState } from "@/core/components/DataState";
 import { useDevices, useOccupancyDetail, useServiceRequests } from "@/lib/api/hooks";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
-import { roomStatusBadgeClass } from "../lib/roomStatus";
+import { conditionLabel, roomStatusBadgeClass } from "../lib/roomStatus";
+import { ConditionBadge } from "./ConditionBadge";
 import { serviceStatusBadgeClass } from "../lib/serviceStatus";
 import { DETAIL_GRID, EMPTY_VALUE, Field } from "./DetailField";
 import { RoomPowerEnergy } from "./RoomPowerEnergy";
@@ -33,6 +34,11 @@ interface RoomDetailsModalProps {
     roomType?: string;
     guestName?: string;
     status?: string;
+    /**
+     * The row's housekeeping conditions, already display-labelled -- what the
+     * table's Status column showed. Used until the detail read lands.
+     */
+    conditions?: string[];
 }
 
 /**
@@ -149,6 +155,7 @@ export function RoomDetailsModal({
     roomType = EMPTY_VALUE,
     guestName = EMPTY_VALUE,
     status = EMPTY_VALUE,
+    conditions: rowConditions = [],
 }: RoomDetailsModalProps) {
     const enabled = isOpen ? amenityId : null;
     const occupancyQuery = useOccupancyDetail(enabled);
@@ -165,6 +172,10 @@ export function RoomDetailsModal({
     const stay = occupancy?.current_stay;
     const devices = devicesQuery.data?.items ?? [];
     const requests = requestsQuery.data?.items ?? [];
+    // The detail read is live, so a condition edited while the dialog is open
+    // shows here; the row's copy only covers the moment before it arrives.
+    const conditions =
+        occupancy?.conditions.map((condition) => conditionLabel(condition.name)) ?? rowConditions;
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
@@ -174,13 +185,28 @@ export function RoomDetailsModal({
                         <DialogTitle className="text-xl font-semibold">
                             Room No: {roomNo}
                         </DialogTitle>
-                        {/* Same status -> same colour as the room list. */}
-                        <Badge
-                            variant="outline"
-                            className={`mr-8 ${roomStatusBadgeClass(occupancy?.status_name ?? status)}`}
-                        >
-                            {occupancy?.status_name ?? status}
-                        </Badge>
+                        {/* The same pills as the table's Status column, which
+                            shows housekeeping CONDITIONS (Sanitation, Under
+                            maintenance...), not `amenity_status`. This badge used
+                            to show `amenity_status` alone, so a room the table
+                            marked Sanitation opened reading "Available" -- true
+                            of the room flag, but not what the operator had just
+                            clicked. With no condition set, the room status is
+                            the most useful thing left to show. */}
+                        {conditions.length > 0 ? (
+                            <div className="mr-8 flex flex-wrap items-center justify-end gap-1.5">
+                                {conditions.map((condition) => (
+                                    <ConditionBadge key={condition} condition={condition} />
+                                ))}
+                            </div>
+                        ) : (
+                            <Badge
+                                variant="outline"
+                                className={`mr-8 ${roomStatusBadgeClass(occupancy?.status_name ?? status)}`}
+                            >
+                                {occupancy?.status_name ?? status}
+                            </Badge>
+                        )}
                     </div>
                 </DialogHeader>
 
@@ -354,7 +380,6 @@ export function RoomDetailsModal({
                                                 <TableHead className={TABLE_HEAD}>
                                                     Occupancy No
                                                 </TableHead>
-                                                <TableHead className={TABLE_HEAD}>Name/Tag</TableHead>
                                                 <TableHead className={TABLE_HEAD}>Device UID</TableHead>
                                                 <TableHead className={TABLE_HEAD}>Config Status</TableHead>
                                                 <TableHead className={`${TABLE_HEAD} text-center`}>
@@ -370,7 +395,6 @@ export function RoomDetailsModal({
                                                 <TableRow key={device.id} className="hover:bg-muted/5">
                                                     <TableCell>{device.device_type_name ?? EMPTY_VALUE}</TableCell>
                                                     <TableCell>{device.amenity_name ?? roomNo}</TableCell>
-                                                    <TableCell>{device.device_name ?? EMPTY_VALUE}</TableCell>
                                                     <TableCell className="font-mono text-xs">
                                                         {device.device_uid || EMPTY_VALUE}
                                                     </TableCell>

@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -18,59 +17,52 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowRight, Wrench, ShieldCheck, BatteryLow, Star, UserCheck, Clock, Minus, CheckCircle2 } from "lucide-react";
+import { ArrowRight, Clock, Minus } from "lucide-react";
 import { RoomDetailsModal } from "../components/RoomDetailsModal";
+import { ConditionBadge } from "../components/ConditionBadge";
 import { conditionLabel } from "../lib/roomStatus";
 import { STATUS_QUERY_PARAM } from "../lib/occupancyLinks";
 import { DataState, TableLoading } from "@/core/components/DataState";
 import { useAuth } from "@/core/contexts/AuthContext";
 import { ReallocateRoomDialog } from "../components/ReallocateRoomDialog";
 import { RoomConditionsDialog } from "../components/RoomConditionsDialog";
+import { useCheckOutStay } from "@/lib/api/mutations";
 import {
-  useCheckInStay,
-  useCheckOutStay,
-} from "@/lib/api/mutations";
-import {
-  useAmenityStatuses,
+  useAllOccupancy,
   useBuildings,
   useFloors,
-  useOccupancy,
 } from "@/lib/api/hooks";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
 import type { OccupancyRead } from "@/lib/api/types";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { useScrollToTop } from "@/hooks/use-scroll-to-top";
 
 /**
  * The Occupancy Dashboard: live occupancy from GET /occupancy.
  *
- * DRILL-DOWN. Building -> Floor -> Status -> room list. All three are server
- * side filters the endpoint already accepts (`building_id` and `floor_id`
- * resolve through `property_chain`, `status` through `amenity_status`), so the
- * table, its `total` and its pagination all agree with the selection. Nothing
- * is filtered in the browser except the free-text search, which the endpoint
- * has no parameter for.
+ * DRILL-DOWN. Building -> Floor -> Status -> room list. Building and Floor are
+ * server side filters the endpoint already accepts (`building_id` and
+ * `floor_id` resolve through `property_chain`). Both default to the FIRST row
+ * of their lookup rather than "All", so the screen opens on one floor.
  *
- * Every option list is a real lookup:
+ * ONE SCROLLABLE LIST. There is no page size, pager or search box: every row
+ * for the selected building / floor is loaded (useAllOccupancy walks the
+ * endpoint's pages) and the browser's own scroll and Ctrl+F do the rest.
+ *
+ * Status is filtered in the browser, over that full list, on the housekeeping
+ * conditions the table's Status column draws, and its options are the
+ * conditions actually present in it. The select can only ever offer a value
+ * that is visible in the grid and will show rows.
+ *
+ * Building / Floor options are real lookups:
  *   Building -> GET /buildings
  *   Floor    -> GET /floors?building_id=...   (narrowed by the selection)
- *   Status   -> GET /amenity-statuses         (the four rows, never hardcoded)
  *
  * Deliberately NOT here: Available / Occupied / Allotted / Unavailable summary
- * cards. The four statuses are drill-down options only.
+ * cards.
  *
- * TWO MISMATCHES WITH THE ORIGINAL SCREEN, both resolved in favour of the
- * database:
- *
- *   1. Status. The mock had only "Available" | "Unavailable". The real
- *      `amenity_status` table has FOUR rows -- Available, Occupied,
- *      Unavailable, Allotted -- and every one of them is rendered. The
- *      "Filter By" select is populated from GET /amenity-statuses rather than
- *      being hardcoded, so it can never drift from the lookup table.
- *
- *   2. Guest name. The mock's flat `guestName` string is now
- *      `current_stay.booker`, the backend's UserRef. A room with no in-house
- *      stay shows "-" instead of a fabricated name.
+ * Guest name. The mock's flat `guestName` string is now
+ * `current_stay.booker`, the backend's UserRef. A room with no in-house stay
+ * shows "-" instead of a fabricated name.
  *
  * Guest / Non Guest are the real `amenity_category` values: the Guest tab is
  * category "room"; Non Guest is everything else. The API filters one category
@@ -86,9 +78,8 @@ type RoomRow = {
   guestName: string;
   statusName: string;
   conditions: string[];
-  /** Present when a stay currently holds the room -- drives check-in/out. */
+  /** Present only while a stay is in house -- drives Check-Out. */
   stayId: string | null;
-  stayStatus: string | null;
   checkedIn: boolean;
   /** The stay's realized check-in; null until the guest is in house. */
   checkInTime: string | null;
@@ -109,7 +100,6 @@ const toRow = (item: OccupancyRead): RoomRow => ({
   // so filtering and saving keep working on the backend vocabulary.
   conditions: item.conditions.map((condition) => conditionLabel(condition.name)),
   stayId: item.current_stay?.stay_id ?? null,
-  stayStatus: item.current_stay?.status ?? null,
   // `actual_checkin_time` is what makes a stay in-house.
   checkedIn: Boolean(item.current_stay?.actual_checkin_time),
   checkInTime: item.current_stay?.actual_checkin_time ?? null,
@@ -119,7 +109,7 @@ const toRow = (item: OccupancyRead): RoomRow => ({
 
 /**
  * An empty table value, drawn as a muted em dash. Display only: the row keeps
- * its "-" (search and the mapping above are unchanged).
+ * its "-" (the mapping above is unchanged).
  */
 const EmptyDash = () => (
   <>
@@ -185,8 +175,8 @@ const DateTimeStack = ({ value, overdue = false }: { value: string | null; overd
  * Room Type, shortened for the table cell only.
  *
  * The stored `amenity_type.name` ("Guest Room", "Suite") is untouched: the row
- * still carries it, search still matches on it, and the cell keeps it in its
- * `title` so the meaning is never lost. The initial is taken FROM that name
+ * still carries it and the cell keeps it in its `title`, so the meaning is
+ * never lost. The initial is taken FROM that name
  * rather than from a map of known types, so a type added to `amenity_type`
  * later shortens itself without a change here.
  */
@@ -210,21 +200,15 @@ const isOverdueCheckout = (room: RoomRow) =>
 
 /**
  * The "no filter applied" sentinel shared by the status, building and floor
- * selects.
- *
- * It was the bare string "all" in ten places -- three `useState` defaults, four
- * conditionals that decide whether to send a query param, a reset, and three
- * `<SelectItem value>`s. Those have to agree exactly or a select silently stops
- * clearing its filter, so the literal is named once. It is deliberately NOT a
- * status name: `amenity_status` owns that vocabulary, and this value must never
- * collide with a row in it.
+ * selects. Every select, default and param check has to agree on it exactly or
+ * a select silently stops clearing its filter, so the literal is named once.
+ * It must never collide with a real option: a building / floor id or an
+ * `amenity_condition` label.
  */
 const ALL_FILTER_VALUE = "all";
 
 const Occupancy = () => {
   const [activeTab, setActiveTab] = useState<"guest" | "nonGuest">("guest");
-  const [entriesPerPage, setEntriesPerPage] = useState("10");
-  const [searchQuery, setSearchQuery] = useState("");
   /**
    * The status filter, seeded from `?status=` so the Occupancy Statistics donut
    * can drill through to it. Clicking Available there lands here already
@@ -234,21 +218,22 @@ const Occupancy = () => {
    * parameter, so changing the select afterwards does not fight the URL and the
    * user is free to widen the filter on the screen they just landed on.
    *
-   * The value is an `amenity_status_name`, matched against the lookup table
-   * below exactly as a hand-picked selection is. A name the table does not hold
-   * resolves to no id and simply leaves the list unfiltered.
+   * The value is compared, exactly, with the condition labels in the Status
+   * column. The donut sends an `amenity_status_name` (Available, ...), which is
+   * not a condition, so today that link falls back to Show All.
    */
   const [searchParams] = useSearchParams();
   const [filterBy, setFilterBy] = useState(
     () => searchParams.get(STATUS_QUERY_PARAM) || ALL_FILTER_VALUE,
   );
-  const [buildingFilter, setBuildingFilter] = useState(ALL_FILTER_VALUE);
-  const [floorFilter, setFloorFilter] = useState(ALL_FILTER_VALUE);
-  const [currentPage, setCurrentPage] = useState(1);
-  // Pagination sits at the bottom of the table; without this the new
-  // page kept the old scroll offset and the sticky header stayed
-  // above the fold. See use-scroll-to-top.
-  useScrollToTop(currentPage);
+  /**
+   * The user's Building / Floor pick, or null while they have not made one.
+   * Null means "the first row of the lookup" (resolved below), so the default
+   * follows the data instead of being a hardcoded name, and it is known as
+   * soon as the lookup answers -- no effect, no unfiltered first fetch.
+   */
+  const [buildingChoice, setBuildingChoice] = useState<string | null>(null);
+  const [floorChoice, setFloorChoice] = useState<string | null>(null);
   const [selectedRoom, setSelectedRoom] = useState<RoomRow | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [reallocateRoom, setReallocateRoom] = useState<RoomRow | null>(null);
@@ -259,18 +244,7 @@ const Occupancy = () => {
   const { canRead, canWrite } = useAuth();
   const mayWriteOccupancy = canWrite("occupancy");
   const mayWriteBookings = canWrite("bookings");
-  const checkIn = useCheckInStay();
   const checkOut = useCheckOutStay();
-
-  const pageSize = Number(entriesPerPage);
-
-  // Status filter options come from the lookup table, not from a literal.
-  const statusesQuery = useAmenityStatuses({ page: 1, page_size: MAX_PAGE_SIZE });
-  const statuses = statusesQuery.data?.items ?? [];
-  const selectedStatusId =
-    filterBy === ALL_FILTER_VALUE
-      ? undefined
-      : statuses.find((status) => status.amenity_status_name === filterBy)?.id;
 
   // Building / Floor options. /buildings and /floors are gated on
   // `facility_management`, which is not the `occupancy` grant that opens this
@@ -283,6 +257,10 @@ const Occupancy = () => {
     mayReadFacility ? { page: 1, page_size: MAX_PAGE_SIZE } : undefined,
     { enabled: mayReadFacility },
   );
+  const buildings = buildingsQuery.data?.items ?? [];
+  // No pick yet -> the first building in the list, not "All Buildings".
+  const buildingFilter = buildingChoice ?? buildings[0]?.id ?? ALL_FILTER_VALUE;
+
   const floorsQuery = useFloors(
     mayReadFacility
       ? {
@@ -294,202 +272,89 @@ const Occupancy = () => {
       : undefined,
     { enabled: mayReadFacility },
   );
-  const buildings = buildingsQuery.data?.items ?? [];
   const floors = floorsQuery.data?.items ?? [];
+  // No pick yet -> the building's first floor. Under "All Buildings" there is
+  // no meaningful "first floor", so the floor stays unfiltered there.
+  const floorFilter =
+    floorChoice ??
+    (buildingFilter !== ALL_FILTER_VALUE ? floors[0]?.id : undefined) ??
+    ALL_FILTER_VALUE;
+
+  // Hold the occupancy fetch until the defaults above are known; otherwise the
+  // first request goes out unfiltered and the table flashes every room. A
+  // failed lookup still counts as settled -- it just leaves that level on All.
+  const settled = (query: { isSuccess: boolean; isError: boolean }) =>
+    query.isSuccess || query.isError;
+  const scopeReady =
+    !mayReadFacility ||
+    (settled(buildingsQuery) && (buildingFilter === ALL_FILTER_VALUE || settled(floorsQuery)));
 
   /** The drill-down, as the endpoint's own query parameters. */
   const scopeParams = {
     ...(buildingFilter !== ALL_FILTER_VALUE ? { building_id: buildingFilter } : {}),
     ...(floorFilter !== ALL_FILTER_VALUE ? { floor_id: floorFilter } : {}),
-    ...(selectedStatusId !== undefined ? { status: selectedStatusId } : {}),
   };
-
-  const commonParams = {
-    page: currentPage,
-    page_size: pageSize,
-    ...scopeParams,
-  };
-
-  const guestQuery = useOccupancy(
-    activeTab === "guest" ? { ...commonParams, amenity_category: "room" } : undefined,
-  );
-  // Two calls, because `amenity_category` takes a single value.
-  const restaurantQuery = useOccupancy(
-    activeTab === "nonGuest"
-      ? { page: 1, page_size: MAX_PAGE_SIZE, amenity_category: "restaurant", ...scopeParams }
-      : undefined,
-  );
-  const othersQuery = useOccupancy(
-    activeTab === "nonGuest"
-      ? { page: 1, page_size: MAX_PAGE_SIZE, amenity_category: "others", ...scopeParams }
-      : undefined,
-  );
 
   const isGuest = activeTab === "guest";
-  const isLoading = isGuest
-    ? guestQuery.isLoading
-    : restaurantQuery.isLoading || othersQuery.isLoading;
+  const guestQuery = useAllOccupancy(
+    { ...scopeParams, amenity_category: "room" },
+    { enabled: scopeReady && isGuest },
+  );
+  // Two calls, because `amenity_category` takes a single value.
+  const restaurantQuery = useAllOccupancy(
+    { ...scopeParams, amenity_category: "restaurant" },
+    { enabled: scopeReady && !isGuest },
+  );
+  const othersQuery = useAllOccupancy(
+    { ...scopeParams, amenity_category: "others" },
+    { enabled: scopeReady && !isGuest },
+  );
+
+  const isLoading =
+    !scopeReady ||
+    (isGuest ? guestQuery.isLoading : restaurantQuery.isLoading || othersQuery.isLoading);
   const error = isGuest
     ? guestQuery.error
     : restaurantQuery.error ?? othersQuery.error;
 
-  const { rows, totalEntries, serverPaged } = useMemo(() => {
-    if (isGuest) {
-      return {
-        rows: (guestQuery.data?.items ?? []).map(toRow),
-        totalEntries: guestQuery.data?.total ?? 0,
-        serverPaged: true,
-      };
-    }
-    const merged = [
-      ...(restaurantQuery.data?.items ?? []),
-      ...(othersQuery.data?.items ?? []),
-    ]
+  const rows = useMemo(() => {
+    if (isGuest) return (guestQuery.data ?? []).map(toRow);
+    return [...(restaurantQuery.data ?? []), ...(othersQuery.data ?? [])]
       .map(toRow)
       .sort((a, b) => a.roomNo.localeCompare(b.roomNo));
-    return {
-      rows: merged,
-      totalEntries: (restaurantQuery.data?.total ?? 0) + (othersQuery.data?.total ?? 0),
-      serverPaged: false,
-    };
   }, [isGuest, guestQuery.data, restaurantQuery.data, othersQuery.data]);
 
-  // Search runs over the rows the API returned for this page. It is a client
-  // convenience: /occupancy exposes no free-text search parameter.
-  const searched = rows.filter((room) => {
-    if (!searchQuery) return true;
-    const needle = searchQuery.toLowerCase();
-    return (
-      room.roomNo.toLowerCase().includes(needle) ||
-      room.roomType.toLowerCase().includes(needle) ||
-      room.guestName.toLowerCase().includes(needle)
-    );
-  });
+  // Status options are the condition labels the table's Status column draws
+  // (`room.conditions`, the pills) -- not `statusName`, which no column shows.
+  // Taken from the loaded rows, so the select only offers values on screen.
+  // A room with no condition ("-") is listed under Show All only.
+  const statusOptions = useMemo(
+    () =>
+      [...new Set(rows.flatMap((room) => room.conditions))]
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b)),
+    [rows],
+  );
+  // A selection this building / floor has no rooms in (e.g. one carried over
+  // from ?status= or from the previous floor) falls back to Show All rather
+  // than leaving the trigger blank over an empty table.
+  const statusFilter = statusOptions.includes(filterBy) ? filterBy : ALL_FILTER_VALUE;
 
-  const filteredRooms = serverPaged
-    ? searched
-    : searched.slice((currentPage - 1) * pageSize, currentPage * pageSize);
-
-  const totalPages = Math.max(1, Math.ceil(totalEntries / pageSize));
-  const firstEntry = totalEntries === 0 ? 0 : (currentPage - 1) * pageSize + 1;
-  const lastEntry = (currentPage - 1) * pageSize + filteredRooms.length;
-
-  const switchTab = (tab: "guest" | "nonGuest") => {
-    setActiveTab(tab);
-    setCurrentPage(1);
-  };
+  const filteredRooms =
+    statusFilter === ALL_FILTER_VALUE
+      ? rows
+      : // Exact string match; a room can carry several conditions, so it is
+        // shown when any one of its pills is the selected value.
+        rows.filter((room) => room.conditions.some((condition) => condition === statusFilter));
 
   /**
-   * Choosing a building clears the floor below it: a floor id from the
-   * previous building would be sent alongside the new selection and match
-   * nothing. Any change returns to page 1, because the row count changes.
+   * Choosing a building clears the floor pick, so the floor falls back to the
+   * new building's first floor: a floor id from the previous building would be
+   * sent alongside the new selection and match nothing.
    */
   const changeBuilding = (value: string) => {
-    setBuildingFilter(value);
-    setFloorFilter(ALL_FILTER_VALUE);
-    setCurrentPage(1);
-  };
-
-  const changeFloor = (value: string) => {
-    setFloorFilter(value);
-    setCurrentPage(1);
-  };
-
-  const getConditionBadge = (condition: string) => {
-    const lowerCondition = condition.toLowerCase();
-    const pillClass =
-      "inline-flex h-7 items-center justify-center gap-1.5 px-2.5 py-1 text-[10.5px] font-semibold leading-none rounded-full border whitespace-nowrap";
-
-    // `amenity_condition` 5, "Ready for occupant". Like every other branch here
-    // this only chooses a COLOUR for a name the API returned -- the condition
-    // list itself is backend data, never a literal in this file. Positive
-    // colouring so the rooms that can actually be handed over stand out.
-    if (lowerCondition.includes("ready")) {
-      return (
-        <span
-          key={condition}
-          className={`${pillClass} border-green-200 bg-green-50 text-green-700 dark:border-green-500/40 dark:bg-green-950/60 dark:text-green-400`}
-        >
-          <CheckCircle2 className="h-3 w-3 text-green-600 dark:text-green-400" />
-          {condition}
-        </span>
-      );
-    }
-    if (lowerCondition.includes("maintenance")) {
-      return (
-        <span
-          key={condition}
-          className={`${pillClass} border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-500/40 dark:bg-orange-950/60 dark:text-orange-400`}
-        >
-          <Wrench className="h-3 w-3 text-orange-600 dark:text-orange-400" />
-          {condition}
-        </span>
-      );
-    }
-    if (lowerCondition.includes("sanitation")) {
-      return (
-        <span
-          key={condition}
-          className={`${pillClass} border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-950/60 dark:text-emerald-400`}
-        >
-          <ShieldCheck className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
-          {condition}
-        </span>
-      );
-    }
-    if (lowerCondition.includes("low battery")) {
-      return (
-        <span
-          key={condition}
-          className={`${pillClass} border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/40 dark:bg-rose-950/60 dark:text-rose-400`}
-        >
-          <BatteryLow className="h-3 w-3 text-rose-600 dark:text-rose-400" />
-          {condition}
-        </span>
-      );
-    }
-    if (lowerCondition.includes("vip")) {
-      return (
-        <span
-          key={condition}
-          className={`${pillClass} border-purple-200 bg-purple-50 text-purple-700 dark:border-purple-500/40 dark:bg-purple-950/60 dark:text-purple-300`}
-        >
-          <Star className="h-3 w-3 text-purple-600 dark:text-purple-300" />
-          {condition}
-        </span>
-      );
-    }
-    if (lowerCondition.includes("occupied")) {
-      return (
-        <span
-          key={condition}
-          className={`${pillClass} border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/40 dark:bg-amber-950/60 dark:text-amber-300`}
-        >
-          <UserCheck className="h-3 w-3 text-amber-600 dark:text-amber-300" />
-          {condition}
-        </span>
-      );
-    }
-    if (lowerCondition.includes("late checkout")) {
-      return (
-        <span
-          key={condition}
-          className={`${pillClass} border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/40 dark:bg-amber-950/60 dark:text-amber-400`}
-        >
-          <Clock className="h-3 w-3 text-amber-600 dark:text-amber-400" />
-          {condition}
-        </span>
-      );
-    }
-    return (
-      <span
-        key={condition}
-        className={`${pillClass} border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-700/60 dark:bg-slate-800/60 dark:text-slate-400`}
-      >
-        <Minus className="h-3 w-3" />
-        {condition}
-      </span>
-    );
+    setBuildingChoice(value);
+    setFloorChoice(null);
   };
 
   const handleDetailsClick = (room: RoomRow) => {
@@ -504,7 +369,7 @@ const Occupancy = () => {
       {/* Tabs */}
       <div className="flex gap-6 border-b border-border dark:border-slate-800">
         <button
-          onClick={() => switchTab("guest")}
+          onClick={() => setActiveTab("guest")}
           className={`relative px-1 pb-3 text-sm font-medium transition-all duration-200 ${activeTab === "guest"
             ? "text-foreground font-semibold"
             : "text-muted-foreground hover:text-foreground"
@@ -516,7 +381,7 @@ const Occupancy = () => {
           )}
         </button>
         <button
-          onClick={() => switchTab("nonGuest")}
+          onClick={() => setActiveTab("nonGuest")}
           className={`relative px-1 pb-3 text-sm font-medium transition-all duration-200 ${activeTab === "nonGuest"
             ? "text-foreground font-semibold"
             : "text-muted-foreground hover:text-foreground"
@@ -532,103 +397,64 @@ const Occupancy = () => {
       {/* Table Container */}
       <Card className="border border-border/80 dark:border-slate-800 shadow-xl rounded-xl bg-card text-card-foreground overflow-hidden">
         <CardContent className="p-5">
-          {/* Controls */}
-          <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
+          {/* Controls. No page size or search: the table is one scrollable
+              list and the browser's Ctrl+F covers finding a row. */}
+          <div className="flex flex-wrap items-center justify-end gap-4 mb-5">
+            {/* Building -> Floor -> Status drill-down. Building and Floor are
+                database rows; Status is the statuses present in the list. */}
+            {mayReadFacility && (
+              <>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground text-sm">Building</span>
+                  <Select value={buildingFilter} onValueChange={changeBuilding}>
+                    <SelectTrigger className="w-36 h-9 bg-muted/30 border-border/50 dark:border-slate-700">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover text-popover-foreground border-border text-xs">
+                      <SelectItem value={ALL_FILTER_VALUE}>All Buildings</SelectItem>
+                      {buildings.map((building) => (
+                        <SelectItem key={building.id} value={building.id}>
+                          {building.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground text-sm">Floor</span>
+                  <Select value={floorFilter} onValueChange={setFloorChoice}>
+                    <SelectTrigger className="w-36 h-9 bg-muted/30 border-border/50 dark:border-slate-700">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover text-popover-foreground border-border text-xs">
+                      <SelectItem value={ALL_FILTER_VALUE}>All Floors</SelectItem>
+                      {floors.map((floor) => (
+                        <SelectItem key={floor.id} value={floor.id}>
+                          {floor.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
+
             <div className="flex items-center gap-2">
-              <span className="text-muted-foreground text-sm">Show</span>
-              <Select
-                value={entriesPerPage}
-                onValueChange={(value) => {
-                  setEntriesPerPage(value);
-                  setCurrentPage(1);
-                }}
-              >
-                <SelectTrigger className="w-20 h-9 bg-muted/30 border-border/50 dark:border-slate-700">
+              <span className="text-muted-foreground text-sm">Status</span>
+              <Select value={statusFilter} onValueChange={setFilterBy}>
+                <SelectTrigger className="w-36 h-9 bg-muted/30 border-border/50 dark:border-slate-700">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-popover text-popover-foreground border-border text-xs">
-                  <SelectItem value="10">10</SelectItem>
-                  <SelectItem value="25">25</SelectItem>
-                  <SelectItem value="50">50</SelectItem>
-                  <SelectItem value="100">100</SelectItem>
+                  <SelectItem value={ALL_FILTER_VALUE}>Show All</SelectItem>
+                  {statusOptions.map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {status}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
-              <span className="text-muted-foreground text-xs font-medium">entries</span>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-4">
-              {/* Building -> Floor -> Status drill-down. Every option is a
-                  database row; none of the three is hardcoded. */}
-              {mayReadFacility && (
-                <>
-                  <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground text-sm">Building</span>
-                    <Select value={buildingFilter} onValueChange={changeBuilding}>
-                      <SelectTrigger className="w-36 h-9 bg-muted/30 border-border/50 dark:border-slate-700">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-popover text-popover-foreground border-border text-xs">
-                        <SelectItem value={ALL_FILTER_VALUE}>All Buildings</SelectItem>
-                        {buildings.map((building) => (
-                          <SelectItem key={building.id} value={building.id}>
-                            {building.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground text-sm">Floor</span>
-                    <Select value={floorFilter} onValueChange={changeFloor}>
-                      <SelectTrigger className="w-36 h-9 bg-muted/30 border-border/50 dark:border-slate-700">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-popover text-popover-foreground border-border text-xs">
-                        <SelectItem value={ALL_FILTER_VALUE}>All Floors</SelectItem>
-                        {floors.map((floor) => (
-                          <SelectItem key={floor.id} value={floor.id}>
-                            {floor.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </>
-              )}
-
-              <div className="flex items-center gap-2">
-                <span className="text-muted-foreground text-sm">Status</span>
-                <Select
-                  value={filterBy}
-                  onValueChange={(value) => {
-                    setFilterBy(value);
-                    setCurrentPage(1);
-                  }}
-                >
-                  <SelectTrigger className="w-36 h-9 bg-muted/30 border-border/50 dark:border-slate-700">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover text-popover-foreground border-border text-xs">
-                    <SelectItem value={ALL_FILTER_VALUE}>Show All</SelectItem>
-                    {statuses.map((status) => (
-                      <SelectItem key={status.id} value={status.amenity_status_name}>
-                        {status.amenity_status_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <span className="text-muted-foreground text-xs font-medium">Search:</span>
-                <Input
-                  placeholder="Room no, Room type, Guest name"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-56 md:w-64 h-8 text-xs bg-muted/20 border-border dark:border-slate-700/80 rounded-md placeholder:text-muted-foreground/60"
-                />
-              </div>
             </div>
           </div>
 
@@ -707,26 +533,21 @@ const Occupancy = () => {
                         <DateTimeStack value={room.checkOutTime} overdue={isOverdueCheckout(room)} />
                       </TableCell>
                       <TableCell className="text-center">
-                        {/* Check-in / check-out: the real stay workflow. Room
-                            state follows automatically (Occupied / Available). */}
-                        {room.stayId && !room.checkedIn ? (
+                        {/* Check-Out for an in-house stay, "No stay" otherwise.
+                            The API sends `current_stay` only while a stay is
+                            checked in and not out, so a stay id here always
+                            means a guest in house -- there is no pre-arrival
+                            Check-In state to show (that lives in Bookings). A
+                            room whose stored status says Occupied without an
+                            in-house stay has nothing to check out. */}
+                        {room.stayId ? (
                           <Button
                             size="sm"
-                            className="rounded-full bg-teal-600 hover:bg-teal-700 text-white text-xs px-3"
-                            disabled={!mayWriteBookings || checkIn.isPending}
-                            onClick={() => checkIn.mutate({ id: room.stayId as string })}
-                            title={
-                              mayWriteBookings
-                                ? "Check this stay in"
-                                : "Your role cannot change bookings"
-                            }
-                          >
-                            Check-In
-                          </Button>
-                        ) : room.stayId && room.checkedIn ? (
-                          <Button
-                            size="sm"
-                            className="rounded-full bg-purple-600 hover:bg-purple-700 text-white text-xs px-3"
+                            // Light purple box, purple text: the actionable
+                            // state, against the muted "No stay". index.css
+                            // repaints `bg-purple-*` pills in table cells (both
+                            // themes, hover included) to this same tint.
+                            className="rounded-full border border-purple-200 bg-purple-50 text-purple-700 text-xs font-semibold px-3"
                             disabled={!mayWriteBookings || checkOut.isPending}
                             onClick={() => checkOut.mutate({ id: room.stayId as string })}
                             title={
@@ -773,7 +594,7 @@ const Occupancy = () => {
                           }
                         >
                           {room.conditions.length > 0
-                            ? room.conditions.map((condition) => getConditionBadge(condition))
+                            ? room.conditions.map((condition) => <ConditionBadge key={condition} condition={condition} />)
                             : <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-gray-200 bg-gray-50 text-gray-400 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400 text-xs font-semibold">
                                 <Minus className="h-3.5 w-3.5" /> -
                               </span>}
@@ -825,29 +646,11 @@ const Occupancy = () => {
             </DataState>
           </div>
 
-          {/* Pagination -- driven by the API's `total`. */}
-          <div className="flex items-center justify-between mt-6">
+          {/* Row count only: every row is on screen, so there is no pager. */}
+          <div className="mt-6">
             <span className="text-muted-foreground text-sm">
-              Showing {firstEntry} to {lastEntry} of {totalEntries} entries
+              Showing {filteredRooms.length} {filteredRooms.length === 1 ? "entry" : "entries"}
             </span>
-
-            <div className="flex items-center gap-1">
-              <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>First</Button>
-              <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1}>Previous</Button>
-              {Array.from({ length: Math.min(totalPages, 4) }, (_, index) => index + 1).map((page) => (
-                <Button
-                  key={page}
-                  variant={currentPage === page ? "default" : "ghost"}
-                  size="sm"
-                  className={`h-8 w-8 p-0 text-xs rounded-xl ${currentPage === page ? "bg-brand hover:bg-brand-hover text-white font-semibold shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-                  onClick={() => setCurrentPage(page)}
-                >
-                  {page}
-                </Button>
-              ))}
-              <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage >= totalPages}>Next</Button>
-              <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setCurrentPage(totalPages)} disabled={currentPage >= totalPages}>Last</Button>
-            </div>
           </div>
         </CardContent>
       </Card>
@@ -873,6 +676,7 @@ const Occupancy = () => {
         roomType={selectedRoom?.roomType}
         guestName={selectedRoom?.guestName}
         status={selectedRoom?.statusName}
+        conditions={selectedRoom?.conditions}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
       />

@@ -6,7 +6,8 @@
  * rooms:
  *
  *   Power   -> GET /device-stats?param_name=active_power&amenity_id=...
- *              `device_param` 18/27, unit KW. Instantaneous load.
+ *              `device_param` 18/27, stored unit "KW" (shown as kW).
+ *              Instantaneous load.
  *   Energy  -> GET /device-stats?param_name=active_energy&amenity_id=...
  *              `device_param` 7/11, unit kWh. Cumulative meter reading.
  *   Energy  -> GET /energy-stats/summary?group_by=amenity&amenity_id=...
@@ -134,8 +135,20 @@ const unitOf = (readings: Map<string, Reading>) => {
     return null;
 };
 
+/**
+ * SI casing for the kilowatt units, applied at display only.
+ *
+ * `device_param` stores active_power's unit as "KW" while active_energy's is
+ * "kWh", so the two sat side by side in different casings. The stored value and
+ * the API response are left as they are; only the rendered text is corrected.
+ * Anything other than the two kilowatt spellings renders exactly as stored.
+ */
+const SI_UNITS: Record<string, string> = { kw: "kW", kwh: "kWh" };
+
+const displayUnit = (unit: string) => SI_UNITS[unit.trim().toLowerCase()] ?? unit;
+
 const show = (value: number | null, unit: string | null) =>
-    value === null ? EMPTY_VALUE : unit ? `${value} ${unit}` : String(value);
+    value === null ? EMPTY_VALUE : unit ? `${value} ${displayUnit(unit)}` : String(value);
 
 const formatDateTime = (value: string | null | undefined) =>
     value ? new Date(value).toLocaleString() : EMPTY_VALUE;
@@ -287,9 +300,20 @@ export function RoomPowerEnergy({ amenityId }: RoomPowerEnergyProps) {
                                 "is shown unlabelled."
                             }
                         />
+                        {/* `reading_count` is how many hourly `energy_stat` rows
+                            the Recorded Consumption sum covers -- a count, not a
+                            time. It used to be labelled "Last Reading", which
+                            made a bare "24" read like a timestamp or an age. */}
                         <Field
-                            label="Last Reading"
-                            value={recorded?.reading_count ?? EMPTY_VALUE}
+                            label="Readings Recorded"
+                            value={
+                                recorded
+                                    ? `${recorded.reading_count} hourly ${
+                                          recorded.reading_count === 1 ? "reading" : "readings"
+                                      }`
+                                    : EMPTY_VALUE
+                            }
+                            title="Number of hourly energy_stat readings summed into Recorded Consumption."
                         />
                     </div>
                 </div>
