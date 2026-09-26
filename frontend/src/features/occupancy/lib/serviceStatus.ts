@@ -3,7 +3,7 @@
  *
  *   Pending              -> yellow   (raised, nobody on it yet)
  *   Assigned             -> blue     (someone owns it)
- *   Partially Completed  -> blue     (owned and underway)
+ *   In Progress          -> blue     (owned and underway)
  *   Completed            -> green    (done)
  *   Canceled             -> gray     (closed without being done)
  *
@@ -16,7 +16,7 @@
  * Keyed by `service_status.status_name` as the API returns it, never by the
  * row's id: `services.py` happens to seed these as 1-5 today and nothing in the
  * schema promises that order. Matching is case- and space-insensitive so
- * "Partially Completed" and "partially_completed" land on the same entry. A
+ * "In Progress" and "in_progress" land on the same entry. A
  * status this map does not know falls back to neutral rather than borrowing
  * another status's meaning, so a status added to the table later shows up
  * uncoloured instead of silently claiming to be complete.
@@ -31,7 +31,7 @@ const STATUS_BADGE_CLASS: Record<string, string> = {
         "bg-yellow-100 text-yellow-700 hover:bg-yellow-100 dark:bg-yellow-900/30 dark:text-yellow-400",
     assigned:
         "bg-blue-100 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400",
-    "partially completed":
+    "in progress":
         "bg-blue-100 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400",
     completed:
         "bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400",

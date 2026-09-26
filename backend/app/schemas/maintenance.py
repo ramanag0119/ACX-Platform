@@ -169,7 +169,7 @@ class MaintenanceRequestUpdate(Body):
     item_id: uuid.UUID | None = None
     under_maintenance: bool | None = None
     non_room_comments: str | None = Field(default=None, max_length=2000)
-    #: `service_status.id`: 1 Pending, 2 Assigned, 3 Partially completed,
+    #: `service_status.id`: 1 Pending, 2 Assigned, 3 In Progress,
     #: 4 Completed, 5 Canceled.
     maintenance_request_status: int | None = Field(default=None, ge=1)
     status_reason: str | None = Field(default=None, max_length=100)

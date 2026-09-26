@@ -5,7 +5,7 @@ Rules taken from the schema and the three seeded rows, not invented:
 * `maintenance_request_type` is the enum `scheduled | planned | disinfection` --
   the three Services Planning tabs. Nothing else is a valid type.
 * `maintenance_request_status` is a FK to `service_status`: 1 Pending,
-  2 Assigned, 3 Partially completed, 4 Completed, 5 Canceled. A new request
+  2 Assigned, 3 In Progress, 4 Completed, 5 Canceled. A new request
   opens at Pending, and naming assignees moves it to Assigned -- exactly what
   the seeded rows show (the row with assignees and no completion sits at 2, the
   completed one at 4 with `completed_on` stamped).

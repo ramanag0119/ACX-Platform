@@ -123,7 +123,7 @@ Legend: **USE** = required, IKANOS business meaning and relationships preserved 
 | 20 | `role_modules` | `role_module` | 18 rows that match the HMS sidebar exactly — closes NEEDS_REVIEW D1 |
 | 21 | `role_module_permissions` | `role_module_permission` | Read/write access per role per module |
 | 22 | `service_types` | `service_type` | The 7 Services Tracking tabs |
-| 23 | `service_statuses` | `service_status` | Pending · Assigned · Partially completed · Completed · Canceled |
+| 23 | `service_statuses` | `service_status` | Pending · Assigned · In Progress (IKANOS: Partially completed) · Completed · Canceled |
 | 24 | `service_categories` | `service_category` | Services Setup groups (replaces HMS `food_category`) |
 | 25 | `service_request_items` | `service_request_item` | Service Tracking "Items" modal, quantities and unit prices |
 | 26 | `room_service_requests` | `room_service_request` | Guest-room service queue — flagged REVIEW §11.7 |
@@ -932,7 +932,7 @@ Every `facility_id` is `UUID NOT NULL/NULL → facility(id) ON DELETE CASCADE` a
 | `name` | `VARCHAR(100)` | NOT NULL | |
 
 - **PK** `id`
-- **Seed (5):** Pending · Assigned · Partially completed · Completed · Canceled
+- **Seed (5):** Pending · Assigned · In Progress · Completed · Canceled (id 3 was IKANOS "Partially completed"; renamed by migration `7c4e2b9a1d53`)
 - Resolves NEEDS_REVIEW **D4** and gaps **X8, O34, D13**.
 
 #### 36. `service_category`
@@ -1023,7 +1023,7 @@ Every `facility_id` is `UUID NOT NULL/NULL → facility(id) ON DELETE CASCADE` a
 | `status` | `SMALLINT` | NULL | → `service_status(id)` |
 
 - **PK** `id` · **FK** all `RESTRICT` · **Indexes** on `service_request_id`, `item_id`, `category_id`
-- **Explains "Partially completed"** — a ticket is partial when its items differ in status.
+- **Explains "In Progress"** — a ticket is in progress when its items differ in status.
 
 #### 40. `room_service_request`
 - **Purpose:** Lightweight in-room service call raised from the guest app.

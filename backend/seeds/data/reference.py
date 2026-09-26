@@ -31,7 +31,7 @@ SERVICE_TYPES = [
 SERVICE_STATUSES = [
     (1, "Pending"),
     (2, "Assigned"),
-    (3, "Partially completed"),
+    (3, "In Progress"),
     (4, "Completed"),
     (5, "Canceled"),
 ]

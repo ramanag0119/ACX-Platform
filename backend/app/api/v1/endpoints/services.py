@@ -139,7 +139,7 @@ def get_service_type(service_type_id: int, db: DbSession) -> ServiceTypeDetail:
     response_model=Page[ServiceStatusRead],
     summary="List service statuses",
     description=(
-        "Pending, Assigned, Partially completed, Completed, Canceled. "
+        "Pending, Assigned, In Progress, Completed, Canceled. "
         "The schema holds no status-transition table."
     ),
 )
@@ -275,7 +275,7 @@ def list_service_requests(
     status_id: int | None = Query(
         None, alias="status",
         description="service_status.id: 1 Pending, 2 Assigned, "
-                    "3 Partially completed, 4 Completed, 5 Canceled",
+                    "3 In Progress, 4 Completed, 5 Canceled",
     ),
     category_id: uuid.UUID | None = Query(None),
     assigned_to: uuid.UUID | None = Query(None),
