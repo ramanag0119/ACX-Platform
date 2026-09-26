@@ -108,7 +108,7 @@ def test_service_statuses_are_the_five_real_values(client):
     names = [
         s["name"] for s in client.get(f"{V1}/service-statuses").json()["items"]
     ]
-    assert names == ["Pending", "Assigned", "Partially completed", "Completed", "Canceled"]
+    assert names == ["Pending", "Assigned", "In Progress", "Completed", "Canceled"]
 
 
 def test_service_type_detail_counts(client, db):
@@ -245,11 +245,11 @@ def test_request_detail_includes_line_items(client, db):
         assert item["quantity"] is None or item["quantity"] > 0
 
 
-def test_partially_completed_request_has_items_in_differing_states(client, db):
-    """This is what 'Partially completed' actually means in the schema."""
+def test_in_progress_request_has_items_in_differing_states(client, db):
+    """This is what 'In Progress' actually means in the schema."""
     request_id = db.execute(
         text("""SELECT sr.id FROM service_request sr JOIN service_status s
-                ON s.id = sr.status WHERE s.name = 'Partially completed' LIMIT 1""")
+                ON s.id = sr.status WHERE s.name = 'In Progress' LIMIT 1""")
     ).scalar_one()
     body = client.get(f"{V1}/service-requests/{request_id}").json()
     assert len({i["status_name"] for i in body["items"]}) > 1

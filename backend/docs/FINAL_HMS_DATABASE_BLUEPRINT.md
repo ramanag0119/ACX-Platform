@@ -932,7 +932,7 @@ Every `facility_id` is `UUID NOT NULL/NULL → facility(id) ON DELETE CASCADE` a
 | `name` | `VARCHAR(100)` | NOT NULL | |
 
 - **PK** `id`
-- **Seed (5):** Pending · Assigned · Partially completed · Completed · Canceled
+- **Seed (5):** Pending · Assigned · In Progress · Completed · Canceled (id 3 was IKANOS "Partially completed"; renamed by migration `7c4e2b9a1d53`)
 - Resolves NEEDS_REVIEW **D4** and gaps **X8, O34, D13**.
 
 #### 36. `service_category`
@@ -1023,7 +1023,7 @@ Every `facility_id` is `UUID NOT NULL/NULL → facility(id) ON DELETE CASCADE` a
 | `status` | `SMALLINT` | NULL | → `service_status(id)` |
 
 - **PK** `id` · **FK** all `RESTRICT` · **Indexes** on `service_request_id`, `item_id`, `category_id`
-- **Explains "Partially completed"** — a ticket is partial when its items differ in status.
+- **Explains "In Progress"** — a ticket is in progress when its items differ in status.
 
 #### 40. `room_service_request`
 - **Purpose:** Lightweight in-room service call raised from the guest app.

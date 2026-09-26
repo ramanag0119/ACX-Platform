@@ -42,7 +42,7 @@ interface Props {
  * The one dialog behind every service-request action, on both Tickets and
  * Services Tracking: assign, change status, record a reason, or cancel.
  *
- * Statuses come from `service_status` (Pending, Assigned, Partially completed,
+ * Statuses come from `service_status` (Pending, Assigned, In Progress,
  * Completed, Canceled) and assignees from staff `app_user` rows -- neither is
  * hardcoded. The backend stamps `completed_on` when the status reaches
  * Completed and clears it on the way out, so the UI never has to.

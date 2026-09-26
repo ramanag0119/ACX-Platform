@@ -65,7 +65,7 @@ class ServiceTypeDetail(ServiceTypeRead):
 
 
 class ServiceStatusRead(ORMModel):
-    """A row of `service_status`: Pending, Assigned, Partially completed,
+    """A row of `service_status`: Pending, Assigned, In Progress,
     Completed, Canceled. There is no status-transition table in the schema."""
 
     id: int = Field(examples=[1])
@@ -141,7 +141,7 @@ class ServiceRequestItemRead(ORMModel):
     """A row of `service_request_item`.
 
     Line items carry their own status, which is how a request reaches
-    "Partially completed": its items differ in status.
+    "In Progress": its items differ in status.
     """
 
     id: uuid.UUID

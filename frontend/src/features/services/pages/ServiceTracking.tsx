@@ -230,7 +230,7 @@ const ServiceTracking = () => {
         else if (normalised === "completed") colorClass = "bg-emerald-500/20 text-emerald-500";
         else if (normalised === "pending") colorClass = "bg-amber-500/20 text-amber-500";
         else if (normalised === "canceled" || normalised === "cancelled") colorClass = "bg-red-500/20 text-red-500";
-        else if (normalised === "partially completed") colorClass = "bg-blue-500/20 text-blue-500";
+        else if (normalised === "in progress") colorClass = "bg-blue-500/20 text-blue-500";
 
         return (
             <Badge className={`${colorClass} hover:${colorClass} font-medium border-0`}>
@@ -244,7 +244,7 @@ const ServiceTracking = () => {
         const normalised = status.toLowerCase();
         if (normalised === "assigned") { bgColor = "bg-[#e5a910] hover:bg-[#cc960e]"; }
         else if (normalised === "pending" || normalised.startsWith("cancel")) { bgColor = "bg-[#ed5565] hover:bg-[#da4453]"; }
-        else if (normalised === "partially completed") { bgColor = "bg-brand-teal hover:bg-[#2e93a8]"; }
+        else if (normalised === "in progress") { bgColor = "bg-brand-teal hover:bg-[#2e93a8]"; }
 
         return (
             <div className="flex justify-center gap-2">
@@ -866,7 +866,7 @@ const ServiceTracking = () => {
                                     <Label className="text-sm font-medium text-gray-800 text-left">Status</Label>
                                     <div className="relative">
                                         <select className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-900 focus:ring-0 px-0 pb-2 text-sm appearance-none outline-none">
-                                            <option>Partially completed</option>
+                                            <option>In Progress</option>
                                         </select>
                                         <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
                                     </div>

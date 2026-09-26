@@ -2,7 +2,7 @@
 
 Rules taken from the schema and the seeded IKANOS rows, not invented:
 
-* `service_status` is the lookup: 1 Pending, 2 Assigned, 3 Partially completed,
+* `service_status` is the lookup: 1 Pending, 2 Assigned, 3 In Progress,
   4 Completed, 5 Canceled. Nothing else is a valid status.
 * Every seeded request with `completed_on` set is status 4, and no other status
   has it. So `completed_on` is stamped when a request reaches Completed and
@@ -51,7 +51,7 @@ from app.services.writes import (
 #: `service_status` ids, read from the seeded lookup rather than hardcoded text.
 STATUS_PENDING = 1
 STATUS_ASSIGNED = 2
-STATUS_PARTIAL = 3
+STATUS_IN_PROGRESS = 3
 STATUS_COMPLETED = 4
 STATUS_CANCELLED = 5
 

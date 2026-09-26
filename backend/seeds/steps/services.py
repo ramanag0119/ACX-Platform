@@ -38,7 +38,7 @@ ROOM_SERVICE, TRAVEL_DESK, BUSINESS_CENTER = 1, 2, 3
 FOOD_ORDER, FACILITY_MAINT, HEALTH_FITNESS, SANITATION = 4, 5, 6, 7
 
 # service_status ids
-PENDING, ASSIGNED, PARTIALLY_COMPLETED, COMPLETED, CANCELED = 1, 2, 3, 4, 5
+PENDING, ASSIGNED, IN_PROGRESS, COMPLETED, CANCELED = 1, 2, 3, 4, 5
 
 # (key, service_type, category_name, category_key)
 CATEGORIES = [
@@ -93,7 +93,7 @@ REQUESTS = [
     ("SR-2026-0003", FACILITY_MAINT, "hvac", "104", None,
      "rahul.das", "vikram.rao", PENDING, "maintenance", None),
     ("SR-2026-0004", ROOM_SERVICE, "laundry", "106", "STY-2026-0006",
-     "ishaan.gupta", "fatima.sheikh", PARTIALLY_COMPLETED, "housekeeping", None),
+     "ishaan.gupta", "fatima.sheikh", IN_PROGRESS, "housekeeping", None),
     ("SR-2026-0005", TRAVEL_DESK, "airport-transfer", "301", None,
      "daniel.foster", "rahul.das", PENDING, "front-office", None),
     ("SR-2026-0006", FOOD_ORDER, "breakfast", "102", "STY-2026-0004",

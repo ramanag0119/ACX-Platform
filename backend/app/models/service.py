@@ -44,7 +44,7 @@ class ServiceStatus(Base, TimestampMixin, SmallIntLookupPk):
     """Service and maintenance lifecycle vocabulary.
     IKANOS `service_statuses`. USE.
 
-    Seeded: Pending, Assigned, Partially completed, Completed, Canceled.
+    Seeded: Pending, Assigned, In Progress, Completed, Canceled.
     """
 
     __tablename__ = "service_status"
@@ -228,7 +228,7 @@ class ServiceRequest(HMSBase, UUIDPk):
 class ServiceRequestItem(HMSBase, UUIDPk):
     """Line items on a ticket. IKANOS `service_request_items`. USE.
 
-    Explains the "Partially completed" status: a ticket is partial when its
+    Explains the "In Progress" status: a ticket is in progress when its
     items differ in status.
     """
 
