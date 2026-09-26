@@ -228,8 +228,8 @@ class ServiceRequest(HMSBase, UUIDPk):
 class ServiceRequestItem(HMSBase, UUIDPk):
     """Line items on a ticket. IKANOS `service_request_items`. USE.
 
-    Explains the "In Progress" status: a ticket is in progress when its
-    items differ in status.
+    Explains status 3, "In Progress" (IKANOS "Partially completed"): a
+    ticket is in progress while its items differ in status.
     """
 
     __tablename__ = "service_request_item"

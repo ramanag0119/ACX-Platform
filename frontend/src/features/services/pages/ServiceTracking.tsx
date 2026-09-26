@@ -17,7 +17,7 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Search, Settings, X, ChevronDown, Bed, Briefcase, Building, Utensils, Wrench, HeartPulse, Sparkles } from "lucide-react";
+import { Search, Settings, X, Bed, Briefcase, Building, Utensils, Wrench, HeartPulse, Sparkles } from "lucide-react";
 import {
     PieChart,
     Pie,
@@ -30,10 +30,10 @@ import {
     Dialog,
     DialogContent,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { DataState, TableLoading } from "@/core/components/DataState";
 import { TablePagination } from "@/core/components/TablePagination";
-import { useServiceRequests, useServiceStatuses, useServiceTypes } from "@/lib/api/hooks";
+import { useServiceRequests, useServiceTypes } from "@/lib/api/hooks";
+import { serviceStatusBadgeClass } from "@/features/occupancy/lib/serviceStatus";
 import { useAuth } from "@/core/contexts/AuthContext";
 import {
   ServiceRequestActionsDialog,
@@ -46,20 +46,20 @@ import { useScrollToTop } from "@/hooks/use-scroll-to-top";
 /**
  * Service Tracking, connected to the Phase 2.5 APIs.
  *
- *   KPI cards  -> GET /service-types  + GET /service-requests?service_type=N
+ *   KPI cards  -> GET /service-types + one page of GET /service-requests
  *   Donut      -> completed vs not-completed counts of the same requests
- *   Tables     -> GET /service-requests, filtered by the selected type
+ *   Tables     -> the same requests, filtered by the selected type
  *
- * The seven cards are the seven real `service_type` rows. Counts are the API's
- * `total`, never a length of the current page. The donut splits on the real
- * `service_status` name "Completed" -- there is no stored completion ratio.
+ * The seven cards are the seven real `service_type` rows. Card counts and the
+ * donut are tallied from that single page (MAX_PAGE_SIZE rows), so they
+ * undercount once there are more requests than fit on it. The donut splits on
+ * the real `service_status` name "Completed" -- there is no stored ratio.
  *
  * Columns with no source in `service_request`, shown as "-":
- *   Time span (start/stop time), "Maintenance" flag and the per-request staff
- *   list. `maintenance_request` is a separate table with no endpoint.
+ *   the "Maintenance" flag (`maintenance_request` is a separate table).
  *
- * This screen is read-only: assignment and status changes need write
- * endpoints, which Phase 2.10 does not add.
+ * Assignment, status changes and cancellation go through
+ * ServiceRequestActionsDialog (PATCH / cancel on /service-requests).
  */
 
 /** Card/tab id -> icon and colour treatment, keyed by the real type name. */
@@ -121,7 +121,6 @@ const ServiceTracking = () => {
     // page kept the old scroll offset and the sticky header stayed
     // above the fold. See use-scroll-to-top.
     useScrollToTop(currentPage);
-    const [statusModalConfig, setStatusModalConfig] = useState<{ isOpen: boolean; type: "yellow" | "red" | "blue" | null }>({ isOpen: false, type: null });
     // The real action target: assign / change status / cancel.
     const [actionTarget, setActionTarget] = useState<ServiceRequestActionTarget | null>(null);
     const { canWrite } = useAuth();
@@ -130,7 +129,6 @@ const ServiceTracking = () => {
 
     // --- Live data -------------------------------------------------------
     const typesQuery = useServiceTypes({ page: 1, page_size: MAX_PAGE_SIZE });
-    const statusesQuery = useServiceStatuses({ page: 1, page_size: MAX_PAGE_SIZE });
     // One page of every request: the cards need per-type counts and the donut
     // needs the status split, and the seeded volume fits inside one page.
     const allRequestsQuery = useServiceRequests({ page: 1, page_size: MAX_PAGE_SIZE });
@@ -198,9 +196,8 @@ const ServiceTracking = () => {
         status: request.status_name ?? "-",
     }));
 
-    const isLoading =
-        typesQuery.isLoading || statusesQuery.isLoading || allRequestsQuery.isLoading;
-    const error = typesQuery.error ?? statusesQuery.error ?? allRequestsQuery.error;
+    const isLoading = typesQuery.isLoading || allRequestsQuery.isLoading;
+    const error = typesQuery.error ?? allRequestsQuery.error;
 
     const renderActiveShape = (props: { cx?: number; cy?: number; innerRadius?: number; outerRadius?: number; startAngle?: number; endAngle?: number; fill?: string }) => {
         const { cx = 0, cy = 0, innerRadius = 0, outerRadius = 0, startAngle = 0, endAngle = 0, fill = "#3eb1c8" } = props;
@@ -223,21 +220,11 @@ const ServiceTracking = () => {
         );
     };
 
-    const getStatusBadge = (status: string) => {
-        let colorClass = "bg-gray-500/20 text-gray-400";
-        const normalised = status.toLowerCase();
-        if (normalised === "assigned") colorClass = "bg-cyan-500/20 text-cyan-400";
-        else if (normalised === "completed") colorClass = "bg-emerald-500/20 text-emerald-500";
-        else if (normalised === "pending") colorClass = "bg-amber-500/20 text-amber-500";
-        else if (normalised === "canceled" || normalised === "cancelled") colorClass = "bg-red-500/20 text-red-500";
-        else if (normalised === "in progress") colorClass = "bg-blue-500/20 text-blue-500";
-
-        return (
-            <Badge className={`${colorClass} hover:${colorClass} font-medium border-0`}>
-                {status}
-            </Badge>
-        );
-    };
+    const getStatusBadge = (status: string) => (
+        <Badge variant="secondary" className={`${serviceStatusBadgeClass(status)} font-medium border-0`}>
+            {status}
+        </Badge>
+    );
 
     const renderAction = (status: string, row?: (typeof rows)[number]) => {
         let bgColor = "bg-[#808080] hover:bg-[#666666]"; // Default for Completed etc
@@ -798,98 +785,6 @@ const ServiceTracking = () => {
                 pageSize={pageSize}
                 className="mt-4"
             />
-
-            {/* Status Update Modal */}
-            <Dialog open={statusModalConfig.isOpen} onOpenChange={(open) => setStatusModalConfig({ ...statusModalConfig, isOpen: open })}>
-                <DialogContent className="max-w-[650px] bg-white text-gray-900 border-0 p-0 overflow-hidden flex flex-col hide-close-button shadow-2xl [&>button]:hidden rounded-none">
-                    <div className="flex justify-between items-center p-3 px-5 bg-white border-b border-gray-200 shadow-sm">
-                        <h2 className="text-[17px] font-semibold text-gray-800 tracking-wide">Status Update</h2>
-                        <Button variant="ghost" className="h-7 w-7 p-0 border-[1.5px] border-gray-300 rounded-[2px] hover:bg-gray-100" onClick={() => setStatusModalConfig({ ...statusModalConfig, isOpen: false })}>
-                            <X className="h-4 w-4 text-gray-500 stroke-[3]" />
-                        </Button>
-                    </div>
-
-                    <div className="px-16 py-12 space-y-8">
-                        {statusModalConfig.type === "yellow" && (
-                            <>
-                                <div className="grid grid-cols-[140px_1fr] gap-6 items-center">
-                                    <Label className="text-sm font-medium text-gray-800 text-left">Status <span className="text-red-500">*</span></Label>
-                                    <div className="relative">
-                                        <select className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-900 focus:ring-0 px-0 pb-2 text-sm appearance-none outline-none">
-                                            <option>Assigned</option>
-                                        </select>
-                                        <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-[140px_1fr] gap-6 items-center">
-                                    <Label className="text-sm font-medium text-gray-800 text-left">Department <span className="text-red-500">*</span></Label>
-                                    <div className="relative">
-                                        <select className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-900 focus:ring-0 px-0 pb-2 text-sm appearance-none outline-none">
-                                            <option>Housekeeping Manager</option>
-                                        </select>
-                                        <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-[140px_1fr] gap-6 items-center">
-                                    <Label className="text-sm font-medium text-gray-800 text-left">Assign To <span className="text-red-500">*</span></Label>
-                                    <div className="relative">
-                                        <select className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-900 focus:ring-0 px-0 pb-2 text-sm appearance-none outline-none">
-                                            <option>Alice konyak</option>
-                                        </select>
-                                        <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
-                                    </div>
-                                </div>
-                                <div className="flex justify-end pt-2">
-                                    <Button className="bg-brand-teal hover:bg-brand-teal/90 text-white border-0 h-9 px-6 rounded-sm font-normal" onClick={() => setStatusModalConfig({ ...statusModalConfig, isOpen: false })}>Submit</Button>
-                                </div>
-                            </>
-                        )}
-                        {statusModalConfig.type === "red" && (
-                            <>
-                                <div className="grid grid-cols-[140px_1fr] gap-6 items-center">
-                                    <Label className="text-sm font-medium text-gray-800 text-left">Status <span className="text-red-500">*</span></Label>
-                                    <div className="relative">
-                                        <select className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-900 focus:ring-0 px-0 pb-2 text-sm appearance-none outline-none">
-                                            <option>Pending</option>
-                                        </select>
-                                        <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
-                                    </div>
-                                </div>
-                                <div className="flex justify-end pt-2">
-                                    <Button className="bg-brand-teal hover:bg-brand-teal/90 text-white border-0 h-9 px-6 rounded-sm font-normal" onClick={() => setStatusModalConfig({ ...statusModalConfig, isOpen: false })}>Submit</Button>
-                                </div>
-                            </>
-                        )}
-                        {statusModalConfig.type === "blue" && (
-                            <>
-                                <div className="grid grid-cols-[140px_1fr] gap-6 items-center">
-                                    <Label className="text-sm font-medium text-gray-800 text-left">Status</Label>
-                                    <div className="relative">
-                                        <select className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-900 focus:ring-0 px-0 pb-2 text-sm appearance-none outline-none">
-                                            <option>In Progress</option>
-                                        </select>
-                                        <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-[140px_1fr] gap-6 items-start mt-8">
-                                    <Label className="text-sm font-medium text-gray-800 text-left pt-1">Description <span className="text-red-500">*</span></Label>
-                                    <div className="relative">
-                                        <textarea rows={1} defaultValue={"Test"} className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-900 focus:ring-0 px-0 pb-2 text-sm outline-none resize-none overflow-hidden" style={{ minHeight: "28px" }}></textarea>
-                                        <div className="absolute right-0 bottom-1 pointer-events-none">
-                                            <svg width="6" height="6" viewBox="0 0 6 6" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                <path d="M6 6L0 6L6 0L6 6Z" fill="#cccccc" />
-                                            </svg>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="flex justify-end pt-2">
-                                    <Button className="bg-brand-teal hover:bg-brand-teal/90 text-white border-0 h-9 px-6 rounded-sm font-normal" onClick={() => setStatusModalConfig({ ...statusModalConfig, isOpen: false })}>Submit</Button>
-                                </div>
-                            </>
-                        )}
-                    </div>
-                </DialogContent>
-            </Dialog>
 
             {/* Items Modal */}
             <Dialog open={itemsModalConfig.isOpen} onOpenChange={(open) => setItemsModalConfig({ ...itemsModalConfig, isOpen: open })}>

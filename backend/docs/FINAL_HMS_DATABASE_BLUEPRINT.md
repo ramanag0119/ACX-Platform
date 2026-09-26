@@ -123,7 +123,7 @@ Legend: **USE** = required, IKANOS business meaning and relationships preserved 
 | 20 | `role_modules` | `role_module` | 18 rows that match the HMS sidebar exactly — closes NEEDS_REVIEW D1 |
 | 21 | `role_module_permissions` | `role_module_permission` | Read/write access per role per module |
 | 22 | `service_types` | `service_type` | The 7 Services Tracking tabs |
-| 23 | `service_statuses` | `service_status` | Pending · Assigned · Partially completed · Completed · Canceled |
+| 23 | `service_statuses` | `service_status` | Pending · Assigned · In Progress (IKANOS: Partially completed) · Completed · Canceled |
 | 24 | `service_categories` | `service_category` | Services Setup groups (replaces HMS `food_category`) |
 | 25 | `service_request_items` | `service_request_item` | Service Tracking "Items" modal, quantities and unit prices |
 | 26 | `room_service_requests` | `room_service_request` | Guest-room service queue — flagged REVIEW §11.7 |
