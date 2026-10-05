@@ -269,7 +269,7 @@ export function RoomDetailsModal({
                                     />
                                     <Field label="Floor" value={occupancy?.floor_name ?? EMPTY_VALUE} />
                                     <Field
-                                        label="Room Allocations"
+                                        label="Allocations"
                                         value={occupancy?.allocation_count ?? EMPTY_VALUE}
                                     />
 
