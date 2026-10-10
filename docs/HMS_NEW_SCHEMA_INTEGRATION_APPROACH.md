@@ -31,8 +31,8 @@ Evidence labels: **[FACT]** read from the diagram or the live database ·
 4. **Fix the diagram's defects before building** (§7): FK type mismatches, two competing role and user
    systems, an `oss_amenity.name` that is only 6 characters, and several hidden or cut-off columns.
 5. **Deliver in phases, by business capability** (§8): foundation and RBAC first, then the property/room
-   bridge, then reservations and stays (this finally gives the Bookings screen a real table), then billing,
-   operations, loyalty/marketing and sustainability.
+   bridge, then reservations and stays (the Bookings screen moves from reading `stay` to a real reservation
+   table), then billing, operations, loyalty/marketing and sustainability.
 
 The timing is favourable: `hms_db` currently holds only seed/demo data (one facility,
 "Ikanos Grand Chennai"), so no production data needs to be migrated. **[FACT]**
@@ -166,6 +166,7 @@ flowchart LR
       A --> D[device]
       D --> AL[device_alert]
       S[stay] --> RA[room_allocation]
+      S --> SU[stay_user]
       K[access_key]
     end
     subgraph BSS["BSS — 54 new bss_* tables"]
@@ -181,7 +182,8 @@ flowchart LR
   P -. oss_facility_id .-> F
   R -. oss_asset_id .-> A
   RR -. bss_reservation_room_id .- RA
-  ST -. bss_stay_id .- S
+  RS -.-|"bss_reservation_id, proposed in C5"| S
+  ST -. bss_stay_id .- SU
   RC -. oss_device_alert_id .-> AL
   DK -. bss_digital_key_id .- K
   API["FastAPI /api/v1<br/>orchestration services"] --> OSS
@@ -217,8 +219,8 @@ SQLAlchemy `Base`.** **[INFER]**
 2. **Outbox for device-driven and asynchronous flows.** `bss_automation_events` (`trigger_type`,
    `source_table`, `source_id`, `target_table`, `target_id`, `processed_at`, `status`) is a transactional
    outbox **[INFER]**. Flows such as *device alert → room condition → work order* or *checkout → housekeeping
-   task* write an event in the same transaction. A worker then processes it, built on the existing
-   `scheduler_job` tables or a small background process.
+   task* write an event in the same transaction. A worker then processes it. That worker can use the `scheduler_job` tables, which already exist in the
+   schema but have no service code yet, or be a small background process.
 3. **One writer per fact.** Where the diagram caches state on both sides, only the owner in §4 writes it,
    and the other side is a projection. Examples are `bss_room_device_registry.last_known_health_status` and
    `amenity.status`.
@@ -288,9 +290,9 @@ L = 2–4 weeks for one developer. **[INFER]**
 | Phase | Scope | Key work | Size |
 |---|---|---|---|
 | **0. Confirm** | Decisions in §9; obtain the DBML; fix §7 in the diagram | No code. Output: a corrected, agreed diagram | S |
-| **1. Foundation and RBAC** | `platform_*` tables; translation conventions; ENUMs | Create `platform_modules` seeded with today's 17 module names **as `module_code`**, so `frontend/src/core/rbac/modules.ts` keeps working unchanged. Migrate `role_module_permission` rows into `platform_role_permissions`. Switch `/auth/me` effective permissions to read from `platform_*`. Retire `role_module*` one release later | M |
+| **1. Foundation and RBAC** | `platform_*` tables; translation conventions; ENUMs | Create `platform_modules` seeded with today's 17 module names **as `module_code`**, so `frontend/src/core/rbac/modules.ts` keeps working unchanged. Give each module two `platform_permissions` rows (`action` = `read` / `write`; `resource` = the module code), then map each `role_module_permission` row's `read_access` / `write_access` flags to `platform_role_permissions` rows. Switch `/auth/me` effective permissions to read from `platform_*`. Retire `role_module*` one release later | M |
 | **2. Property and room bridge** | `bss_brands`, `bss_properties`, `bss_floors`, `bss_room_types`, `bss_rooms`, `bss_room_device_registry`, `bss_room_status_history` | Backfill one brand, one property linked to the facility, floors from the property tree, rooms from room-type amenities (`oss_asset_id`), and the registry from `device.amenity_id`. Add the reconciliation report | M |
-| **3. Reservations and stays** | `bss_reservations`, `bss_reservation_rooms`, `bss_reservation_guests`, `bss_stays`, `bss_guests`, `bss_guest_pii`, rate plans, cancellation policies, availability | Bridge columns on `stay`, `room_allocation`, `stay_user`. **Orchestration services** for book, check-in, check-out and room move. The **Bookings** screen gets a real backing table (today it has none). Occupancy screens read occupancy from `bss_stays` | L |
+| **3. Reservations and stays** | `bss_reservations`, `bss_reservation_rooms`, `bss_reservation_guests`, `bss_stays`, `bss_guests`, `bss_guest_pii`, rate plans, cancellation policies, availability | Bridge columns on `stay`, `room_allocation`, `stay_user`. **Orchestration services** for book, check-in, check-out and room move. The **Bookings** screen moves to `bss_reservations`; today it lists `stay` rows, because HMS has no booking table. Occupancy screens read occupancy from `bss_stays` | L |
 | **4. Billing** | `bss_folios`, `bss_folio_charges`, `bss_orders`, `bss_payments`, `bss_invoices`, `bss_revenue_categories`, `bss_payment_methods_config` | Post service charges (`service_request.net_amount`) to folios. `invoice` becomes read-only with `bss_invoice_id`. Payment gateway integration is a separate project | L |
 | **5. Operations crossover** | `bss_housekeeping_tasks`, `bss_service_requests`, `bss_maintenance_work_orders`, `bss_room_conditions`, `bss_digital_keys`, `bss_smart_access_log`, `bss_iot_control_events`, `bss_automation_events` | Outbox worker. Flows: device alert → room condition → work order; checkout → housekeeping task; key issue → `access_key` plus `bss_digital_keys` | L |
 | **6. Commercial extensions** | Loyalty (4), promotions and redemptions, campaigns (2), corporate accounts, group blocks, events, public holidays, channels and OTA (4), seasonal rates | Resolve the Offers, Holidays and Events screens against the BSS tables (decision D6). Treat OTA inbound processing as its own integration | L |
@@ -305,7 +307,7 @@ L = 2–4 weeks for one developer. **[INFER]**
 - **Tests:** extend `APPROVED_TABLES` and the schema test (the live DB must equal the approved set); add
   integration tests for every orchestration function; add tests that the reconciliation report finds
   nothing on fresh seed data.
-- **Seed:** update `seeds/run_seed` in each phase so a fresh database always has a consistent pair of OSS
+- **Seed:** update `backend/seeds/run_seed.py` in each phase so a fresh database always has a consistent pair of OSS
   and BSS rows. Prefer **re-seeding** over backfilling the current demo data.
 - **API:** expose BSS rows by `uuid` and keep the current `/api/v1` error envelope and pagination.
   `/api/v1/bss/...` or capability names (`/reservations`, `/folios`) both work; pick one in decision D7.
