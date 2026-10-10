@@ -18,7 +18,8 @@ from sqlalchemy.exc import OperationalError
 from app.api.deps import get_db
 from app.core.config import settings
 from app.db.session import SessionLocal
-from app.main import API_VERSION, app, create_app
+from app.core.version import API_VERSION
+from app.main import app, create_app
 
 V1 = settings.API_V1_PREFIX
 
@@ -70,6 +71,31 @@ def test_health_does_not_touch_the_database(client, monkeypatch):
     app.dependency_overrides[get_db] = exploding_db
     try:
         assert client.get("/health").status_code == 200
+    finally:
+        app.dependency_overrides.clear()
+
+
+# ---------------------------------------------------------------------------
+# GET /api/v1/health/version -- the version the About screen shows
+# ---------------------------------------------------------------------------
+
+
+def test_version_reports_the_running_api_version(client):
+    r = client.get(f"{V1}/health/version")
+    assert r.status_code == 200
+    assert r.json() == {"app": settings.APP_NAME, "version": API_VERSION}
+
+
+def test_version_needs_no_token_and_no_database(client):
+    """The About screen reads it before anything else, and it must not fail
+    just because PostgreSQL is down."""
+
+    def exploding_db():
+        raise OperationalError("SELECT 1", {}, Exception("database is down"))
+
+    app.dependency_overrides[get_db] = exploding_db
+    try:
+        assert client.get(f"{V1}/health/version").status_code == 200
     finally:
         app.dependency_overrides.clear()
 
@@ -231,6 +257,8 @@ DELIVERED_PATHS = {
     # Phase 2.1 -- foundation
     "/health",
     f"{V1}/health/db",
+    # About screen -- the running API version
+    f"{V1}/health/version",
     # Phase 2.2 -- facility and property hierarchy
     f"{V1}/facilities",
     f"{V1}/facilities/{{facility_id}}",

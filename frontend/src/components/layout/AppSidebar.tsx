@@ -23,6 +23,7 @@ import {
   ShieldAlert,
   BedDouble,
   CalendarRange,
+  Info,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/core/contexts/AuthContext";
@@ -179,6 +180,8 @@ export const AppSidebar = ({ collapsed }: AppSidebarProps) => {
     // Power View / Energy View / Room View are gone: their room-level figures
     // now live inside the Occupancy Dashboard's Room Details dialog.
     { to: "/key-settings", icon: Key, label: "Default Key Settings" },
+    // About has no module grant, so every signed-in user sees it.
+    { to: "/about", icon: Info, label: "About" },
   ];
 
   // Hide what the signed-in user has no read grant for. A parent with
