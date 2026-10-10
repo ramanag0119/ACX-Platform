@@ -1,6 +1,6 @@
-"""Database health endpoint.
+"""Health endpoints: database readiness and the running API version.
 
-Every value returned here is read live from PostgreSQL on each request. There
+Every value `/health/db` returns is read live from PostgreSQL on each request. There
 is no cached or hardcoded status: if the database is unreachable, the endpoint
 answers 503 rather than reporting "ok".
 """
@@ -15,9 +15,20 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.deps import DbSession
 from app.core.config import settings
-from app.schemas.health import DatabaseHealthResponse, ErrorResponse
+from app.core.version import API_VERSION
+from app.schemas.health import DatabaseHealthResponse, ErrorResponse, VersionResponse
 
 router = APIRouter(prefix="/health", tags=["health"])
+
+
+@router.get("/version", response_model=VersionResponse, summary="API version")
+def api_version() -> VersionResponse:
+    """The version this API process is running, for the About screen.
+
+    Served under the v1 prefix, unlike `/health`, so the frontend reaches it
+    through its configured API base with no extra proxy rule.
+    """
+    return VersionResponse(app=settings.APP_NAME, version=API_VERSION)
 
 
 @router.get(

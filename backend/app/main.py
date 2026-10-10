@@ -19,9 +19,8 @@ from app.api.errors import install_exception_handlers
 from app.api.write_errors import install_write_error_handlers
 from app.api.v1.router import api_router
 from app.core.config import settings
+from app.core.version import API_VERSION
 from app.schemas.health import LivenessResponse
-
-API_VERSION = "0.3.0"
 
 
 def create_app() -> FastAPI:

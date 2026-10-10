@@ -18,6 +18,13 @@ class LivenessResponse(BaseModel):
     version: str = Field(examples=["0.2.1"])
 
 
+class VersionResponse(BaseModel):
+    """`GET /api/v1/health/version` — the running API's name and version."""
+
+    app: str = Field(examples=["HMS Backend"])
+    version: str = Field(examples=["0.3.0"])
+
+
 class DatabaseHealthResponse(BaseModel):
     """`GET /api/v1/health/db` — every field is read live from PostgreSQL."""
 

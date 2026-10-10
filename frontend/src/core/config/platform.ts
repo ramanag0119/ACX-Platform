@@ -1,12 +1,12 @@
 /**
  * Platform identity shown on the About page and in the footer.
  *
- * Bump PLATFORM_VERSION and PLATFORM_RELEASE_DATE together on each release.
- * API_VERSION mirrors `API_VERSION` in backend/app/main.py -- keep the two in
- * step, since the backend reports that value on /health and /openapi.json.
+ * Version and release date are resolved at build time (see vite.config.ts):
+ * the version is package.json's, the release date is VITE_PLATFORM_RELEASE_DATE
+ * or the build date. The API version is not here -- the About page asks the
+ * running backend for it, so it can never drift from what is deployed.
  */
-export const PLATFORM_VERSION = "1.0.0";
-export const PLATFORM_RELEASE_DATE = "2026-10-10";
-export const API_VERSION = "0.3.0";
+export const PLATFORM_VERSION = __PLATFORM_VERSION__;
+export const PLATFORM_RELEASE_DATE = __PLATFORM_RELEASE_DATE__;
 export const PLATFORM_VENDOR = "Inspironics Corporation, USA";
-export const PLATFORM_LICENSE = "Enterprise";
+export const PLATFORM_LICENSE = import.meta.env.VITE_PLATFORM_LICENSE || "Enterprise";

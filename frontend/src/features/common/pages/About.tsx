@@ -1,25 +1,18 @@
 import { Card, CardContent } from "@/components/ui/card";
 import {
-  API_VERSION,
   PLATFORM_LICENSE,
   PLATFORM_RELEASE_DATE,
   PLATFORM_VENDOR,
   PLATFORM_VERSION,
 } from "@/core/config/platform";
+import { useApiVersion } from "@/lib/api/hooks";
 
-/** Release identity -- version, release date, vendor and license. */
-const LEFT_COLUMN = [
-  { label: "Platform Version", value: PLATFORM_VERSION },
-  { label: "Platform Release Date", value: PLATFORM_RELEASE_DATE },
-  { label: "API Version", value: API_VERSION },
-];
+interface InfoRow {
+  label: string;
+  value: string;
+}
 
-const RIGHT_COLUMN = [
-  { label: "Platform Vendor", value: PLATFORM_VENDOR },
-  { label: "License", value: PLATFORM_LICENSE },
-];
-
-const InfoColumn = ({ rows }: { rows: { label: string; value: string }[] }) => (
+const InfoColumn = ({ rows }: { rows: InfoRow[] }) => (
   <dl className="divide-y divide-slate-200 dark:divide-slate-800">
     {rows.map(({ label, value }) => (
       <div key={label} className="flex items-center justify-between gap-4 py-2.5">
@@ -32,20 +25,36 @@ const InfoColumn = ({ rows }: { rows: { label: string; value: string }[] }) => (
   </dl>
 );
 
-const About = () => (
-  <div className="animate-fade-in pt-5">
-    <Card className="rounded-xl">
-      <CardContent className="p-7">
-        <h1 className="mb-4 text-[22px] font-semibold text-[#2563eb] dark:text-blue-400">
-          About
-        </h1>
-        <div className="grid grid-cols-1 gap-x-6 md:grid-cols-2">
-          <InfoColumn rows={LEFT_COLUMN} />
-          <InfoColumn rows={RIGHT_COLUMN} />
-        </div>
-      </CardContent>
-    </Card>
-  </div>
-);
+/** Release details. The API version is read from the running backend. */
+const About = () => {
+  const { data, isError } = useApiVersion();
+  const apiVersion = data?.version ?? (isError ? "Unavailable" : "Loading…");
+
+  const releaseRows: InfoRow[] = [
+    { label: "Platform Version", value: PLATFORM_VERSION },
+    { label: "Platform Release Date", value: PLATFORM_RELEASE_DATE },
+    { label: "API Version", value: apiVersion },
+  ];
+  const vendorRows: InfoRow[] = [
+    { label: "Platform Vendor", value: PLATFORM_VENDOR },
+    { label: "License", value: PLATFORM_LICENSE },
+  ];
+
+  return (
+    <div className="animate-fade-in pt-5">
+      <Card className="rounded-xl">
+        <CardContent className="p-7">
+          <h1 className="mb-4 text-[22px] font-semibold text-[#2563eb] dark:text-blue-400">
+            About
+          </h1>
+          <div className="grid grid-cols-1 gap-x-6 md:grid-cols-2">
+            <InfoColumn rows={releaseRows} />
+            <InfoColumn rows={vendorRows} />
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
 
 export default About;

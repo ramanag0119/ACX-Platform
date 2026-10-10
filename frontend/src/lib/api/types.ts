@@ -182,6 +182,12 @@ export interface UserPermissionRead {
   granted_by_roles: string[];
 }
 
+/** `GET /health/version` -- the running API's name and version. */
+export interface ApiVersion {
+  app: string;
+  version: string;
+}
+
 export interface CurrentUser {
   id: string;
   user_name: string | null;

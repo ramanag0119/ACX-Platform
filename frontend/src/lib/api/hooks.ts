@@ -151,6 +151,12 @@ export function useCounts(
   };
 }
 
+// --- Health ----------------------------------------------------------------
+
+/** The version only changes on a redeploy, so one fetch per session is enough. */
+export const useApiVersion = () =>
+  useApiQuery(["health", "version"], () => api.fetchApiVersion(), { staleTime: Infinity });
+
 // --- Auth ------------------------------------------------------------------
 
 export const useCurrentUser = (enabled: boolean) =>

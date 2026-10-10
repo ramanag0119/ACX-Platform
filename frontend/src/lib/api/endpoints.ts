@@ -21,6 +21,7 @@ import type {
   AlertTypeRead,
   AmenityConditionRead,
   AmenityStatusRead,
+  ApiVersion,
   BuildingRead,
   CurrentUser,
   CaleidoAtWorkRead,
@@ -61,6 +62,10 @@ import type {
   UserRead,
   ValueAlertRead,
 } from "./types";
+
+// --- Health -----------------------------------------------------------------
+
+export const fetchApiVersion = () => apiClient.get<ApiVersion>("/health/version");
 
 // --- Authentication (Phase 2.4) --------------------------------------------
 
