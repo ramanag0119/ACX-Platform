@@ -18,6 +18,7 @@ import ServicePlanning from "@/features/services/pages/ServicePlanning";
 import FacilityManagement from "@/features/config/pages/FacilityManagement";
 import ServicesSetup from "@/features/config/pages/ServicesSetup";
 import NotFound from "@/features/common/pages/NotFound";
+import About from "@/features/common/pages/About";
 import UserRoles from "@/features/config/pages/UserRoles";
 import Employees from "@/features/config/pages/Employees";
 import JobOrder from "@/features/config/pages/JobOrder";
@@ -77,6 +78,7 @@ const App = () => (
               <Route path="/energy-view" element={<Navigate to="/occupancy" replace />} />
               <Route path="/room-view" element={<Navigate to="/occupancy" replace />} />
               <Route path="/key-settings" element={<KeySettings />} />
+              <Route path="/about" element={<About />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
