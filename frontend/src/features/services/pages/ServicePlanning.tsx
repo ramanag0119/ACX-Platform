@@ -1070,11 +1070,10 @@ const ServicePlanning = () => {
                                 </TableCell>
                             </TableRow>
                         ) : (
-                        data.map((row, index) => (
+                        data.map((row) => (
                             <TableRow
                                 key={row.id}
-                                className={`${index % 2 === 0 ? "bg-muted/20" : "bg-background"
-                                    } hover:bg-muted/40 transition-colors`}
+                                className="hover:bg-[var(--hms-table-row-hover-bg)] transition-colors"
                             >
                                 {columns.map((col) => (
                                     <TableCell key={col.key}>

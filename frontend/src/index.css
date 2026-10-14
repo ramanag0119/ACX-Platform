@@ -91,6 +91,18 @@
     --gradient-primary: linear-gradient(135deg, hsl(239, 84%, 67%) 0%, hsl(244, 75%, 59%) 100%);
     --gradient-secondary: linear-gradient(135deg, hsl(239, 84%, 67%) 0%, hsl(240, 20%, 98%) 100%);
     --gradient-accent: linear-gradient(135deg, hsl(199, 89%, 48%) 0%, hsl(239, 84%, 67%) 100%);
+
+    /* ---------- HMS Standardized Data Table Row Design Tokens (Light) ---------- */
+    --hms-table-row-bg: #f5f4fb;
+    /* Verified light-lavender background matching reference */
+    --hms-table-row-hover-bg: #ede9f8;
+    /* Soft lavender-indigo hover */
+    --hms-table-row-selected-bg: #e0e7ff;
+    /* Selected row tint */
+    --hms-table-header-bg: #eae7f6;
+    /* Distinct lavender-slate header background */
+    --hms-table-border: rgba(99, 102, 241, 0.12);
+    /* Subtle indigo-tinted border */
   }
 
   .dark {
@@ -141,6 +153,18 @@
     /* #222938 - Dark Border */
     --input: 222 20% 18%;
     --ring: 239 84% 67%;
+
+    /* ---------- HMS Standardized Data Table Row Design Tokens (Dark) ---------- */
+    --hms-table-row-bg: #0e1322;
+    /* Solid dark slate-navy background */
+    --hms-table-row-hover-bg: #1a2234;
+    /* Elevated slate hover */
+    --hms-table-row-selected-bg: #1e293b;
+    /* Slate-800 selected */
+    --hms-table-header-bg: #090d18;
+    /* Darker distinct header */
+    --hms-table-border: rgba(255, 255, 255, 0.08);
+    /* Subtle dark border */
 
     /* ---------- Sidebar Specific ---------- */
     --sidebar-bg: 227 47% 6%;
@@ -477,6 +501,13 @@ html:not(.dark) .sidebar-brand-text {
   margin-left: 1.85rem;
   margin-top: 0.125rem;
   padding-left: 0.65rem;
+  border-left: 1px solid hsl(var(--sidebar-border));
+}
+
+.sidebar-nav-nested-submenu {
+  margin-left: 1.15rem;
+  margin-top: 0.125rem;
+  padding-left: 0.5rem;
   border-left: 1px solid hsl(var(--sidebar-border));
 }
 
@@ -881,11 +912,134 @@ span[style*="#8A86A8"] {
   }
 
   /* Striped table behavior */
-  .dark tbody tr:nth-child(even),
   [class*="bg-muted/20"],
   .bg-muted\/20 {
     background-color: hsl(var(--muted) / 0.2) !important;
   }
+}
+
+/* =========================================================
+   STANDARDIZED DATA TABLE ROW BACKGROUND & STICKY FIRST COLUMN
+   ---------------------------------------------------------
+   All normal data table rows use ONE consistent, uniform
+   light-lavender background (matching reference image),
+   completely eliminating white/grey alternating striping.
+   Sticky first-column cells match the row background exactly,
+   remaining 100% solid, fully opaque, and visually integrated.
+   ========================================================= */
+
+.hms-table-sticky-first {
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+}
+
+/* Header row styling */
+.hms-table-sticky-first thead th {
+  background-color: var(--hms-table-header-bg) !important;
+  border-bottom: 1px solid var(--hms-table-border) !important;
+}
+
+/* Header sticky first cell: top-left corner pins to top & left */
+.hms-table-sticky-first thead th:first-child {
+  position: sticky !important;
+  left: 0 !important;
+  top: 0 !important;
+  z-index: 35 !important; /* above all body cells and normal header cells */
+  background-color: var(--hms-table-header-bg) !important;
+  border-right: 1px solid var(--hms-table-border) !important;
+  border-bottom: 1px solid var(--hms-table-border) !important;
+  box-shadow: none !important;
+  white-space: nowrap !important;
+}
+
+/* ALL normal table rows: ONE uniform, standardized background across the entire table */
+.hms-table-sticky-first tbody tr,
+.hms-table-sticky-first tbody tr:nth-child(odd),
+.hms-table-sticky-first tbody tr:nth-child(even),
+.hms-table-sticky-first tbody td {
+  background-color: var(--hms-table-row-bg) !important;
+  background: var(--hms-table-row-bg) !important;
+  border-bottom: 1px solid var(--hms-table-border) !important;
+}
+
+/* Body sticky first cell: matches the normal row background identically with subtle neutral border */
+.hms-table-sticky-first tbody td:first-child,
+.hms-table-sticky-first tbody tr:nth-child(odd) td:first-child,
+.hms-table-sticky-first tbody tr:nth-child(even) td:first-child {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: 20 !important;
+  background-color: var(--hms-table-row-bg) !important;
+  background: var(--hms-table-row-bg) !important;
+  border-right: 1px solid var(--hms-table-border) !important;
+  border-bottom: 1px solid var(--hms-table-border) !important;
+  box-shadow: none !important;
+  white-space: nowrap !important;
+}
+
+/* Hover state across the row and its sticky first-column cell */
+.hms-table-sticky-first tbody tr:hover,
+.hms-table-sticky-first tbody tr:hover td {
+  background-color: var(--hms-table-row-hover-bg) !important;
+  background: var(--hms-table-row-hover-bg) !important;
+}
+.hms-table-sticky-first tbody tr:hover td:first-child {
+  background-color: var(--hms-table-row-hover-bg) !important;
+  background: var(--hms-table-row-hover-bg) !important;
+}
+
+/* Selected state across the row and its sticky first-column cell */
+.hms-table-sticky-first tbody tr[data-state="selected"],
+.hms-table-sticky-first tbody tr[data-state="selected"] td {
+  background-color: var(--hms-table-row-selected-bg) !important;
+  background: var(--hms-table-row-selected-bg) !important;
+}
+.hms-table-sticky-first tbody tr[data-state="selected"] td:first-child {
+  background-color: var(--hms-table-row-selected-bg) !important;
+  background: var(--hms-table-row-selected-bg) !important;
+}
+
+/* Colspan rows (e.g. Empty state or Loading skeleton) should span normally without sticky pinning */
+.hms-table-sticky-first tbody tr:has(> td[colspan]) td:first-child,
+.hms-table-sticky-first tbody td[colspan] {
+  position: static !important;
+  box-shadow: none !important;
+  border-right: none !important;
+}
+
+/* Ensure the wrapper scrolls smoothly and contains the shadow */
+.hms-table-sticky-first-wrapper {
+  overflow-x: auto;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(156, 163, 175, 0.4) transparent;
+  -webkit-overflow-scrolling: touch;
+}
+
+.hms-table-sticky-first-wrapper::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+
+.hms-table-sticky-first-wrapper::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.hms-table-sticky-first-wrapper::-webkit-scrollbar-thumb {
+  background-color: rgba(156, 163, 175, 0.35);
+  border-radius: 9999px;
+}
+
+.hms-table-sticky-first-wrapper::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(107, 114, 128, 0.6);
+}
+
+/* All HMS table rows default to the standardized background */
+.hms-content table tbody tr {
+  background-color: var(--hms-table-row-bg);
+}
+.hms-content table tbody tr:hover {
+  background-color: var(--hms-table-row-hover-bg);
 }
 
 /* =========================================================
@@ -1234,30 +1388,19 @@ div.border-gray-200,
   border-color: rgba(0, 0, 0, 0.08) !important;
 }
 
-/* Transparent table rows */
-tr,
-tr.bg-white,
-tr.bg-muted\/20,
-tr[class*="bg-white"],
-tr[class*="bg-muted"] {
-  background: transparent !important;
-  background-color: transparent !important;
-}
-
 /* Table header formatting matching FleetExplorer */
 th,
 thead th,
 .data-table th,
-.enterprise-table th,
-.text-gray-600 {
+.enterprise-table th {
   color: #6366f1 !important;
   /* Indigo header text matching FleetExplorer */
   font-size: 11px !important;
   font-weight: 600 !important;
   text-transform: uppercase !important;
   letter-spacing: 0.08em !important;
-  background-color: rgba(0, 0, 0, 0.2) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background-color: var(--hms-table-header-bg) !important;
+  border-bottom: 1px solid var(--hms-table-border) !important;
   white-space: nowrap !important;
   padding: 10px 14px !important;
 }
@@ -1265,10 +1408,10 @@ thead th,
 [data-theme="light"] th,
 [data-theme="light"] thead th,
 html:not(.dark) th,
-[data-theme="light"] .text-gray-600 {
+html:not(.dark) thead th {
   color: #4f46e5 !important;
-  background-color: rgba(0, 0, 0, 0.04) !important;
-  border-bottom-color: rgba(0, 0, 0, 0.08) !important;
+  background-color: var(--hms-table-header-bg) !important;
+  border-bottom-color: var(--hms-table-border) !important;
 }
 
 /* Input, Textarea and Select Dropdown overrides */
@@ -1477,63 +1620,30 @@ tbody td button.w-8.h-8 {
   padding: 0 !important;
 }
 
-/* Occupancy table: 11 columns that fit the container without a horizontal
-   scrollbar, at one row height. The page sets the fixed layout and column
-   widths; the overrides of global table rules below repeat those rules'
-   selectors under `.hms-occupancy-table`, so they win on specificity and no
-   other table changes. Headers may wrap here: a header that could neither wrap
-   nor shrink would overflow its fixed-width column. */
-.hms-occupancy-table th {
-  padding: 8px 6px !important;
-  white-space: normal !important;
-  line-height: 1.25;
-  vertical-align: middle;
-}
-
-/* One height for every row. A table row's height is a minimum, so this holds
-   only because each cell's content is kept to two tight lines (dates) or one
-   (truncated text, buttons, badges). */
-.hms-occupancy-table tbody tr {
-  height: 48px;
-}
-
-.hms-occupancy-table td {
-  padding: 4px 6px;
-  vertical-align: middle;
-}
-
-.hms-occupancy-table td.hms-truncate {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* Muted and overdue text. The typography sweep further down repaints every
-   span in `main` pure black / white at full opacity with !important -- which is
-   why the empty hyphens read at full contrast. The page puts `badge` (the
-   sweep's own opt-out, unstyled) on these spans, so plain rules apply. */
+/* Muted and overdue text across HMS data tables */
+.hms-muted,
 .hms-occupancy-table .hms-muted {
   color: theme("colors.slate.500");
 }
 
+.hms-overdue-text,
 .hms-occupancy-table .hms-overdue-text {
   color: theme("colors.red.600");
 }
 
+.dark .hms-overdue-text,
 .dark .hms-occupancy-table .hms-overdue-text {
   color: theme("colors.red.400");
 }
 
-/* Micro-badge beside the check-out time. Styled here rather than with
-   `inline-flex rounded-* border-*` utilities, because those class names are
-   what the global status-pill rule matches on, and it would size this back up
-   to a full pill. */
+/* Micro-badge beside the check-out time */
+.hms-overdue-tag,
 .hms-occupancy-table .hms-overdue-tag {
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  padding: 1px 4px;
-  font-size: 8px;
+  padding: 1px 5px;
+  font-size: 8.5px;
   font-weight: 700;
   line-height: 1;
   letter-spacing: 0.04em;
@@ -1544,33 +1654,11 @@ tbody td button.w-8.h-8 {
   color: theme("colors.red.700");
 }
 
+.dark .hms-overdue-tag,
 .dark .hms-occupancy-table .hms-overdue-tag {
   border-color: theme("colors.red.500 / 40%");
   background-color: theme("colors.red.950 / 60%");
   color: theme("colors.red.400");
-}
-
-.hms-occupancy-table tbody td button:not(.hms-cell-trigger):not(.hms-action-on-fill),
-.hms-occupancy-table tbody td .btn:not(.hms-cell-trigger):not(.hms-action-on-fill) {
-  padding: 3px 8px !important;
-  height: 26px !important;
-  font-size: 10.5px !important;
-  gap: 4px !important;
-}
-
-.hms-occupancy-table td [class*="inline-flex"][class*="rounded-"]:not(button):not(.btn):not([role="button"]):not(a),
-.hms-occupancy-table td span[class*="border-"]:not(button):not(.btn):not([role="button"]):not(a) {
-  /* One pill height across every status, whatever its padding utilities. */
-  height: 22px !important;
-  padding: 0 7px !important;
-  font-size: 9.5px !important;
-  line-height: 1 !important;
-  gap: 4px !important;
-  max-width: 100%;
-}
-
-.hms-occupancy-table td div[class*="flex"][class*="flex-wrap"] {
-  gap: 4px !important;
 }
 
 /* Light mode overrides for table action buttons */
@@ -2179,7 +2267,7 @@ select option:focus {
   gap: 10px;
 }
 
-.hms-page-header__actions > * {
+.hms-page-header__actions>* {
   height: 36px;
   border-radius: 9px;
 }
@@ -2250,7 +2338,7 @@ select option:focus {
    inner div sits between; and the inner div already carries `overflow: auto`,
    which makes IT the scroll container a sticky `thead` resolves against. Give
    it the height cap and the header pins to the right box. */
-.hms-content div[class*="overflow-x-auto"] > div:has(> table) {
+.hms-content div[class*="overflow-x-auto"]>div:has(> table) {
   max-height: var(--hms-table-max-height);
 }
 
@@ -2289,6 +2377,7 @@ select option:focus {
 }
 
 @keyframes hmsPanelFlash {
+
   0%,
   100% {
     outline-color: transparent;

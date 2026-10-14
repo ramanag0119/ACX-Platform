@@ -125,15 +125,6 @@ const cellValue = (value: string) => (value === "-" ? <EmptyDash /> : value);
 /** A cell's hover text: the full value, or none for an empty one. */
 const cellTitle = (value: string) => (value === "-" ? undefined : value);
 
-/**
- * Relative column widths, in table order: Room No, Room Type, Building, Floor,
- * Guest name, Check-In, Check-Out, Generate, Status, Reassign, Invoice.
- * Percentages rather than pixels so the fixed layout scales with the container
- * instead of reintroducing a horizontal scroll.
- */
-const COLUMN_WIDTHS = [
-  "6.3%", "5.3%", "8.2%", "7.2%", "11.6%", "11.6%", "13%", "9.2%", "14.5%", "5.8%", "7.3%",
-];
 
 /**
  * Check-In / Check-Out for the table cell: two tight lines, the date over the
@@ -171,17 +162,6 @@ const DateTimeStack = ({ value, overdue = false }: { value: string | null; overd
   );
 };
 
-/**
- * Room Type, shortened for the table cell only.
- *
- * The stored `amenity_type.name` ("Guest Room", "Suite") is untouched: the row
- * still carries it and the cell keeps it in its `title`, so the meaning is
- * never lost. The initial is taken FROM that name
- * rather than from a map of known types, so a type added to `amenity_type`
- * later shortens itself without a change here.
- */
-const shortRoomType = (roomType: string) =>
-  roomType && roomType !== "-" ? roomType.trim().charAt(0).toUpperCase() : "-";
 
 /**
  * A stay that is still in house after its expected checkout has passed.
@@ -471,92 +451,65 @@ const Occupancy = () => {
               error={error}
               isEmpty={filteredRooms.length === 0}
               emptyTitle="No Rooms match this view"
-              loader={<TableLoading columns={COLUMN_WIDTHS.length} />}
+              loader={<TableLoading columns={11} />}
             >
-              {/* `min-w-0` drops the shared Table's `min-w-max` and
-                  `table-fixed` applies COLUMN_WIDTHS, so the columns share the
-                  container width instead of scrolling. `hms-occupancy-table`
-                  sets the row height and compacts cells, buttons and badges
-                  (index.css). */}
-              <Table className="hms-occupancy-table table-fixed min-w-0">
-                <colgroup>
-                  {COLUMN_WIDTHS.map((width, index) => (
-                    <col key={index} style={{ width }} />
-                  ))}
-                </colgroup>
+              <Table>
                 <TableHeader>
-                  <TableRow className="bg-gray-50/80 dark:bg-slate-800/60 hover:bg-gray-50 dark:hover:bg-slate-800/60 border-b border-gray-200 dark:border-slate-800">
-                    <TableHead className="text-gray-600 dark:text-slate-300 font-medium">Room No</TableHead>
-                    <TableHead className="text-gray-600 dark:text-slate-300 font-medium">Room Type</TableHead>
-                    <TableHead className="text-gray-600 dark:text-slate-300 font-medium">Building</TableHead>
-                    <TableHead className="text-gray-600 dark:text-slate-300 font-medium">Floor</TableHead>
-                    <TableHead className="text-gray-600 dark:text-slate-300 font-medium">Guest name</TableHead>
-                    <TableHead className="text-gray-600 dark:text-slate-300 font-medium">Check-In</TableHead>
-                    <TableHead className="text-gray-600 dark:text-slate-300 font-medium">Check-Out</TableHead>
-                    <TableHead className="text-gray-600 dark:text-slate-300 font-medium text-center">Generate <span className="text-gray-400 dark:text-slate-500">↓</span></TableHead>
-                    <TableHead className="text-gray-600 dark:text-slate-300 font-medium text-center">Status</TableHead>
-                    <TableHead className="text-gray-600 dark:text-slate-300 font-medium text-center">Reassign</TableHead>
-                    <TableHead className="text-gray-600 dark:text-slate-300 font-medium text-center">Invoice <span className="text-gray-400 dark:text-slate-500">↓</span></TableHead>
+                  <TableRow className="bg-muted/40 dark:bg-[#090d18] border-b border-border dark:border-slate-800">
+                    <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap min-w-[110px] text-left">Room No</TableHead>
+                    <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap min-w-[140px] text-left">Room Type</TableHead>
+                    <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap min-w-[130px] text-left">Building</TableHead>
+                    <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap min-w-[110px] text-left">Floor</TableHead>
+                    <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap min-w-[180px] text-left">Guest Name</TableHead>
+                    <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap min-w-[140px] text-left">Check-In</TableHead>
+                    <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap min-w-[160px] text-left">Check-Out</TableHead>
+                    <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap min-w-[130px] text-center">Generate <span className="text-muted-foreground/60">↓</span></TableHead>
+                    <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap min-w-[220px] text-center">Status</TableHead>
+                    <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap min-w-[100px] text-center">Reassign</TableHead>
+                    <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap min-w-[110px] text-center">Invoice <span className="text-muted-foreground/60">↓</span></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredRooms.map((room, index) => (
+                  {filteredRooms.map((room) => (
                     <TableRow
                       key={room.amenityId}
-                      className={`${index % 2 === 0 ? "bg-card dark:bg-slate-900/60" : "bg-muted/20 dark:bg-slate-800/40"} hover:bg-muted/40 dark:hover:bg-slate-800/80 border-b border-border/40 dark:border-slate-800/50`}
+                      className="hover:bg-[var(--hms-table-row-hover-bg)] border-b border-border/40 dark:border-slate-800/50 transition-colors"
                     >
-                      <TableCell className="font-medium text-foreground">
+                      <TableCell className="font-semibold text-primary py-3 px-4 whitespace-nowrap min-w-[110px] text-left">
                         {/* The room number opens the same dialog as Details. */}
                         <button
                           type="button"
-                          className="font-medium text-foreground hover:text-primary hover:underline"
+                          className="font-semibold text-primary hover:underline transition-colors"
                           onClick={() => handleDetailsClick(room)}
                           title={`Open details for room ${room.roomNo}`}
                         >
                           {room.roomNo}
                         </button>
                       </TableCell>
-                      {/* Shortened for width; the full type is on the title. */}
-                      <TableCell className="text-foreground" title={cellTitle(room.roomType)}>
-                        {cellValue(shortRoomType(room.roomType))}
+                      <TableCell className="text-foreground text-xs font-medium py-3 px-4 whitespace-nowrap min-w-[140px] text-left" title={cellTitle(room.roomType)}>
+                        {cellValue(room.roomType)}
                       </TableCell>
-                      {/* Single-line cells: a long name truncates with an
-                          ellipsis instead of growing the row; the full value
-                          is on the title. */}
-                      <TableCell className="hms-truncate text-foreground" title={cellTitle(room.buildingName)}>
+                      <TableCell className="text-foreground text-xs py-3 px-4 whitespace-nowrap min-w-[130px] text-left" title={cellTitle(room.buildingName)}>
                         {cellValue(room.buildingName)}
                       </TableCell>
-                      <TableCell className="hms-truncate text-foreground" title={cellTitle(room.floorName)}>
+                      <TableCell className="text-foreground text-xs py-3 px-4 whitespace-nowrap min-w-[110px] text-left" title={cellTitle(room.floorName)}>
                         {cellValue(room.floorName)}
                       </TableCell>
-                      <TableCell className="hms-truncate text-foreground" title={cellTitle(room.guestName)}>
+                      <TableCell className="text-foreground text-xs font-medium py-3 px-4 whitespace-nowrap min-w-[180px] text-left" title={cellTitle(room.guestName)}>
                         {cellValue(room.guestName)}
                       </TableCell>
-                      <TableCell className="text-foreground">
+                      <TableCell className="text-foreground text-xs py-3 px-4 whitespace-nowrap min-w-[140px] text-left">
                         <DateTimeStack value={room.checkInTime} />
                       </TableCell>
-                      <TableCell className="text-foreground">
+                      <TableCell className="text-foreground text-xs py-3 px-4 whitespace-nowrap min-w-[160px] text-left">
                         <DateTimeStack value={room.checkOutTime} overdue={isOverdueCheckout(room)} />
                       </TableCell>
-                      <TableCell className="text-center">
-                        {/* Check-Out for an in-house stay, "No stay" otherwise.
-                            The API sends `current_stay` only while a stay is
-                            checked in and not out, so a stay id here always
-                            means a guest in house -- there is no pre-arrival
-                            Check-In state to show (that lives in Bookings). A
-                            room whose stored status says Occupied without an
-                            in-house stay has nothing to check out. */}
+                      <TableCell className="text-center py-3 px-4 whitespace-nowrap min-w-[130px]">
                         {room.stayId ? (
                           <Button
                             size="sm"
-                            // Light purple box, purple text: the actionable
-                            // state, against the muted "No stay". index.css
-                            // repaints `bg-purple-*` pills in table cells (both
-                            // themes, hover included) to this same tint.
-                            className="rounded-full border border-purple-200 bg-purple-50 text-purple-700 text-xs font-semibold px-3"
+                            className="h-8 rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/60 text-xs font-semibold px-3 transition-colors shadow-none"
                             disabled={!mayWriteBookings}
-                            // Step one only: opens the confirmation, which is
-                            // the sole place the check-out request is sent.
                             onClick={() => {
                               setCheckOutRoom(room);
                               setIsCheckOutOpen(true);
@@ -570,25 +523,15 @@ const Occupancy = () => {
                             Check-Out
                           </Button>
                         ) : (
-                          <span className="badge hms-muted text-[11px]">No stay</span>
+                          <span className="badge hms-muted text-[11px] px-2.5 py-1 rounded-full bg-muted/40 border border-border/50">No stay</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-center">
-                        {/* A div, not a button: the condition pills inside are
-                            interactive-looking elements and a button may not
-                            nest one. `disabled` does not exist on a div, so the
-                            read-only state is carried by aria-disabled and the
-                            cursor class rather than a `disabled:` variant that
-                            would never match. */}
+                      <TableCell className="text-center py-3 px-4 min-w-[220px]">
                         <div
                           role="button"
                           aria-disabled={!mayWriteOccupancy}
                           tabIndex={mayWriteOccupancy ? 0 : -1}
-                          // `hms-cell-trigger`: a layout wrapper around the
-                          // condition pills, not a button, so it opts out of
-                          // the boxed table-action chrome in index.css. The
-                          // role is for keyboard activation only.
-                          className={`hms-cell-trigger flex w-full flex-wrap items-center justify-center gap-1.5 ${
+                          className={`hms-cell-trigger flex items-center justify-center gap-1.5 flex-wrap min-h-[32px] ${
                             mayWriteOccupancy ? "cursor-pointer" : "cursor-not-allowed"
                           }`}
                           onClick={() => mayWriteOccupancy && setConditionsRoom(room)}
@@ -611,17 +554,10 @@ const Occupancy = () => {
                               </span>}
                         </div>
                       </TableCell>
-                      <TableCell className="text-center">
+                      <TableCell className="text-center py-3 px-4 whitespace-nowrap min-w-[100px]">
                         <Button
                           size="sm"
-                          // `bg-brand` is the Submit-button colour (#5865f2, see
-                          // tailwind.config.ts), so the row's actions share one
-                          // token instead of each carrying its own accent.
-                          //
-                          // Never raw `bg-cyan-600` here -- that is caught by
-                          // the pagination rule in index.css and repainted
-                          // anyway (see Bookings' actions).
-                          className="hms-action-on-fill bg-brand hover:bg-brand-hover text-white w-8 h-8 p-0"
+                          className="hms-action-on-fill bg-brand hover:bg-brand-hover text-white w-8 h-8 p-0 rounded-lg inline-flex items-center justify-center shadow-sm transition-all"
                           disabled={!mayWriteBookings || !room.stayId}
                           onClick={() => setReallocateRoom(room)}
                           title={
@@ -635,11 +571,11 @@ const Occupancy = () => {
                           <ArrowRight className="h-4 w-4" />
                         </Button>
                       </TableCell>
-                      <TableCell className="text-center">
+                      <TableCell className="text-center py-3 px-4 whitespace-nowrap min-w-[110px]">
                         <Button
                           size="sm"
                           variant="outline"
-                          className="border-cyan-500 text-cyan-600 hover:bg-cyan-50 dark:text-cyan-400 dark:hover:bg-cyan-950/50 text-xs px-3"
+                          className="border-cyan-500/60 text-cyan-600 hover:bg-cyan-50 dark:text-cyan-400 dark:hover:bg-cyan-950/50 text-xs h-8 px-3 rounded-lg font-medium transition-colors"
                           disabled
                           title={
                             "Invoice generation needs amounts the schema does not hold: " +

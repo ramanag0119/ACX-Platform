@@ -213,8 +213,8 @@ const Offers = () => {
                             </TableHeader>
                             <TableBody>
                                 {paginatedData.length > 0 ? (
-                                    paginatedData.map((item, index) => (
-                                        <TableRow key={item.id} className={`${index % 2 === 0 ? "bg-card dark:bg-[#101526]/80" : "bg-muted/10 dark:bg-[#0d1120]/80"} hover:bg-muted/30 dark:hover:bg-slate-800/50 border-b border-border/50 dark:border-slate-800/70 transition-colors`}>
+                                    paginatedData.map((item) => (
+                                        <TableRow key={item.id} className="hover:bg-[var(--hms-table-row-hover-bg)] border-b border-border/50 dark:border-slate-800/70 transition-colors">
                                             <TableCell className="text-cyan-600 dark:text-cyan-400 text-xs py-3 px-4 whitespace-nowrap font-medium">{item.offerName}</TableCell>
                                             <TableCell className="whitespace-nowrap text-xs py-3 px-4 text-foreground/90">{item.applicableTo}</TableCell>
                                             <TableCell className="whitespace-nowrap text-xs py-3 px-4 text-foreground/90 font-mono">{item.couponCode}</TableCell>

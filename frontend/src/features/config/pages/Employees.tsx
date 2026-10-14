@@ -451,8 +451,8 @@ const Employees = () => {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {paginatedDepartments.map((item, index) => (
-                                    <TableRow key={item.id} className={`${index % 2 === 0 ? "bg-card dark:bg-[#101526]/80" : "bg-muted/10 dark:bg-[#0d1120]/80"} hover:bg-muted/30 dark:hover:bg-slate-800/50 border-b border-border/50 dark:border-slate-800/70 transition-colors`}>
+                                {paginatedDepartments.map((item) => (
+                                    <TableRow key={item.id} className="hover:bg-[var(--hms-table-row-hover-bg)] border-b border-border/50 dark:border-slate-800/70 transition-colors">
                                         <TableCell className="text-cyan-600 hover:underline cursor-pointer">{item.name}</TableCell>
                                         <TableCell className="text-center">
                                             <Button size="sm" className="h-7 w-7 p-0 rounded-[3px]" disabled={!mayWrite} onClick={() => { setEditingDepartment(item); setEditDepartmentOpen(true); }}>
@@ -523,8 +523,8 @@ const Employees = () => {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {paginatedFunctions.map((item, index) => (
-                                    <TableRow key={item.id} className={`${index % 2 === 0 ? "bg-card dark:bg-[#101526]/80" : "bg-muted/10 dark:bg-[#0d1120]/80"} hover:bg-muted/30 dark:hover:bg-slate-800/50 border-b border-border/50 dark:border-slate-800/70 transition-colors`}>
+                                {paginatedFunctions.map((item) => (
+                                    <TableRow key={item.id} className="hover:bg-[var(--hms-table-row-hover-bg)] border-b border-border/50 dark:border-slate-800/70 transition-colors">
                                         <TableCell className="text-cyan-600 hover:underline cursor-pointer">{item.name}</TableCell>
                                         <TableCell className="text-center">
                                             <Button size="sm" className="h-7 w-7 p-0 rounded-[3px]" disabled={!mayWrite} onClick={() => { setEditingFunction(item); setEditFunctionOpen(true); }}>
@@ -588,8 +588,8 @@ const Employees = () => {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {paginatedEmployees.map((item, index) => (
-                                <TableRow key={item.id} className={`${index % 2 === 0 ? "bg-card dark:bg-[#101526]/80" : "bg-muted/10 dark:bg-[#0d1120]/80"} hover:bg-muted/30 dark:hover:bg-slate-800/50 border-b border-border/50 dark:border-slate-800/70 transition-colors`}>
+                            {paginatedEmployees.map((item) => (
+                                <TableRow key={item.id} className="hover:bg-[var(--hms-table-row-hover-bg)] border-b border-border/50 dark:border-slate-800/70 transition-colors">
                                     <TableCell className="text-cyan-600 hover:underline cursor-pointer whitespace-nowrap">{item.id}</TableCell>
                                     <TableCell className="text-cyan-600 whitespace-nowrap">{item.usrId}</TableCell>
                                     <TableCell className="text-cyan-600 whitespace-nowrap">{item.firstName}</TableCell>

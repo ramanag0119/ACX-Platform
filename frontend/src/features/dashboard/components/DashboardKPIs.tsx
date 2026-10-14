@@ -343,7 +343,7 @@ const StayTile = ({ enabled }: { enabled: boolean }) => {
   return (
     <Tile
       label="Stays in house"
-      to="/bookings"
+      to="/check-in"
       icon={UserCheck}
       accent={BLUE}
       value={inHouse.total}

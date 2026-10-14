@@ -820,10 +820,10 @@ const ServicesSetup = () => {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {paginatedRoomServicesData.map((item, index) => (
+                                {paginatedRoomServicesData.map((item) => (
                                     <TableRow
                                         key={item.id}
-                                        className={`${index % 2 === 0 ? "bg-muted/30" : "bg-muted/20"} hover:bg-background transition-colors`}
+                                        className="hover:bg-[var(--hms-table-row-hover-bg)] transition-colors"
                                     >
                                         <TableCell className="text-cyan-600 hover:underline cursor-pointer">
                                             {item.roomServices}
@@ -974,10 +974,10 @@ const ServicesSetup = () => {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {paginatedTravelDeskData.map((item, index) => (
+                                {paginatedTravelDeskData.map((item) => (
                                     <TableRow
                                         key={item.id}
-                                        className={`${index % 2 === 0 ? "bg-muted/30" : "bg-muted/20"} hover:bg-background transition-colors`}
+                                        className="hover:bg-[var(--hms-table-row-hover-bg)] transition-colors"
                                     >
                                         <TableCell className="text-cyan-600 hover:underline text-center cursor-pointer">
                                             {item.travelRequestMenu}
@@ -1125,10 +1125,10 @@ const ServicesSetup = () => {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {paginatedBusinessCenterData.map((item, index) => (
+                                {paginatedBusinessCenterData.map((item) => (
                                     <TableRow
                                         key={item.id}
-                                        className={`${index % 2 === 0 ? "bg-muted/30" : "bg-muted/20"} hover:bg-background transition-colors`}
+                                        className="hover:bg-[var(--hms-table-row-hover-bg)] transition-colors"
                                     >
                                         <TableCell className="text-cyan-600 hover:underline text-center cursor-pointer">
                                             {item.businessCenterMenu}
@@ -1291,8 +1291,8 @@ const ServicesSetup = () => {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {paginatedFoodCategoryData.map((item, index) => (
-                                            <TableRow key={item.id} className={`${index % 2 === 0 ? "bg-muted/30" : "bg-muted/20"} hover:bg-background`}>
+                                        {paginatedFoodCategoryData.map((item) => (
+                                            <TableRow key={item.id} className="hover:bg-[var(--hms-table-row-hover-bg)] transition-colors">
                                                 <TableCell className="text-cyan-600 hover:underline text-center cursor-pointer">{item.category}</TableCell>
                                                 <TableCell className="text-center">
                                                     <div className="flex justify-center gap-2">
@@ -1439,8 +1439,8 @@ const ServicesSetup = () => {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {paginatedFoodMenuData.map((item, index) => (
-                                            <TableRow key={item.id} className={`${index % 2 === 0 ? "bg-muted/30" : "bg-muted/20"} hover:bg-background`}>
+                                        {paginatedFoodMenuData.map((item) => (
+                                            <TableRow key={item.id} className="hover:bg-[var(--hms-table-row-hover-bg)] transition-colors">
                                                 <TableCell className="text-cyan-600 hover:underline cursor-pointer">{item.foodCategory}</TableCell>
                                                 <TableCell className="text-foreground">{item.name}</TableCell>
                                                 <TableCell className="text-foreground">{item.description}</TableCell>
@@ -1558,8 +1558,8 @@ const ServicesSetup = () => {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {paginatedFacilityServicesData.map((item, index) => (
-                                            <TableRow key={item.id} className={`${index % 2 === 0 ? "bg-muted/30" : "bg-muted/20"} hover:bg-background`}>
+                                        {paginatedFacilityServicesData.map((item) => (
+                                            <TableRow key={item.id} className="hover:bg-[var(--hms-table-row-hover-bg)] transition-colors">
                                                 <TableCell className="text-cyan-600 hover:underline text-center cursor-pointer">{item.facilityService}</TableCell>
                                             </TableRow>
                                         ))}
@@ -1640,8 +1640,8 @@ const ServicesSetup = () => {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {paginatedFacilityServicesTypeData.map((item, index) => (
-                                            <TableRow key={item.id} className={`${index % 2 === 0 ? "bg-muted/20" : "bg-background"} hover:bg-muted/40 transition-colors`}>
+                                        {paginatedFacilityServicesTypeData.map((item) => (
+                                            <TableRow key={item.id} className="hover:bg-[var(--hms-table-row-hover-bg)] transition-colors">
                                                 <TableCell className="text-cyan-600 hover:underline cursor-pointer">{item.typeOfService}</TableCell>
                                                 <TableCell>30</TableCell>
                                                 <TableCell className="text-center">
@@ -1736,8 +1736,8 @@ const ServicesSetup = () => {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {paginatedHealthFitnessData.map((item, index) => (
-                                    <TableRow key={item.id} className={`${index % 2 === 0 ? "bg-muted/30" : "bg-muted/20"} hover:bg-background`}>
+                                {paginatedHealthFitnessData.map((item) => (
+                                    <TableRow key={item.id} className="hover:bg-[var(--hms-table-row-hover-bg)] transition-colors">
                                         <TableCell className="text-cyan-600 hover:underline text-center cursor-pointer">{item.healthFitness}</TableCell>
                                     </TableRow>
                                 ))}
@@ -1838,8 +1838,8 @@ const ServicesSetup = () => {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {paginatedSanitationServicesData.map((item, index) => (
-                                            <TableRow key={item.id} className={`${index % 2 === 0 ? "bg-muted/30" : "bg-muted/20"} hover:bg-background`}>
+                                        {paginatedSanitationServicesData.map((item) => (
+                                            <TableRow key={item.id} className="hover:bg-[var(--hms-table-row-hover-bg)] transition-colors">
                                                 <TableCell className="text-cyan-600 hover:underline text-center cursor-pointer">{item.sanitationService}</TableCell>
                                             </TableRow>
                                         ))}
@@ -1928,8 +1928,8 @@ const ServicesSetup = () => {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {paginatedSanitationServicesTypeData.map((item, index) => (
-                                            <TableRow key={item.id} className={`${index % 2 === 0 ? "bg-muted/30" : "bg-muted/20"} hover:bg-background`}>
+                                        {paginatedSanitationServicesTypeData.map((item) => (
+                                            <TableRow key={item.id} className="hover:bg-[var(--hms-table-row-hover-bg)] transition-colors">
                                                 <TableCell className="text-cyan-600 hover:underline text-center cursor-pointer">{item.sanitationService}</TableCell>
                                                 <TableCell className="text-cyan-600 hover:underline text-center cursor-pointer">{item.typeOfService}</TableCell>
                                                 <TableCell className="text-center">

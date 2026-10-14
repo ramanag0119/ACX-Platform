@@ -55,6 +55,9 @@ export const ROUTE_MODULE: Record<string, HmsModule> = {
   // `role_module.module_name` value the backend gates on, not a URL.
   "/HMS": "dashboard",
   "/occupancy": "occupancy",
+  "/reservations": "bookings",
+  "/check-in": "bookings",
+  "/checkin": "bookings",
   "/bookings": "bookings",
   "/services/tracking": "service_tracking",
   "/services/planning": "service_planning",

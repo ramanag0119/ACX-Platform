@@ -397,10 +397,10 @@ const FacilityManagement = () => {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {pageOf(facilitySetupData).map((row, index) => (
+                            {pageOf(facilitySetupData).map((row) => (
                                 <TableRow
                                     key={row.id}
-                                    className={`${index % 2 === 0 ? "bg-muted/20" : "bg-background"} hover:bg-muted/40 transition-colors`}
+                                    className="hover:bg-[var(--hms-table-row-hover-bg)] transition-colors"
                                 >
                                     <TableCell>{row.organizationName}</TableCell>
                                     <TableCell>{row.hospitalityName}</TableCell>
@@ -521,10 +521,10 @@ const FacilityManagement = () => {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {pageOf(amenityTypeData).map((row, index) => (
+                                {pageOf(amenityTypeData).map((row) => (
                                     <TableRow
                                         key={row.id}
-                                        className={`${index % 2 === 0 ? "bg-muted/20" : "bg-background"} hover:bg-muted/40 transition-colors`}
+                                        className="hover:bg-[var(--hms-table-row-hover-bg)] transition-colors"
                                     >
                                         <TableCell className="text-center">{row.amenityType}</TableCell>
                                         {/* The real `amenity_type.amenity_category`:
@@ -645,10 +645,10 @@ const FacilityManagement = () => {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {pageOf(roomAmenitiesData).map((row, index) => (
+                                {pageOf(roomAmenitiesData).map((row) => (
                                     <TableRow
                                         key={row.id}
-                                        className={`${index % 2 === 0 ? "bg-muted/20" : "bg-background"} hover:bg-muted/40 transition-colors`}
+                                        className="hover:bg-[var(--hms-table-row-hover-bg)] transition-colors"
                                     >
                                         <TableCell className="text-center">{row.amenity}</TableCell>
                                     </TableRow>
@@ -947,10 +947,10 @@ const FacilityManagement = () => {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {pageOf(packagesData).map((row, index) => (
+                                    {pageOf(packagesData).map((row) => (
                                         <TableRow
                                             key={row.id}
-                                            className={`${index % 2 === 0 ? "bg-muted/20" : "bg-background"} hover:bg-muted/40 transition-colors`}
+                                            className="hover:bg-[var(--hms-table-row-hover-bg)] transition-colors"
                                         >
                                             <TableCell className="text-primary">{row.packageName}</TableCell>
                                             <TableCell className="text-primary">{row.amenityType}</TableCell>
@@ -1003,10 +1003,10 @@ const FacilityManagement = () => {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {pageOf(subPackagesData).map((row, index) => (
+                                    {pageOf(subPackagesData).map((row) => (
                                         <TableRow
                                             key={row.id}
-                                            className={`${index % 2 === 0 ? "bg-muted/20" : "bg-background"} hover:bg-muted/40 transition-colors`}
+                                            className="hover:bg-[var(--hms-table-row-hover-bg)] transition-colors"
                                         >
                                             <TableCell>{row.sNo}</TableCell>
                                             <TableCell className="text-primary">{row.packageName}</TableCell>
@@ -1268,10 +1268,10 @@ const FacilityManagement = () => {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {pageOf(roomSetupData).map((row, index) => (
+                                {pageOf(roomSetupData).map((row) => (
                                     <TableRow
                                         key={row.id}
-                                        className={`${index % 2 === 0 ? "bg-muted/20" : "bg-background"} hover:bg-muted/40 transition-colors`}
+                                        className="hover:bg-[var(--hms-table-row-hover-bg)] transition-colors"
                                     >
                                         {/* Both cells previously highlighted hardcoded names
                                             ("Busy Room", "Delux Package") that match no

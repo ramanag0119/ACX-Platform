@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -23,9 +23,8 @@ import {
     Pie,
     Cell,
     ResponsiveContainer,
-    Tooltip,
-    Sector,
 } from "recharts";
+import { DonutHoleTooltip } from "@/core/components/DonutHoleTooltip";
 import {
     Dialog,
     DialogContent,
@@ -111,9 +110,11 @@ const formatDate = (value: string | null) => (value ? new Date(value).toLocaleDa
 const formatTime = (value: string | null) =>
     value ? new Date(value).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "-";
 
+const INACTIVE_SLICE_OPACITY = 0.2;
+
 const ServiceTracking = () => {
     const [activeService, setActiveService] = useState<number | null>(null);
-    const [activeChartIndex, setActiveChartIndex] = useState<number | undefined>(undefined);
+    const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
     const [entriesPerPage, setEntriesPerPage] = useState("10");
     const [searchQuery, setSearchQuery] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
@@ -157,12 +158,41 @@ const ServiceTracking = () => {
         (request) => request.status_name === "Completed",
     ).length;
     const totalServices = requestsForType.length;
-    const currentChartData = totalServices
-        ? [
-            { name: "Completed", value: Number(((completedCount / totalServices) * 100).toFixed(2)), color: "#22c55e" },
-            { name: "Pending", value: Number((((totalServices - completedCount) / totalServices) * 100).toFixed(2)), color: "#ef4444" },
-        ]
-        : [];
+    const pendingCount = totalServices - completedCount;
+
+    const currentChartData = useMemo(() => {
+        if (!totalServices) return [];
+        return [
+            {
+                name: "Completed",
+                value: completedCount,
+                count: completedCount,
+                percent: Number(((completedCount / totalServices) * 100).toFixed(1)).toString().replace(/\.0$/, ""),
+                color: "#22c55e",
+            },
+            {
+                name: "Pending",
+                value: pendingCount,
+                count: pendingCount,
+                percent: Number(((pendingCount / totalServices) * 100).toFixed(1)).toString().replace(/\.0$/, ""),
+                color: "#ef4444",
+            },
+        ].filter((slice) => slice.value > 0);
+    }, [totalServices, completedCount, pendingCount]);
+
+    const hoveredName = useMemo(
+        () =>
+            hoveredCategory && currentChartData.some((slice) => slice.name === hoveredCategory)
+                ? hoveredCategory
+                : null,
+        [hoveredCategory, currentChartData]
+    );
+
+    const isDimmed = (name: string) => hoveredName !== null && name !== hoveredName;
+
+    const hoveredSlice = hoveredName
+        ? currentChartData.find((slice) => slice.name === hoveredName)
+        : undefined;
 
     // One row shape covering every table variant below. Each value is a real
     // `service_request` field; "-" means the schema has no such column.
@@ -198,27 +228,6 @@ const ServiceTracking = () => {
 
     const isLoading = typesQuery.isLoading || allRequestsQuery.isLoading;
     const error = typesQuery.error ?? allRequestsQuery.error;
-
-    const renderActiveShape = (props: { cx?: number; cy?: number; innerRadius?: number; outerRadius?: number; startAngle?: number; endAngle?: number; fill?: string }) => {
-        const { cx = 0, cy = 0, innerRadius = 0, outerRadius = 0, startAngle = 0, endAngle = 0, fill = "#3eb1c8" } = props;
-        return (
-            <g>
-                <Sector
-                    cx={cx}
-                    cy={cy}
-                    innerRadius={innerRadius - 2}
-                    outerRadius={outerRadius + 6}
-                    startAngle={startAngle}
-                    endAngle={endAngle}
-                    fill={fill}
-                    style={{
-                        filter: `drop-shadow(0 0 10px ${fill}80)`,
-                        transition: "all 0.3s ease-out",
-                    }}
-                />
-            </g>
-        );
-    };
 
     const getStatusBadge = (status: string) => (
         <Badge variant="secondary" className={`${serviceStatusBadgeClass(status)} font-medium border-0`}>
@@ -282,7 +291,7 @@ const ServiceTracking = () => {
         switch (selectedType?.name) {
             case "Room Service":
                 return (
-                    <Table>
+                    <Table stickyFirstColumn>
                         <TableHeader>
                             <TableRow className="bg-muted/40 dark:bg-[#0e1322] border-b border-border dark:border-slate-800">
                                 <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Room No</TableHead>
@@ -329,7 +338,7 @@ const ServiceTracking = () => {
                 );
             case "Travel Desk":
                 return (
-                    <Table>
+                    <Table stickyFirstColumn>
                         <TableHeader>
                             <TableRow className="bg-muted/40 dark:bg-[#0e1322] border-b border-border dark:border-slate-800">
                                 <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Room No</TableHead>
@@ -366,7 +375,7 @@ const ServiceTracking = () => {
                 );
             case "Business Center":
                 return (
-                    <Table>
+                    <Table stickyFirstColumn>
                         <TableHeader>
                             <TableRow className="bg-muted/40 dark:bg-[#0e1322] border-b border-border dark:border-slate-800">
                                 <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Room No</TableHead>
@@ -446,7 +455,7 @@ const ServiceTracking = () => {
                 );
             case "Facility Maintenance Service":
                 return (
-                    <Table>
+                    <Table stickyFirstColumn>
                         <TableHeader>
                             <TableRow className="bg-muted/40 dark:bg-[#0e1322] border-b border-border dark:border-slate-800">
                                 <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Service Management</TableHead>
@@ -489,7 +498,7 @@ const ServiceTracking = () => {
                 );
             case "Sanitation Maintenance Service":
                 return (
-                    <Table>
+                    <Table stickyFirstColumn>
                         <TableHeader>
                             <TableRow className="bg-muted/40 dark:bg-[#0e1322] border-b border-border dark:border-slate-800">
                                 <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4">Service Management</TableHead>
@@ -531,9 +540,9 @@ const ServiceTracking = () => {
             default:
                 // Any other service type uses the standard request columns.
                 return (
-                    <Table>
+                    <Table stickyFirstColumn>
                         <TableHeader>
-                            <TableRow className="bg-gray-50 border-b border-gray-200">
+                            <TableRow className="bg-muted/40 dark:bg-[#0e1322] border-b border-border dark:border-slate-800">
                                 <TableHead className="text-gray-600 font-medium">Room No</TableHead>
                                 <TableHead className="text-gray-600 font-medium">Service Type</TableHead>
                                 <TableHead className="text-gray-600 font-medium">Service Request</TableHead>
@@ -588,7 +597,7 @@ const ServiceTracking = () => {
                                     setActiveService(card.id);
                                     // Drop any hover left on the old chart, so the
                                     // centre shows the newly selected type.
-                                    setActiveChartIndex(undefined);
+                                    setHoveredCategory(null);
                                 }}
                                 className={`relative bg-white rounded-xl border-2 border-gray-100 shadow-sm overflow-hidden px-5 pt-5 pb-4 transition-all duration-200 cursor-pointer text-left flex flex-col gap-2 ${card.hoverBorder} ${card.id === selectedTypeId ? "ring-2 ring-primary shadow-md" : ""}`}
                             >
@@ -621,7 +630,10 @@ const ServiceTracking = () => {
                             Viewing: <span className="font-semibold text-foreground">{selectedType.name}</span>
                         </p>
                     )}
-                    <div className="relative w-64 h-64 flex items-center justify-center">
+                    <div
+                        className="relative w-64 h-64 flex items-center justify-center [&_*:focus:not(:focus-visible)]:outline-none [&_.recharts-sector]:transition-[fill-opacity] [&_.recharts-sector]:duration-300 [&_.recharts-sector]:ease-out"
+                        onMouseLeave={() => setHoveredCategory(null)}
+                    >
                         <ResponsiveContainer width="100%" height="100%">
                             {/* Keyed on the selected type: Recharts only animates a
                                 Pie on mount or on a data change, so two types with
@@ -633,106 +645,40 @@ const ServiceTracking = () => {
                                     data={currentChartData}
                                     cx="50%"
                                     cy="50%"
-                                    innerRadius={56}
-                                    outerRadius={98}
+                                    innerRadius="60%"
+                                    outerRadius="90%"
                                     startAngle={90}
                                     endAngle={-270}
-                                    paddingAngle={0}
+                                    paddingAngle={2}
+                                    cornerRadius={5}
+                                    stroke="none"
                                     dataKey="value"
-                                    stroke="hsl(var(--card))"
-                                    strokeWidth={2}
-                                    activeIndex={activeChartIndex}
-                                    activeShape={renderActiveShape}
-                                    onMouseEnter={(_, index) => setActiveChartIndex(index)}
-                                    onMouseLeave={() => setActiveChartIndex(undefined)}
                                     className="cursor-pointer"
+                                    onMouseEnter={(entry, index) => {
+                                        const name = entry?.name ?? currentChartData[index]?.name ?? null;
+                                        setHoveredCategory(name);
+                                    }}
                                 >
-                                    {currentChartData.map((entry, index) => (
+                                    {currentChartData.map((entry) => (
                                         <Cell
-                                            key={`cell-${index}`}
+                                            key={entry.name}
                                             fill={entry.color}
-                                            className="transition-all duration-300 cursor-pointer"
-                                            opacity={activeChartIndex === undefined || activeChartIndex === index ? 1 : 0.6}
+                                            fillOpacity={isDimmed(entry.name) ? INACTIVE_SLICE_OPACITY : 1}
                                         />
                                     ))}
                                 </Pie>
-                                <Tooltip
-                                    formatter={(value: unknown) => [`${value}%`, 'Percentage']}
-                                    contentStyle={{
-                                        backgroundColor: "hsl(var(--card))",
-                                        border: "1px solid hsl(var(--border))",
-                                        borderRadius: "10px",
-                                        boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.2)",
-                                        fontSize: "12px",
-                                    }}
-                                />
                             </PieChart>
                         </ResponsiveContainer>
-                        {/* Center Metric Display (dynamic on hover) */}
-                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center transition-all duration-200">
-                            {activeChartIndex !== undefined && currentChartData[activeChartIndex] ? (
-                                <>
-                                    <span className="text-3xl font-bold tracking-tight text-foreground transition-all">
-                                        {currentChartData[activeChartIndex].value}%
-                                    </span>
-                                    <span className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mt-0.5">
-                                        {currentChartData[activeChartIndex].name}
-                                    </span>
-                                </>
-                            ) : (
-                                <>
-                                    <span className="text-3xl font-bold tracking-tight text-foreground transition-all">
-                                        {totalServices.toLocaleString()}
-                                    </span>
-                                    {/* The type's name in place of the generic word;
-                                        clamped to the donut's 112px hole. */}
-                                    <span
-                                        className="text-xs text-muted-foreground font-medium mt-0.5 max-w-[100px] leading-tight line-clamp-2"
-                                        title={selectedType?.name}
-                                    >
-                                        {selectedType?.name ?? "services"}
-                                    </span>
-                                </>
-                            )}
-                        </div>
+                        {/* Centered Donut Hole Tooltip Presentation */}
+                        <DonutHoleTooltip
+                            hoveredSlice={hoveredSlice}
+                            totalValue={totalServices.toLocaleString()}
+                            totalLabel={selectedType?.name ?? "services"}
+                            restingTitle={selectedType?.name}
+                        />
                     </div>
-
-                    {/* Stats Legend Cards (interactive hover synced with chart) */}
-                    <div className="flex flex-wrap items-center justify-center gap-4 mt-5 w-full">
-                        {currentChartData.map((data, index) => {
-                            const isGreen = data.name.toLowerCase().includes("complete") || data.name.toLowerCase().includes("sanitized");
-                            const isHovered = activeChartIndex === index;
-                            return (
-                                <div
-                                    key={index}
-                                    onMouseEnter={() => setActiveChartIndex(index)}
-                                    onMouseLeave={() => setActiveChartIndex(undefined)}
-                                    className={`flex items-center gap-3 px-4 py-2.5 rounded-xl border cursor-pointer transition-all duration-200 ${
-                                        isHovered
-                                            ? "scale-105 shadow-md ring-2 ring-primary/40 brightness-105"
-                                            : "hover:scale-102 hover:shadow-sm"
-                                    } ${
-                                        isGreen
-                                            ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:border-emerald-500/30 dark:text-emerald-300"
-                                            : "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:border-rose-500/30 dark:text-rose-300"
-                                    }`}
-                                >
-                                    <div
-                                        className={`w-2.5 h-2.5 rounded-full shrink-0 transition-transform duration-200 ${
-                                            isHovered ? "scale-125 shadow-sm" : ""
-                                        }`}
-                                        style={{ backgroundColor: data.color }}
-                                    />
-                                    <div className="flex flex-col text-left">
-                                        <span className="text-xs font-semibold text-foreground/90">{data.name}</span>
-                                        <span className="text-sm font-bold">{data.value}%</span>
-                                    </div>
-                                </div>
-                            );
-                        })}
                     </div>
                 </div>
-            </div>
 
             {/* Table Container */}
             {/* Controls */}
