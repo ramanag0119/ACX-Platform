@@ -45,6 +45,14 @@ export interface SurfaceTokens {
   tooltipBorder: string;
   /** Recharts cartesian grid stroke. */
   gridStroke: string;
+  /** Standardized data table row background. */
+  tableRowBg: string;
+  /** Standardized data table row hover background. */
+  tableRowHoverBg: string;
+  /** Standardized data table header background. */
+  tableHeaderBg: string;
+  /** Standardized data table border. */
+  tableBorder: string;
 }
 
 const DARK: SurfaceTokens = {
@@ -59,6 +67,10 @@ const DARK: SurfaceTokens = {
   tooltipBg: "#1e2233",
   tooltipBorder: "1px solid rgba(255,255,255,0.1)",
   gridStroke: "rgba(255,255,255,0.06)",
+  tableRowBg: "#0e1322",
+  tableRowHoverBg: "#1a2234",
+  tableHeaderBg: "#090d18",
+  tableBorder: "rgba(255,255,255,0.08)",
 };
 
 const LIGHT: SurfaceTokens = {
@@ -73,6 +85,10 @@ const LIGHT: SurfaceTokens = {
   tooltipBg: "#FFFFFF",
   tooltipBorder: "1px solid rgba(124,92,255,0.12)",
   gridStroke: "rgba(124,92,255,0.1)",
+  tableRowBg: "#f5f4fb",
+  tableRowHoverBg: "#ede9f8",
+  tableHeaderBg: "#eae7f6",
+  tableBorder: "rgba(99,102,241,0.12)",
 };
 
 /** The card tokens for the active theme. */

@@ -331,8 +331,8 @@ const UserRoles = () => {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {currentEntries.map((role, index) => (
-                                            <TableRow key={role.id} className={`${index % 2 === 0 ? "bg-card dark:bg-[#101526]/80" : "bg-muted/10 dark:bg-[#0d1120]/80"} hover:bg-muted/30 dark:hover:bg-slate-800/50 border-b border-border/50 dark:border-slate-800/70 transition-colors`}>
+                                        {currentEntries.map((role) => (
+                                            <TableRow key={role.id} className="hover:bg-[var(--hms-table-row-hover-bg)] border-b border-border/50 dark:border-slate-800/70 transition-colors">
                                                 <TableCell className="text-cyan-600 font-medium">{role.userRole}</TableCell>
                                                 <TableCell>{role.roleType}</TableCell>
                                                 <TableCell className="text-cyan-600">{role.notifications}</TableCell>
@@ -414,8 +414,8 @@ const UserRoles = () => {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {modulePermissions.map((module, index) => (
-                                            <TableRow key={module.id} className={`${index % 2 === 0 ? "bg-card dark:bg-[#101526]/80" : "bg-muted/10 dark:bg-[#0d1120]/80"} hover:bg-muted/30 dark:hover:bg-slate-800/50 border-b border-border/50 dark:border-slate-800/70 transition-colors`}>
+                                        {modulePermissions.map((module) => (
+                                            <TableRow key={module.id} className="hover:bg-[var(--hms-table-row-hover-bg)] border-b border-border/50 dark:border-slate-800/70 transition-colors">
                                                 <TableCell className="text-muted-foreground dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider py-2.5 px-3">{module.name}</TableCell>
                                                 <TableCell className="text-center">
                                                     <Checkbox

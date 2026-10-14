@@ -581,7 +581,7 @@ const JobOrder = () => {
                                         </TableRow>
                                     ) : (
                                         addedRooms.map((item, index) => (
-                                            <TableRow key={`${item.amenityId}-${item.deviceTypeId}`} className={`${index % 2 === 0 ? "bg-card dark:bg-[#101526]/80" : "bg-muted/10 dark:bg-[#0d1120]/80"} hover:bg-muted/30 dark:hover:bg-slate-800/50 border-b border-border/50 dark:border-slate-800/70 transition-colors`}>
+                                            <TableRow key={`${item.amenityId}-${item.deviceTypeId}`} className="hover:bg-[var(--hms-table-row-hover-bg)] border-b border-border/50 dark:border-slate-800/70 transition-colors">
                                                 <TableCell>{item.roomName}</TableCell>
                                                 <TableCell>
                                                     {item.deviceTypeName}
@@ -683,8 +683,8 @@ const JobOrder = () => {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {paginatedJobOrders.map((job, index) => (
-                                    <TableRow key={job.id} className={`${index % 2 === 0 ? "bg-card dark:bg-[#101526]/80" : "bg-muted/10 dark:bg-[#0d1120]/80"} hover:bg-muted/30 dark:hover:bg-slate-800/50 border-b border-border/50 dark:border-slate-800/70 transition-colors`}>
+                                {paginatedJobOrders.map((job) => (
+                                    <TableRow key={job.id} className="hover:bg-[var(--hms-table-row-hover-bg)] border-b border-border/50 dark:border-slate-800/70 transition-colors">
                                         {/* `job_order` has one human reference; the row's own id
                                             is a UUID, shortened here with the full value on hover. */}
                                         <TableCell className="text-cyan-600 whitespace-nowrap" title={job.id}>

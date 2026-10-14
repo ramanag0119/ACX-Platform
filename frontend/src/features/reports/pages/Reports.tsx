@@ -522,11 +522,7 @@ const Reports = () => {
                         rows.map((row, index) => (
                           <TableRow
                             key={index}
-                            className={`${
-                              index % 2 === 0
-                                ? "bg-card dark:bg-[#101526]/80"
-                                : "bg-muted/10 dark:bg-[#0d1120]/80"
-                            } hover:bg-muted/30 dark:hover:bg-slate-800/50 border-b border-border/50 dark:border-slate-800/70 transition-colors`}
+                            className="hover:bg-[var(--hms-table-row-hover-bg)] border-b border-border/50 dark:border-slate-800/70 transition-colors"
                           >
                             {columns.map((column) => (
                               <TableCell

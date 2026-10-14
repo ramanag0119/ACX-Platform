@@ -456,8 +456,8 @@ const Tickets = () => {
                     </TableCell>
                   </TableRow>
                 )}
-                {paginatedTickets.map((ticket, index) => (
-                  <TableRow key={ticket.id} className={`${index % 2 === 0 ? "bg-card dark:bg-[#101526]/80" : "bg-muted/10 dark:bg-[#0d1120]/80"} hover:bg-muted/30 dark:hover:bg-slate-800/50 border-b border-border/50 dark:border-slate-800/70 transition-colors`}>
+                {paginatedTickets.map((ticket) => (
+                  <TableRow key={ticket.id} className="hover:bg-[var(--hms-table-row-hover-bg)] border-b border-border/50 dark:border-slate-800/70 transition-colors">
                     <TableCell className="text-cyan-600 dark:text-cyan-400 text-xs py-3 px-4 whitespace-nowrap font-medium">{ticket.serviceType}</TableCell>
                     <TableCell className="whitespace-nowrap text-xs py-3 px-4 text-foreground/90">{ticket.serviceCategory}</TableCell>
                     <TableCell className={`text-xs py-3 px-4 whitespace-nowrap ${ticket.serviceRequest === "Items" ? "text-amber-500 font-medium" : "text-cyan-600 dark:text-cyan-400 font-medium"}`}>{ticket.serviceRequest}</TableCell>

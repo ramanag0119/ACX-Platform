@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Users,
@@ -24,6 +24,7 @@ import {
   BedDouble,
   CalendarRange,
   Info,
+  UserCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/core/contexts/AuthContext";
@@ -41,15 +42,17 @@ const NavItem = ({ to, icon: Icon, label, collapsed, subItems }: NavItemProps) =
   const location = useLocation();
   const matches = (path: string) =>
     location.pathname === path || location.pathname.startsWith(path + "/");
-  // A group is active when its own prefix matches OR any child's does. For
-  // Services and Config and Setup the children already sit under the parent
-  // prefix, so this changes nothing for them; it is what lets
-  // a group whose children keep their own top-level routes -- Stay -> Offers,
-  // Booking -- still highlight and open on the page it is showing.
+  // A group is active when its own prefix matches OR any child's does.
   const isActive =
     matches(to) || (subItems ?? []).some((item) => matches(item.to));
   const hasSubItems = subItems && subItems.length > 0;
   const [isOpen, setIsOpen] = useState(isActive);
+
+  useEffect(() => {
+    if (isActive) {
+      setIsOpen(true);
+    }
+  }, [isActive]);
 
   if (hasSubItems) {
     return (
@@ -118,6 +121,205 @@ const NavItem = ({ to, icon: Icon, label, collapsed, subItems }: NavItemProps) =
   );
 };
 
+interface HmsNavGroupProps {
+  collapsed: boolean;
+  canReadModule: (moduleName: string) => boolean;
+}
+
+/**
+ * HMS Navigation Group:
+ * Represents the top-level HMS menu which directly links to the existing
+ * HMS Dashboard (/HMS) while acting as the expandable parent of Occupancy
+ * and Services (which contains Services Tracking and Services Planning).
+ */
+const HmsNavGroup = ({ collapsed, canReadModule }: HmsNavGroupProps) => {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Child permission checks
+  const hasHms = canReadModule("dashboard");
+  const hasOccupancy = canReadModule("occupancy");
+  const hasServiceTracking = canReadModule("service_tracking");
+  const hasServicePlanning = canReadModule("service_planning");
+  const hasServices = hasServiceTracking || hasServicePlanning;
+
+  // Active route detection
+  const isHmsActive =
+    location.pathname === "/HMS" ||
+    location.pathname === "/hms" ||
+    location.pathname === "/";
+  const isOccupancyActive =
+    location.pathname === "/occupancy" ||
+    location.pathname.startsWith("/occupancy/");
+  const isServiceTrackingActive =
+    location.pathname === "/services/tracking" ||
+    location.pathname.startsWith("/services/tracking/");
+  const isServicePlanningActive =
+    location.pathname === "/services/planning" ||
+    location.pathname.startsWith("/services/planning/");
+  const isServicesActive =
+    isServiceTrackingActive ||
+    isServicePlanningActive ||
+    location.pathname === "/services";
+
+  const isChildActive = isOccupancyActive || isServicesActive;
+
+  // HMS parent open state (expanded by default if on HMS or on child route)
+  const [isOpen, setIsOpen] = useState(isHmsActive || isChildActive);
+  // Services submenu open state
+  const [servicesOpen, setServicesOpen] = useState(isServicesActive);
+
+  // Auto-expand parent when a child route is navigated to
+  useEffect(() => {
+    if (isChildActive || isHmsActive) {
+      setIsOpen(true);
+    }
+  }, [location.pathname, isChildActive, isHmsActive]);
+
+  useEffect(() => {
+    if (isServicesActive) {
+      setServicesOpen(true);
+    }
+  }, [location.pathname, isServicesActive]);
+
+  // If user has no read access to any part of HMS, hide the group
+  if (!hasHms && !hasOccupancy && !hasServices) {
+    return null;
+  }
+
+  const handleHmsClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    navigate("/HMS");
+    setIsOpen(true);
+  };
+
+  return (
+    <div className="relative">
+      <div
+        className={cn(
+          "sidebar-nav-item w-full flex items-center justify-between group cursor-pointer",
+          isHmsActive && "sidebar-nav-item-active"
+        )}
+        onClick={handleHmsClick}
+      >
+        <div
+          className={cn(
+            "flex items-center text-inherit no-underline min-w-0",
+            collapsed ? "justify-center w-full" : "gap-3 flex-1"
+          )}
+        >
+          <LayoutDashboard className="sidebar-nav-item-icon" />
+          {!collapsed && (
+            <span className="sidebar-nav-item-text truncate">HMS</span>
+          )}
+        </div>
+
+        {!collapsed && (
+          <button
+            type="button"
+            aria-label={isOpen ? "Collapse HMS submenu" : "Expand HMS submenu"}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsOpen((prev) => !prev);
+            }}
+            className="p-1 rounded hover:bg-black/10 dark:hover:bg-white/10 text-current transition-colors ml-1 focus:outline-none"
+          >
+            <ChevronDown
+              className={cn(
+                "sidebar-nav-chevron",
+                isOpen && "sidebar-nav-chevron-open"
+              )}
+            />
+          </button>
+        )}
+        {collapsed && <span className="sidebar-tooltip">HMS</span>}
+      </div>
+
+      {/* Submenu under HMS */}
+      {!collapsed && isOpen && (
+        <div className="sidebar-nav-submenu">
+          {/* 1. Occupancy */}
+          {hasOccupancy && (
+            <NavLink
+              to="/occupancy"
+              className={cn(
+                "sidebar-nav-subitem",
+                isOccupancyActive && "sidebar-nav-subitem-active"
+              )}
+            >
+              <Users className="w-4 h-4 flex-shrink-0" />
+              <span>Occupancy</span>
+            </NavLink>
+          )}
+
+          {/* 2. Services */}
+          {hasServices && (
+            <div className="relative">
+              <button
+                type="button"
+                aria-label={
+                  servicesOpen
+                    ? "Collapse Services submenu"
+                    : "Expand Services submenu"
+                }
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setServicesOpen((prev) => !prev);
+                }}
+                className="sidebar-nav-subitem w-full flex items-center justify-between text-left"
+              >
+                <div className="flex items-center gap-2.5">
+                  <Headphones className="w-4 h-4 flex-shrink-0" />
+                  <span>Services</span>
+                </div>
+                <ChevronDown
+                  className={cn(
+                    "sidebar-nav-chevron w-3.5 h-3.5 opacity-60",
+                    servicesOpen && "sidebar-nav-chevron-open"
+                  )}
+                />
+              </button>
+
+              {/* Submenu under Services */}
+              {servicesOpen && (
+                <div className="sidebar-nav-nested-submenu">
+                  {hasServiceTracking && (
+                    <NavLink
+                      to="/services/tracking"
+                      className={cn(
+                        "sidebar-nav-subitem",
+                        isServiceTrackingActive && "sidebar-nav-subitem-active"
+                      )}
+                    >
+                      <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
+                      <span>Services Tracking</span>
+                    </NavLink>
+                  )}
+
+                  {hasServicePlanning && (
+                    <NavLink
+                      to="/services/planning"
+                      className={cn(
+                        "sidebar-nav-subitem",
+                        isServicePlanningActive && "sidebar-nav-subitem-active"
+                      )}
+                    >
+                      <ClipboardList className="w-3.5 h-3.5 flex-shrink-0" />
+                      <span>Services Planning</span>
+                    </NavLink>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 interface AppSidebarProps {
   collapsed: boolean;
 }
@@ -125,9 +327,11 @@ interface AppSidebarProps {
 export const AppSidebar = ({ collapsed }: AppSidebarProps) => {
   const { canRead } = useAuth();
 
-  const allNavItems = [
-    { to: "/HMS", icon: LayoutDashboard, label: "HMS" },
-    { to: "/occupancy", icon: Users, label: "Occupancy" },
+  // Remaining standard sidebar items:
+  // Occupancy and Services have moved under HMS.
+  // Stay, Config and Setup, Manage, Reports, Tickets, Default Key Settings,
+  // and About remain in their exact positions and functions.
+  const remainingNavItems = [
     // Stay groups the two screens a stay is made of. `/stay` is a nav-only
     // prefix with no route of its own -- the parent is a disclosure button,
     // never a link -- so Offers and Booking keep their existing routes,
@@ -138,16 +342,8 @@ export const AppSidebar = ({ collapsed }: AppSidebarProps) => {
       label: "Stay",
       subItems: [
         { to: "/offers", label: "Offers", icon: Tag },
-        { to: "/bookings", label: "Booking", icon: Calendar },
-      ],
-    },
-    {
-      to: "/services",
-      icon: Headphones,
-      label: "Services",
-      subItems: [
-        { to: "/services/tracking", label: "Services Tracking", icon: MapPin },
-        { to: "/services/planning", label: "Services Planning", icon: ClipboardList },
+        { to: "/reservations", label: "Reservation", icon: Calendar },
+        { to: "/check-in", label: "Check-in", icon: UserCheck },
       ],
     },
     {
@@ -184,22 +380,19 @@ export const AppSidebar = ({ collapsed }: AppSidebarProps) => {
     { to: "/about", icon: Info, label: "About" },
   ];
 
-  // Hide what the signed-in user has no read grant for. A parent with
-  // sub-items survives as long as at least one child is permitted, and its
-  // sub-items are filtered to match. Purely cosmetic -- the API is the
-  // authority, and it will still answer 403 on anything not granted.
+  // Hide what the signed-in user has no read grant for.
   const isPermitted = (to: string) => {
     const moduleName = moduleForPath(to);
     return moduleName ? canRead(moduleName) : true;
   };
 
-  const navItems = allNavItems
+  const navItems = remainingNavItems
     .map((item) => {
       if (!item.subItems) return isPermitted(item.to) ? item : null;
       const subItems = item.subItems.filter((sub) => isPermitted(sub.to));
       return subItems.length ? { ...item, subItems } : null;
     })
-    .filter(Boolean) as typeof allNavItems;
+    .filter(Boolean) as typeof remainingNavItems;
 
   return (
     <aside
@@ -212,6 +405,10 @@ export const AppSidebar = ({ collapsed }: AppSidebarProps) => {
     >
       {/* Navigation */}
       <nav className="sidebar-nav flex-1 overflow-y-auto scrollbar-thin py-2 pb-6 space-y-0.5">
+        {/* HMS Navigation Group (Parent of Occupancy and Services) */}
+        <HmsNavGroup collapsed={collapsed} canReadModule={canRead} />
+
+        {/* Remaining Sidebar Navigation Items */}
         {navItems.map((item) => (
           <NavItem
             key={item.to}

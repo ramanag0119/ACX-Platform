@@ -366,7 +366,7 @@ const LimitConfigAlert = () => {
                                     </TableRow>
                                 ) : (
                                     paginatedData.map((item, index) => (
-                                        <TableRow key={index} className={`${index % 2 === 0 ? "bg-card dark:bg-[#101526]/80" : "bg-muted/10 dark:bg-[#0d1120]/80"} hover:bg-muted/30 dark:hover:bg-slate-800/50 border-b border-border/50 dark:border-slate-800/70 transition-colors`}>
+                                        <TableRow key={index} className="hover:bg-[var(--hms-table-row-hover-bg)] border-b border-border/50 dark:border-slate-800/70 transition-colors">
                                             <TableCell className="whitespace-nowrap text-xs py-3 px-4 text-foreground/90">{item.parameter}</TableCell>
                                             <TableCell className="whitespace-nowrap text-xs py-3 px-4 font-medium text-foreground">{item.deviceName}</TableCell>
                                             <TableCell className="whitespace-nowrap text-xs py-3 px-4 text-foreground/90">{item.limitCheck}</TableCell>

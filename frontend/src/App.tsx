@@ -12,7 +12,8 @@ import Tickets from "@/features/tickets/pages/Tickets";
 import Reports from "@/features/reports/pages/Reports";
 import KeySettings from "@/features/devices/pages/KeySettings";
 import Occupancy from "@/features/occupancy/pages/Occupancy";
-import Bookings from "@/features/bookings/pages/Bookings";
+import Reservations from "@/features/bookings/pages/Reservations";
+import CheckIn from "@/features/bookings/pages/CheckIn";
 import ServiceTracking from "@/features/services/pages/ServiceTracking";
 import ServicePlanning from "@/features/services/pages/ServicePlanning";
 import FacilityManagement from "@/features/config/pages/FacilityManagement";
@@ -55,7 +56,10 @@ const App = () => (
               <Route path="/hms" element={<Navigate to="/HMS" replace />} />
               <Route path="/dashboard" element={<Navigate to="/HMS" replace />} />
               <Route path="/occupancy" element={<Occupancy />} />
-              <Route path="/bookings" element={<Bookings />} />
+              <Route path="/reservations" element={<Reservations />} />
+              <Route path="/bookings" element={<Navigate to="/reservations" replace />} />
+              <Route path="/check-in" element={<CheckIn />} />
+              <Route path="/checkin" element={<Navigate to="/check-in" replace />} />
               <Route path="/services" element={<Navigate to="/services/tracking" replace />} />
               <Route path="/services/tracking" element={<ServiceTracking />} />
               <Route path="/services/planning" element={<ServicePlanning />} />

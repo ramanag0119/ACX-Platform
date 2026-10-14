@@ -2,8 +2,12 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableElement>>(
-  ({ className, ...props }, ref) => (
+export interface TableProps extends React.HTMLAttributes<HTMLTableElement> {
+  stickyFirstColumn?: boolean;
+}
+
+const Table = React.forwardRef<HTMLTableElement, TableProps>(
+  ({ className, stickyFirstColumn = true, ...props }, ref) => (
     /*
       `min-w-max` is what keeps a column header above its own column.
 
@@ -17,8 +21,21 @@ const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableE
       is `w-full`, so that scrolling stays inside the table and never becomes
       page-level horizontal scroll.
     */
-    <div className="relative w-full overflow-auto">
-      <table ref={ref} className={cn("w-full min-w-max caption-bottom text-sm", className)} {...props} />
+    <div
+      className={cn(
+        "relative w-full overflow-auto",
+        stickyFirstColumn && "hms-table-sticky-first-wrapper"
+      )}
+    >
+      <table
+        ref={ref}
+        className={cn(
+          "w-full min-w-max caption-bottom text-sm",
+          stickyFirstColumn && "hms-table-sticky-first",
+          className
+        )}
+        {...props}
+      />
     </div>
   ),
 );
@@ -47,7 +64,10 @@ const TableRow = React.forwardRef<HTMLTableRowElement, React.HTMLAttributes<HTML
   ({ className, ...props }, ref) => (
     <tr
       ref={ref}
-      className={cn("border-b transition-colors data-[state=selected]:bg-muted hover:bg-muted/50", className)}
+      className={cn(
+        "border-b transition-colors bg-[var(--hms-table-row-bg)] hover:bg-[var(--hms-table-row-hover-bg)] data-[state=selected]:bg-[var(--hms-table-row-selected-bg)]",
+        className
+      )}
       {...props}
     />
   ),
