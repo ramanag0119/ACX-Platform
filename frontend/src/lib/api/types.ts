@@ -668,6 +668,7 @@ export interface OccupancyRead {
   package_name: string | null;
   status: number | null;
   status_name: string | null;
+  occupancy_status?: string | null;
   conditions: AmenityConditionRead[];
   facility_id: string | null;
   building_id: string | null;
@@ -706,6 +707,7 @@ export interface StayRead {
   actual_checkout_time: string | null;
   is_checked_in: boolean;
   is_in_house: boolean;
+  display_status: string;
   gst: string | null;
   comments: string | null;
   checkout_initiated_by: string | null;
