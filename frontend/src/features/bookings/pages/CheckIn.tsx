@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Search,
   CheckCircle,
@@ -38,7 +39,7 @@ import {
 } from "lucide-react";
 import { DataState, TableLoading } from "@/core/components/DataState";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
-import { useStays } from "@/lib/api/hooks";
+import { useCount, useStays } from "@/lib/api/hooks";
 import {
   useCheckInStay,
   useCheckOutStay,
@@ -69,10 +70,21 @@ export type CheckInData = {
   isCheckedIn: boolean;
   isCheckedOut: boolean;
   isInHouse: boolean;
+  displayStatus: string;
   stayRef: string;
 };
 
-type CheckInTab = "in-house" | "all-checkins" | "pending-arrivals";
+type CheckInTab = "in-room" | "all-checkins" | "pending-arrivals";
+
+const renderTabCount = (query: { total: number | null; isError: boolean }) => {
+  if (query.total !== null) {
+    return query.total;
+  }
+  if (query.isError) {
+    return "-";
+  }
+  return <Skeleton className="h-2.5 w-3 rounded bg-current opacity-40 animate-pulse" />;
+};
 
 export const CheckIn = () => {
   const staysQuery = useStays({ page: 1, page_size: MAX_PAGE_SIZE });
@@ -109,6 +121,7 @@ export const CheckIn = () => {
       isCheckedIn,
       isCheckedOut,
       isInHouse,
+      displayStatus: stay.display_status ?? (isInHouse ? "In-Room" : isCheckedOut ? "Checked Out" : "Pending"),
       stayRef: stay.internal_stay_ref_number,
     };
   });
@@ -120,8 +133,8 @@ export const CheckIn = () => {
   const extend = useExtendStay();
   const approveDocs = useSetStayDocumentApproval();
 
-  // Active Tab: In-House, All Check-ins, or Pending Arrivals
-  const [activeTab, setActiveTab] = useState<CheckInTab>("in-house");
+  // Active Tab: In-Room, All Check-ins, or Pending Arrivals
+  const [activeTab, setActiveTab] = useState<CheckInTab>("in-room");
   const [entriesPerPage, setEntriesPerPage] = useState("10");
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -133,21 +146,21 @@ export const CheckIn = () => {
   const [extendUntil, setExtendUntil] = useState("");
   const [selectedRecord, setSelectedRecord] = useState<CheckInData | null>(null);
 
-  // Tab counts
-  const inHouseCount = allRecords.filter((r) => r.isInHouse).length;
-  const allCheckinsCount = allRecords.filter((r) => r.isCheckedIn).length;
-  const pendingArrivalsCount = allRecords.filter((r) => !r.isCheckedIn && r.status !== "cancelled").length;
+  // Exact database KPI counts from list endpoint's COUNT(*)
+  const inRoomCountQuery = useCount("stays", { is_in_house: true });
+  const allCheckinsCountQuery = useCount("stays", { is_checked_in: true });
+  const pendingArrivalsCountQuery = useCount("stays", { status: "pending" });
 
   // Filter records by selected tab
   const tabFilteredRecords = allRecords.filter((record) => {
-    if (activeTab === "in-house") {
+    if (activeTab === "in-room") {
       return record.isInHouse;
     }
     if (activeTab === "all-checkins") {
       return record.isCheckedIn;
     }
     if (activeTab === "pending-arrivals") {
-      return !record.isCheckedIn && record.status !== "cancelled";
+      return record.status === "pending";
     }
     return true;
   });
@@ -198,11 +211,20 @@ export const CheckIn = () => {
         actions={
           <div className="flex items-center gap-2">
             <span className="text-xs font-medium text-muted-foreground mr-1">
-              Active Guests:
+              In-Room Stays:
             </span>
-            <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-semibold px-3 py-1 text-xs border border-emerald-500/30">
-              <UserCheck className="w-3.5 h-3.5 mr-1" />
-              {inHouseCount} In-House
+            <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-semibold px-3 py-1 text-xs border border-emerald-500/30 inline-flex items-center min-w-[5.5rem] justify-center">
+              <UserCheck className="w-3.5 h-3.5 mr-1 shrink-0" />
+              {inRoomCountQuery.total !== null ? (
+                <span>{inRoomCountQuery.total} In-Room</span>
+              ) : inRoomCountQuery.isError ? (
+                <span title="Count unavailable">- In-Room</span>
+              ) : (
+                <span className="inline-flex items-center gap-1">
+                  <Skeleton className="h-3 w-4 rounded bg-emerald-600/30 dark:bg-emerald-400/30 animate-pulse" />
+                  <span>In-Room</span>
+                </span>
+              )}
             </Badge>
           </div>
         }
@@ -212,21 +234,21 @@ export const CheckIn = () => {
       <div className="flex items-center gap-2 border-b border-border/80 dark:border-slate-800 pb-3">
         <button
           type="button"
-          onClick={() => { setActiveTab("in-house"); setCurrentPage(1); }}
+          onClick={() => { setActiveTab("in-room"); setCurrentPage(1); }}
           className={cn(
             "flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg transition-all",
-            activeTab === "in-house"
+            activeTab === "in-room"
               ? "bg-brand text-white shadow-sm"
               : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
           )}
         >
           <UserCheck className="w-4 h-4" />
-          <span>In-House</span>
+          <span>In-Room</span>
           <span className={cn(
-            "text-[11px] px-1.5 py-0.5 rounded-full font-bold",
-            activeTab === "in-house" ? "bg-white/20 text-white" : "bg-muted text-muted-foreground"
+            "text-[11px] px-1.5 py-0.5 rounded-full font-bold min-w-[1.25rem] inline-flex items-center justify-center",
+            activeTab === "in-room" ? "bg-white/20 text-white" : "bg-muted text-muted-foreground"
           )}>
-            {inHouseCount}
+            {renderTabCount(inRoomCountQuery)}
           </span>
         </button>
 
@@ -243,10 +265,10 @@ export const CheckIn = () => {
           <Building className="w-4 h-4" />
           <span>All Check-ins</span>
           <span className={cn(
-            "text-[11px] px-1.5 py-0.5 rounded-full font-bold",
+            "text-[11px] px-1.5 py-0.5 rounded-full font-bold min-w-[1.25rem] inline-flex items-center justify-center",
             activeTab === "all-checkins" ? "bg-white/20 text-white" : "bg-muted text-muted-foreground"
           )}>
-            {allCheckinsCount}
+            {renderTabCount(allCheckinsCountQuery)}
           </span>
         </button>
 
@@ -263,10 +285,10 @@ export const CheckIn = () => {
           <Clock className="w-4 h-4" />
           <span>Pending Arrivals</span>
           <span className={cn(
-            "text-[11px] px-1.5 py-0.5 rounded-full font-bold",
+            "text-[11px] px-1.5 py-0.5 rounded-full font-bold min-w-[1.25rem] inline-flex items-center justify-center",
             activeTab === "pending-arrivals" ? "bg-white/20 text-white" : "bg-muted text-muted-foreground"
           )}>
-            {pendingArrivalsCount}
+            {renderTabCount(pendingArrivalsCountQuery)}
           </span>
         </button>
       </div>
@@ -372,19 +394,20 @@ export const CheckIn = () => {
                       {record.expectedCheckOut || "-"}
                     </TableCell>
                     <TableCell className="text-center">
-                      {record.isInHouse ? (
-                        <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[11px] font-semibold">
-                          In-House
-                        </Badge>
-                      ) : record.isCheckedOut ? (
-                        <Badge className="bg-slate-500/15 text-slate-600 dark:text-slate-400 border border-slate-500/30 text-[11px] font-semibold">
-                          Checked Out
-                        </Badge>
-                      ) : (
-                        <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-[11px] font-semibold">
-                          Pending
-                        </Badge>
-                      )}
+                      <Badge
+                        className={cn(
+                          "text-[11px] font-semibold border",
+                          record.displayStatus === "In-Room"
+                            ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
+                            : record.displayStatus === "Checked Out"
+                              ? "bg-slate-500/15 text-slate-600 dark:text-slate-400 border-slate-500/30"
+                              : record.displayStatus === "Cancelled"
+                                ? "bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30"
+                                : "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30"
+                        )}
+                      >
+                        {record.displayStatus}
+                      </Badge>
                     </TableCell>
                     <TableCell className="text-center">
                       <Button
@@ -587,7 +610,7 @@ export const CheckIn = () => {
             <div className="p-3 bg-muted/40 rounded-lg text-xs text-muted-foreground">
               {selectedRecord?.isCheckedIn
                 ? "Checking out will update the guest stay to 'checked out' and release the assigned room back to available status."
-                : "Checking in will register the guest as currently in-house and record the actual arrival timestamp."}
+                : "Checking in will register the guest stay as in-room and record the actual arrival timestamp."}
             </div>
           </div>
           <div className="flex justify-end gap-3 pt-4 border-t border-border">
