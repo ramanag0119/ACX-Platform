@@ -88,6 +88,11 @@ class OccupancyRead(ORMModel):
 
     status: int | None = Field(default=None, description="amenity_status.id")
     status_name: str | None = Field(default=None, examples=["Occupied"])
+    occupancy_status: str | None = Field(
+        default=None,
+        examples=["Available"],
+        description="Authoritative derived occupancy status: Available | Occupied | Allotted | Unavailable",
+    )
     conditions: list[AmenityConditionRead] = Field(
         default_factory=list, description="Active rows from amenity_condition_status"
     )
