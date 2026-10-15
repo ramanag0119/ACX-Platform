@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -212,23 +212,39 @@ const Occupancy = () => {
    * column. The donut sends an `amenity_status_name` (Available, ...), which is
    * not a condition, so today that link falls back to Show All.
    */
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const initialStatus = searchParams.get(STATUS_QUERY_PARAM);
   const [filterBy, setFilterBy] = useState(
     () => initialStatus || ALL_FILTER_VALUE,
   );
   /**
-   * The user's Building / Floor pick, or null while they have not made one.
-   * Null means "the first row of the lookup" (resolved below).
-   * When arriving via ?status= (from the Occupancy Statistics graph), default
-   * to "all" so that all matching rooms across the property are displayed.
+   * The user's Building / Floor pick.
+   * Default to "all" (ALL_FILTER_VALUE) so that rooms across the property are
+   * visible and selecting any Room Status displays all matching records.
    */
-  const [buildingChoice, setBuildingChoice] = useState<string | null>(
-    () => (initialStatus ? ALL_FILTER_VALUE : null),
-  );
-  const [floorChoice, setFloorChoice] = useState<string | null>(
-    () => (initialStatus ? ALL_FILTER_VALUE : null),
-  );
+  const [buildingChoice, setBuildingChoice] = useState<string | null>(ALL_FILTER_VALUE);
+  const [floorChoice, setFloorChoice] = useState<string | null>(ALL_FILTER_VALUE);
+
+  // Sync state if URL search params change externally
+  useEffect(() => {
+    const statusInUrl = searchParams.get(STATUS_QUERY_PARAM);
+    if (statusInUrl && statusInUrl !== filterBy) {
+      setFilterBy(statusInUrl);
+    } else if (!statusInUrl && filterBy !== ALL_FILTER_VALUE && initialStatus) {
+      setFilterBy(ALL_FILTER_VALUE);
+    }
+  }, [searchParams, filterBy, initialStatus]);
+
+  const handleStatusChange = (status: string) => {
+    setFilterBy(status);
+    const newParams = new URLSearchParams(searchParams);
+    if (status === ALL_FILTER_VALUE) {
+      newParams.delete(STATUS_QUERY_PARAM);
+    } else {
+      newParams.set(STATUS_QUERY_PARAM, status);
+    }
+    setSearchParams(newParams, { replace: true });
+  };
   const [selectedRoom, setSelectedRoom] = useState<RoomRow | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [reallocateRoom, setReallocateRoom] = useState<RoomRow | null>(null);
@@ -259,8 +275,8 @@ const Occupancy = () => {
     { enabled: mayReadFacility },
   );
   const buildings = buildingsQuery.data?.items ?? [];
-  // No pick yet -> the first building in the list, not "All Buildings".
-  const buildingFilter = buildingChoice ?? buildings[0]?.id ?? ALL_FILTER_VALUE;
+  // No pick yet -> ALL_FILTER_VALUE ("All Buildings").
+  const buildingFilter = buildingChoice ?? ALL_FILTER_VALUE;
 
   const floorsQuery = useFloors(
     mayReadFacility
@@ -274,12 +290,8 @@ const Occupancy = () => {
     { enabled: mayReadFacility },
   );
   const floors = floorsQuery.data?.items ?? [];
-  // No pick yet -> the building's first floor. Under "All Buildings" there is
-  // no meaningful "first floor", so the floor stays unfiltered there.
-  const floorFilter =
-    floorChoice ??
-    (buildingFilter !== ALL_FILTER_VALUE ? floors[0]?.id : undefined) ??
-    ALL_FILTER_VALUE;
+  // No pick yet -> ALL_FILTER_VALUE ("All Floors").
+  const floorFilter = floorChoice ?? ALL_FILTER_VALUE;
 
   // Hold the occupancy fetch until the defaults above are known; otherwise the
   // first request goes out unfiltered and the table flashes every room. A
@@ -294,6 +306,7 @@ const Occupancy = () => {
   const scopeParams = {
     ...(buildingFilter !== ALL_FILTER_VALUE ? { building_id: buildingFilter } : {}),
     ...(floorFilter !== ALL_FILTER_VALUE ? { floor_id: floorFilter } : {}),
+    ...(filterBy !== ALL_FILTER_VALUE ? { occupancy_status: filterBy } : {}),
   };
 
   const isGuest = activeTab === "guest";
@@ -332,12 +345,11 @@ const Occupancy = () => {
 
   /**
    * Choosing a building clears the floor pick, so the floor falls back to the
-   * new building's first floor: a floor id from the previous building would be
-   * sent alongside the new selection and match nothing.
+   * new building's floors or All Floors.
    */
   const changeBuilding = (value: string) => {
     setBuildingChoice(value);
-    setFloorChoice(null);
+    setFloorChoice(ALL_FILTER_VALUE);
   };
 
   const handleDetailsClick = (room: RoomRow) => {
@@ -425,7 +437,7 @@ const Occupancy = () => {
 
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground text-sm">Status</span>
-              <Select value={filterBy} onValueChange={setFilterBy}>
+              <Select value={filterBy} onValueChange={handleStatusChange}>
                 <SelectTrigger className="w-36 h-9 bg-muted/30 border-border/50 dark:border-slate-700">
                   <SelectValue />
                 </SelectTrigger>
@@ -461,7 +473,7 @@ const Occupancy = () => {
                     <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3.5 px-5 whitespace-nowrap min-w-[150px] text-left">Check-In</TableHead>
                     <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3.5 px-5 whitespace-nowrap min-w-[170px] text-left">Check-Out</TableHead>
                     <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3.5 px-8 whitespace-nowrap min-w-[170px] text-center">Generate <span className="text-muted-foreground/60">↓</span></TableHead>
-                    <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3.5 px-8 whitespace-nowrap min-w-[220px] text-center">Occupancy Status</TableHead>
+                    <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3.5 px-8 whitespace-nowrap min-w-[220px] text-center">Room Status</TableHead>
                     <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3.5 px-8 whitespace-nowrap min-w-[240px] text-center">Room Condition</TableHead>
                     <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3.5 px-6 whitespace-nowrap min-w-[120px] text-center">Reassign</TableHead>
                     <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3.5 px-6 whitespace-nowrap min-w-[130px] text-center">Invoice <span className="text-muted-foreground/60">↓</span></TableHead>
