@@ -60,7 +60,7 @@ const RoomView = () => {
     const items = allRoomsQuery.data?.items ?? [];
     const byStatus = new Map<string, number>();
     for (const item of items) {
-      const name = item.status_name ?? "Unknown";
+      const name = item.occupancy_status ?? item.status_name ?? "Unknown";
       byStatus.set(name, (byStatus.get(name) ?? 0) + 1);
     }
     const total = items.length;
