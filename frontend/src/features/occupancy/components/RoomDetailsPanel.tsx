@@ -130,10 +130,12 @@ export const RoomDetailsPanel = ({ amenityId, roomNumber, roomType }: RoomDetail
                   },
                   {
                     label: "Status",
-                    value: occupancy?.status_name ?? "-",
+                    value: occupancy?.occupancy_status ?? occupancy?.status_name ?? "-",
                     // The one coloured row: room status uses the module's
                     // shared Available/Occupied/Allotted/Unavailable colours.
-                    className: roomStatusTextClass(occupancy?.status_name),
+                    className: roomStatusTextClass(
+                      occupancy?.occupancy_status ?? occupancy?.status_name,
+                    ),
                   },
                 ].map(({ label, value, className }) => (
                   <div
