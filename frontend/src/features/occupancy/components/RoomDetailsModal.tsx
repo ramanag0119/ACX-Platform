@@ -33,10 +33,11 @@ interface RoomDetailsModalProps {
     onClose: () => void;
     roomType?: string;
     guestName?: string;
+    occupancyStatus?: string;
     status?: string;
     /**
      * The row's housekeeping conditions, already display-labelled -- what the
-     * table's Status column showed. Used until the detail read lands.
+     * table's Condition column showed. Used until the detail read lands.
      */
     conditions?: string[];
 }
@@ -154,6 +155,7 @@ export function RoomDetailsModal({
     onClose,
     roomType = EMPTY_VALUE,
     guestName = EMPTY_VALUE,
+    occupancyStatus = EMPTY_VALUE,
     status = EMPTY_VALUE,
     conditions: rowConditions = [],
 }: RoomDetailsModalProps) {
@@ -176,6 +178,8 @@ export function RoomDetailsModal({
     // shows here; the row's copy only covers the moment before it arrives.
     const conditions =
         occupancy?.conditions.map((condition) => conditionLabel(condition.name)) ?? rowConditions;
+    const resolvedOccupancyStatus =
+        occupancy?.occupancy_status ?? (occupancyStatus !== EMPTY_VALUE ? occupancyStatus : null) ?? occupancy?.status_name ?? status;
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
@@ -185,28 +189,17 @@ export function RoomDetailsModal({
                         <DialogTitle className="text-xl font-semibold">
                             Room No: {roomNo}
                         </DialogTitle>
-                        {/* The same pills as the table's Status column, which
-                            shows housekeeping CONDITIONS (Sanitation, Under
-                            maintenance...), not `amenity_status`. This badge used
-                            to show `amenity_status` alone, so a room the table
-                            marked Sanitation opened reading "Available" -- true
-                            of the room flag, but not what the operator had just
-                            clicked. With no condition set, the room status is
-                            the most useful thing left to show. */}
-                        {conditions.length > 0 ? (
-                            <div className="mr-8 flex flex-wrap items-center justify-end gap-1.5">
-                                {conditions.map((condition) => (
-                                    <ConditionBadge key={condition} condition={condition} />
-                                ))}
-                            </div>
-                        ) : (
+                        <div className="mr-8 flex flex-wrap items-center justify-end gap-2">
                             <Badge
                                 variant="outline"
-                                className={`mr-8 ${roomStatusBadgeClass(occupancy?.status_name ?? status)}`}
+                                className={roomStatusBadgeClass(resolvedOccupancyStatus)}
                             >
-                                {occupancy?.status_name ?? status}
+                                {resolvedOccupancyStatus}
                             </Badge>
-                        )}
+                            {conditions.map((condition) => (
+                                <ConditionBadge key={condition} condition={condition} />
+                            ))}
+                        </div>
                     </div>
                 </DialogHeader>
 

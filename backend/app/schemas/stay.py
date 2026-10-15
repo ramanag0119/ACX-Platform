@@ -152,6 +152,12 @@ class StayRead(ORMModel):
             "reading of two columns, not a business rule the schema encodes."
         )
     )
+    display_status: str = Field(
+        description=(
+            "Derived presentation label for UI display (e.g. 'In-Room', 'Checked Out', 'Pending'). "
+            "Authoritatively computed by the backend from stay status, check-in, and check-out state."
+        )
+    )
     gst: str | None = Field(default=None, description="Tax registration on the stay")
     comments: str | None = None
     checkout_initiated_by: uuid.UUID | None = None

@@ -117,12 +117,58 @@ def _stay_stmt() -> Select:
     )
 
 
+def _display_status(status: str | None, is_in_house: bool, is_checked_in: bool) -> str:
+    """Centralized mapping from backend stay state to human-readable UI display label.
+
+    Database ``stay_status`` enum values:
+      - 'pending'
+      - 'active'
+      - 'checkout accepted'
+      - 'checkout pending'
+      - 'checkout rejected'
+      - 'checked out'
+      - 'cancelled'
+
+    Business presentation rules:
+      - Active stay checked into a room -> 'In-Room'
+      - Completed stay or checked out -> 'Checked Out'
+      - Not yet checked in / pending arrival -> 'Pending'
+      - Intermediate checkout workflow states -> 'Checkout Pending', 'Checkout Accepted', 'Checkout Rejected'
+      - Cancelled -> 'Cancelled'
+    """
+    if not status:
+        return "Unknown"
+
+    if status == "cancelled":
+        return "Cancelled"
+    if status == "checked out" or (status == "active" and is_checked_in and not is_in_house):
+        return "Checked Out"
+    if status == "active":
+        return "In-Room" if is_in_house else ("Checked Out" if (is_checked_in and not is_in_house) else "Pending")
+    if status == "checkout pending":
+        return "Checkout Pending"
+    if status == "checkout accepted":
+        return "Checkout Accepted"
+    if status == "checkout rejected":
+        return "Checkout Rejected"
+    if status == "pending":
+        return "Pending"
+
+    # For unknown / unsupported statuses, do NOT silently convert to a valid-looking label
+    return status.title()
+
+
 def _shape_stay(row) -> dict:
     data = dict(row)
     data["booker"] = _user_ref(
         data.pop("booking_user_id"),
         data.pop("booker_first_name"),
         data.pop("booker_last_name"),
+    )
+    data["display_status"] = _display_status(
+        status=data.get("status"),
+        is_in_house=bool(data.get("is_in_house")),
+        is_checked_in=bool(data.get("is_checked_in")),
     )
     return data
 

@@ -23,7 +23,7 @@ const Table = React.forwardRef<HTMLTableElement, TableProps>(
     */
     <div
       className={cn(
-        "relative w-full overflow-auto",
+        "relative w-full overflow-x-auto",
         stickyFirstColumn && "hms-table-sticky-first-wrapper"
       )}
     >

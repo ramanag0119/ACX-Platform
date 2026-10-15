@@ -933,18 +933,17 @@ span[style*="#8A86A8"] {
   border-spacing: 0 !important;
 }
 
-/* Header row styling */
+/* Header row styling: uniform header background */
 .hms-table-sticky-first thead th {
   background-color: var(--hms-table-header-bg) !important;
   border-bottom: 1px solid var(--hms-table-border) !important;
 }
 
-/* Header sticky first cell: top-left corner pins to top & left */
+/* Header sticky first cell: pins horizontally to the left on wide tables, staying perfectly in line with header row */
 .hms-table-sticky-first thead th:first-child {
   position: sticky !important;
   left: 0 !important;
-  top: 0 !important;
-  z-index: 35 !important; /* above all body cells and normal header cells */
+  z-index: 25 !important; /* Above scrolling body cells and first-col td (20), but strictly BELOW page header (30) */
   background-color: var(--hms-table-header-bg) !important;
   border-right: 1px solid var(--hms-table-border) !important;
   border-bottom: 1px solid var(--hms-table-border) !important;
@@ -1010,7 +1009,7 @@ span[style*="#8A86A8"] {
 /* Ensure the wrapper scrolls smoothly and contains the shadow */
 .hms-table-sticky-first-wrapper {
   overflow-x: auto;
-  overflow-y: auto;
+  overflow-y: visible;
   scrollbar-width: thin;
   scrollbar-color: rgba(156, 163, 175, 0.4) transparent;
   -webkit-overflow-scrolling: touch;
@@ -1402,7 +1401,22 @@ thead th,
   background-color: var(--hms-table-header-bg) !important;
   border-bottom: 1px solid var(--hms-table-border) !important;
   white-space: nowrap !important;
-  padding: 10px 14px !important;
+  padding: 12px 18px;
+}
+
+th.px-8, thead th.px-8, td.px-8, tbody td.px-8 {
+  padding-left: 2rem !important;
+  padding-right: 2rem !important;
+}
+
+th.px-6, thead th.px-6, td.px-6, tbody td.px-6 {
+  padding-left: 1.5rem !important;
+  padding-right: 1.5rem !important;
+}
+
+th.px-5, thead th.px-5, td.px-5, tbody td.px-5 {
+  padding-left: 1.25rem !important;
+  padding-right: 1.25rem !important;
 }
 
 [data-theme="light"] th,
@@ -2342,14 +2356,10 @@ select option:focus {
   max-height: var(--hms-table-max-height);
 }
 
-/* Descendant, not child -- see above. */
+/* Table headers inside .hms-content: ensure uniform z-index below page header (30) */
 .hms-content div[class*="overflow-x-auto"] table thead th {
-  position: sticky;
-  top: 0;
-  /* Below the page header (30) so it tucks under rather than over it.
-     See the layer ladder on `.hms-page-header`. */
   z-index: 20;
-  background-color: hsl(var(--muted));
+  background-color: var(--hms-table-header-bg);
 }
 
 /* --- Viewport fit ---------------------------------------------------------

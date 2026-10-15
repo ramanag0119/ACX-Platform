@@ -17,6 +17,7 @@ from sqlalchemy import text
 from app.core.config import settings
 from app.db.session import SessionLocal
 from app.main import app
+from app.services.stay import _display_status
 
 V1 = settings.API_V1_PREFIX
 
@@ -193,6 +194,33 @@ def test_cancelled_stay_has_no_room_allocation(client, db):
     stay = client.get(f"{V1}/stays?status=cancelled&page_size=100").json()["items"][0]
     assert stay["room_count"] == 0
     assert client.get(f"{V1}/stays/{stay['id']}/room-allocations").json() == []
+
+
+def test_display_status_derivation_and_vocabulary(client):
+    """display_status is authoritatively backend-derived and mapped for UI display."""
+    body = client.get(f"{V1}/stays?page_size=100").json()
+    assert body["items"], "Should have seeded stays"
+    for s in body["items"]:
+        assert "display_status" in s
+        if s["is_in_house"]:
+            assert s["display_status"] in (
+                "In-Room", "Checkout Pending", "Checkout Accepted", "Checkout Rejected"
+            )
+        elif s["status"] == "checked out":
+            assert s["display_status"] == "Checked Out"
+        elif s["status"] == "cancelled":
+            assert s["display_status"] == "Cancelled"
+
+    # Unit checks across all PostgreSQL stay_status enum values
+    assert _display_status(status="active", is_in_house=True, is_checked_in=True) == "In-Room"
+    assert _display_status(status="pending", is_in_house=False, is_checked_in=False) == "Pending"
+    assert _display_status(status="checked out", is_in_house=False, is_checked_in=True) == "Checked Out"
+    assert _display_status(status="cancelled", is_in_house=False, is_checked_in=False) == "Cancelled"
+    assert _display_status(status="checkout pending", is_in_house=True, is_checked_in=True) == "Checkout Pending"
+    assert _display_status(status="checkout accepted", is_in_house=True, is_checked_in=True) == "Checkout Accepted"
+    assert _display_status(status="checkout rejected", is_in_house=True, is_checked_in=True) == "Checkout Rejected"
+    # Fallback for unexpected status
+    assert _display_status(status="custom_status", is_in_house=False, is_checked_in=False) == "Custom_Status"
 
 
 # ---------------------------------------------------------------------------
@@ -726,3 +754,179 @@ def test_earlier_phase_endpoints_still_work(client, anon, admin_headers):
                  f"{V1}/notifications"):
         assert client.get(path).status_code == 200
     assert anon.get(f"{V1}/auth/me", headers=admin_headers).status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# Authoritative Occupancy Classification and Reconciliation
+# ---------------------------------------------------------------------------
+
+
+def test_authoritative_occupancy_status_vocabulary(client):
+    """Every room has an authoritative occupancy status from the approved 4 categories."""
+    res = client.get(f"{V1}/occupancy?page_size=100")
+    assert res.status_code == 200
+    items = res.json()["items"]
+    allowed = {"Available", "Occupied", "Allotted", "Unavailable"}
+    for item in items:
+        assert item["occupancy_status"] in allowed, (
+            f"Room {item['room_name']} has invalid occupancy_status: {item['occupancy_status']}"
+        )
+
+
+def test_active_in_house_stay_yields_occupied_status(client):
+    """An active in-house stay makes the room Occupied."""
+    res = client.get(f"{V1}/occupancy?amenity_category=room&page_size=100")
+    items = res.json()["items"]
+    occupied_rooms = [r for r in items if r["occupancy_status"] == "Occupied"]
+    assert len(occupied_rooms) == 1
+    assert occupied_rooms[0]["room_name"] == "301"
+    assert occupied_rooms[0]["current_stay"] is not None
+    assert occupied_rooms[0]["current_stay"]["actual_checkin_time"] is not None
+
+
+def test_stale_amenity_status_not_treated_as_occupied(client):
+    """Rooms with stale amenity.status == 1 but no active stay are not Occupied."""
+    res = client.get(f"{V1}/occupancy?amenity_category=room&page_size=100")
+    items = res.json()["items"]
+    for r in items:
+        if r["occupancy_status"] == "Occupied":
+            assert r["current_stay"] is not None
+            assert r["current_stay"]["actual_checkin_time"] is not None
+
+
+def test_low_battery_does_not_block_available_status(client):
+    """A low-battery alert alone does not block room booking; room remains Available."""
+    res = client.get(f"{V1}/occupancy?amenity_category=room&page_size=100")
+    items = res.json()["items"]
+    room_106 = next(r for r in items if r["room_name"] == "106")
+    cond_names = [c["name"].lower() for c in room_106["conditions"]]
+    assert "low battery" in cond_names
+    assert room_106["occupancy_status"] == "Available"
+
+
+def test_blocking_conditions_yield_unavailable(client):
+    """Rooms blocked by maintenance or sanitation are classified as Unavailable."""
+    res = client.get(f"{V1}/occupancy?amenity_category=room&page_size=100")
+    items = res.json()["items"]
+    # Room 103 has Sanitation condition
+    room_103 = next(r for r in items if r["room_name"] == "103")
+    assert any("sanitation" in c["name"].lower() for c in room_103["conditions"])
+    assert room_103["occupancy_status"] == "Unavailable"
+    # Room 204 has Under maintenance condition
+    room_204 = next(r for r in items if r["room_name"] == "204")
+    assert any("under maintenance" in c["name"].lower() for c in room_204["conditions"])
+    assert room_204["occupancy_status"] == "Unavailable"
+
+
+def test_occupancy_status_filtering_and_graph_reconciliation(client):
+    """Querying by occupancy_status filters accurately and reconciles to 24 guest bedrooms."""
+    categories = ["Available", "Occupied", "Unavailable", "Allotted"]
+    totals = {}
+    for cat in categories:
+        res = client.get(f"{V1}/occupancy?amenity_category=room&occupancy_status={cat}&page_size=100")
+        assert res.status_code == 200
+        data = res.json()
+        totals[cat] = data["total"]
+        assert len(data["items"]) == data["total"]
+        for item in data["items"]:
+            assert item["occupancy_status"] == cat
+
+    assert totals["Available"] == 12
+    assert totals["Occupied"] == 1
+    assert totals["Unavailable"] == 10
+    assert totals["Allotted"] == 1
+    assert sum(totals.values()) == 24
+
+    total_res = client.get(f"{V1}/occupancy?amenity_category=room&page_size=1")
+    assert total_res.json()["total"] == 24
+
+
+def test_selecting_allotted_returns_all_expected_records(client):
+    """Selecting Allotted returns Room 108 and only Allotted rooms."""
+    res = client.get(f"{V1}/occupancy?amenity_category=room&occupancy_status=Allotted&page_size=100")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["total"] >= 1
+    room_names = [r["room_name"] for r in data["items"]]
+    assert "108" in room_names
+    for item in data["items"]:
+        assert item["occupancy_status"] == "Allotted"
+
+
+def test_selecting_available_returns_only_available_records(client):
+    res = client.get(f"{V1}/occupancy?amenity_category=room&occupancy_status=Available&page_size=100")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["total"] == 12
+    for item in data["items"]:
+        assert item["occupancy_status"] == "Available"
+
+
+def test_selecting_occupied_returns_only_occupied_records(client):
+    res = client.get(f"{V1}/occupancy?amenity_category=room&occupancy_status=Occupied&page_size=100")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["total"] == 1
+    for item in data["items"]:
+        assert item["occupancy_status"] == "Occupied"
+    assert data["items"][0]["room_name"] == "301"
+
+
+def test_selecting_unavailable_returns_only_unavailable_records(client):
+    res = client.get(f"{V1}/occupancy?amenity_category=room&occupancy_status=Unavailable&page_size=100")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["total"] == 10
+    for item in data["items"]:
+        assert item["occupancy_status"] == "Unavailable"
+
+
+def test_show_all_returns_all_permitted_records(client):
+    res = client.get(f"{V1}/occupancy?amenity_category=room&page_size=100")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["total"] == 24
+    assert len(data["items"]) == 24
+
+
+def test_conditions_do_not_replace_occupancy_status_values(client):
+    res = client.get(f"{V1}/occupancy?amenity_category=room&page_size=100")
+    items = res.json()["items"]
+    allowed = {"Available", "Occupied", "Allotted", "Unavailable"}
+    for item in items:
+        assert item["occupancy_status"] in allowed
+        assert item["occupancy_status"] not in {"Dirty", "Sanitation", "Under maintenance", "Low battery"}
+
+
+def test_valid_allotted_records_not_excluded_by_unrelated_conditions(client):
+    """Room 108 has condition Sanitation but must remain Allotted."""
+    res = client.get(f"{V1}/occupancy?amenity_category=room&occupancy_status=Allotted&page_size=100")
+    data = res.json()
+    room_108 = next(r for r in data["items"] if r["room_name"] == "108")
+    assert room_108["occupancy_status"] == "Allotted"
+    cond_names = [c["name"].lower() for c in room_108["conditions"]]
+    assert "sanitation" in cond_names
+
+
+def test_pagination_and_total_counts_reflect_filtered_dataset(client):
+    res1 = client.get(f"{V1}/occupancy?amenity_category=room&occupancy_status=Allotted&page=1&page_size=1")
+    assert res1.status_code == 200
+    data1 = res1.json()
+    assert data1["total"] == 1
+    assert len(data1["items"]) == 1
+    assert data1["items"][0]["room_name"] == "108"
+
+    res2 = client.get(f"{V1}/occupancy?amenity_category=room&occupancy_status=Allotted&page=2&page_size=1")
+    assert res2.status_code == 200
+    data2 = res2.json()
+    assert data2["total"] == 1
+    assert len(data2["items"]) == 0
+
+
+def test_dashboard_filtering_and_direct_occupancy_filtering_equivalent(client):
+    dash_count_res = client.get(f"{V1}/occupancy?amenity_category=room&occupancy_status=Allotted&page_size=1")
+    direct_res = client.get(f"{V1}/occupancy?amenity_category=room&occupancy_status=Allotted&page_size=100")
+    assert dash_count_res.json()["total"] == direct_res.json()["total"]
+    assert dash_count_res.json()["total"] == len(direct_res.json()["items"])
+
+

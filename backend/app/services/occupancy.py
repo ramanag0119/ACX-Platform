@@ -13,7 +13,7 @@ from __future__ import annotations
 import uuid
 from collections import defaultdict
 
-from sqlalchemy import Select, and_, func, select
+from sqlalchemy import Select, and_, case, func, or_, select
 from sqlalchemy.orm import Session, aliased
 
 from app.models import (
@@ -85,6 +85,61 @@ def list_amenity_conditions(db: Session, *, page: int, page_size: int):
 # ---------------------------------------------------------------------------
 
 
+def _in_house_exists():
+    return (
+        select(RoomAllocation.id)
+        .join(Stay, Stay.id == RoomAllocation.stay_id)
+        .where(RoomAllocation.room_id == Amenity.id, IN_HOUSE)
+        .exists()
+    )
+
+
+BLOCKING_CONDITION_NAMES = {"dirty", "under maintenance", "sanitation", "need maintenance"}
+BLOCKING_CONDITION_IDS = {1, 3, 4}
+
+
+def _blocking_condition_exists():
+    return (
+        select(AmenityConditionStatus.amenity_id)
+        .join(
+            AmenityCondition,
+            AmenityCondition.id == AmenityConditionStatus.amenity_condition_id,
+        )
+        .where(
+            AmenityConditionStatus.amenity_id == Amenity.id,
+            AmenityConditionStatus.status == 1,
+            or_(
+                AmenityConditionStatus.amenity_condition_id.in_(BLOCKING_CONDITION_IDS),
+                func.lower(AmenityCondition.name).in_(BLOCKING_CONDITION_NAMES),
+            ),
+        )
+        .exists()
+    )
+
+
+def _pending_allocation_exists():
+    return (
+        select(RoomAllocation.id)
+        .join(Stay, Stay.id == RoomAllocation.stay_id)
+        .where(
+            RoomAllocation.room_id == Amenity.id,
+            Stay.status == "pending",
+            Stay.actual_checkin_time.is_(None),
+            Stay.actual_checkout_time.is_(None),
+        )
+        .exists()
+    )
+
+
+def _authoritative_occupancy_status_expr():
+    return case(
+        (_in_house_exists(), "Occupied"),
+        (or_(Amenity.status == 3, _pending_allocation_exists()), "Allotted"),
+        (or_(Amenity.status == 2, _blocking_condition_exists()), "Unavailable"),
+        else_="Available",
+    )
+
+
 def _occupancy_stmt() -> Select:
     allocation_count = (
         select(func.count())
@@ -103,6 +158,7 @@ def _occupancy_stmt() -> Select:
             Package.name.label("package_name"),
             Amenity.status,
             AmenityStatus.amenity_status_name.label("status_name"),
+            _authoritative_occupancy_status_expr().label("occupancy_status"),
             Amenity.facility_id,
             BuildingProp.id.label("building_id"),
             BuildingProp.property_name.label("building_name"),
@@ -119,15 +175,6 @@ def _occupancy_stmt() -> Select:
         .outerjoin(PropertyChain, PropertyChain.id == Amenity.property_chain_id)
         .outerjoin(BuildingProp, BuildingProp.id == PropertyChain.level_one_id)
         .outerjoin(FloorProp, FloorProp.id == PropertyChain.level_two_id)
-    )
-
-
-def _in_house_exists():
-    return (
-        select(RoomAllocation.id)
-        .join(Stay, Stay.id == RoomAllocation.stay_id)
-        .where(RoomAllocation.room_id == Amenity.id, IN_HOUSE)
-        .exists()
     )
 
 
@@ -225,6 +272,7 @@ def list_occupancy(
     amenity_type_id: uuid.UUID | None = None,
     amenity_category: str | None = None,
     status: int | None = None,
+    occupancy_status: str | None = None,
     condition_id: int | None = None,
     is_occupied: bool | None = None,
 ):
@@ -241,6 +289,8 @@ def list_occupancy(
         stmt = stmt.where(AmenityType.amenity_category == amenity_category)
     if status is not None:
         stmt = stmt.where(Amenity.status == status)
+    if occupancy_status:
+        stmt = stmt.where(_authoritative_occupancy_status_expr() == occupancy_status)
     if condition_id is not None:
         stmt = stmt.where(
             select(AmenityConditionStatus.amenity_id)
