@@ -134,7 +134,7 @@ def _pending_allocation_exists():
 def _authoritative_occupancy_status_expr():
     return case(
         (_in_house_exists(), "Occupied"),
-        (_pending_allocation_exists(), "Allotted"),
+        (or_(Amenity.status == 3, _pending_allocation_exists()), "Allotted"),
         (or_(Amenity.status == 2, _blocking_condition_exists()), "Unavailable"),
         else_="Available",
     )
