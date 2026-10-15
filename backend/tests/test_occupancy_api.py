@@ -833,10 +833,100 @@ def test_occupancy_status_filtering_and_graph_reconciliation(client):
 
     assert totals["Available"] == 12
     assert totals["Occupied"] == 1
-    assert totals["Unavailable"] == 11
-    assert totals["Allotted"] == 0
+    assert totals["Unavailable"] == 10
+    assert totals["Allotted"] == 1
     assert sum(totals.values()) == 24
 
     total_res = client.get(f"{V1}/occupancy?amenity_category=room&page_size=1")
     assert total_res.json()["total"] == 24
+
+
+def test_selecting_allotted_returns_all_expected_records(client):
+    """Selecting Allotted returns Room 108 and only Allotted rooms."""
+    res = client.get(f"{V1}/occupancy?amenity_category=room&occupancy_status=Allotted&page_size=100")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["total"] >= 1
+    room_names = [r["room_name"] for r in data["items"]]
+    assert "108" in room_names
+    for item in data["items"]:
+        assert item["occupancy_status"] == "Allotted"
+
+
+def test_selecting_available_returns_only_available_records(client):
+    res = client.get(f"{V1}/occupancy?amenity_category=room&occupancy_status=Available&page_size=100")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["total"] == 12
+    for item in data["items"]:
+        assert item["occupancy_status"] == "Available"
+
+
+def test_selecting_occupied_returns_only_occupied_records(client):
+    res = client.get(f"{V1}/occupancy?amenity_category=room&occupancy_status=Occupied&page_size=100")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["total"] == 1
+    for item in data["items"]:
+        assert item["occupancy_status"] == "Occupied"
+    assert data["items"][0]["room_name"] == "301"
+
+
+def test_selecting_unavailable_returns_only_unavailable_records(client):
+    res = client.get(f"{V1}/occupancy?amenity_category=room&occupancy_status=Unavailable&page_size=100")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["total"] == 10
+    for item in data["items"]:
+        assert item["occupancy_status"] == "Unavailable"
+
+
+def test_show_all_returns_all_permitted_records(client):
+    res = client.get(f"{V1}/occupancy?amenity_category=room&page_size=100")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["total"] == 24
+    assert len(data["items"]) == 24
+
+
+def test_conditions_do_not_replace_occupancy_status_values(client):
+    res = client.get(f"{V1}/occupancy?amenity_category=room&page_size=100")
+    items = res.json()["items"]
+    allowed = {"Available", "Occupied", "Allotted", "Unavailable"}
+    for item in items:
+        assert item["occupancy_status"] in allowed
+        assert item["occupancy_status"] not in {"Dirty", "Sanitation", "Under maintenance", "Low battery"}
+
+
+def test_valid_allotted_records_not_excluded_by_unrelated_conditions(client):
+    """Room 108 has condition Sanitation but must remain Allotted."""
+    res = client.get(f"{V1}/occupancy?amenity_category=room&occupancy_status=Allotted&page_size=100")
+    data = res.json()
+    room_108 = next(r for r in data["items"] if r["room_name"] == "108")
+    assert room_108["occupancy_status"] == "Allotted"
+    cond_names = [c["name"].lower() for c in room_108["conditions"]]
+    assert "sanitation" in cond_names
+
+
+def test_pagination_and_total_counts_reflect_filtered_dataset(client):
+    res1 = client.get(f"{V1}/occupancy?amenity_category=room&occupancy_status=Allotted&page=1&page_size=1")
+    assert res1.status_code == 200
+    data1 = res1.json()
+    assert data1["total"] == 1
+    assert len(data1["items"]) == 1
+    assert data1["items"][0]["room_name"] == "108"
+
+    res2 = client.get(f"{V1}/occupancy?amenity_category=room&occupancy_status=Allotted&page=2&page_size=1")
+    assert res2.status_code == 200
+    data2 = res2.json()
+    assert data2["total"] == 1
+    assert len(data2["items"]) == 0
+
+
+def test_dashboard_filtering_and_direct_occupancy_filtering_equivalent(client):
+    dash_count_res = client.get(f"{V1}/occupancy?amenity_category=room&occupancy_status=Allotted&page_size=1")
+    direct_res = client.get(f"{V1}/occupancy?amenity_category=room&occupancy_status=Allotted&page_size=100")
+    assert dash_count_res.json()["total"] == direct_res.json()["total"]
+    assert dash_count_res.json()["total"] == len(direct_res.json()["items"])
+
 
