@@ -55,12 +55,16 @@ export const OccupancyStatisticsChart = () => {
   const statuses = useMemo(() => statusesQuery.data?.items ?? [], [statusesQuery.data]);
 
   const filterSets = useMemo<QueryParams[]>(
-    () => statuses.map((status) => ({ status: status.id })),
+    () =>
+      statuses.map((status) => ({
+        amenity_category: "room",
+        occupancy_status: status.amenity_status_name,
+      })),
     [statuses],
   );
   const perStatus = useCounts("occupancy", filterSets, statuses.length > 0);
 
-  const roomTotal = useCount("occupancy");
+  const roomTotal = useCount("occupancy", { amenity_category: "room" });
 
   const data = useMemo(
     () =>
