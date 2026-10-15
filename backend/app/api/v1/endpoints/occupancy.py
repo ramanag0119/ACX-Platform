@@ -90,6 +90,10 @@ def list_occupancy(
         description="amenity_status.id: 0 Available, 1 Occupied, "
                     "2 Unavailable, 3 Allotted",
     ),
+    occupancy_status: str | None = Query(
+        None,
+        description="Authoritative derived occupancy status: Available | Occupied | Allotted | Unavailable",
+    ),
     condition_id: int | None = Query(
         None, description="amenity_condition.id, active conditions only"
     ),
@@ -102,7 +106,8 @@ def list_occupancy(
         db, page=page, page_size=page_size, facility_id=facility_id,
         building_id=building_id, floor_id=floor_id,
         amenity_type_id=amenity_type_id, amenity_category=amenity_category,
-        status=status_value, condition_id=condition_id, is_occupied=is_occupied,
+        status=status_value, occupancy_status=occupancy_status,
+        condition_id=condition_id, is_occupied=is_occupied,
     )
     return Page[OccupancyRead](
         items=[OccupancyRead.model_validate(r) for r in rows],
