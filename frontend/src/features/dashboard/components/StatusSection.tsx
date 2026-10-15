@@ -128,7 +128,7 @@ export const StatusSection = ({
       id: item.amenity_id,
       number: item.room_name,
       type: item.amenity_type_name ?? "-",
-      statusName: item.status_name ?? "-",
+      statusName: item.occupancy_status ?? item.status_name ?? "Available",
       conditions: item.conditions.map((condition) => conditionLabel(condition.name)),
     }));
     return affectedOnly ? mapped.filter((room) => room.conditions.length > 0) : mapped;
