@@ -64,7 +64,8 @@ import { useScrollToTop } from "@/hooks/use-scroll-to-top";
 const UserRoles = () => {
     // --- Live data -------------------------------------------------------
     const rolesQuery = useRoles({ page: 1, page_size: MAX_PAGE_SIZE });
-    const { canWrite } = useAuth();
+    const { canRead, canWrite } = useAuth();
+    const mayRead = canRead("user_roles");
     const mayWrite = canWrite("user_roles");
     const createRole = useCreateRole();
     const updateRole = useUpdateRole();
