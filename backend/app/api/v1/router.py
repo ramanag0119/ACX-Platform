@@ -26,6 +26,7 @@ api_router.include_router(facilities.properties_router)
 api_router.include_router(facilities.buildings_router)
 api_router.include_router(facilities.floors_router)
 api_router.include_router(facilities.rooms_router)
+api_router.include_router(facilities.countries_router)
 
 # Phase 2.3 -- users, roles, modules and permissions (read-only).
 api_router.include_router(access.users_router)

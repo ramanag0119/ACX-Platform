@@ -150,11 +150,41 @@ export const KNOWN_INCIDENT_STATUSES = [
   "Resolved",
 ] as const;
 
-/** Referenced user. The backend never returns more than this for a person. */
+/** Referenced user. */
 export interface UserRef {
   id: string;
   name: string;
   emp_id: string | null;
+}
+
+/** Booker details including contact info, gender, and nationality reference. */
+export interface BookerDetail extends UserRef {
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  phone_number: string | null;
+  gender: string | null;
+  country: number | null;
+  nationality: number | null;
+  nationality_name: string | null;
+  city: string | null;
+}
+
+/** A row of country reference data. */
+export interface CountryRead {
+  id: number;
+  name: string;
+  nice_name: string;
+  phone_code: string;
+  iso_code: string | null;
+  iso3: string | null;
+  num_code: number | null;
+}
+
+/** Database-backed enum option for gender. */
+export interface GenderOption {
+  value: string;
+  label: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -698,7 +728,7 @@ export interface StayRead {
   status: StayStatus | null;
   document_approval_status: DocumentApprovalStatus;
   request_source: RequestSource | null;
-  booker: UserRef | null;
+  booker: BookerDetail | null;
   no_of_rooms: number | null;
   no_of_guests: number;
   expected_checkin_time: string;

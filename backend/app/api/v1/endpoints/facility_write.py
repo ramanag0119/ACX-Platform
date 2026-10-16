@@ -178,10 +178,20 @@ def update_room(room_id: uuid.UUID, payload: RoomUpdate, db: DbSession) -> RoomR
     summary="List amenity types",
 )
 def list_amenity_types(
-    db: DbSession, page: int = 1, page_size: int = DEFAULT_PAGE_SIZE
+    db: DbSession,
+    page: int = 1,
+    page_size: int = DEFAULT_PAGE_SIZE,
+    amenity_category: str | None = Query(None, description="Filter by amenity_category: room, restaurant, others"),
+    status: int | None = Query(None, description="Filter by status (1 active, 0 inactive)"),
 ) -> Page[AmenityTypeRead]:
     page, page_size = _page_args(page, page_size)
-    rows, total = catalog.list_amenity_types(db, page=page, page_size=page_size)
+    rows, total = catalog.list_amenity_types(
+        db,
+        page=page,
+        page_size=page_size,
+        amenity_category=amenity_category,
+        status=status,
+    )
     return Page[AmenityTypeRead](
         items=[AmenityTypeRead.model_validate(r) for r in rows],
         page=page, page_size=page_size, total=total,
@@ -241,6 +251,7 @@ def list_packages(
     page: int = 1,
     page_size: int = DEFAULT_PAGE_SIZE,
     is_sub_package: bool | None = None,
+    parent_package_id: uuid.UUID | None = Query(None, description="Filter sub-packages linked to parent package"),
     include_removed: bool = Query(False, description="Include status = 0 rows"),
 ) -> Page[PackageRead]:
     page, page_size = _page_args(page, page_size)
@@ -249,6 +260,7 @@ def list_packages(
         page=page,
         page_size=page_size,
         is_sub_package=is_sub_package,
+        parent_package_id=parent_package_id,
         include_removed=include_removed,
     )
     return Page[PackageRead](items=items, page=page, page_size=page_size, total=total)
@@ -303,10 +315,15 @@ def update_package(
     description="`feature` -- the Room Amenities tab of Facility Management.",
 )
 def list_features(
-    db: DbSession, page: int = 1, page_size: int = DEFAULT_PAGE_SIZE
+    db: DbSession,
+    page: int = 1,
+    page_size: int = DEFAULT_PAGE_SIZE,
+    status: int | None = Query(None, description="Filter by status (1 active, 0 inactive)"),
 ) -> Page[FeatureRead]:
     page, page_size = _page_args(page, page_size)
-    rows, total = catalog.list_features(db, page=page, page_size=page_size)
+    rows, total = catalog.list_features(
+        db, page=page, page_size=page_size, status=status
+    )
     return Page[FeatureRead](
         items=[FeatureRead.model_validate(r) for r in rows],
         page=page, page_size=page_size, total=total,

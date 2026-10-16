@@ -22,24 +22,31 @@ import { Card, CardContent } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Search, ChevronRight, ChevronDown, Edit, Trash2, Upload, X } from "lucide-react";
+import { Search, ChevronRight, ChevronDown, Edit, Trash2, Upload, X, Check } from "lucide-react";
 import { DataState, TableLoading } from "@/core/components/DataState";
 import {
-  useAmenityTypes,
-  useFacilities,
-  useFeatures,
-  usePackages,
-  useRooms,
+    useAmenityTypes,
+    useBuildings,
+    useFacilities,
+    useFeatures,
+    useFloors,
+    usePackages,
+    useRooms,
 } from "@/lib/api/hooks";
 import { useAuth } from "@/core/contexts/AuthContext";
 import {
-  useCreateAmenityType,
-  useCreateFeature,
-  useCreatePackage,
-  useCreateRoom,
-  useRemovePackage,
+    useCreateAmenityType,
+    useCreateFeature,
+    useCreatePackage,
+    useCreateRoom,
+    useRemovePackage,
+    useUpdateAmenityType,
+    useUpdateFacility,
+    useUpdatePackage,
+    useUpdateRoom,
 } from "@/lib/api/mutations";
-import { MAX_PAGE_SIZE } from "@/lib/api/types";
+import { MAX_PAGE_SIZE, type FacilityRead, type RoomRead } from "@/lib/api/types";
+import type { AmenityTypeRead, PackageRead } from "@/lib/api/writes";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useScrollToTop } from "@/hooks/use-scroll-to-top";
 import { TablePagination } from "@/core/components/TablePagination";
@@ -47,27 +54,15 @@ import { TablePagination } from "@/core/components/TablePagination";
 type TabType = "facility" | "amenity" | "roomAmenities" | "packages" | "roomSetup";
 
 /**
- * Facility Management, connected to the Phase 2.2 facility APIs.
+ * Facility Management, connected to the Phase 2.2 and Phase 3.0 facility APIs.
  *
- * CONNECTED (real data):
- *   Facility Setup -> GET /facilities
- *   Amenity Type   -> distinct amenity types seen on GET /rooms
- *   Packages       -> distinct packages seen on GET /rooms
- *   Room Setup     -> GET /rooms
- *
- * Phase 3.0 connected the rest and made them writable:
+ * CONNECTED (live database records):
+ *   Facility Setup -> GET /facilities, PATCH /facilities/{id}
  *   Amenity Type   -> GET/POST/PATCH /amenity-types
- *   Room Amenities -> GET/POST /features  (the `feature` table)
+ *   Room Amenities -> GET/POST /features (the `feature` table)
  *   Packages       -> GET/POST/PATCH /packages, including `package_feature`
- *   Room Setup     -> POST/PATCH /rooms   (a room IS an `amenity`)
- *   Facility Setup -> PATCH /facilities/{id}
- *
- * Sub Packages are `package.is_sub_package`, so that sub-tab lists and creates
- * packages with the flag set rather than needing a table of its own.
- *
- * Columns with no column behind them (Hospitality Name, Hotel Image, Connect
- * to Caleido, Smoking, Pool Facing) show "-": `facility` and `amenity` store
- * no such field, and Phase 3.0 does not add one.
+ *   Room Setup     -> GET/POST/PATCH /rooms (a room IS an `amenity`)
+ *   Buildings/Floors -> GET /buildings, GET /floors (property_chain hierarchy)
  */
 
 const FacilityManagement = () => {
@@ -75,35 +70,63 @@ const FacilityManagement = () => {
     const [entriesPerPage, setEntriesPerPage] = useState("10");
     const [searchQuery, setSearchQuery] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
-    // Pagination sits at the bottom of the table; without this the new
-    // page kept the old scroll offset and the sticky header stayed
-    // above the fold. See use-scroll-to-top.
+
     useScrollToTop(currentPage);
 
-    /* Every tab on this screen listed its whole dataset under a footer whose
-       First/Previous/Next/Last carried no onClick and whose page button was a
-       literal "1", and beside an entries-per-page select nothing read. Both
-       controls are real now: rows are sliced to the selected size and the
-       footer drives the page.
-
-       The tabs share one page index, and changing tab, page size or search
-       resets it -- otherwise leaving the Rooms tab on page 7 and opening the
-       Facility tab, which has far fewer rows, landed past the end on an
-       empty table. */
     const pageSize = parseInt(entriesPerPage, 10) || 10;
     useEffect(() => {
         setCurrentPage(1);
     }, [activeTab, entriesPerPage, searchQuery]);
 
-    /** The slice of `rows` belonging to the current page. */
     const pageOf = <T,>(rows: T[]) => rows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
+    // Modal visibility states
     const [editFacilityOpen, setEditFacilityOpen] = useState(false);
     const [editAmenityOpen, setEditAmenityOpen] = useState(false);
     const [editPackageOpen, setEditPackageOpen] = useState(false);
     const [editRoomOpen, setEditRoomOpen] = useState(false);
 
-    // Form states
+    // Active record being edited
+    const [editingFacility, setEditingFacility] = useState<FacilityRead | null>(null);
+    const [editingAmenityType, setEditingAmenityType] = useState<AmenityTypeRead | null>(null);
+    const [editingPackage, setEditingPackage] = useState<PackageRead | null>(null);
+    const [editingRoom, setEditingRoom] = useState<RoomRead | null>(null);
+
+    // Edit modal form states
+    const [editFacilityForm, setEditFacilityForm] = useState({
+        name: "",
+        guestRooms: "",
+        city: "",
+        state: "",
+        pinCode: "",
+        email: "",
+        additionalEmail: "",
+        googleMapLink: "",
+    });
+
+    const [editAmenityForm, setEditAmenityForm] = useState({
+        name: "",
+        amenityCategory: "room" as "room" | "restaurant" | "others",
+    });
+
+    const [editPackageForm, setEditPackageForm] = useState({
+        name: "",
+        amenityTypeId: "",
+        selectedFeatureIds: [] as string[],
+        subPackageId: "",
+        parentPackageId: "",
+    });
+
+    const [editRoomForm, setEditRoomForm] = useState({
+        name: "",
+        amenityTypeId: "",
+        packageId: "",
+        propertyChainId: "",
+        smoking: "no",
+        poolFacing: "no",
+    });
+
+    // Create form states
     const [amenityForm, setAmenityForm] = useState({
         amenityType: "",
         amenitiesIcon: null as File | null,
@@ -112,9 +135,8 @@ const FacilityManagement = () => {
     const [packageForm, setPackageForm] = useState({
         packages: "",
         roomType: "",
-        amenityType: "",
-        features: "",
-        subPackages: "",
+        selectedFeatureIds: [] as string[],
+        subPackageId: "",
         packageImage: "",
     });
 
@@ -127,28 +149,68 @@ const FacilityManagement = () => {
         poolFacing: "no",
     });
 
-    // --- Live data -------------------------------------------------------
+    // Sub Packages form state
+    const [subPackageForm, setSubPackageForm] = useState({
+        parentPackage: "",
+        packageName: "",
+        roomType: "",
+        selectedFeatureIds: [] as string[],
+        packageImage: "",
+    });
+
+    const [packagesSubTab, setPackagesSubTab] = useState<"parent" | "sub">("parent");
+    const [newAmenityName, setNewAmenityName] = useState("");
+
+    // --- Live Queries ---
     const facilitiesQuery = useFacilities({ page: 1, page_size: MAX_PAGE_SIZE });
+    const buildingsQuery = useBuildings({ page: 1, page_size: MAX_PAGE_SIZE });
+    const floorsQuery = useFloors({ page: 1, page_size: MAX_PAGE_SIZE });
     const roomsQuery = useRooms({ page: 1, page_size: MAX_PAGE_SIZE });
-    // Phase 3.0 endpoints: the catalogue is no longer derived from rooms.
     const amenityTypesQuery = useAmenityTypes({ page: 1, page_size: MAX_PAGE_SIZE });
     const packagesQuery = usePackages({ page: 1, page_size: MAX_PAGE_SIZE });
     const featuresQuery = useFeatures({ page: 1, page_size: MAX_PAGE_SIZE });
 
-    // --- Mutations
+    // --- Mutations ---
     const { canWrite } = useAuth();
     const mayWrite = canWrite("facility_management");
+
     const createAmenityType = useCreateAmenityType();
+    const updateAmenityTypeMutation = useUpdateAmenityType();
     const createPackageMutation = useCreatePackage();
+    const updatePackageMutation = useUpdatePackage();
     const removePackageMutation = useRemovePackage();
     const createFeatureMutation = useCreateFeature();
     const createRoomMutation = useCreateRoom();
+    const updateRoomMutation = useUpdateRoom();
+    const updateFacilityMutation = useUpdateFacility();
 
-    const facilitySetupData = (facilitiesQuery.data?.items ?? []).map((facility) => ({
+    // Data derivations
+    // Data derivations & Authoritative Category/Status Filters
+    const facilities = facilitiesQuery.data?.items ?? [];
+    const buildings = buildingsQuery.data?.items ?? [];
+    const floors = floorsQuery.data?.items ?? [];
+    const rooms = roomsQuery.data?.items ?? [];
+    const amenityTypes = amenityTypesQuery.data?.items ?? [];
+    const allPackages = packagesQuery.data?.items ?? [];
+    const featuresList = featuresQuery.data?.items ?? [];
+
+    // Filtered authoritative lists for dropdowns:
+    // Room Types: only amenity types with amenity_category == 'room' and active (status != 0)
+    const roomTypes = amenityTypes.filter((at) => at.amenity_category === "room" && at.status !== 0);
+    // Active Amenity Types (status != 0)
+    const activeAmenityTypes = amenityTypes.filter((at) => at.status !== 0);
+    // Active Parent Packages (not sub-packages and status != 0)
+    const activeParentPackages = allPackages.filter((p) => !p.is_sub_package && p.status !== 0);
+    // Active Sub-Packages (is_sub_package == true and status != 0)
+    const activeSubPackages = allPackages.filter((p) => p.is_sub_package && p.status !== 0);
+    // Active Room Amenities / Features (status != 0)
+    const activeFeatures = featuresList.filter((f) => f.status !== 0);
+
+    const facilitySetupData = facilities.map((facility) => ({
         id: facility.id,
+        raw: facility,
         organizationName: facility.name,
-        // `facility` has no hospitality-name, image or Caleido-connection column.
-        hospitalityName: "-",
+        hospitalityName: facility.facility_uid || "-",
         guestRooms: facility.guest_rooms ?? "-",
         hotelImage: facility.facility_image_id ? "View" : "-",
         city: facility.city ?? "-",
@@ -159,134 +221,143 @@ const FacilityManagement = () => {
         connectToCaleido: "-",
     }));
 
-    const rooms = roomsQuery.data?.items ?? [];
-
-    const amenityTypeData = (amenityTypesQuery.data?.items ?? []).map((row) => ({
+    const amenityTypeData = activeAmenityTypes.map((row) => ({
         id: row.id,
+        raw: row,
         amenityType: row.name,
         icon: row.amenity_category,
     }));
 
-    const allPackages = packagesQuery.data?.items ?? [];
-    const packagesData = allPackages
-        .filter((row) => !row.is_sub_package)
-        .map((row) => ({
-            // `id` is the real `package.id` UUID -- what delete and edit act on.
-            id: row.id,
-            packageName: row.name,
-            amenityType: row.amenity_type_name ?? "-",
-            subPackages: row.is_sub_package ? "Yes" : "-",
-            features: row.feature_names.join(", ") || "-",
-            image: "-",
-            // Rooms on this package. The API refuses to retire a package that
-            // still has any, so the button says so before the click.
-            roomCount: row.room_count,
-        }));
-
-    const roomSetupData = rooms.map((room) => ({
-        id: room.id,
-        amenityTypeId: room.amenity_type_id,
-        packageId: room.package_id,
-        amenityType: room.amenity_type_name ?? "-",
-        package: room.package_name ?? "None",
-        roomNo: room.name,
-        // `amenity` stores no smoking or pool-facing flag.
-        smoking: "-",
-        poolFacing: "-",
+    const packagesData = activeParentPackages.map((row) => ({
+        id: row.id,
+        raw: row,
+        packageName: row.name,
+        amenityType: row.amenity_type_name ?? "-",
+        subPackages: row.sub_package_names?.length ? row.sub_package_names.join(", ") : "-",
+        features: row.feature_names?.join(", ") || "-",
+        image: "-",
+        roomCount: row.room_count,
     }));
 
-    // Packages sub-tab state
-    const [packagesSubTab, setPackagesSubTab] = useState<"parent" | "sub">("parent");
-    /** New room-amenity (`feature`) name, for the Room Amenities tab. */
-    const [newAmenityName, setNewAmenityName] = useState("");
-
-    const roomAmenitiesData = (featuresQuery.data?.items ?? []).map((row) => ({
+    const subPackagesData = activeSubPackages.map((row, index) => ({
         id: row.id,
+        raw: row,
+        sNo: index + 1,
+        packageName: row.name,
+        amenityType: row.amenity_type_name ?? "-",
+        parentPackages: row.parent_package_names?.length ? row.parent_package_names.join(", ") : "-",
+        features: row.feature_names?.join(", ") || "-",
+        image: "-",
+        roomCount: row.room_count,
+    }));
+
+    const roomAmenitiesData = activeFeatures.map((row) => ({
+        id: row.id,
+        raw: row,
         amenity: row.feature_name,
     }));
     const selectedAmenities = roomAmenitiesData.map((row) => row.amenity);
 
-    // Sub Packages form state
-    const [subPackageForm, setSubPackageForm] = useState({
-        parentPackage: "",
-        packageName: "",
-        amenityType: "",
-        features: "",
-        subPackages: "",
-        packageImage: "",
+    const roomSetupData = rooms.map((room) => ({
+        id: room.id,
+        raw: room,
+        amenityTypeId: room.amenity_type_id,
+        packageId: room.package_id,
+        amenityType: room.amenity_type_name ?? "-",
+        package: room.package_name ?? "-",
+        roomNo: room.name,
+        smoking: "-",
+        poolFacing: "-",
+    }));
+
+    // Filtered rows based on search
+    const filteredFacilityData = facilitySetupData.filter((row) => {
+        if (!searchQuery.trim()) return true;
+        const q = searchQuery.toLowerCase();
+        return (
+            row.organizationName?.toLowerCase().includes(q) ||
+            row.hospitalityName?.toLowerCase().includes(q) ||
+            row.city?.toLowerCase().includes(q) ||
+            row.state?.toLowerCase().includes(q) ||
+            row.email?.toLowerCase().includes(q)
+        );
     });
 
-    // A sub package is `package.is_sub_package` -- the same table, one flag.
-    const subPackagesData = allPackages
-        .filter((row) => row.is_sub_package)
-        .map((row, index) => ({
-            id: row.id,
-            sNo: index + 1,
-            packageName: row.name,
-            amenityType: row.amenity_type_name ?? "-",
-            features: row.feature_names.join(", ") || "-",
-            image: "-",
-            roomCount: row.room_count,
-        }));
+    const filteredAmenityTypeData = amenityTypeData.filter((row) => {
+        if (!searchQuery.trim()) return true;
+        return row.amenityType?.toLowerCase().includes(searchQuery.toLowerCase());
+    });
 
-    /**
-     * Delete a package -- the project's soft delete (`status = 0`), the same
-     * shape ServicePlanning and Bookings use for their row actions. The row's
-     * real `package.id` UUID goes to PATCH /packages/{id}; on success the
-     * mutation invalidates the catalogue queries, /packages refetches without
-     * the retired row, and the table loses it. A 409 (rooms still assigned)
-     * surfaces through the shared error toast.
-     */
+    const filteredRoomAmenitiesData = roomAmenitiesData.filter((row) => {
+        if (!searchQuery.trim()) return true;
+        return row.amenity?.toLowerCase().includes(searchQuery.toLowerCase());
+    });
+
+    const filteredPackagesData = packagesData.filter((row) => {
+        if (!searchQuery.trim()) return true;
+        const q = searchQuery.toLowerCase();
+        return (
+            row.packageName?.toLowerCase().includes(q) ||
+            row.amenityType?.toLowerCase().includes(q)
+        );
+    });
+
+    const filteredSubPackagesData = subPackagesData.filter((row) => {
+        if (!searchQuery.trim()) return true;
+        const q = searchQuery.toLowerCase();
+        return (
+            row.packageName?.toLowerCase().includes(q) ||
+            row.amenityType?.toLowerCase().includes(q)
+        );
+    });
+
+    const filteredRoomSetupData = roomSetupData.filter((row) => {
+        if (!searchQuery.trim()) return true;
+        const q = searchQuery.toLowerCase();
+        return (
+            row.roomNo?.toLowerCase().includes(q) ||
+            row.amenityType?.toLowerCase().includes(q) ||
+            row.package?.toLowerCase().includes(q)
+        );
+    });
+
+    // Delete actions
     const handleRemovePackage = (packageId: string) => {
         removePackageMutation.mutate(packageId);
+    };
+
+    const handleRemoveAmenityType = (amenityTypeId: string) => {
+        updateAmenityTypeMutation.mutate({ id: amenityTypeId, body: { status: 0 } });
+    };
+
+    // Reset handlers
+    const handleReset = () => {
+        if (activeTab === "amenity") {
+            setAmenityForm({ amenityType: "", amenitiesIcon: null });
+        } else if (activeTab === "packages") {
+            setPackageForm({ packages: "", roomType: "", selectedFeatureIds: [], subPackageId: "", packageImage: "" });
+        } else if (activeTab === "roomSetup") {
+            setRoomSetupForm({ amenityType: "", package: "", facilityStructure: [], room: "", smoking: "no", poolFacing: "no" });
+        }
     };
 
     const handleSubPackageReset = () => {
         setSubPackageForm({
             parentPackage: "",
             packageName: "",
-            amenityType: "",
-            features: "",
-            subPackages: "",
+            roomType: "",
+            selectedFeatureIds: [],
             packageImage: "",
         });
     };
 
-    const tabs = [
-        { id: "facility" as TabType, label: "Facility Setup" },
-        { id: "amenity" as TabType, label: "Amenity Type" },
-        { id: "roomAmenities" as TabType, label: "Room Amenities" },
-        { id: "packages" as TabType, label: "Packages" },
-        { id: "roomSetup" as TabType, label: "Room Setup" },
-    ];
-
-    const handleReset = () => {
-        if (activeTab === "amenity") {
-            setAmenityForm({ amenityType: "", amenitiesIcon: null });
-        } else if (activeTab === "packages") {
-            setPackageForm({ packages: "", roomType: "", amenityType: "", features: "", subPackages: "", packageImage: "" });
-        } else if (activeTab === "roomSetup") {
-            setRoomSetupForm({ amenityType: "", package: "", facilityStructure: [], room: "", smoking: "no", poolFacing: "no" });
-        }
-    };
-
-    /**
-     * Each tab writes to its own table, so one submit dispatches by tab.
-     *
-     *   amenity       -> POST /amenity-types
-     *   roomAmenities -> POST /features
-     *   packages      -> POST /packages (with `is_sub_package` for the sub tab
-     *                    and `feature_ids` for the ticked room amenities)
-     *   roomSetup     -> POST /rooms, which needs an amenity type AND a package
-     *                    because both columns are NOT NULL
-     */
+    // Create submits
     const handleSubmit = () => {
         if (activeTab === "amenity") {
             if (!amenityForm.amenityType.trim()) return;
             createAmenityType.mutate(
                 {
                     name: amenityForm.amenityType.trim(),
-                    // `amenity_category` is NOT NULL; a guest-facing type is a room.
                     amenity_category: "room",
                 },
                 { onSuccess: handleReset },
@@ -303,39 +374,49 @@ const FacilityManagement = () => {
         }
 
         if (activeTab === "packages") {
-            const name = packagesSubTab === "parent" ? packageForm.packages : subPackageForm.packageName;
-            const typeName = packagesSubTab === "parent" ? packageForm.amenityType : subPackageForm.amenityType;
-            const amenityTypeId = amenityTypeData.find((row) => row.amenityType === typeName)?.id;
-            if (!name.trim() || !amenityTypeId) return;
-            createPackageMutation.mutate(
-                {
-                    name: name.trim(),
-                    amenity_type: amenityTypeId,
-                    is_sub_package: packagesSubTab === "sub",
-                },
-                {
-                    onSuccess: () => {
-                        handleReset();
-                        handleSubPackageReset();
+            if (packagesSubTab === "parent") {
+                if (!packageForm.packages.trim() || !packageForm.roomType) return;
+                createPackageMutation.mutate(
+                    {
+                        name: packageForm.packages.trim(),
+                        amenity_type: packageForm.roomType,
+                        is_sub_package: false,
+                        feature_ids: packageForm.selectedFeatureIds,
+                        sub_package_ids: packageForm.subPackageId ? [packageForm.subPackageId] : [],
                     },
-                },
-            );
+                    {
+                        onSuccess: () => {
+                            handleReset();
+                        },
+                    },
+                );
+            } else {
+                if (!subPackageForm.packageName.trim() || !subPackageForm.roomType || !subPackageForm.parentPackage) return;
+                createPackageMutation.mutate(
+                    {
+                        name: subPackageForm.packageName.trim(),
+                        amenity_type: subPackageForm.roomType,
+                        is_sub_package: true,
+                        feature_ids: subPackageForm.selectedFeatureIds,
+                        parent_package_id: subPackageForm.parentPackage,
+                    },
+                    {
+                        onSuccess: () => {
+                            handleSubPackageReset();
+                        },
+                    },
+                );
+            }
             return;
         }
 
         if (activeTab === "roomSetup") {
-            const amenityTypeId = amenityTypeData.find(
-                (row) => row.amenityType === roomSetupForm.amenityType,
-            )?.id;
-            const packageId = allPackages.find((row) => row.name === roomSetupForm.package)?.id;
-            if (!roomSetupForm.room.trim() || !amenityTypeId || !packageId) return;
+            if (!roomSetupForm.room.trim() || !roomSetupForm.amenityType || !roomSetupForm.package) return;
             createRoomMutation.mutate(
                 {
                     name: roomSetupForm.room.trim(),
-                    amenity_type_id: amenityTypeId,
-                    package_id: packageId,
-                    // `facilityStructure` is the building/floor choice, which is a
-                    // `property_chain` row -- the only way to place a room.
+                    amenity_type_id: roomSetupForm.amenityType,
+                    package_id: roomSetupForm.package,
                     ...(roomSetupForm.facilityStructure[0]
                         ? { property_chain_id: roomSetupForm.facilityStructure[0] }
                         : {}),
@@ -344,6 +425,149 @@ const FacilityManagement = () => {
             );
         }
     };
+
+    // Open Edit Modals with authoritative database row data
+    const handleOpenEditFacility = (facility: FacilityRead) => {
+        setEditingFacility(facility);
+        setEditFacilityForm({
+            name: facility.name || "",
+            guestRooms: facility.guest_rooms !== null && facility.guest_rooms !== undefined ? String(facility.guest_rooms) : "",
+            city: facility.city || "",
+            state: facility.state || "",
+            pinCode: facility.pin_code || "",
+            email: facility.email || "",
+            additionalEmail: facility.additional_email || "",
+            googleMapLink: facility.google_map_link || "",
+        });
+        setEditFacilityOpen(true);
+    };
+
+    const handleSaveFacility = () => {
+        if (!editingFacility) return;
+        const guestRoomsNum = editFacilityForm.guestRooms.trim() ? parseInt(editFacilityForm.guestRooms.trim(), 10) : null;
+        updateFacilityMutation.mutate(
+            {
+                id: editingFacility.id,
+                body: {
+                    name: editFacilityForm.name.trim() || undefined,
+                    guest_rooms: guestRoomsNum !== null && !isNaN(guestRoomsNum) ? guestRoomsNum : null,
+                    city: editFacilityForm.city.trim() || null,
+                    state: editFacilityForm.state.trim() || null,
+                    pin_code: editFacilityForm.pinCode.trim() || null,
+                    email: editFacilityForm.email.trim() || undefined,
+                    additional_email: editFacilityForm.additionalEmail.trim() || null,
+                    google_map_link: editFacilityForm.googleMapLink.trim() || null,
+                },
+            },
+            {
+                onSuccess: () => {
+                    setEditFacilityOpen(false);
+                },
+            }
+        );
+    };
+
+    const handleOpenEditAmenity = (item: AmenityTypeRead) => {
+        setEditingAmenityType(item);
+        setEditAmenityForm({
+            name: item.name,
+            amenityCategory: item.amenity_category,
+        });
+        setEditAmenityOpen(true);
+    };
+
+    const handleSaveAmenityType = () => {
+        if (!editingAmenityType || !editAmenityForm.name.trim()) return;
+        updateAmenityTypeMutation.mutate(
+            {
+                id: editingAmenityType.id,
+                body: {
+                    name: editAmenityForm.name.trim(),
+                    amenity_category: editAmenityForm.amenityCategory,
+                },
+            },
+            {
+                onSuccess: () => {
+                    setEditAmenityOpen(false);
+                },
+            }
+        );
+    };
+
+    const handleOpenEditPackage = (pkg: PackageRead) => {
+        setEditingPackage(pkg);
+        setEditPackageForm({
+            name: pkg.name,
+            amenityTypeId: pkg.amenity_type,
+            selectedFeatureIds: [...(pkg.feature_ids || [])],
+            subPackageId: pkg.sub_package_ids?.[0] || "",
+            parentPackageId: pkg.parent_package_ids?.[0] || "",
+        });
+        setEditPackageOpen(true);
+    };
+
+    const handleSavePackage = () => {
+        if (!editingPackage || !editPackageForm.name.trim()) return;
+        const isSub = editingPackage.is_sub_package;
+        updatePackageMutation.mutate(
+            {
+                id: editingPackage.id,
+                body: {
+                    name: editPackageForm.name.trim(),
+                    amenity_type: editPackageForm.amenityTypeId || undefined,
+                    feature_ids: editPackageForm.selectedFeatureIds,
+                    sub_package_ids: !isSub && editPackageForm.subPackageId ? [editPackageForm.subPackageId] : [],
+                    parent_package_id: isSub && editPackageForm.parentPackageId ? editPackageForm.parentPackageId : undefined,
+                },
+            },
+            {
+                onSuccess: () => {
+                    setEditPackageOpen(false);
+                },
+            }
+        );
+    };
+
+    const handleOpenEditRoom = (room: RoomRead) => {
+        setEditingRoom(room);
+        setEditRoomForm({
+            name: room.name,
+            amenityTypeId: room.amenity_type_id,
+            packageId: room.package_id,
+            propertyChainId: room.property_chain_id || "",
+            smoking: "no",
+            poolFacing: "no",
+        });
+        setEditRoomOpen(true);
+    };
+
+    const handleSaveRoom = () => {
+        if (!editingRoom || !editRoomForm.name.trim() || !editRoomForm.amenityTypeId || !editRoomForm.packageId) return;
+        updateRoomMutation.mutate(
+            {
+                id: editingRoom.id,
+                body: {
+                    name: editRoomForm.name.trim(),
+                    amenity_type_id: editRoomForm.amenityTypeId,
+                    package_id: editRoomForm.packageId,
+                    ...(editRoomForm.propertyChainId ? { property_chain_id: editRoomForm.propertyChainId } : {}),
+                },
+            },
+            {
+                onSuccess: () => {
+                    setEditRoomOpen(false);
+                },
+            }
+        );
+    };
+
+    const tabs = [
+        { id: "facility" as TabType, label: "Facility Setup" },
+        { id: "amenity" as TabType, label: "Amenity Type" },
+        { id: "roomAmenities" as TabType, label: "Room Amenities" },
+        { id: "packages" as TabType, label: "Packages" },
+        { id: "roomSetup" as TabType, label: "Room Setup" },
+    ];
 
     // Facility Setup Tab
     const renderFacilitySetup = () => (
@@ -397,34 +621,48 @@ const FacilityManagement = () => {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {pageOf(facilitySetupData).map((row) => (
-                                <TableRow
-                                    key={row.id}
-                                    className="hover:bg-[var(--hms-table-row-hover-bg)] transition-colors"
-                                >
-                                    <TableCell>{row.organizationName}</TableCell>
-                                    <TableCell>{row.hospitalityName}</TableCell>
-                                    <TableCell>{row.guestRooms}</TableCell>
-                                    <TableCell>
-                                        <span className="text-cyan-400 cursor-pointer hover:underline">{row.hotelImage}</span>
-                                    </TableCell>
-                                    <TableCell>{row.city}</TableCell>
-                                    <TableCell>{row.state}</TableCell>
-                                    <TableCell>{row.pinCode}</TableCell>
-                                    <TableCell className="max-w-[150px] truncate">{row.email}</TableCell>
-                                    <TableCell>
-                                        <span className="text-cyan-400 cursor-pointer hover:underline">{row.googleMap}</span>
-                                    </TableCell>
-                                    <TableCell>{row.connectToCaleido}</TableCell>
-                                    <TableCell>
-                                        <div className="flex items-center justify-center">
-                                            <Button size="sm" className="h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditFacilityOpen(true)}>
-                                                <Edit className="h-[14px] w-[14px]" />
-                                            </Button>
-                                        </div>
+                            {filteredFacilityData.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={11} className="text-center py-6 text-muted-foreground">
+                                        No facilities found
                                     </TableCell>
                                 </TableRow>
-                            ))}
+                            ) : (
+                                pageOf(filteredFacilityData).map((row) => (
+                                    <TableRow
+                                        key={row.id}
+                                        className="hover:bg-[var(--hms-table-row-hover-bg)] transition-colors"
+                                    >
+                                        <TableCell>{row.organizationName}</TableCell>
+                                        <TableCell>{row.hospitalityName}</TableCell>
+                                        <TableCell>{row.guestRooms}</TableCell>
+                                        <TableCell>
+                                            <span className="text-cyan-400 cursor-pointer hover:underline">{row.hotelImage}</span>
+                                        </TableCell>
+                                        <TableCell>{row.city}</TableCell>
+                                        <TableCell>{row.state}</TableCell>
+                                        <TableCell>{row.pinCode}</TableCell>
+                                        <TableCell className="max-w-[150px] truncate">{row.email}</TableCell>
+                                        <TableCell>
+                                            <span className="text-cyan-400 cursor-pointer hover:underline">{row.googleMap}</span>
+                                        </TableCell>
+                                        <TableCell>{row.connectToCaleido}</TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center justify-center">
+                                                <Button
+                                                    size="sm"
+                                                    className="h-7 w-7 p-0 rounded-[3px]"
+                                                    onClick={() => handleOpenEditFacility(row.raw)}
+                                                    disabled={!mayWrite}
+                                                    title={!mayWrite ? "You do not have write permissions" : "Edit Facility"}
+                                                >
+                                                    <Edit className="h-[14px] w-[14px]" />
+                                                </Button>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            )}
                         </TableBody>
                     </Table>
                 </div>
@@ -432,7 +670,7 @@ const FacilityManagement = () => {
                 <TablePagination
                     currentPage={currentPage}
                     onPageChange={setCurrentPage}
-                    totalEntries={facilitySetupData.length}
+                    totalEntries={filteredFacilityData.length}
                     pageSize={pageSize}
                     className="mt-6"
                 />
@@ -475,8 +713,12 @@ const FacilityManagement = () => {
                         <Button onClick={handleReset} variant="outline" className="h-11 px-8 min-w-[120px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all">
                             Reset
                         </Button>
-                        <Button onClick={handleSubmit} className="h-11 px-8 min-w-[120px] rounded-2xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">
-                            Submit
+                        <Button
+                            onClick={handleSubmit}
+                            disabled={!mayWrite || !amenityForm.amenityType.trim() || createAmenityType.isPending}
+                            className="h-11 px-8 min-w-[120px] rounded-2xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
+                        >
+                            {createAmenityType.isPending ? "Submitting..." : "Submit"}
                         </Button>
                     </div>
                 </CardContent>
@@ -521,27 +763,45 @@ const FacilityManagement = () => {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {pageOf(amenityTypeData).map((row) => (
-                                    <TableRow
-                                        key={row.id}
-                                        className="hover:bg-[var(--hms-table-row-hover-bg)] transition-colors"
-                                    >
-                                        <TableCell className="text-center">{row.amenityType}</TableCell>
-                                        {/* The real `amenity_type.amenity_category`:
-                                            room | restaurant | others. */}
-                                        <TableCell className="text-center capitalize">{row.icon}</TableCell>
-                                        <TableCell>
-                                            <div className="flex items-center justify-center gap-2">
-                                                <Button size="sm" className="h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditAmenityOpen(true)}>
-                                                    <Edit className="h-[14px] w-[14px]" />
-                                                </Button>
-                                                <Button size="sm" className="bg-red-500 hover:bg-red-600 text-white h-7 w-7 p-0 rounded-[3px]">
-                                                    <Trash2 className="h-[14px] w-[14px]" />
-                                                </Button>
-                                            </div>
+                                {filteredAmenityTypeData.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={3} className="text-center py-6 text-muted-foreground">
+                                            No amenity types found
                                         </TableCell>
                                     </TableRow>
-                                ))}
+                                ) : (
+                                    pageOf(filteredAmenityTypeData).map((row) => (
+                                        <TableRow
+                                            key={row.id}
+                                            className="hover:bg-[var(--hms-table-row-hover-bg)] transition-colors"
+                                        >
+                                            <TableCell className="text-center">{row.amenityType}</TableCell>
+                                            <TableCell className="text-center capitalize">{row.icon}</TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center justify-center gap-2">
+                                                    <Button
+                                                        size="sm"
+                                                        className="h-7 w-7 p-0 rounded-[3px]"
+                                                        onClick={() => handleOpenEditAmenity(row.raw)}
+                                                        disabled={!mayWrite}
+                                                        title="Edit Amenity Type"
+                                                    >
+                                                        <Edit className="h-[14px] w-[14px]" />
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        className="bg-red-500 hover:bg-red-600 text-white h-7 w-7 p-0 rounded-[3px]"
+                                                        onClick={() => handleRemoveAmenityType(row.id)}
+                                                        disabled={!mayWrite || updateAmenityTypeMutation.isPending}
+                                                        title="Delete Amenity Type"
+                                                    >
+                                                        <Trash2 className="h-[14px] w-[14px]" />
+                                                    </Button>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
                             </TableBody>
                         </Table>
                     </div>
@@ -549,7 +809,7 @@ const FacilityManagement = () => {
                     <TablePagination
                         currentPage={currentPage}
                         onPageChange={setCurrentPage}
-                        totalEntries={amenityTypeData.length}
+                        totalEntries={filteredAmenityTypeData.length}
                         pageSize={pageSize}
                         className="mt-6"
                     />
@@ -578,8 +838,6 @@ const FacilityManagement = () => {
                         <Button
                             onClick={handleSubmit}
                             disabled={!mayWrite || !newAmenityName.trim() || createFeatureMutation.isPending}
-                            // Same brand fill as the Submit button below; size
-                            // and shape unchanged.
                             className="h-10 px-6 bg-brand hover:bg-brand-hover text-white"
                         >
                             {createFeatureMutation.isPending ? "Adding..." : "Add"}
@@ -588,22 +846,19 @@ const FacilityManagement = () => {
 
                     <div className="p-4 border border-gray-200 rounded-lg bg-muted/20 mb-6">
                         <div className="flex flex-wrap gap-2.5">
-                            {selectedAmenities.map((amenity) => (
-                                <Badge
-                                    key={amenity}
-                                    className="bg-brand/15 text-brand dark:bg-brand/25 dark:text-[#c7d2fe] border border-brand/35 px-3.5 py-1.5 rounded-full flex items-center gap-2 font-medium text-xs shadow-sm hover:bg-brand/25 transition-all"
-                                >
-                                    {amenity}
-                                    <X className="h-3.5 w-3.5 cursor-pointer hover:text-red-500 hover:scale-110 transition-all opacity-70 hover:opacity-100" />
-                                </Badge>
-                            ))}
+                            {selectedAmenities.length === 0 ? (
+                                <span className="text-xs text-muted-foreground">No features defined</span>
+                            ) : (
+                                selectedAmenities.map((amenity) => (
+                                    <Badge
+                                        key={amenity}
+                                        className="bg-brand/15 text-brand dark:bg-brand/25 dark:text-[#c7d2fe] border border-brand/35 px-3.5 py-1.5 rounded-full flex items-center gap-2 font-medium text-xs shadow-sm hover:bg-brand/25 transition-all"
+                                    >
+                                        {amenity}
+                                    </Badge>
+                                ))
+                            )}
                         </div>
-                    </div>
-
-                    <div className="flex justify-center pt-6 mt-6 border-t border-border/30">
-                        <Button onClick={handleSubmit} className="h-11 px-12 min-w-[140px] rounded-2xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">
-                            Submit
-                        </Button>
                     </div>
                 </CardContent>
             </Card>
@@ -645,14 +900,22 @@ const FacilityManagement = () => {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {pageOf(roomAmenitiesData).map((row) => (
-                                    <TableRow
-                                        key={row.id}
-                                        className="hover:bg-[var(--hms-table-row-hover-bg)] transition-colors"
-                                    >
-                                        <TableCell className="text-center">{row.amenity}</TableCell>
+                                {filteredRoomAmenitiesData.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell className="text-center py-6 text-muted-foreground">
+                                            No room amenities found
+                                        </TableCell>
                                     </TableRow>
-                                ))}
+                                ) : (
+                                    pageOf(filteredRoomAmenitiesData).map((row) => (
+                                        <TableRow
+                                            key={row.id}
+                                            className="hover:bg-[var(--hms-table-row-hover-bg)] transition-colors"
+                                        >
+                                            <TableCell className="text-center">{row.amenity}</TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
                             </TableBody>
                         </Table>
                     </div>
@@ -660,7 +923,7 @@ const FacilityManagement = () => {
                     <TablePagination
                         currentPage={currentPage}
                         onPageChange={setCurrentPage}
-                        totalEntries={roomAmenitiesData.length}
+                        totalEntries={filteredRoomAmenitiesData.length}
                         pageSize={pageSize}
                         className="mt-6"
                     />
@@ -679,7 +942,9 @@ const FacilityManagement = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-4">
                                 <div className="space-y-2">
-                                    <Label className="text-sm font-medium">Packages</Label>
+                                    <Label className="text-sm font-medium">
+                                        Package Name <span className="text-red-500">*</span>
+                                    </Label>
                                     <Input
                                         placeholder="Enter Package Name"
                                         value={packageForm.packages}
@@ -700,42 +965,13 @@ const FacilityManagement = () => {
                                             <SelectValue placeholder="Select Room Type" />
                                         </SelectTrigger>
                                         <SelectContent className="bg-popover">
-                                            <SelectItem value="guest">Guest Room</SelectItem>
-                                            <SelectItem value="deluxe">Deluxe Room</SelectItem>
-                                            <SelectItem value="suite">Suite</SelectItem>
+                                            {roomTypes.map((rt) => (
+                                                <SelectItem key={rt.id} value={rt.id}>
+                                                    {rt.name}
+                                                </SelectItem>
+                                            ))}
                                         </SelectContent>
                                     </Select>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label className="text-primary text-sm font-medium">
-                                        Amenity Type <span className="text-red-500">*</span>
-                                    </Label>
-                                    <Select
-                                        value={packageForm.amenityType}
-                                        onValueChange={(v) => setPackageForm({ ...packageForm, amenityType: v })}
-                                    >
-                                        <SelectTrigger className="h-10 bg-muted/30 border-border/50">
-                                            <SelectValue placeholder="Select Amenity Type" />
-                                        </SelectTrigger>
-                                        <SelectContent className="bg-popover">
-                                            <SelectItem value="continental">Continental old</SelectItem>
-                                            <SelectItem value="business">Business Center</SelectItem>
-                                            <SelectItem value="guest-room">Guest Room</SelectItem>
-                                            <SelectItem value="swimming">Swimming</SelectItem>
-                                            <SelectItem value="honeymoon">Honey Moon</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label className="text-sm font-medium">Features</Label>
-                                    <Input
-                                        placeholder="Enter Features"
-                                        value={packageForm.features}
-                                        onChange={(e) => setPackageForm({ ...packageForm, features: e.target.value })}
-                                        className="h-10 bg-muted/30 border-border/50"
-                                    />
                                 </div>
                             </div>
 
@@ -744,21 +980,21 @@ const FacilityManagement = () => {
                                     <Label className="text-sm font-medium">Sub Packages</Label>
                                     <div className="flex items-center gap-2">
                                         <Select
-                                            value={packageForm.subPackages}
-                                            onValueChange={(v) => setPackageForm({ ...packageForm, subPackages: v })}
+                                            value={packageForm.subPackageId}
+                                            onValueChange={(v) => setPackageForm({ ...packageForm, subPackageId: v === "none" ? "" : v })}
                                         >
                                             <SelectTrigger className="h-10 bg-muted/30 border-border/50 flex-1">
-                                                <SelectValue placeholder="Select Sub Package" />
+                                                <SelectValue placeholder="Select Sub Package (Optional)" />
                                             </SelectTrigger>
                                             <SelectContent className="bg-popover">
-                                                <SelectItem value="amenities">Amenities</SelectItem>
-                                                <SelectItem value="pool">Pool package</SelectItem>
+                                                <SelectItem value="none">None</SelectItem>
+                                                {activeSubPackages.map((sp) => (
+                                                    <SelectItem key={sp.id} value={sp.id}>
+                                                        {sp.name}
+                                                    </SelectItem>
+                                                ))}
                                             </SelectContent>
                                         </Select>
-                                        {/* Brand fill, the same token the Submit buttons use. */}
-                                        <Button size="icon" className="bg-brand hover:bg-brand-hover h-10 w-10">
-                                            +
-                                        </Button>
                                     </div>
                                 </div>
 
@@ -770,6 +1006,38 @@ const FacilityManagement = () => {
                                             Choose file
                                         </Button>
                                     </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2 md:col-span-2">
+                                <Label className="text-sm font-medium">Features / Room Amenities</Label>
+                                <div className="flex flex-wrap gap-2 p-3 bg-muted/20 border border-border/40 rounded-xl min-h-[50px] items-center">
+                                    {activeFeatures.length === 0 ? (
+                                        <span className="text-xs text-muted-foreground">No room amenities configured.</span>
+                                    ) : (
+                                        activeFeatures.map((f) => {
+                                            const selected = packageForm.selectedFeatureIds.includes(f.id);
+                                            return (
+                                                <button
+                                                    key={f.id}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const next = selected
+                                                            ? packageForm.selectedFeatureIds.filter((id) => id !== f.id)
+                                                            : [...packageForm.selectedFeatureIds, f.id];
+                                                        setPackageForm({ ...packageForm, selectedFeatureIds: next });
+                                                    }}
+                                                    className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-all ${
+                                                        selected
+                                                            ? "bg-brand text-white border-brand shadow-sm"
+                                                            : "bg-white text-muted-foreground border-border/60 hover:border-brand/50"
+                                                    }`}
+                                                >
+                                                    {f.feature_name}
+                                                </button>
+                                            );
+                                        })
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -778,26 +1046,32 @@ const FacilityManagement = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-4">
                                 <div className="space-y-2">
-                                    <Label className="text-sm font-medium">Packages</Label>
+                                    <Label className="text-sm font-medium">
+                                        Parent Package <span className="text-red-500">*</span>
+                                    </Label>
                                     <Select
                                         value={subPackageForm.parentPackage}
                                         onValueChange={(v) => setSubPackageForm({ ...subPackageForm, parentPackage: v })}
                                     >
                                         <SelectTrigger className="h-10 bg-muted/30 border-border/50">
-                                            <SelectValue placeholder="Select Room Number" />
+                                            <SelectValue placeholder="Select Parent Package" />
                                         </SelectTrigger>
                                         <SelectContent className="bg-popover">
-                                            <SelectItem value="breakfast">Breakfast</SelectItem>
-                                            <SelectItem value="caleido">Caleido Package</SelectItem>
-                                            <SelectItem value="pool">Pool</SelectItem>
+                                            {activeParentPackages.map((p) => (
+                                                <SelectItem key={p.id} value={p.id}>
+                                                    {p.name}
+                                                </SelectItem>
+                                            ))}
                                         </SelectContent>
                                     </Select>
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label className="text-sm font-medium">Package Name</Label>
+                                    <Label className="text-sm font-medium">
+                                        Sub-Package Name <span className="text-red-500">*</span>
+                                    </Label>
                                     <Input
-                                        placeholder="Enter Package Name"
+                                        placeholder="Enter Sub-Package Name"
                                         value={subPackageForm.packageName}
                                         onChange={(e) => setSubPackageForm({ ...subPackageForm, packageName: e.target.value })}
                                         className="h-10 bg-muted/30 border-border/50"
@@ -805,55 +1079,28 @@ const FacilityManagement = () => {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label className="text-sm font-medium">Amenity Type</Label>
+                                    <Label className="text-primary text-sm font-medium">
+                                        Room Type <span className="text-red-500">*</span>
+                                    </Label>
                                     <Select
-                                        value={subPackageForm.amenityType}
-                                        onValueChange={(v) => setSubPackageForm({ ...subPackageForm, amenityType: v })}
+                                        value={subPackageForm.roomType}
+                                        onValueChange={(v) => setSubPackageForm({ ...subPackageForm, roomType: v })}
                                     >
                                         <SelectTrigger className="h-10 bg-muted/30 border-border/50">
-                                            <SelectValue placeholder="Select Amenity Type" />
+                                            <SelectValue placeholder="Select Room Type" />
                                         </SelectTrigger>
                                         <SelectContent className="bg-popover">
-                                            <SelectItem value="continental">Continental old</SelectItem>
-                                            <SelectItem value="business">Business Center</SelectItem>
-                                            <SelectItem value="champagne">Champagne Bar</SelectItem>
+                                            {roomTypes.map((rt) => (
+                                                <SelectItem key={rt.id} value={rt.id}>
+                                                    {rt.name}
+                                                </SelectItem>
+                                            ))}
                                         </SelectContent>
                                     </Select>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label className="text-sm font-medium">Features</Label>
-                                    <Input
-                                        placeholder="Enter Features"
-                                        value={subPackageForm.features}
-                                        onChange={(e) => setSubPackageForm({ ...subPackageForm, features: e.target.value })}
-                                        className="h-10 bg-muted/30 border-border/50"
-                                    />
                                 </div>
                             </div>
 
                             <div className="space-y-4">
-                                <div className="space-y-2">
-                                    <Label className="text-sm font-medium">Sub Packages</Label>
-                                    <div className="flex items-center gap-2">
-                                        <Select
-                                            value={subPackageForm.subPackages}
-                                            onValueChange={(v) => setSubPackageForm({ ...subPackageForm, subPackages: v })}
-                                        >
-                                            <SelectTrigger className="h-10 bg-muted/30 border-border/50 flex-1">
-                                                <SelectValue placeholder="Select Sub Package" />
-                                            </SelectTrigger>
-                                            <SelectContent className="bg-popover">
-                                                <SelectItem value="amenities">Amenities</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        {/* Brand fill, the same token the Submit buttons use. */}
-                                        <Button size="icon" className="bg-brand hover:bg-brand-hover h-10 w-10">
-                                            +
-                                        </Button>
-                                    </div>
-                                </div>
-
                                 <div className="space-y-2">
                                     <Label className="text-sm font-medium">Package Image</Label>
                                     <div className="flex items-center gap-2">
@@ -862,6 +1109,38 @@ const FacilityManagement = () => {
                                             Choose file
                                         </Button>
                                     </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2 md:col-span-2">
+                                <Label className="text-sm font-medium">Features / Room Amenities</Label>
+                                <div className="flex flex-wrap gap-2 p-3 bg-muted/20 border border-border/40 rounded-xl min-h-[50px] items-center">
+                                    {activeFeatures.length === 0 ? (
+                                        <span className="text-xs text-muted-foreground">No room amenities configured.</span>
+                                    ) : (
+                                        activeFeatures.map((f) => {
+                                            const selected = subPackageForm.selectedFeatureIds.includes(f.id);
+                                            return (
+                                                <button
+                                                    key={f.id}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const next = selected
+                                                            ? subPackageForm.selectedFeatureIds.filter((id) => id !== f.id)
+                                                            : [...subPackageForm.selectedFeatureIds, f.id];
+                                                        setSubPackageForm({ ...subPackageForm, selectedFeatureIds: next });
+                                                    }}
+                                                    className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-all ${
+                                                        selected
+                                                            ? "bg-brand text-white border-brand shadow-sm"
+                                                            : "bg-white text-muted-foreground border-border/60 hover:border-brand/50"
+                                                    }`}
+                                                >
+                                                    {f.feature_name}
+                                                </button>
+                                            );
+                                        })
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -875,8 +1154,12 @@ const FacilityManagement = () => {
                         >
                             Reset
                         </Button>
-                        <Button onClick={handleSubmit} className="h-10 px-8 bg-brand hover:bg-brand-hover text-white">
-                            Submit
+                        <Button
+                            onClick={handleSubmit}
+                            disabled={!mayWrite || createPackageMutation.isPending}
+                            className="h-10 px-8 bg-brand hover:bg-brand-hover text-white"
+                        >
+                            {createPackageMutation.isPending ? "Submitting..." : "Submit"}
                         </Button>
                     </div>
                 </CardContent>
@@ -947,44 +1230,58 @@ const FacilityManagement = () => {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {pageOf(packagesData).map((row) => (
-                                        <TableRow
-                                            key={row.id}
-                                            className="hover:bg-[var(--hms-table-row-hover-bg)] transition-colors"
-                                        >
-                                            <TableCell className="text-primary">{row.packageName}</TableCell>
-                                            <TableCell className="text-primary">{row.amenityType}</TableCell>
-                                            <TableCell>
-                                                {row.subPackages === "-" ? "-" : (
-                                                    <span className="text-primary">{row.subPackages}</span>
-                                                )}
-                                            </TableCell>
-                                            <TableCell className="max-w-[300px] truncate">{row.features}</TableCell>
-                                            <TableCell>{row.image}</TableCell>
-                                            <TableCell>
-                                                <div className="flex items-center justify-center gap-2">
-                                                    <Button size="sm" className="h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditPackageOpen(true)}>
-                                                        <Edit className="h-[14px] w-[14px]" />
-                                                    </Button>
-                                                    <Button
-                                                        size="sm"
-                                                        className="bg-red-500 hover:bg-red-600 text-white h-7 w-7 p-0 rounded-[3px]"
-                                                        onClick={() => handleRemovePackage(row.id)}
-                                                        disabled={!mayWrite || removePackageMutation.isPending}
-                                                        title={
-                                                            !mayWrite
-                                                                ? "Your role cannot change the room catalogue"
-                                                                : row.roomCount > 0
-                                                                    ? `Delete this package -- ${row.roomCount} room(s) still use it and must be moved first`
-                                                                    : "Delete this package"
-                                                        }
-                                                    >
-                                                        <Trash2 className="h-[14px] w-[14px]" />
-                                                    </Button>
-                                                </div>
+                                    {filteredPackagesData.length === 0 ? (
+                                        <TableRow>
+                                            <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
+                                                No parent packages found
                                             </TableCell>
                                         </TableRow>
-                                    ))}
+                                    ) : (
+                                        pageOf(filteredPackagesData).map((row) => (
+                                            <TableRow
+                                                key={row.id}
+                                                className="hover:bg-[var(--hms-table-row-hover-bg)] transition-colors"
+                                            >
+                                                <TableCell className="text-primary">{row.packageName}</TableCell>
+                                                <TableCell className="text-primary">{row.amenityType}</TableCell>
+                                                <TableCell>
+                                                    {row.subPackages === "-" ? "-" : (
+                                                        <span className="text-primary">{row.subPackages}</span>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell className="max-w-[300px] truncate">{row.features}</TableCell>
+                                                <TableCell>{row.image}</TableCell>
+                                                <TableCell>
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        <Button
+                                                            size="sm"
+                                                            className="h-7 w-7 p-0 rounded-[3px]"
+                                                            onClick={() => handleOpenEditPackage(row.raw)}
+                                                            disabled={!mayWrite}
+                                                            title="Edit Package"
+                                                        >
+                                                            <Edit className="h-[14px] w-[14px]" />
+                                                        </Button>
+                                                        <Button
+                                                            size="sm"
+                                                            className="bg-red-500 hover:bg-red-600 text-white h-7 w-7 p-0 rounded-[3px]"
+                                                            onClick={() => handleRemovePackage(row.id)}
+                                                            disabled={!mayWrite || removePackageMutation.isPending}
+                                                            title={
+                                                                !mayWrite
+                                                                    ? "Your role cannot change the room catalogue"
+                                                                    : row.roomCount > 0
+                                                                        ? `Delete this package -- ${row.roomCount} room(s) still use it and must be moved first`
+                                                                        : "Delete this package"
+                                                            }
+                                                        >
+                                                            <Trash2 className="h-[14px] w-[14px]" />
+                                                        </Button>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                    )}
                                 </TableBody>
                             </Table>
                         </div>
@@ -997,46 +1294,62 @@ const FacilityManagement = () => {
                                         <TableHead className="text-gray-600 font-medium">S No</TableHead>
                                         <TableHead className="text-primary font-semibold">Package Name</TableHead>
                                         <TableHead className="text-gray-600 font-medium">Amenity Type</TableHead>
+                                        <TableHead className="text-gray-600 font-medium">Parent Package</TableHead>
                                         <TableHead className="text-gray-600 font-medium">Features</TableHead>
                                         <TableHead className="text-gray-600 font-medium">Image</TableHead>
                                         <TableHead className="text-red-400 font-semibold text-center">Action</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {pageOf(subPackagesData).map((row) => (
-                                        <TableRow
-                                            key={row.id}
-                                            className="hover:bg-[var(--hms-table-row-hover-bg)] transition-colors"
-                                        >
-                                            <TableCell>{row.sNo}</TableCell>
-                                            <TableCell className="text-primary">{row.packageName}</TableCell>
-                                            <TableCell className="text-primary">{row.amenityType}</TableCell>
-                                            <TableCell className="max-w-[300px] truncate">{row.features}</TableCell>
-                                            <TableCell>{row.image}</TableCell>
-                                            <TableCell>
-                                                <div className="flex items-center justify-center gap-2">
-                                                    <Button size="sm" className="h-8 w-8 p-0 rounded-full">
-                                                        <Edit className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button
-                                                        size="sm"
-                                                        className="bg-red-500 hover:bg-red-600 text-white h-8 w-8 p-0 rounded-full"
-                                                        onClick={() => handleRemovePackage(row.id)}
-                                                        disabled={!mayWrite || removePackageMutation.isPending}
-                                                        title={
-                                                            !mayWrite
-                                                                ? "Your role cannot change the room catalogue"
-                                                                : row.roomCount > 0
-                                                                    ? `Delete this sub package -- ${row.roomCount} room(s) still use it and must be moved first`
-                                                                    : "Delete this sub package"
-                                                        }
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                </div>
+                                    {filteredSubPackagesData.length === 0 ? (
+                                        <TableRow>
+                                            <TableCell colSpan={7} className="text-center py-6 text-muted-foreground">
+                                                No sub-packages found
                                             </TableCell>
                                         </TableRow>
-                                    ))}
+                                    ) : (
+                                        pageOf(filteredSubPackagesData).map((row) => (
+                                            <TableRow
+                                                key={row.id}
+                                                className="hover:bg-[var(--hms-table-row-hover-bg)] transition-colors"
+                                            >
+                                                <TableCell>{row.sNo}</TableCell>
+                                                <TableCell className="text-primary">{row.packageName}</TableCell>
+                                                <TableCell className="text-primary">{row.amenityType}</TableCell>
+                                                <TableCell className="text-primary">{row.parentPackages}</TableCell>
+                                                <TableCell className="max-w-[300px] truncate">{row.features}</TableCell>
+                                                <TableCell>{row.image}</TableCell>
+                                                <TableCell>
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        <Button
+                                                            size="sm"
+                                                            className="h-8 w-8 p-0 rounded-full"
+                                                            onClick={() => handleOpenEditPackage(row.raw)}
+                                                            disabled={!mayWrite}
+                                                            title="Edit Sub Package"
+                                                        >
+                                                            <Edit className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button
+                                                            size="sm"
+                                                            className="bg-red-500 hover:bg-red-600 text-white h-8 w-8 p-0 rounded-full"
+                                                            onClick={() => handleRemovePackage(row.id)}
+                                                            disabled={!mayWrite || removePackageMutation.isPending}
+                                                            title={
+                                                                !mayWrite
+                                                                    ? "Your role cannot change the room catalogue"
+                                                                    : row.roomCount > 0
+                                                                        ? `Delete this sub package -- ${row.roomCount} room(s) still use it and must be moved first`
+                                                                        : "Delete this sub package"
+                                                            }
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                    )}
                                 </TableBody>
                             </Table>
                         </div>
@@ -1045,7 +1358,7 @@ const FacilityManagement = () => {
                     <TablePagination
                         currentPage={currentPage}
                         onPageChange={setCurrentPage}
-                        totalEntries={packagesSubTab === "parent" ? packagesData.length : subPackagesData.length}
+                        totalEntries={packagesSubTab === "parent" ? filteredPackagesData.length : filteredSubPackagesData.length}
                         pageSize={pageSize}
                         className="mt-6"
                     />
@@ -1063,18 +1376,26 @@ const FacilityManagement = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-4">
                             <div className="space-y-2">
-                                <Label className="text-sm font-medium">Amenity Type</Label>
+                                <Label className="text-sm font-medium">Room Type</Label>
                                 <Select
                                     value={roomSetupForm.amenityType}
-                                    onValueChange={(v) => setRoomSetupForm({ ...roomSetupForm, amenityType: v })}
+                                    onValueChange={(v) =>
+                                        setRoomSetupForm({
+                                            ...roomSetupForm,
+                                            amenityType: v,
+                                            package: "",
+                                        })
+                                    }
                                 >
                                     <SelectTrigger className="h-10 bg-muted/30 border-border/50">
-                                        <SelectValue placeholder="Select an amenity" />
+                                        <SelectValue placeholder="Select Room Type" />
                                     </SelectTrigger>
                                     <SelectContent className="bg-popover">
-                                        <SelectItem value="guest-room">Guest Room</SelectItem>
-                                        <SelectItem value="restaurant">Restaurant</SelectItem>
-                                        <SelectItem value="car-parking">Car Parking</SelectItem>
+                                        {roomTypes.map((rt) => (
+                                            <SelectItem key={rt.id} value={rt.id}>
+                                                {rt.name}
+                                            </SelectItem>
+                                        ))}
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -1086,82 +1407,73 @@ const FacilityManagement = () => {
                                     onValueChange={(v) => setRoomSetupForm({ ...roomSetupForm, package: v })}
                                 >
                                     <SelectTrigger className="h-10 bg-muted/30 border-border/50">
-                                        <SelectValue placeholder="Select room package" />
+                                        <SelectValue placeholder="Select Room Package" />
                                     </SelectTrigger>
                                     <SelectContent className="bg-popover">
-                                        <SelectItem value="delux">Delux Package</SelectItem>
-                                        <SelectItem value="golden">Golden Package</SelectItem>
-                                        <SelectItem value="none">None</SelectItem>
+                                        {(roomSetupForm.amenityType
+                                            ? activeParentPackages.filter(
+                                                  (p) => !p.amenity_type || p.amenity_type === roomSetupForm.amenityType
+                                              )
+                                            : activeParentPackages
+                                        ).map((p) => (
+                                            <SelectItem key={p.id} value={p.id}>
+                                                {p.name}
+                                            </SelectItem>
+                                        ))}
                                     </SelectContent>
                                 </Select>
                             </div>
 
                             <div className="space-y-2">
-                                <Label className="text-sm font-medium">Facility Structure</Label>
+                                <Label className="text-sm font-medium">Facility Structure (Select Floor)</Label>
                                 <div className="p-2 border border-gray-200 rounded-lg bg-white max-h-64 overflow-y-auto">
                                     <div className="space-y-0">
-                                        {/* CXPL Root */}
-                                        <Collapsible defaultOpen>
-                                            <CollapsibleTrigger className="flex items-center gap-1 w-full py-1 px-1 hover:bg-muted/20 rounded text-left">
-                                                <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                                                <span className="text-sm">CXPL</span>
-                                            </CollapsibleTrigger>
-                                            <CollapsibleContent className="ml-4">
-                                                {/* Building A */}
-                                                <Collapsible>
-                                                    <CollapsibleTrigger className="flex items-center gap-1 w-full py-1 px-1 hover:bg-muted/20 rounded text-left">
-                                                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                                                        <span className="text-sm">Building A</span>
-                                                    </CollapsibleTrigger>
-                                                    <CollapsibleContent className="ml-4 pl-2 border-l border-border/30">
-                                                        <div className="py-1 px-2 text-sm hover:bg-muted/20 rounded cursor-pointer">Floor 1</div>
-                                                        <div className="py-1 px-2 text-sm hover:bg-muted/20 rounded cursor-pointer">Floor 2</div>
-                                                        <div className="py-1 px-2 text-sm hover:bg-muted/20 rounded cursor-pointer">Floor 3</div>
-                                                        <div className="py-1 px-2 text-sm hover:bg-muted/20 rounded cursor-pointer">Floor 4</div>
-                                                        <div className="py-1 px-2 text-sm hover:bg-muted/20 rounded cursor-pointer">Floor 5</div>
-                                                    </CollapsibleContent>
-                                                </Collapsible>
-
-                                                {/* Demo Box */}
-                                                <Collapsible>
-                                                    <CollapsibleTrigger className="flex items-center gap-1 w-full py-1 px-1 hover:bg-muted/20 rounded text-left">
-                                                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                                                        <span className="text-sm">Demo Box</span>
-                                                    </CollapsibleTrigger>
-                                                    <CollapsibleContent className="ml-4 pl-2 border-l border-border/30">
-                                                        <div className="py-1 px-2 text-sm hover:bg-muted/20 rounded cursor-pointer">US demo</div>
-                                                        <div className="py-1 px-2 text-sm hover:bg-muted/20 rounded cursor-pointer">Demo</div>
-                                                        <div className="py-1 px-2 text-sm hover:bg-muted/20 rounded cursor-pointer">Senthil MDU room</div>
-                                                        <div className="py-1 px-2 text-sm hover:bg-muted/20 rounded cursor-pointer">Senthil USA</div>
-                                                    </CollapsibleContent>
-                                                </Collapsible>
-
-                                                {/* Dev & Testing */}
-                                                <Collapsible>
-                                                    <CollapsibleTrigger className="flex items-center gap-1 w-full py-1 px-1 hover:bg-muted/20 rounded text-left">
-                                                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                                                        <span className="text-sm">Dev & Testing</span>
-                                                    </CollapsibleTrigger>
-                                                    <CollapsibleContent className="ml-4 pl-2 border-l border-border/30">
-                                                        <div className="py-1 px-2 text-sm hover:bg-muted/20 rounded cursor-pointer">Floor1</div>
-                                                        <div className="py-1 px-2 text-sm hover:bg-muted/20 rounded cursor-pointer">Testing</div>
-                                                        <div className="py-1 px-2 text-sm hover:bg-muted/20 rounded cursor-pointer">FW_Dev Devices</div>
-                                                    </CollapsibleContent>
-                                                </Collapsible>
-
-                                                {/* Building D PILOT */}
-                                                <Collapsible>
-                                                    <CollapsibleTrigger className="flex items-center gap-1 w-full py-1 px-1 hover:bg-muted/20 rounded text-left">
-                                                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                                                        <span className="text-sm">Building D PILOT</span>
-                                                    </CollapsibleTrigger>
-                                                    <CollapsibleContent className="ml-4 pl-2 border-l border-border/30">
-                                                        <div className="py-1 px-2 text-sm hover:bg-muted/20 rounded cursor-pointer">Ground Floor</div>
-                                                        <div className="py-1 px-2 text-sm hover:bg-muted/20 rounded cursor-pointer">Floor 1</div>
-                                                    </CollapsibleContent>
-                                                </Collapsible>
-                                            </CollapsibleContent>
-                                        </Collapsible>
+                                        {facilities.map((fac) => (
+                                            <Collapsible key={fac.id} defaultOpen>
+                                                <CollapsibleTrigger className="flex items-center gap-1 w-full py-1 px-1 hover:bg-muted/20 rounded text-left">
+                                                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                                    <span className="text-sm font-medium">{fac.name}</span>
+                                                </CollapsibleTrigger>
+                                                <CollapsibleContent className="ml-4 space-y-1">
+                                                    {buildings
+                                                        .filter((b) => !b.facility_id || b.facility_id === fac.id)
+                                                        .map((b) => (
+                                                            <Collapsible key={b.id} defaultOpen>
+                                                                <CollapsibleTrigger className="flex items-center gap-1 w-full py-1 px-1 hover:bg-muted/20 rounded text-left">
+                                                                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                                                    <span className="text-sm">{b.name}</span>
+                                                                </CollapsibleTrigger>
+                                                                <CollapsibleContent className="ml-4 pl-2 border-l border-border/30 space-y-1">
+                                                                    {floors
+                                                                        .filter((f) => f.building_id === b.id)
+                                                                        .map((f) => {
+                                                                            const isSelected = roomSetupForm.facilityStructure[0] === f.property_chain_id;
+                                                                            return (
+                                                                                <div
+                                                                                    key={f.id}
+                                                                                    onClick={() =>
+                                                                                        setRoomSetupForm({
+                                                                                            ...roomSetupForm,
+                                                                                            facilityStructure: [f.property_chain_id],
+                                                                                        })
+                                                                                    }
+                                                                                    className={`py-1 px-2 text-sm rounded cursor-pointer flex items-center justify-between transition-colors ${
+                                                                                        isSelected
+                                                                                            ? "bg-brand/10 text-brand font-semibold"
+                                                                                            : "hover:bg-muted/20 text-gray-700"
+                                                                                    }`}
+                                                                                >
+                                                                                    <span>{f.name}</span>
+                                                                                    {isSelected && <Check className="h-3.5 w-3.5 text-brand" />}
+                                                                                </div>
+                                                                            );
+                                                                        })}
+                                                                </CollapsibleContent>
+                                                            </Collapsible>
+                                                        ))}
+                                                </CollapsibleContent>
+                                            </Collapsible>
+                                        ))}
                                     </div>
                                 </div>
                             </div>
@@ -1171,7 +1483,7 @@ const FacilityManagement = () => {
                             <div className="space-y-2">
                                 <Label className="text-sm font-medium">Room</Label>
                                 <Input
-                                    placeholder="101,102,103,104"
+                                    placeholder="e.g. 101, 102"
                                     value={roomSetupForm.room}
                                     onChange={(e) => setRoomSetupForm({ ...roomSetupForm, room: e.target.value })}
                                     className="h-10 bg-muted/30 border-border/50"
@@ -1220,8 +1532,12 @@ const FacilityManagement = () => {
                         <Button onClick={handleReset} variant="outline" className="h-10 px-8 bg-cyan-600 text-white border-0 hover:bg-cyan-700">
                             Reset
                         </Button>
-                        <Button onClick={handleSubmit} className="h-10 px-8 bg-brand hover:bg-brand-hover text-white">
-                            Submit
+                        <Button
+                            onClick={handleSubmit}
+                            disabled={!mayWrite || createRoomMutation.isPending}
+                            className="h-10 px-8 bg-brand hover:bg-brand-hover text-white"
+                        >
+                            {createRoomMutation.isPending ? "Submitting..." : "Submit"}
                         </Button>
                     </div>
                 </CardContent>
@@ -1268,29 +1584,39 @@ const FacilityManagement = () => {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {pageOf(roomSetupData).map((row) => (
-                                    <TableRow
-                                        key={row.id}
-                                        className="hover:bg-[var(--hms-table-row-hover-bg)] transition-colors"
-                                    >
-                                        {/* Both cells previously highlighted hardcoded names
-                                            ("Busy Room", "Delux Package") that match no
-                                            `amenity_type` or `package` row, so the highlight
-                                            never fired. The real value is shown plainly. */}
-                                        <TableCell>{row.amenityType}</TableCell>
-                                        <TableCell>{row.package}</TableCell>
-                                        <TableCell>{row.roomNo}</TableCell>
-                                        <TableCell>{row.smoking}</TableCell>
-                                        <TableCell>{row.poolFacing}</TableCell>
-                                        <TableCell>
-                                            <div className="flex items-center justify-center">
-                                                <Button size="sm" className="h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditRoomOpen(true)}>
-                                                    <Edit className="h-[14px] w-[14px]" />
-                                                </Button>
-                                            </div>
+                                {filteredRoomSetupData.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
+                                            No rooms found
                                         </TableCell>
                                     </TableRow>
-                                ))}
+                                ) : (
+                                    pageOf(filteredRoomSetupData).map((row) => (
+                                        <TableRow
+                                            key={row.id}
+                                            className="hover:bg-[var(--hms-table-row-hover-bg)] transition-colors"
+                                        >
+                                            <TableCell>{row.amenityType}</TableCell>
+                                            <TableCell>{row.package}</TableCell>
+                                            <TableCell>{row.roomNo}</TableCell>
+                                            <TableCell>{row.smoking}</TableCell>
+                                            <TableCell>{row.poolFacing}</TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center justify-center">
+                                                    <Button
+                                                        size="sm"
+                                                        className="h-7 w-7 p-0 rounded-[3px]"
+                                                        onClick={() => handleOpenEditRoom(row.raw)}
+                                                        disabled={!mayWrite}
+                                                        title="Edit Room"
+                                                    >
+                                                        <Edit className="h-[14px] w-[14px]" />
+                                                    </Button>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
                             </TableBody>
                         </Table>
                     </div>
@@ -1298,7 +1624,7 @@ const FacilityManagement = () => {
                     <TablePagination
                         currentPage={currentPage}
                         onPageChange={setCurrentPage}
-                        totalEntries={roomSetupData.length}
+                        totalEntries={filteredRoomSetupData.length}
                         pageSize={pageSize}
                         className="mt-6"
                     />
@@ -1330,11 +1656,24 @@ const FacilityManagement = () => {
                 ))}
             </div>
 
-            {/* Content. One shared loading/error boundary for the whole
-                screen -- both queries feed several tabs. */}
+            {/* Content with live data loading / error boundary */}
             <DataState
-                isLoading={facilitiesQuery.isLoading || roomsQuery.isLoading}
-                error={facilitiesQuery.error ?? roomsQuery.error}
+                isLoading={
+                    facilitiesQuery.isLoading ||
+                    roomsQuery.isLoading ||
+                    amenityTypesQuery.isLoading ||
+                    packagesQuery.isLoading ||
+                    featuresQuery.isLoading ||
+                    buildingsQuery.isLoading ||
+                    floorsQuery.isLoading
+                }
+                error={
+                    facilitiesQuery.error ??
+                    roomsQuery.error ??
+                    amenityTypesQuery.error ??
+                    packagesQuery.error ??
+                    featuresQuery.error
+                }
                 loader={<TableLoading columns={8} />}
             >
                 <>
@@ -1358,70 +1697,129 @@ const FacilityManagement = () => {
                     <div className="p-6 px-10 max-h-[75vh] overflow-y-auto space-y-6">
                         <div className="grid grid-cols-[160px_1fr] items-center gap-4">
                             <Label className="text-sm font-medium text-gray-800">Organization Name <span className="text-red-500">*</span></Label>
-                            <input type="text" value="County Retreat" readOnly className="w-full bg-gray-100 border-0 border-b border-gray-300 text-gray-900 focus:ring-0 px-3 py-2 text-sm outline-none rounded-t-[2px]" />
+                            <input
+                                type="text"
+                                value={editFacilityForm.name}
+                                onChange={(e) => setEditFacilityForm({ ...editFacilityForm, name: e.target.value })}
+                                className="w-full bg-white border border-gray-300 text-gray-900 focus:ring-1 focus:ring-brand px-3 py-1.5 text-sm outline-none rounded-[2px]"
+                            />
                         </div>
                         <div className="grid grid-cols-[160px_1fr] items-center gap-4">
-                            <Label className="text-sm font-medium text-gray-800">Hospitality Name <span className="text-red-500">*</span></Label>
-                            <input type="text" value="CXPL" readOnly className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-500 focus:ring-0 px-0 pb-1 text-sm outline-none" />
+                            <Label className="text-sm font-medium text-gray-800">Hospitality Code</Label>
+                            <input
+                                type="text"
+                                value={editingFacility?.facility_uid || "-"}
+                                readOnly
+                                className="w-full bg-gray-50 border-0 border-b border-gray-300 text-gray-600 focus:ring-0 px-0 pb-1 text-sm outline-none"
+                            />
                         </div>
                         <div className="grid grid-cols-[160px_1fr] items-center gap-4">
                             <Label className="text-sm font-medium text-gray-800">No. of guest Rooms <span className="text-red-500">*</span></Label>
-                            <input type="text" value="500" readOnly className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-500 focus:ring-0 px-0 pb-1 text-sm outline-none" />
+                            <input
+                                type="number"
+                                min={0}
+                                value={editFacilityForm.guestRooms}
+                                onChange={(e) => setEditFacilityForm({ ...editFacilityForm, guestRooms: e.target.value })}
+                                className="w-full bg-white border border-gray-300 text-gray-900 focus:ring-1 focus:ring-brand px-3 py-1.5 text-sm outline-none rounded-[2px]"
+                            />
                         </div>
                         <div className="grid grid-cols-[160px_1fr] items-start gap-4">
-                            <Label className="text-sm font-medium text-gray-800 pt-2">Edit Facility OutLayer <span className="text-red-500">*</span></Label>
-                            <div className="bg-transparent border-0 border-b border-gray-300 pb-2 text-sm">
-                                <div className="flex items-center text-gray-800 font-medium"><ChevronDown className="h-4 w-4 mr-1 text-gray-500" /> CXPL</div>
-                                <div className="ml-5 mt-1">
-                                    <div className="flex items-center text-gray-800 font-medium"><ChevronDown className="h-4 w-4 mr-1 text-gray-500" /> Building</div>
-                                    <div className="ml-5 mt-1 flex items-center text-gray-800 opacity-80"><ChevronRight className="h-4 w-4 mr-1 text-gray-500" /> Floor</div>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-[160px_1fr] items-start gap-4">
-                            <Label className="text-sm font-medium text-gray-800 pt-2">Facility Structure <span className="text-red-500">*</span></Label>
-                            <div className="bg-transparent border-0 border-b border-gray-300 pb-2 text-sm max-h-[150px] overflow-y-auto custom-scrollbar">
-                                <div className="flex items-center text-gray-800 font-medium"><ChevronDown className="h-4 w-4 mr-1 text-gray-500" /> CXPL</div>
-                                <div className="ml-5 mt-1">
-                                    <div className="flex items-center text-gray-800 font-medium"><ChevronDown className="h-4 w-4 mr-1 text-gray-500" /> Building A</div>
-                                    <div className="ml-5 mt-1 space-y-1">
-                                        <div className="flex items-center text-gray-800 before:content-['•'] before:mr-2 before:text-gray-400">Floor 1</div>
-                                        <div className="flex items-center text-gray-800 before:content-['•'] before:mr-2 before:text-gray-400">Floor 2</div>
-                                        <div className="flex items-center text-gray-800 before:content-['•'] before:mr-2 before:text-gray-400">Floor 3</div>
-                                        <div className="flex items-center text-gray-800 before:content-['•'] before:mr-2 before:text-gray-400">Floor 4</div>
+                            <Label className="text-sm font-medium text-gray-800 pt-2">Facility Structure</Label>
+                            <div className="bg-transparent border border-gray-200 rounded p-3 text-sm max-h-[160px] overflow-y-auto custom-scrollbar w-full">
+                                {editingFacility && (
+                                    <div>
+                                        <div className="flex items-center text-gray-800 font-medium">
+                                            <ChevronDown className="h-4 w-4 mr-1 text-gray-500" />
+                                            {editingFacility.name} ({editingFacility.facility_uid})
+                                        </div>
+                                        <div className="ml-5 mt-1 space-y-1">
+                                            {buildings
+                                                .filter((b) => !b.facility_id || b.facility_id === editingFacility.id)
+                                                .map((b) => (
+                                                    <div key={b.id}>
+                                                        <div className="flex items-center text-gray-700 font-medium">
+                                                            <ChevronDown className="h-4 w-4 mr-1 text-gray-500" />
+                                                            {b.name}
+                                                        </div>
+                                                        <div className="ml-5 mt-1 space-y-0.5">
+                                                            {floors
+                                                                .filter((f) => f.building_id === b.id)
+                                                                .map((f) => (
+                                                                    <div key={f.id} className="text-gray-600 text-xs flex items-center before:content-['•'] before:mr-2 before:text-gray-400">
+                                                                        {f.name} ({f.room_count} rooms)
+                                                                    </div>
+                                                                ))}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                        </div>
                                     </div>
-                                </div>
+                                )}
                             </div>
                         </div>
-                        <div className="grid grid-cols-[160px_1fr] items-start gap-4">
-                            <Label className="text-sm font-medium text-gray-800 pt-2">Hotel Image</Label>
-                            <div className="border-0 border-b border-gray-300 pb-2">
-                                <div className="flex items-center gap-2">
-                                    <button className="bg-gray-100 text-gray-800 border border-gray-300 text-xs px-2 py-1 rounded-[2px] shadow-sm hover:bg-gray-200">Choose file</button>
-                                    <span className="text-[13px] text-gray-500">No file chosen</span>
-                                </div>
-                                <div className="text-brand-teal text-xs mt-1 hover:underline cursor-pointer">Click here to preview image</div>
-                            </div>
+                        <div className="grid grid-cols-[160px_1fr] items-center gap-4">
+                            <Label className="text-sm font-medium text-gray-800">City <span className="text-red-500">*</span></Label>
+                            <input
+                                type="text"
+                                value={editFacilityForm.city}
+                                onChange={(e) => setEditFacilityForm({ ...editFacilityForm, city: e.target.value })}
+                                className="w-full bg-white border border-gray-300 text-gray-900 focus:ring-1 focus:ring-brand px-3 py-1.5 text-sm outline-none rounded-[2px]"
+                            />
                         </div>
-                        {[
-                            { label: "City *", value: "Hyderabad" },
-                            { label: "State *", value: "Hyderabad" },
-                            { label: "PIN Code *", value: "500001" },
-                            { label: "Email *", value: "sarumugam@inspirionics.net" },
-                            { label: "Additional Email", value: "genesanIc@caleidoxenia.com, skodevallo@inspirionics.net" },
-                            { label: "Google Map *", value: "https://goo.gl/maps/HnTVuzYriD2KuXjS27" },
-                            { label: "Connect to Caleido *", value: "deyoncounty.db.connect" },
-                        ].map((field, i) => (
-                            <div key={i} className="grid grid-cols-[160px_1fr] items-center gap-4">
-                                <Label className="text-sm font-medium text-gray-800">
-                                    {field.label.replace(' *', '')} {field.label.includes('*') && <span className="text-red-500">*</span>}
-                                </Label>
-                                <input type="text" value={field.value} readOnly className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-500 focus:ring-0 px-0 pb-1 text-sm outline-none" />
-                            </div>
-                        ))}
+                        <div className="grid grid-cols-[160px_1fr] items-center gap-4">
+                            <Label className="text-sm font-medium text-gray-800">State <span className="text-red-500">*</span></Label>
+                            <input
+                                type="text"
+                                value={editFacilityForm.state}
+                                onChange={(e) => setEditFacilityForm({ ...editFacilityForm, state: e.target.value })}
+                                className="w-full bg-white border border-gray-300 text-gray-900 focus:ring-1 focus:ring-brand px-3 py-1.5 text-sm outline-none rounded-[2px]"
+                            />
+                        </div>
+                        <div className="grid grid-cols-[160px_1fr] items-center gap-4">
+                            <Label className="text-sm font-medium text-gray-800">PIN Code <span className="text-red-500">*</span></Label>
+                            <input
+                                type="text"
+                                value={editFacilityForm.pinCode}
+                                onChange={(e) => setEditFacilityForm({ ...editFacilityForm, pinCode: e.target.value })}
+                                className="w-full bg-white border border-gray-300 text-gray-900 focus:ring-1 focus:ring-brand px-3 py-1.5 text-sm outline-none rounded-[2px]"
+                            />
+                        </div>
+                        <div className="grid grid-cols-[160px_1fr] items-center gap-4">
+                            <Label className="text-sm font-medium text-gray-800">Email <span className="text-red-500">*</span></Label>
+                            <input
+                                type="email"
+                                value={editFacilityForm.email}
+                                onChange={(e) => setEditFacilityForm({ ...editFacilityForm, email: e.target.value })}
+                                className="w-full bg-white border border-gray-300 text-gray-900 focus:ring-1 focus:ring-brand px-3 py-1.5 text-sm outline-none rounded-[2px]"
+                            />
+                        </div>
+                        <div className="grid grid-cols-[160px_1fr] items-center gap-4">
+                            <Label className="text-sm font-medium text-gray-800">Additional Email</Label>
+                            <input
+                                type="text"
+                                value={editFacilityForm.additionalEmail}
+                                onChange={(e) => setEditFacilityForm({ ...editFacilityForm, additionalEmail: e.target.value })}
+                                className="w-full bg-white border border-gray-300 text-gray-900 focus:ring-1 focus:ring-brand px-3 py-1.5 text-sm outline-none rounded-[2px]"
+                            />
+                        </div>
+                        <div className="grid grid-cols-[160px_1fr] items-center gap-4">
+                            <Label className="text-sm font-medium text-gray-800">Google Map Link</Label>
+                            <input
+                                type="text"
+                                value={editFacilityForm.googleMapLink}
+                                onChange={(e) => setEditFacilityForm({ ...editFacilityForm, googleMapLink: e.target.value })}
+                                className="w-full bg-white border border-gray-300 text-gray-900 focus:ring-1 focus:ring-brand px-3 py-1.5 text-sm outline-none rounded-[2px]"
+                            />
+                        </div>
                     </div>
                     <div className="flex justify-center p-4 border-t border-gray-200">
-                        <Button className="bg-transparent text-brand-teal border border-brand-teal hover:bg-cyan-50 h-8 px-6 rounded-[3px] font-normal" onClick={() => setEditFacilityOpen(false)}>Submit</Button>
+                        <Button
+                            className="bg-transparent text-brand-teal border border-brand-teal hover:bg-cyan-50 h-8 px-6 rounded-[3px] font-normal"
+                            onClick={handleSaveFacility}
+                            disabled={!mayWrite || updateFacilityMutation.isPending}
+                        >
+                            {updateFacilityMutation.isPending ? "Saving..." : "Submit"}
+                        </Button>
                     </div>
                 </DialogContent>
             </Dialog>
@@ -1430,39 +1828,66 @@ const FacilityManagement = () => {
             <Dialog open={editAmenityOpen} onOpenChange={setEditAmenityOpen}>
                 <DialogContent className="max-w-[700px] bg-white text-gray-900 border-0 p-0 overflow-hidden flex flex-col hide-close-button shadow-2xl [&>button]:hidden rounded-[4px]">
                     <div className="flex justify-between items-center p-3 px-5 bg-white border-b border-gray-200 shadow-sm">
-                        <h2 className="text-[17px] font-semibold text-gray-800 tracking-wide">Edit Hotel Amenities</h2>
+                        <h2 className="text-[17px] font-semibold text-gray-800 tracking-wide">Edit Amenity Type</h2>
                         <Button variant="ghost" className="h-7 w-7 p-0 border-[1.5px] border-gray-300 rounded-[2px] hover:bg-gray-100" onClick={() => setEditAmenityOpen(false)}>
                             <X className="h-4 w-4 text-gray-500 stroke-[3]" />
                         </Button>
                     </div>
-                    <div className="p-8 px-10 space-y-8">
+                    <div className="p-8 px-10 space-y-6">
                         <div className="grid grid-cols-[160px_1fr] items-center gap-4">
-                            <Label className="text-sm font-medium text-gray-800">Hotel Amenities <span className="text-red-500">*</span></Label>
-                            <input type="text" value="Banquet Hall" readOnly className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-500 focus:ring-0 px-0 pb-1 text-sm outline-none" />
+                            <Label className="text-sm font-medium text-gray-800">Amenity Name <span className="text-red-500">*</span></Label>
+                            <input
+                                type="text"
+                                value={editAmenityForm.name}
+                                onChange={(e) => setEditAmenityForm({ ...editAmenityForm, name: e.target.value })}
+                                className="w-full bg-white border border-gray-300 text-gray-900 focus:ring-1 focus:ring-brand px-3 py-1.5 text-sm outline-none rounded-[2px]"
+                            />
                         </div>
-                        <div className="grid grid-cols-[160px_1fr] items-start gap-4">
-                            <Label className="text-sm font-medium text-gray-800 pt-1">Amenities Icon</Label>
-                            <div className="border-0 border-b border-gray-300 pb-2">
-                                <div className="flex items-center gap-2">
-                                    <button className="bg-gray-100 text-gray-800 border border-gray-300 text-xs px-2 py-1 rounded-[2px] shadow-sm hover:bg-gray-200">Choose file</button>
-                                    <span className="text-[13px] text-gray-500">No file chosen</span>
-                                </div>
-                                <div className="text-brand-teal text-xs mt-1 hover:underline cursor-pointer">Click here to preview image</div>
-                            </div>
+                        <div className="grid grid-cols-[160px_1fr] items-center gap-4">
+                            <Label className="text-sm font-medium text-gray-800">Category <span className="text-red-500">*</span></Label>
+                            <Select
+                                value={editAmenityForm.amenityCategory}
+                                onValueChange={(v: "room" | "restaurant" | "others") =>
+                                    setEditAmenityForm({ ...editAmenityForm, amenityCategory: v })
+                                }
+                            >
+                                <SelectTrigger className="h-10 bg-muted/30 border-border/50">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="bg-popover">
+                                    <SelectItem value="room">Room</SelectItem>
+                                    <SelectItem value="restaurant">Restaurant</SelectItem>
+                                    <SelectItem value="others">Others</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                     </div>
                     <div className="flex justify-center gap-4 pb-8">
-                        <Button variant="outline" className="h-10 px-8 min-w-[110px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all" onClick={() => setEditAmenityOpen(false)}>Reset</Button>
-                        <Button className="h-10 px-8 min-w-[110px] rounded-2xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all" onClick={() => setEditAmenityOpen(false)}>Submit</Button>
+                        <Button
+                            variant="outline"
+                            className="h-10 px-8 min-w-[110px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all"
+                            onClick={() => setEditAmenityOpen(false)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            className="h-10 px-8 min-w-[110px] rounded-2xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
+                            onClick={handleSaveAmenityType}
+                            disabled={!mayWrite || updateAmenityTypeMutation.isPending}
+                        >
+                            {updateAmenityTypeMutation.isPending ? "Saving..." : "Submit"}
+                        </Button>
                     </div>
                 </DialogContent>
             </Dialog>
 
-            {/* Edit Parent Packages Modal */}
+            {/* Edit Packages Modal */}
             <Dialog open={editPackageOpen} onOpenChange={setEditPackageOpen}>
                 <DialogContent className="max-w-[700px] bg-white text-gray-900 border-0 p-0 overflow-hidden flex flex-col hide-close-button shadow-2xl [&>button]:hidden rounded-[4px]">
                     <div className="flex justify-between items-center p-3 px-5 bg-white border-b border-gray-200 shadow-sm">
-                        <h2 className="text-[17px] font-semibold text-gray-800 tracking-wide">Edit Parent Packages</h2>
+                        <h2 className="text-[17px] font-semibold text-gray-800 tracking-wide">
+                            {editingPackage?.is_sub_package ? "Edit Sub Package" : "Edit Package"}
+                        </h2>
                         <Button variant="ghost" className="h-7 w-7 p-0 border-[1.5px] border-gray-300 rounded-[2px] hover:bg-gray-100" onClick={() => setEditPackageOpen(false)}>
                             <X className="h-4 w-4 text-gray-500 stroke-[3]" />
                         </Button>
@@ -1470,62 +1895,115 @@ const FacilityManagement = () => {
                     <div className="p-8 px-10 space-y-6">
                         <div className="grid grid-cols-[160px_1fr] items-center gap-4">
                             <Label className="text-sm font-medium text-gray-800">Package Name <span className="text-red-500">*</span></Label>
-                            <input type="text" value="Beverage" readOnly className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-400 focus:ring-0 px-0 pb-1 text-sm outline-none cursor-default" />
+                            <input
+                                type="text"
+                                value={editPackageForm.name}
+                                onChange={(e) => setEditPackageForm({ ...editPackageForm, name: e.target.value })}
+                                className="w-full bg-white border border-gray-300 text-gray-900 focus:ring-1 focus:ring-brand px-3 py-1.5 text-sm outline-none rounded-[2px]"
+                            />
                         </div>
                         <div className="grid grid-cols-[160px_1fr] items-center gap-4">
-                            <Label className="text-sm font-medium text-gray-800">Amenity Type <span className="text-red-500">*</span></Label>
-                            <div className="relative">
-                                <select className="w-full bg-transparent border-0 border-b border-gray-500 text-gray-700 focus:ring-0 px-0 pb-2 text-sm appearance-none outline-none">
-                                    <option>Champagne Bar</option>
-                                </select>
-                                <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
-                            </div>
+                            <Label className="text-sm font-medium text-gray-800">Room Type <span className="text-red-500">*</span></Label>
+                            <Select
+                                value={editPackageForm.amenityTypeId}
+                                onValueChange={(v) => setEditPackageForm({ ...editPackageForm, amenityTypeId: v })}
+                            >
+                                <SelectTrigger className="h-10 bg-muted/30 border-border/50">
+                                    <SelectValue placeholder="Select Room Type" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-popover">
+                                    {roomTypes.map((rt) => (
+                                        <SelectItem key={rt.id} value={rt.id}>
+                                            {rt.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
+                        {editingPackage?.is_sub_package ? (
+                            <div className="grid grid-cols-[160px_1fr] items-center gap-4">
+                                <Label className="text-sm font-medium text-gray-800">Parent Package</Label>
+                                <Select
+                                    value={editPackageForm.parentPackageId}
+                                    onValueChange={(v) => setEditPackageForm({ ...editPackageForm, parentPackageId: v })}
+                                >
+                                    <SelectTrigger className="h-10 bg-muted/30 border-border/50">
+                                        <SelectValue placeholder="Select Parent Package" />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-popover">
+                                        {activeParentPackages
+                                            .filter((p) => p.id !== editingPackage.id)
+                                            .map((p) => (
+                                                <SelectItem key={p.id} value={p.id}>
+                                                    {p.name}
+                                                </SelectItem>
+                                            ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-[160px_1fr] items-center gap-4">
+                                <Label className="text-sm font-medium text-gray-800">Sub Package</Label>
+                                <Select
+                                    value={editPackageForm.subPackageId}
+                                    onValueChange={(v) => setEditPackageForm({ ...editPackageForm, subPackageId: v === "none" ? "" : v })}
+                                >
+                                    <SelectTrigger className="h-10 bg-muted/30 border-border/50">
+                                        <SelectValue placeholder="Select Sub Package" />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-popover">
+                                        <SelectItem value="none">None</SelectItem>
+                                        {activeSubPackages
+                                            .filter((sp) => sp.id !== editingPackage?.id)
+                                            .map((sp) => (
+                                                <SelectItem key={sp.id} value={sp.id}>
+                                                    {sp.name}
+                                                </SelectItem>
+                                            ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
                         <div className="grid grid-cols-[160px_1fr] items-start gap-4">
-                            <Label className="text-sm font-medium text-gray-800 pt-2">Features <span className="text-red-500">*</span></Label>
-                            <div className="relative border border-gray-300 rounded-[4px] p-2 pr-8 flex flex-wrap gap-2 min-h-[120px] bg-transparent">
-                                {[
-                                    "Flat Screen TV", "Work Desk", "Letter Head with Pen",
-                                    "High Speed Wireless Internet", "Electronic Safe / Locker",
-                                    "Mini Bar / Mini Fridge", "Tea / Coffee Maker", "Ironing Board", "Iron",
-                                    "Hair dryer", "Newspaper", "Mood lighting",
-                                    "Caleido - Air Quality Control", "Caleido Smart Lock",
-                                    "Non-Smoking Rooms", "Smoking Lounge", "Pet Friendly",
-                                    "Doctor On Call", "Parking", "Ample Wall Outlets",
-                                    "Complimentary Electronics Chargers", "Business Facilities",
-                                    "Exercise Facilities and Accessories", "Complimentary Luggage storage",
-                                    "Curated Experiences", "Fancy Bathrobes",
-                                    "Kid-friendly Rooms and Products", "Premium Bedding",
-                                    "Stain Remover Wipes", "Champagne Bar"
-                                ].map((tag, i) => (
-                                    <div key={i} className="bg-brand-teal text-white text-[12px] px-2 py-0.5 rounded-[2px] flex items-center gap-1 hover:bg-brand-teal/90 cursor-default shadow-sm border border-brand-teal">
-                                        {tag} <X className="h-[10px] w-[10px] cursor-pointer hover:opacity-80 stroke-[3]" />
-                                    </div>
-                                ))}
-                                <ChevronDown className="absolute right-2 top-2 h-4 w-4 text-gray-400 pointer-events-none" />
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-[160px_1fr] items-center gap-4">
-                            <Label className="text-sm font-medium text-gray-800">SubPackages</Label>
-                            <div className="relative">
-                                <select className="w-full bg-transparent border border-gray-400 text-gray-700 focus:ring-0 px-3 py-1.5 text-sm appearance-none outline-none rounded-[4px]">
-                                    <option>Select Sub Packages</option>
-                                </select>
-                                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-[160px_1fr] items-start gap-4">
-                            <Label className="text-sm font-medium text-gray-800 pt-1">Package Icon</Label>
-                            <div className="border-0 border-b border-gray-300 pb-2">
-                                <div className="flex items-center gap-2">
-                                    <button className="bg-gray-100 text-gray-800 border border-gray-400 text-xs font-medium px-3 py-1 rounded-[2px] shadow-sm hover:bg-gray-200">Choose file</button>
-                                    <span className="text-[13px] text-gray-500">No file chosen</span>
-                                </div>
+                            <Label className="text-sm font-medium text-gray-800 pt-2">Features</Label>
+                            <div className="border border-gray-300 rounded-[4px] p-2 flex flex-wrap gap-2 min-h-[60px] bg-transparent">
+                                {activeFeatures.length === 0 ? (
+                                    <span className="text-xs text-gray-400 p-1">No features configured</span>
+                                ) : (
+                                    activeFeatures.map((f) => {
+                                        const isChecked = editPackageForm.selectedFeatureIds.includes(f.id);
+                                        return (
+                                            <button
+                                                key={f.id}
+                                                type="button"
+                                                onClick={() => {
+                                                    const next = isChecked
+                                                        ? editPackageForm.selectedFeatureIds.filter((id) => id !== f.id)
+                                                        : [...editPackageForm.selectedFeatureIds, f.id];
+                                                    setEditPackageForm({ ...editPackageForm, selectedFeatureIds: next });
+                                                }}
+                                                className={`text-xs px-2.5 py-1 rounded-[2px] flex items-center gap-1 transition-all ${
+                                                    isChecked
+                                                        ? "bg-brand text-white shadow-sm font-medium"
+                                                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                                                }`}
+                                            >
+                                                {f.feature_name}
+                                            </button>
+                                        );
+                                    })
+                                )}
                             </div>
                         </div>
                     </div>
-                    <div className="flex justify-center p-4">
-                        <Button className="bg-brand-teal hover:bg-brand-teal/90 text-white h-[34px] px-8 rounded-[3px] font-medium" onClick={() => setEditPackageOpen(false)}>Submit</Button>
+                    <div className="flex justify-center p-4 border-t border-gray-200">
+                        <Button
+                            className="bg-brand-teal hover:bg-brand-teal/90 text-white h-[34px] px-8 rounded-[3px] font-medium"
+                            onClick={handleSavePackage}
+                            disabled={!mayWrite || updatePackageMutation.isPending}
+                        >
+                            {updatePackageMutation.isPending ? "Saving..." : "Submit"}
+                        </Button>
                     </div>
                 </DialogContent>
             </Dialog>
@@ -1541,72 +2019,151 @@ const FacilityManagement = () => {
                     </div>
                     <div className="p-8 px-10 max-h-[75vh] overflow-y-auto space-y-6">
                         <div className="grid grid-cols-[160px_1fr] items-center gap-4">
-                            <Label className="text-sm font-medium text-gray-800">Amenity Type <span className="text-red-500">*</span></Label>
-                            <div className="relative">
-                                <select className="w-full bg-gray-100 border-0 border-b border-gray-300 text-gray-600 focus:ring-0 px-3 py-1.5 text-sm appearance-none outline-none rounded-t-[2px]">
-                                    <option>Guest Room</option>
-                                </select>
-                                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-                            </div>
+                            <Label className="text-sm font-medium text-gray-800">Room Type <span className="text-red-500">*</span></Label>
+                            <Select
+                                value={editRoomForm.amenityTypeId}
+                                onValueChange={(v) => setEditRoomForm({ ...editRoomForm, amenityTypeId: v })}
+                            >
+                                <SelectTrigger className="h-10 bg-muted/30 border-border/50">
+                                    <SelectValue placeholder="Select Room Type" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-popover">
+                                    {roomTypes.map((rt) => (
+                                        <SelectItem key={rt.id} value={rt.id}>
+                                            {rt.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div className="grid grid-cols-[160px_1fr] items-center gap-4">
                             <Label className="text-sm font-medium text-gray-800">Package <span className="text-red-500">*</span></Label>
-                            <div className="relative">
-                                <select className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-400 focus:ring-0 px-0 pb-1 text-sm appearance-none outline-none">
-                                    <option>Delux Package</option>
-                                </select>
-                                <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-                            </div>
+                            <Select
+                                value={editRoomForm.packageId}
+                                onValueChange={(v) => setEditRoomForm({ ...editRoomForm, packageId: v })}
+                            >
+                                <SelectTrigger className="h-10 bg-muted/30 border-border/50">
+                                    <SelectValue placeholder="Select Package" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-popover">
+                                    {activeParentPackages.map((p) => (
+                                        <SelectItem key={p.id} value={p.id}>
+                                            {p.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div className="grid grid-cols-[160px_1fr] items-start gap-4">
                             <Label className="text-sm font-medium text-gray-800 pt-2">Facility Structure <span className="text-red-500">*</span></Label>
-                            <div className="bg-transparent border-0 border-b border-gray-300 pb-4 text-sm max-h-[200px] overflow-y-auto custom-scrollbar">
-                                <div className="flex items-center text-gray-800 font-medium"><ChevronDown className="h-4 w-4 mr-1 text-gray-500" /> CXPL</div>
-                                <div className="ml-5 mt-2">
-                                    <div className="flex items-center text-gray-800 font-medium"><ChevronDown className="h-4 w-4 mr-1 text-gray-500" /> Building A</div>
-                                    <div className="ml-5 mt-2 space-y-2">
-                                        <div className="flex items-center text-red-500 font-medium before:content-['•'] before:mr-2 before:text-gray-400 border-b border-red-500 inline-block">Floor 1</div>
-                                        <div className="flex items-center text-gray-800 font-medium before:content-['•'] before:mr-2 before:text-gray-400">Floor 2</div>
-                                        <div className="flex items-center text-gray-800 font-medium before:content-['•'] before:mr-2 before:text-gray-400">Floor 3</div>
-                                        <div className="flex items-center text-gray-800 font-medium before:content-['•'] before:mr-2 before:text-gray-400">Floor 4</div>
+                            <div className="bg-transparent border border-gray-200 rounded p-3 text-sm max-h-[180px] overflow-y-auto custom-scrollbar w-full">
+                                {facilities.map((fac) => (
+                                    <div key={fac.id}>
+                                        <div className="flex items-center text-gray-800 font-medium">
+                                            <ChevronDown className="h-4 w-4 mr-1 text-gray-500" />
+                                            {fac.name}
+                                        </div>
+                                        <div className="ml-5 mt-1 space-y-1">
+                                            {buildings
+                                                .filter((b) => !b.facility_id || b.facility_id === fac.id)
+                                                .map((b) => (
+                                                    <div key={b.id}>
+                                                        <div className="flex items-center text-gray-700 font-medium">
+                                                            <ChevronDown className="h-4 w-4 mr-1 text-gray-500" />
+                                                            {b.name}
+                                                        </div>
+                                                        <div className="ml-5 mt-1 space-y-1">
+                                                            {floors
+                                                                .filter((f) => f.building_id === b.id)
+                                                                .map((f) => {
+                                                                    const isSelected = editRoomForm.propertyChainId === f.property_chain_id;
+                                                                    return (
+                                                                        <div
+                                                                            key={f.id}
+                                                                            onClick={() =>
+                                                                                setEditRoomForm({
+                                                                                    ...editRoomForm,
+                                                                                    propertyChainId: f.property_chain_id,
+                                                                                })
+                                                                            }
+                                                                            className={`py-1 px-2 text-xs rounded cursor-pointer flex items-center justify-between transition-colors ${
+                                                                                isSelected
+                                                                                    ? "bg-brand/10 text-brand font-semibold"
+                                                                                    : "hover:bg-muted/20 text-gray-700"
+                                                                            }`}
+                                                                        >
+                                                                            <span>{f.name}</span>
+                                                                            {isSelected && <Check className="h-3.5 w-3.5 text-brand" />}
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                        </div>
                                     </div>
-                                </div>
+                                ))}
                             </div>
                         </div>
                         <div className="grid grid-cols-[160px_1fr] items-center gap-4">
-                            <Label className="text-sm font-medium text-gray-800">Room <span className="text-red-500">*</span></Label>
-                            <input type="text" value="106" readOnly className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-400 focus:ring-0 px-0 pb-1 text-sm outline-none cursor-default" />
+                            <Label className="text-sm font-medium text-gray-800">Room No <span className="text-red-500">*</span></Label>
+                            <input
+                                type="text"
+                                value={editRoomForm.name}
+                                onChange={(e) => setEditRoomForm({ ...editRoomForm, name: e.target.value })}
+                                className="w-full bg-white border border-gray-300 text-gray-900 focus:ring-1 focus:ring-brand px-3 py-1.5 text-sm outline-none rounded-[2px]"
+                            />
                         </div>
                         <div className="grid grid-cols-[160px_1fr] items-center gap-4 mt-2">
-                            <Label className="text-sm font-medium text-gray-800">Smoking <span className="text-red-500">*</span></Label>
-                            <RadioGroup defaultValue="yes" className="flex flex-col gap-2">
+                            <Label className="text-sm font-medium text-gray-800">Smoking</Label>
+                            <RadioGroup
+                                value={editRoomForm.smoking}
+                                onValueChange={(v) => setEditRoomForm({ ...editRoomForm, smoking: v })}
+                                className="flex gap-4"
+                            >
                                 <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="yes" id="room-smoke-yes" className="text-gray-800 border-gray-400" />
-                                    <Label htmlFor="room-smoke-yes" className="cursor-pointer text-gray-800 font-medium">Yes</Label>
+                                    <RadioGroupItem value="yes" id="edit-room-smoke-yes" />
+                                    <Label htmlFor="edit-room-smoke-yes" className="cursor-pointer text-sm">Yes</Label>
                                 </div>
                                 <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="no" id="room-smoke-no" className="border-brand-teal text-brand-teal" />
-                                    <Label htmlFor="room-smoke-no" className="cursor-pointer text-brand-teal font-medium">No</Label>
+                                    <RadioGroupItem value="no" id="edit-room-smoke-no" />
+                                    <Label htmlFor="edit-room-smoke-no" className="cursor-pointer text-sm">No</Label>
                                 </div>
                             </RadioGroup>
                         </div>
                         <div className="grid grid-cols-[160px_1fr] items-center gap-4 mt-2">
-                            <Label className="text-sm font-medium text-gray-800">Front Facing <span className="text-red-500">*</span></Label>
-                            <RadioGroup defaultValue="yes" className="flex flex-col gap-2">
+                            <Label className="text-sm font-medium text-gray-800">Front / Pool Facing</Label>
+                            <RadioGroup
+                                value={editRoomForm.poolFacing}
+                                onValueChange={(v) => setEditRoomForm({ ...editRoomForm, poolFacing: v })}
+                                className="flex gap-4"
+                            >
                                 <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="yes" id="room-front-yes" className="text-gray-800 border-gray-400" />
-                                    <Label htmlFor="room-front-yes" className="cursor-pointer text-gray-800 font-medium">Yes</Label>
+                                    <RadioGroupItem value="yes" id="edit-room-front-yes" />
+                                    <Label htmlFor="edit-room-front-yes" className="cursor-pointer text-sm">Yes</Label>
                                 </div>
                                 <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="no" id="room-front-no" className="border-brand-teal text-brand-teal" />
-                                    <Label htmlFor="room-front-no" className="cursor-pointer text-brand-teal font-medium">No</Label>
+                                    <RadioGroupItem value="no" id="edit-room-front-no" />
+                                    <Label htmlFor="edit-room-front-no" className="cursor-pointer text-sm">No</Label>
                                 </div>
                             </RadioGroup>
                         </div>
                     </div>
-                    <div className="flex justify-center gap-4 pb-8 border-t border-transparent pt-4">
-                        <Button variant="outline" className="h-10 px-8 min-w-[110px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all" onClick={() => setEditRoomOpen(false)}>Reset</Button>
-                        <Button className="h-10 px-8 min-w-[110px] rounded-2xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all" onClick={() => setEditRoomOpen(false)}>Submit</Button>
+                    <div className="flex justify-center gap-4 pb-8 border-t border-gray-200 pt-4">
+                        <Button
+                            variant="outline"
+                            className="h-10 px-8 min-w-[110px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all"
+                            onClick={() => setEditRoomOpen(false)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            className="h-10 px-8 min-w-[110px] rounded-2xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
+                            onClick={handleSaveRoom}
+                            disabled={!mayWrite || updateRoomMutation.isPending}
+                        >
+                            {updateRoomMutation.isPending ? "Saving..." : "Submit"}
+                        </Button>
                     </div>
                 </DialogContent>
             </Dialog>
@@ -1615,7 +2172,3 @@ const FacilityManagement = () => {
 };
 
 export default FacilityManagement;
-
-
-
-

@@ -135,7 +135,7 @@ def test_db_health_values_come_from_postgres_not_from_code(client):
 
 def test_db_health_reports_the_applied_migration(client):
     body = client.get(f"{V1}/health/db").json()
-    assert body["alembic_revision"] == "7c4e2b9a1d53"
+    assert body["alembic_revision"] == "0e2687233b59"
 
 
 def test_db_health_measures_real_latency(client):
@@ -405,6 +405,9 @@ DELIVERED_PATHS = {
     f"{V1}/reports",
     f"{V1}/reports/{{report_key}}",
     f"{V1}/reports/{{report_key}}/export.xlsx",
+    # Reference data -- Country and Gender options
+    f"{V1}/countries",
+    f"{V1}/countries/genders",
 }
 
 

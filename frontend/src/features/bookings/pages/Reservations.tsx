@@ -45,10 +45,11 @@ import {
 import { DataState, TableLoading } from "@/core/components/DataState";
 import { toast } from "@/hooks/use-toast";
 import { MAX_PAGE_SIZE, ROOM_STATUS } from "@/lib/api/types";
-import { useRooms, useStays } from "@/lib/api/hooks";
+import { useCountries, useGenders, useRooms, useStays, useUsers } from "@/lib/api/hooks";
 import {
   useCancelStay,
   useCreateUser,
+  useUpdateUser,
   useUpdateStay,
   useCheckInStay,
   useCheckOutStay,
@@ -81,24 +82,28 @@ export type ReservationData = {
   isCheckedOut: boolean;
   expectedCheckout: string;
   stayRef: string;
+  bookingUserId?: string | null;
+  firstName?: string;
+  lastName?: string;
+  gender?: string | null;
+  nationality?: number | null;
+  nationalityName?: string | null;
+  country?: number | null;
+  city?: string | null;
+  comments?: string | null;
+  gst?: string | null;
+  externalStayRef?: string | null;
+  rawCheckin?: string;
+  rawCheckout?: string;
 };
 
 type ViewMode = "list" | "add" | "edit";
-
-const COUNTRY_CODES = [
-  { code: "+91", label: "+91 (India)" },
-  { code: "+1", label: "+1 (USA)" },
-  { code: "+44", label: "+44 (UK)" },
-  { code: "+971", label: "+971 (UAE)" },
-] as const;
-
-const DEFAULT_COUNTRY_CODE: string = COUNTRY_CODES[0].code;
 
 const EMPTY_FORM = {
   firstName: "",
   lastName: "",
   email: "",
-  countryCode: DEFAULT_COUNTRY_CODE,
+  countryCode: "+91",
   mobileNumber: "",
   gender: "",
   city: "",
@@ -109,8 +114,8 @@ const EMPTY_FORM = {
   /** An `amenity.id` (UUID) -- what POST /stays wants in `room_ids`. */
   roomId: "",
   subPackages: "",
-  noOfPersons: "",
-  numberOfRooms: "",
+  noOfPersons: "1",
+  numberOfRooms: "1",
   gst: "",
   reservationReference: "",
   comments: "",
@@ -118,33 +123,79 @@ const EMPTY_FORM = {
 };
 
 export const Reservations = () => {
-  // --- Live data -----------------------------------------------------------
+  // --- Live data from PostgreSQL via backend APIs ---------------------------
   const staysQuery = useStays({ page: 1, page_size: MAX_PAGE_SIZE });
+  const usersQuery = useUsers({ page: 1, page_size: MAX_PAGE_SIZE });
+  const countriesQuery = useCountries({ page: 1, page_size: 250 });
+  const gendersQuery = useGenders();
+  const roomsQuery = useRooms({ page: 1, page_size: MAX_PAGE_SIZE });
 
-  const reservations: ReservationData[] = (staysQuery.data?.items ?? []).map((stay) => ({
-    id: stay.id,
-    name: stay.booker?.name ?? "-",
-    mobileNumber: "-",
-    email: "-",
-    occupants: stay.no_of_guests,
-    roomNo: "",
-    roomType: "-",
-    noOfRooms: stay.no_of_rooms ?? 0,
-    checkIn: stay.actual_checkin_time
-      ? new Date(stay.actual_checkin_time).toLocaleString()
-      : "",
-    checkOut: stay.actual_checkout_time
-      ? new Date(stay.actual_checkout_time).toLocaleString()
-      : "",
-    extendCheckOut: false,
-    reservationDate: new Date(stay.created_on).toLocaleDateString(),
-    documentsApproval: stay.document_approval_status === "approved",
-    status: stay.status ?? "-",
-    isCheckedIn: stay.is_checked_in,
-    isCheckedOut: Boolean(stay.actual_checkout_time),
-    expectedCheckout: stay.expected_checkout_time,
-    stayRef: stay.internal_stay_ref_number,
-  }));
+  const countries = countriesQuery.data?.items ?? [];
+  const countriesById = new Map(countries.map((c) => [c.id, c]));
+  const usersById = new Map((usersQuery.data?.items ?? []).map((u) => [u.id, u]));
+
+  // Phone country codes derived dynamically from database countries
+  const phoneCountryOptions = countries
+    .filter((c) => c.phone_code)
+    .map((c) => ({
+      code: `+${c.phone_code}`,
+      countryId: c.id,
+      label: `+${c.phone_code} (${c.nice_name})`,
+      niceName: c.nice_name,
+    }));
+
+  const defaultCountry = countries.find((c) => c.phone_code === "91") ?? countries[0];
+  const defaultCountryCode = defaultCountry ? `+${defaultCountry.phone_code}` : "+91";
+
+  // Gender options derived dynamically from backend pg_enum
+  const genderOptions = gendersQuery.data ?? [];
+
+  const reservations: ReservationData[] = (staysQuery.data?.items ?? []).map((stay) => {
+    const bookerUser = stay.booker?.id ? usersById.get(stay.booker.id) : null;
+    const nationalityCountry = bookerUser?.nationality ? countriesById.get(bookerUser.nationality) : null;
+
+    const guestName = bookerUser
+      ? `${bookerUser.first_name} ${bookerUser.last_name || ""}`.trim()
+      : (stay.booker?.name ?? "-");
+
+    return {
+      id: stay.id,
+      name: guestName,
+      mobileNumber: bookerUser?.phone_number ?? "-",
+      email: bookerUser?.email ?? "-",
+      occupants: stay.no_of_guests,
+      roomNo: "",
+      roomType: "-",
+      noOfRooms: stay.no_of_rooms ?? 0,
+      checkIn: stay.actual_checkin_time
+        ? new Date(stay.actual_checkin_time).toLocaleString()
+        : (stay.expected_checkin_time ? new Date(stay.expected_checkin_time).toLocaleDateString() : ""),
+      checkOut: stay.actual_checkout_time
+        ? new Date(stay.actual_checkout_time).toLocaleString()
+        : (stay.expected_checkout_time ? new Date(stay.expected_checkout_time).toLocaleDateString() : ""),
+      extendCheckOut: false,
+      reservationDate: new Date(stay.created_on).toLocaleDateString(),
+      documentsApproval: stay.document_approval_status === "approved",
+      status: stay.display_status || stay.status || "-",
+      isCheckedIn: stay.is_checked_in,
+      isCheckedOut: Boolean(stay.actual_checkout_time),
+      expectedCheckout: stay.expected_checkout_time,
+      stayRef: stay.internal_stay_ref_number,
+      bookingUserId: stay.booker?.id ?? null,
+      firstName: bookerUser?.first_name ?? "",
+      lastName: bookerUser?.last_name ?? "",
+      gender: bookerUser?.gender ?? null,
+      nationality: bookerUser?.nationality ?? null,
+      nationalityName: nationalityCountry?.nice_name ?? null,
+      country: bookerUser?.country ?? null,
+      city: bookerUser?.address ?? null,
+      comments: stay.comments ?? null,
+      gst: stay.gst ?? null,
+      externalStayRef: stay.external_stay_ref_number ?? null,
+      rawCheckin: stay.expected_checkin_time,
+      rawCheckout: stay.expected_checkout_time,
+    };
+  });
 
   const { canWrite } = useAuth();
   const mayWrite = canWrite("bookings");
@@ -156,8 +207,8 @@ export const Reservations = () => {
   const createStay = useCreateStay();
   const updateStay = useUpdateStay();
   const createGuest = useCreateUser({ success: "Guest record created" });
+  const updateGuest = useUpdateUser({ success: "Guest details updated" });
 
-  const roomsQuery = useRooms({ page: 1, page_size: MAX_PAGE_SIZE });
   const allocatableRooms = (roomsQuery.data?.items ?? []).filter(
     (room) => room.status_name === ROOM_STATUS.AVAILABLE,
   );
@@ -187,7 +238,8 @@ export const Reservations = () => {
       reservation.name.toLowerCase().includes(query) ||
       reservation.mobileNumber.toLowerCase().includes(query) ||
       reservation.email.toLowerCase().includes(query) ||
-      reservation.roomType.toLowerCase().includes(query)
+      reservation.roomType.toLowerCase().includes(query) ||
+      (reservation.nationalityName?.toLowerCase() ?? "").includes(query)
     );
   };
 
@@ -214,6 +266,12 @@ export const Reservations = () => {
     const checkout = formData.depart ? new Date(formData.depart) : null;
 
     if (viewMode === "edit" && editingReservation) {
+      const selectedPhoneCountry = countries.find(
+        (c) => `+${c.phone_code}` === formData.countryCode,
+      );
+      const countryId = selectedPhoneCountry?.id ?? (formData.nationality ? Number(formData.nationality) : null);
+      const nationalityId = formData.nationality ? Number(formData.nationality) : null;
+
       updateStay.mutate(
         {
           id: editingReservation.id,
@@ -228,7 +286,26 @@ export const Reservations = () => {
               : {}),
           },
         },
-        { onSuccess: resetForm },
+        {
+          onSuccess: () => {
+            if (editingReservation.bookingUserId) {
+              updateGuest.mutate({
+                id: editingReservation.bookingUserId,
+                body: {
+                  first_name: formData.firstName,
+                  last_name: formData.lastName || null,
+                  email: formData.email || null,
+                  phone_number: `${formData.countryCode || defaultCountryCode}${formData.mobileNumber}`,
+                  gender: (formData.gender || null) as "male" | "female" | "other" | null,
+                  country: countryId,
+                  nationality: nationalityId,
+                  address: formData.city || null,
+                },
+              });
+            }
+            resetForm();
+          },
+        },
       );
       return;
     }
@@ -242,13 +319,21 @@ export const Reservations = () => {
       return;
     }
 
+    const selectedPhoneCountry = countries.find(
+      (c) => `+${c.phone_code}` === formData.countryCode,
+    );
+    const countryId = selectedPhoneCountry?.id ?? (formData.nationality ? Number(formData.nationality) : null);
+    const nationalityId = formData.nationality ? Number(formData.nationality) : null;
+
     createGuest.mutate(
       {
         first_name: formData.firstName,
         last_name: formData.lastName || null,
         email: formData.email || null,
-        phone_number: `${formData.countryCode || DEFAULT_COUNTRY_CODE}${formData.mobileNumber}`,
+        phone_number: `${formData.countryCode || defaultCountryCode}${formData.mobileNumber}`,
         gender: (formData.gender || null) as "male" | "female" | "other" | null,
+        country: countryId,
+        nationality: nationalityId,
         address: formData.city || null,
         is_staff: 0,
       },
@@ -277,16 +362,43 @@ export const Reservations = () => {
   const handleEdit = (reservation: ReservationData) => {
     setEditingReservation(reservation);
     const nameParts = reservation.name.split(" ");
+    const firstName = reservation.firstName || nameParts[0] || "";
+    const lastName = reservation.lastName || nameParts.slice(1).join(" ") || "";
+
+    let countryCode = defaultCountryCode;
+    let mobile = reservation.mobileNumber !== "-" ? reservation.mobileNumber : "";
+    if (mobile.startsWith("+")) {
+      const match = phoneCountryOptions.find((opt) => mobile.startsWith(opt.code));
+      if (match) {
+        countryCode = match.code;
+        mobile = mobile.slice(match.code.length);
+      }
+    }
+
+    const arrivalDate = reservation.rawCheckin
+      ? new Date(reservation.rawCheckin).toISOString().slice(0, 10)
+      : "";
+    const departDate = reservation.rawCheckout
+      ? new Date(reservation.rawCheckout).toISOString().slice(0, 10)
+      : "";
+
     setFormData({
       ...EMPTY_FORM,
-      firstName: nameParts[0] || "",
-      lastName: nameParts.slice(1).join(" ") || "",
-      email: reservation.email,
-      countryCode: reservation.mobileNumber.split(" ")[0] || DEFAULT_COUNTRY_CODE,
-      mobileNumber: reservation.mobileNumber.split(" ")[1] || "",
-      arrival: reservation.checkIn,
-      noOfPersons: reservation.occupants.toString(),
-      numberOfRooms: reservation.noOfRooms.toString(),
+      firstName,
+      lastName,
+      email: reservation.email !== "-" ? reservation.email : "",
+      countryCode,
+      mobileNumber: mobile,
+      gender: reservation.gender || "",
+      city: reservation.city || "",
+      nationality: reservation.nationality ? String(reservation.nationality) : "",
+      arrival: arrivalDate,
+      depart: departDate,
+      noOfPersons: reservation.occupants ? reservation.occupants.toString() : "1",
+      numberOfRooms: reservation.noOfRooms ? reservation.noOfRooms.toString() : "1",
+      gst: reservation.gst || "",
+      reservationReference: reservation.externalStayRef || "",
+      comments: reservation.comments || "",
     });
     setViewMode("edit");
   };
@@ -401,16 +513,39 @@ export const Reservations = () => {
                   <Select
                     value={formData.countryCode}
                     onValueChange={(value) => handleFormChange("countryCode", value)}
+                    disabled={countriesQuery.isLoading}
                   >
                     <SelectTrigger className="h-12 bg-muted/30 border-border/50">
-                      <SelectValue placeholder="Select country code" />
+                      <SelectValue
+                        placeholder={
+                          countriesQuery.isLoading
+                            ? "Loading country codes..."
+                            : countriesQuery.isError
+                              ? "Failed to load country codes"
+                              : "Select country code"
+                        }
+                      />
                     </SelectTrigger>
-                    <SelectContent className="bg-popover">
-                      {COUNTRY_CODES.map(({ code, label }) => (
-                        <SelectItem key={code} value={code}>
-                          {label}
-                        </SelectItem>
-                      ))}
+                    <SelectContent className="bg-popover max-h-72">
+                      {countriesQuery.isLoading ? (
+                        <div className="p-4 text-center text-sm text-muted-foreground">
+                          Loading country codes from database...
+                        </div>
+                      ) : countriesQuery.isError ? (
+                        <div className="p-4 text-center text-sm text-destructive">
+                          Failed to load countries from backend.
+                        </div>
+                      ) : phoneCountryOptions.length === 0 ? (
+                        <div className="p-4 text-center text-sm text-muted-foreground">
+                          No country reference data found in database.
+                        </div>
+                      ) : (
+                        phoneCountryOptions.map((opt) => (
+                          <SelectItem key={`${opt.code}-${opt.countryId}`} value={opt.code}>
+                            {opt.label}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -434,14 +569,39 @@ export const Reservations = () => {
                   <Select
                     value={formData.gender}
                     onValueChange={(value) => handleFormChange("gender", value)}
+                    disabled={gendersQuery.isLoading}
                   >
                     <SelectTrigger className="h-12 bg-muted/30 border-border/50">
-                      <SelectValue placeholder="Select Gender" />
+                      <SelectValue
+                        placeholder={
+                          gendersQuery.isLoading
+                            ? "Loading genders..."
+                            : gendersQuery.isError
+                              ? "Failed to load genders"
+                              : "Select Gender"
+                        }
+                      />
                     </SelectTrigger>
                     <SelectContent className="bg-popover">
-                      <SelectItem value="male">Male</SelectItem>
-                      <SelectItem value="female">Female</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
+                      {gendersQuery.isLoading ? (
+                        <div className="p-4 text-center text-sm text-muted-foreground">
+                          Loading gender options from database...
+                        </div>
+                      ) : gendersQuery.isError ? (
+                        <div className="p-4 text-center text-sm text-destructive">
+                          Failed to load gender options.
+                        </div>
+                      ) : genderOptions.length === 0 ? (
+                        <div className="p-4 text-center text-sm text-muted-foreground">
+                          No gender options available.
+                        </div>
+                      ) : (
+                        genderOptions.map((g) => (
+                          <SelectItem key={g.value} value={g.value}>
+                            {g.label}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -463,15 +623,39 @@ export const Reservations = () => {
                   <Select
                     value={formData.nationality}
                     onValueChange={(value) => handleFormChange("nationality", value)}
+                    disabled={countriesQuery.isLoading}
                   >
                     <SelectTrigger className="h-12 bg-muted/30 border-border/50">
-                      <SelectValue placeholder="Select nationality" />
+                      <SelectValue
+                        placeholder={
+                          countriesQuery.isLoading
+                            ? "Loading nationalities..."
+                            : countriesQuery.isError
+                              ? "Failed to load nationalities"
+                              : "Select nationality"
+                        }
+                      />
                     </SelectTrigger>
-                    <SelectContent className="bg-popover">
-                      <SelectItem value="indian">Indian</SelectItem>
-                      <SelectItem value="american">American</SelectItem>
-                      <SelectItem value="british">British</SelectItem>
-                      <SelectItem value="australian">Australian</SelectItem>
+                    <SelectContent className="bg-popover max-h-72">
+                      {countriesQuery.isLoading ? (
+                        <div className="p-4 text-center text-sm text-muted-foreground">
+                          Loading nationalities from database...
+                        </div>
+                      ) : countriesQuery.isError ? (
+                        <div className="p-4 text-center text-sm text-destructive">
+                          Failed to load nationalities from backend.
+                        </div>
+                      ) : countries.length === 0 ? (
+                        <div className="p-4 text-center text-sm text-muted-foreground">
+                          No nationality reference data found in database.
+                        </div>
+                      ) : (
+                        countries.map((c) => (
+                          <SelectItem key={c.id} value={String(c.id)}>
+                            {c.nice_name}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -544,8 +728,8 @@ export const Reservations = () => {
                     </SelectTrigger>
                     <SelectContent className="bg-popover">
                       {allocatableRooms.map((room) => (
-                        <SelectItem key={room.amenity_id} value={room.amenity_id}>
-                          {room.room_name} ({room.amenity_type_name ?? "Room"})
+                        <SelectItem key={room.id} value={room.id}>
+                          {room.name} ({room.amenity_type_name ?? "Room"})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -659,10 +843,10 @@ export const Reservations = () => {
                 </Button>
                 <Button
                   onClick={handleSubmit}
-                  disabled={createStay.isPending || updateStay.isPending || createGuest.isPending}
+                  disabled={createStay.isPending || updateStay.isPending || createGuest.isPending || updateGuest.isPending}
                   className="h-12 px-8 min-w-[120px] rounded-2xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
                 >
-                  {createStay.isPending || updateStay.isPending || createGuest.isPending
+                  {createStay.isPending || updateStay.isPending || createGuest.isPending || updateGuest.isPending
                     ? "Saving..."
                     : "Submit"}
                 </Button>

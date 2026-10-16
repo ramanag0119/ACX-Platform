@@ -32,6 +32,30 @@ class ORMModel(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Reference data: Country & Gender
+# ---------------------------------------------------------------------------
+
+
+class CountryRead(ORMModel):
+    """A row of `country` reference data."""
+
+    id: int
+    name: str = Field(examples=["INDIA"])
+    nice_name: str = Field(examples=["India"])
+    phone_code: str = Field(examples=["91"])
+    iso_code: str | None = Field(default=None, examples=["IN"])
+    iso3: str | None = Field(default=None, examples=["IND"])
+    num_code: int | None = None
+
+
+class GenderOption(BaseModel):
+    """Database-backed enum option for gender."""
+
+    value: str = Field(examples=["male"])
+    label: str = Field(examples=["Male"])
+
+
+# ---------------------------------------------------------------------------
 # Facility
 # ---------------------------------------------------------------------------
 
