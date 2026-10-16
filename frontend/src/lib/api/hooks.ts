@@ -178,11 +178,19 @@ export const useFloors = (params?: QueryParams, options?: EnabledOption) =>
   useApiQuery(["floors", params], () => api.listFloors(params), options);
 export const useRooms = (params?: QueryParams) =>
   useApiQuery(["rooms", params], () => api.listRooms(params));
+export const useCountries = (params?: QueryParams) =>
+  useApiQuery(["countries", params], () => api.listCountries(params));
+export const useGenders = () =>
+  useApiQuery(["countries", "genders"], () => api.listGenders());
 
 // --- Users, roles, permissions ---------------------------------------------
 
 export const useUsers = (params?: QueryParams) =>
   useApiQuery(["users", params], () => api.listUsers(params));
+export const useUser = (userId: string | null) =>
+  useApiQuery(["users", userId], () => api.getUser(userId!), {
+    enabled: Boolean(userId),
+  });
 export const useRoles = (params?: QueryParams) =>
   useApiQuery(["roles", params], () => api.listRoles(params));
 export const useRolePermissions = (roleId: string | null) =>

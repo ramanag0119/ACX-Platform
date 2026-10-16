@@ -23,6 +23,7 @@ import type {
   AmenityStatusRead,
   ApiVersion,
   BuildingRead,
+  CountryRead,
   CurrentUser,
   CaleidoAtWorkRead,
   DailyDataPointRead,
@@ -35,6 +36,7 @@ import type {
   EnergySummaryRead,
   FacilityRead,
   FloorRead,
+  GenderOption,
   IncidentRead,
   InvoiceRead,
   ModuleRead,
@@ -91,6 +93,10 @@ export const listFloors = (params?: QueryParams) =>
 export const listRooms = (params?: QueryParams) =>
   apiClient.get<Page<RoomRead>>("/rooms", params);
 export const getRoom = (roomId: string) => apiClient.get<RoomRead>(`/rooms/${roomId}`);
+export const listCountries = (params?: QueryParams) =>
+  apiClient.get<Page<CountryRead>>("/countries", params);
+export const listGenders = () =>
+  apiClient.get<GenderOption[]>("/countries/genders");
 
 // --- Users, roles, permissions (Phase 2.3) ---------------------------------
 

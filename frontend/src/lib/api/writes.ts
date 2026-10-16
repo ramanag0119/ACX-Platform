@@ -76,6 +76,8 @@ export interface UserWrite {
   date_of_joining?: string | null;
   supervisor?: string | null;
   address?: string | null;
+  country?: number | null;
+  nationality?: number | null;
   marital_status?: "married" | "unmarried" | "divorced" | "other" | null;
   department_id?: string | null;
   job_function_id?: string | null;
@@ -387,7 +389,12 @@ export interface PackageRead {
   is_sub_package: boolean;
   facility_id: string | null;
   status: number;
+  feature_ids?: string[];
   feature_names: string[];
+  sub_package_ids?: string[];
+  sub_package_names?: string[];
+  parent_package_ids?: string[];
+  parent_package_names?: string[];
   room_count: number;
   created_on: string;
   updated_on: string;
@@ -401,6 +408,8 @@ export const createPackage = (body: {
   description?: string | null;
   is_sub_package?: boolean;
   feature_ids?: string[];
+  sub_package_ids?: string[];
+  parent_package_id?: string | null;
 }) => apiClient.post<PackageRead>("/packages", body);
 export const updatePackage = (
   id: string,
@@ -409,6 +418,8 @@ export const updatePackage = (
     amenity_type?: string;
     description?: string | null;
     feature_ids?: string[];
+    sub_package_ids?: string[];
+    parent_package_id?: string | null;
     /** 0 retires the package. See updateAmenityType. */
     status?: number | null;
   },

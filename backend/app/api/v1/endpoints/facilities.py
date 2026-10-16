@@ -26,9 +26,11 @@ from app.api.deps import DbSession, require_permission
 from app.schemas.common import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, Page
 from app.schemas.facility import (
     BuildingRead,
+    CountryRead,
     FacilityDetail,
     FacilityRead,
     FloorRead,
+    GenderOption,
     PropertyRead,
     RoomRead,
 )
@@ -312,3 +314,45 @@ def get_room(room_id: uuid.UUID, db: DbSession) -> RoomRead:
     if row is None:
         raise _missing("Room", room_id)
     return RoomRead.model_validate(row)
+
+
+# ---------------------------------------------------------------------------
+# Country reference data & Gender reference
+# ---------------------------------------------------------------------------
+
+countries_router = APIRouter(
+    prefix="/countries", tags=["facilities"], responses=AUTH_RESPONSES
+)
+
+
+@countries_router.get(
+    "",
+    response_model=Page[CountryRead],
+    summary="List country reference data",
+    description="239 reference rows for country codes, ISO codes, and nationalities.",
+)
+def list_countries(
+    db: DbSession,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(250, ge=1, le=500),
+    search: str | None = Query(None, description="Search by name, nice_name, ISO code, or phone code"),
+) -> Page[CountryRead]:
+    rows, total = service.list_countries(db, page=page, page_size=page_size, search=search)
+    return Page[CountryRead](
+        items=[CountryRead.model_validate(r) for r in rows],
+        page=page,
+        page_size=page_size,
+        total=total,
+    )
+
+
+@countries_router.get(
+    "/genders",
+    response_model=list[GenderOption],
+    summary="List gender reference options",
+    description="Options derived authoritatively from PostgreSQL's `gender` enum type.",
+)
+def list_genders(db: DbSession) -> list[GenderOption]:
+    options = service.get_gender_options(db)
+    return [GenderOption.model_validate(o) for o in options]
+

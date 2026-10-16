@@ -31,6 +31,7 @@ from app.models import (
     OccasionType,
     Package,
     PackageFeature,
+    SubPackage,
     PromoCode,
     PromoCodeAmenity,
     Amenity,
@@ -76,7 +77,12 @@ class PackageRead(BaseModel):
     is_sub_package: bool
     facility_id: uuid.UUID | None
     status: int
-    feature_names: list[str]
+    feature_ids: list[uuid.UUID] = []
+    feature_names: list[str] = []
+    sub_package_ids: list[uuid.UUID] = []
+    sub_package_names: list[str] = []
+    parent_package_ids: list[uuid.UUID] = []
+    parent_package_names: list[str] = []
     room_count: int
     created_on: datetime
     updated_on: datetime
@@ -159,33 +165,83 @@ def _paged(db: Session, stmt: Select, page: int, page_size: int):
     return rows, total
 
 
-def list_amenity_types(db: Session, *, page: int, page_size: int, facility_id=None):
+def list_amenity_types(
+    db: Session,
+    *,
+    page: int,
+    page_size: int,
+    facility_id=None,
+    amenity_category: str | None = None,
+    status: int | None = None,
+):
     stmt = select(AmenityType).order_by(AmenityType.name)
+    if status is not None:
+        stmt = stmt.where(AmenityType.status == status)
     if facility_id:
         stmt = stmt.where(AmenityType.facility_id == facility_id)
+    if amenity_category:
+        stmt = stmt.where(AmenityType.amenity_category == amenity_category)
     return _paged(db, stmt, page, page_size)
 
 
-def list_features(db: Session, *, page: int, page_size: int, facility_id=None):
+def list_features(
+    db: Session,
+    *,
+    page: int,
+    page_size: int,
+    facility_id=None,
+    status: int | None = None,
+):
     stmt = select(Feature).order_by(Feature.feature_name)
+    if status is not None:
+        stmt = stmt.where(Feature.status == status)
     if facility_id:
         stmt = stmt.where(Feature.facility_id == facility_id)
     return _paged(db, stmt, page, page_size)
 
 
 def _package_extras(db: Session, package_ids: list[uuid.UUID]):
-    """Feature names and room counts for a page of packages, in two queries."""
+    """Feature IDs/names, sub-package IDs/names, parent-package IDs/names, and room counts for a page of packages."""
     if not package_ids:
-        return {}, {}
-    features: dict[uuid.UUID, list[str]] = {}
+        return {}, {}, {}, {}, {}, {}, {}
+
+    feature_ids_map: dict[uuid.UUID, list[uuid.UUID]] = {}
+    feature_names_map: dict[uuid.UUID, list[str]] = {}
     rows = db.execute(
-        select(PackageFeature.package_id, Feature.feature_name)
+        select(PackageFeature.package_id, Feature.id, Feature.feature_name)
         .join(Feature, Feature.id == PackageFeature.feature_id)
         .where(PackageFeature.package_id.in_(package_ids))
         .order_by(Feature.feature_name)
     ).all()
-    for package_id, name in rows:
-        features.setdefault(package_id, []).append(name)
+    for package_id, f_id, name in rows:
+        feature_names_map.setdefault(package_id, []).append(name)
+        feature_ids_map.setdefault(package_id, []).append(f_id)
+
+    # Sub-packages where package_id is the parent
+    sub_pkg_ids_map: dict[uuid.UUID, list[uuid.UUID]] = {}
+    sub_pkg_names_map: dict[uuid.UUID, list[str]] = {}
+    sub_rows = db.execute(
+        select(SubPackage.parent_package_id, Package.id, Package.name)
+        .join(Package, Package.id == SubPackage.sub_package_id)
+        .where(SubPackage.parent_package_id.in_(package_ids))
+        .order_by(Package.name)
+    ).all()
+    for parent_id, sp_id, sp_name in sub_rows:
+        sub_pkg_ids_map.setdefault(parent_id, []).append(sp_id)
+        sub_pkg_names_map.setdefault(parent_id, []).append(sp_name)
+
+    # Parent packages where package_id is the child sub-package
+    parent_pkg_ids_map: dict[uuid.UUID, list[uuid.UUID]] = {}
+    parent_pkg_names_map: dict[uuid.UUID, list[str]] = {}
+    parent_rows = db.execute(
+        select(SubPackage.sub_package_id, Package.id, Package.name)
+        .join(Package, Package.id == SubPackage.parent_package_id)
+        .where(SubPackage.sub_package_id.in_(package_ids))
+        .order_by(Package.name)
+    ).all()
+    for sp_id, p_id, p_name in parent_rows:
+        parent_pkg_ids_map.setdefault(sp_id, []).append(p_id)
+        parent_pkg_names_map.setdefault(sp_id, []).append(p_name)
 
     counts = dict(
         db.execute(
@@ -194,7 +250,15 @@ def _package_extras(db: Session, package_ids: list[uuid.UUID]):
             .group_by(Amenity.package_id)
         ).all()
     )
-    return features, counts
+    return (
+        feature_ids_map,
+        feature_names_map,
+        sub_pkg_ids_map,
+        sub_pkg_names_map,
+        parent_pkg_ids_map,
+        parent_pkg_names_map,
+        counts,
+    )
 
 
 def list_packages(
@@ -204,14 +268,12 @@ def list_packages(
     page_size: int,
     facility_id=None,
     is_sub_package=None,
+    parent_package_id=None,
     include_removed: bool = False,
 ):
-    """Packages plus their feature names and room count.
+    """Packages plus their feature names, linked sub-packages, and room count.
 
-    Retired packages (`status = 0`) are excluded unless `include_removed`,
-    which is the same soft-delete read rule `list_maintenance_requests` uses.
-    Without this filter a retired package stayed on the Packages tab and the
-    delete action looked like it had done nothing.
+    Retired packages (`status = 0`) are excluded unless `include_removed`.
     """
     stmt = select(Package).order_by(Package.name)
     if not include_removed:
@@ -220,10 +282,22 @@ def list_packages(
         stmt = stmt.where(Package.facility_id == facility_id)
     if is_sub_package is not None:
         stmt = stmt.where(Package.is_sub_package == is_sub_package)
+    if parent_package_id is not None:
+        stmt = stmt.join(SubPackage, SubPackage.sub_package_id == Package.id).where(
+            SubPackage.parent_package_id == parent_package_id
+        )
     rows, total = _paged(db, stmt, page, page_size)
 
     ids = [row.id for row in rows]
-    features, counts = _package_extras(db, ids)
+    (
+        feat_ids_map,
+        feat_names_map,
+        sub_pkg_ids_map,
+        sub_pkg_names_map,
+        parent_pkg_ids_map,
+        parent_pkg_names_map,
+        counts,
+    ) = _package_extras(db, ids)
     type_names = dict(
         db.execute(select(AmenityType.id, AmenityType.name)).all()
     )
@@ -237,7 +311,12 @@ def list_packages(
             is_sub_package=row.is_sub_package,
             facility_id=row.facility_id,
             status=row.status,
-            feature_names=features.get(row.id, []),
+            feature_ids=feat_ids_map.get(row.id, []),
+            feature_names=feat_names_map.get(row.id, []),
+            sub_package_ids=sub_pkg_ids_map.get(row.id, []),
+            sub_package_names=sub_pkg_names_map.get(row.id, []),
+            parent_package_ids=parent_pkg_ids_map.get(row.id, []),
+            parent_package_names=parent_pkg_names_map.get(row.id, []),
             room_count=counts.get(row.id, 0),
             created_on=row.created_on,
             updated_on=row.updated_on,

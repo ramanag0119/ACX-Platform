@@ -364,6 +364,9 @@ class PackageCreate(Body):
     status: int = Field(default=1, ge=0, le=1)
     #: `package_feature` rows; each references a `feature`.
     feature_ids: list[uuid.UUID] = Field(default_factory=list)
+    #: `sub_package` rows linking parent packages to sub-packages.
+    sub_package_ids: list[uuid.UUID] = Field(default_factory=list)
+    parent_package_id: uuid.UUID | None = None
 
 
 class PackageUpdate(Body):
@@ -372,6 +375,8 @@ class PackageUpdate(Body):
     description: str | None = None
     status: int | None = Field(default=None, ge=0, le=1)
     feature_ids: list[uuid.UUID] | None = None
+    sub_package_ids: list[uuid.UUID] | None = None
+    parent_package_id: uuid.UUID | None = None
 
 
 class FeatureCreate(Body):

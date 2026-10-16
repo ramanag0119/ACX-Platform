@@ -109,10 +109,10 @@ export const roomStatusTint = (statusName: string | null | undefined) =>
  * Display label for an `amenity_condition` name.
  *
  * The stored vocabulary is the backend's (Dirty, Low battery, Under
- * maintenance, Sanitation) and is NOT changed here -- filters, writes and the
- * condition picker all still work on the stored value. This maps the stored
- * name to the wording operators use, in ONE place, so the room list, the
- * dashboard tiles and the conditions dialog cannot disagree.
+ * maintenance, Sanitation, Ready for occupant) and is NOT changed here --
+ * filters, writes and the condition picker all still work on the stored value.
+ * This maps the stored name to the wording operators use, in ONE place, so the
+ * room list, the dashboard tiles and the conditions dialog cannot disagree.
  *
  * Matching is case-insensitive on the stored name; anything without an entry
  * falls through unchanged, so a condition added to the table later shows its
@@ -120,6 +120,7 @@ export const roomStatusTint = (statusName: string | null | undefined) =>
  */
 const CONDITION_LABELS: Record<string, string> = {
   dirty: "Need Maintenance",
+  "ready for occupant": "Ready to occupy",
 };
 
 export const conditionLabel = (name: string | null | undefined) =>

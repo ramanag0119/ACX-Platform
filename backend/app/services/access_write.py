@@ -55,10 +55,17 @@ from app.services.writes import (
 # ---------------------------------------------------------------------------
 
 
+from app.models.facility import Country
+
+
 def _validate_user_refs(db: Session, data: dict) -> None:
     require_exists(db, Department, data.get("department_id"), "Department")
     require_exists(db, JobFunction, data.get("job_function_id"), "Job function")
     require_exists(db, AppUser, data.get("supervisor"), "Supervisor")
+    if data.get("country") is not None:
+        require_exists(db, Country, data.get("country"), "Country")
+    if data.get("nationality") is not None:
+        require_exists(db, Country, data.get("nationality"), "Nationality")
 
 
 def create_user(

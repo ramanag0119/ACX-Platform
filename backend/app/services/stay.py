@@ -160,11 +160,19 @@ def _display_status(status: str | None, is_in_house: bool, is_checked_in: bool) 
 
 def _shape_stay(row) -> dict:
     data = dict(row)
-    data["booker"] = _user_ref(
-        data.pop("booking_user_id"),
-        data.pop("booker_first_name"),
-        data.pop("booker_last_name"),
-    )
+    booker_id = data.pop("booking_user_id", None)
+    first_name = data.pop("booker_first_name", None)
+    last_name = data.pop("booker_last_name", None)
+    email = data.pop("booker_email", None)
+    phone = data.pop("booker_phone_number", None)
+    gender = data.pop("booker_gender", None)
+    country = data.pop("booker_country", None)
+    nationality = data.pop("booker_nationality", None)
+    address = data.pop("booker_address", None)
+    nationality_name = data.pop("booker_nationality_name", None)
+
+    data["booker"] = _user_ref(booker_id, first_name, last_name)
+
     data["display_status"] = _display_status(
         status=data.get("status"),
         is_in_house=bool(data.get("is_in_house")),

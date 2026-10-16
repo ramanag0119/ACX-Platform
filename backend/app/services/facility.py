@@ -339,3 +339,50 @@ def get_room(db: Session, room_id: uuid.UUID):
     row = dict(row)
     row["conditions"] = _conditions_for(db, [row["id"]]).get(row["id"], [])
     return row
+
+
+def list_countries(
+    db: Session,
+    *,
+    page: int = 1,
+    page_size: int = 250,
+    search: str | None = None,
+) -> tuple[list, int]:
+    from sqlalchemy import or_
+    from app.models.facility import Country
+
+    stmt = select(Country).order_by(Country.nice_name)
+    if search:
+        q = f"%{search.strip().lower()}%"
+        stmt = stmt.where(
+            or_(
+                func.lower(Country.nice_name).like(q),
+                func.lower(Country.name).like(q),
+                Country.phone_code.like(f"%{search.strip().lstrip('+')}%"),
+                func.lower(Country.iso_code).like(q),
+            )
+        )
+    total = _count(db, stmt)
+    rows = list(db.execute(_page(stmt, page=page, page_size=page_size)).scalars().all())
+    return rows, total
+
+
+def get_gender_options(db: Session) -> list[dict[str, str]]:
+    """Return gender options authoritatively defined in PostgreSQL's `gender` enum."""
+    from sqlalchemy import text
+
+    result = db.execute(
+        text(
+            "SELECT e.enumlabel FROM pg_type t JOIN pg_enum e ON t.oid = e.enumtypid "
+            "JOIN pg_namespace n ON n.oid = t.typnamespace "
+            "WHERE n.nspname = 'public' AND t.typname = 'gender' ORDER BY e.enumsortorder"
+        )
+    ).fetchall()
+    if not result:
+        return [
+            {"value": "male", "label": "Male"},
+            {"value": "female", "label": "Female"},
+            {"value": "other", "label": "Other"},
+        ]
+    return [{"value": r[0], "label": r[0].title()} for r in result]
+
