@@ -22,7 +22,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Search, ChevronRight, ChevronDown, Edit, Trash2, Upload, X, Check } from "lucide-react";
+import { Search, ChevronDown, Edit, Trash2, Upload, X, Check } from "lucide-react";
 import { DataState, TableLoading } from "@/core/components/DataState";
 import {
     useAmenityTypes,

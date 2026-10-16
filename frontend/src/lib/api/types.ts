@@ -298,8 +298,27 @@ export interface UserRead {
   department_name: string | null;
   job_function_id: string | null;
   job_function_name: string | null;
+  role_id?: string | null;
+  role_name?: string | null;
   created_on: string;
   updated_on: string;
+}
+
+export interface UserRoleItem {
+  role_id: string;
+  role_name: string;
+  role_type: string;
+  facility_id: string;
+}
+
+export interface UserDetail extends UserRead {
+  roles: UserRoleItem[];
+  facility_ids: string[];
+}
+
+export interface RoleTypeOption {
+  value: string;
+  label: string;
 }
 
 // ---------------------------------------------------------------------------

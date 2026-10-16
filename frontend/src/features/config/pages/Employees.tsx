@@ -23,7 +23,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { DataState, TableLoading } from "@/core/components/DataState";
 import { useAuth } from "@/core/contexts/AuthContext";
-import { useDepartments, useJobFunctions, useRoles, useUsers } from "@/lib/api/hooks";
+import { useCountries, useDepartments, useJobFunctions, useAssignableRoles, useUsers } from "@/lib/api/hooks";
+import * as api from "@/lib/api/endpoints";
+import type { UserWrite } from "@/lib/api/writes";
+import { toast } from "@/hooks/use-toast";
 import {
   useCreateDepartment,
   useCreateJobFunction,
@@ -63,9 +66,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
  * and service requests reference the row.
  */
 
-// Country codes for the (display-only) add form.
-const countryCodes = ["+91", "+1", "+44", "+971", "+65"];
-
+// Dynamic database-driven types and tabs
 type TabType = "department" | "function" | "employee";
 
 const Employees = () => {
@@ -101,29 +102,31 @@ const Employees = () => {
         dateOfJoining: "",
         supervisor: "",
         department: "",
-        role: "",
+        roleId: "",
         function: "",
         userId: "",
         password: "",
         email: "",
-        countryCode: "+91",
+        countryId: null as number | null,
+        countryCode: "",
         mobile: "",
         address: "",
     });
     const [showPassword, setShowPassword] = useState(false);
 
     // --- Live data -------------------------------------------------------
-    const { canRead, canWrite } = useAuth();
-    const canReadRoles = canRead("user_roles");
+    const { canWrite } = useAuth();
 
     const usersQuery = useUsers({ page: 1, page_size: MAX_PAGE_SIZE, is_staff: 1 });
-    const rolesQuery = useRoles(canReadRoles ? { page: 1, page_size: MAX_PAGE_SIZE } : undefined);
-    // Phase 3.0 gave `department` and `job_function` their own endpoints, so a
-    // department with no staff assigned is no longer invisible.
+    const countriesQuery = useCountries({ page: 1, page_size: 250 });
+    const assignableRolesQuery = useAssignableRoles();
     const departmentsQuery = useDepartments({ page: 1, page_size: MAX_PAGE_SIZE });
     const functionsQuery = useJobFunctions({ page: 1, page_size: MAX_PAGE_SIZE });
 
     const users = usersQuery.data?.items ?? [];
+    const countries = countriesQuery.data?.items ?? [];
+    const defaultCountry = countries.find(c => c.phone_code === "91" || c.nice_name === "India") || countries[0];
+    const assignableRoles = assignableRolesQuery.data ?? [];
 
     const departmentData = (departmentsQuery.data?.items ?? []).map((row) => ({
         id: row.id,
@@ -151,11 +154,14 @@ const Employees = () => {
     const [editingFunction, setEditingFunction] = useState<{ id: string; name: string } | null>(null);
     const [editingEmployee, setEditingEmployeeRow] = useState<(typeof employeeData)[number] | null>(null);
 
-    const roleOptions = (rolesQuery.data?.items ?? []).map((role) => role.name);
-    // `app_user.supervisor` is free text, so the picker offers what is in use.
-    const supervisorOptions = [
-        ...new Set(users.map((user) => user.supervisor).filter(Boolean) as string[]),
-    ].sort();
+    // Staff members who can serve as supervisors
+    const supervisorOptions = users
+        .filter((user) => !editingEmployee || user.id !== editingEmployee.userId)
+        .map((user) => ({
+            id: user.id,
+            name: `${user.first_name} ${user.last_name || ""}`.trim(),
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
 
     const employeeData = users.map((user) => ({
         /** `app_user.id` -- what every mutation is keyed on. */
@@ -164,14 +170,13 @@ const Employees = () => {
         usrId: user.user_name ?? "-",
         firstName: user.first_name,
         lastName: user.last_name ?? "",
-        // Per-user role names would need /users/{id} for each row; the list
-        // endpoint does not carry them.
-        role: "-",
+        role: user.role_name ?? "-",
+        roleId: user.role_id ?? null,
+        country: user.country ?? null,
         department: user.department_name ?? "-",
         function: user.job_function_name ?? "-",
         email: user.email ?? "-",
         mobile: user.phone_number ?? "-",
-        // `date_of_termination` is what the schema uses to retire an employee.
         status: user.date_of_termination ? "InActive" : "Active",
     }));
 
@@ -223,46 +228,115 @@ const Employees = () => {
         });
     };
 
+    const resetEmployeeForm = () => {
+        const initialCode = defaultCountry ? `+${defaultCountry.phone_code}` : "";
+        setNewEmployee({
+            employeeId: "",
+            firstName: "",
+            lastName: "",
+            dateOfJoining: "",
+            supervisor: "",
+            department: "",
+            roleId: "",
+            function: "",
+            userId: "",
+            password: "",
+            email: "",
+            countryId: defaultCountry?.id ?? null,
+            countryCode: initialCode,
+            mobile: "",
+            address: "",
+        });
+        setEditingEmployeeRow(null);
+    };
+
+    const handleOpenAddEmployee = () => {
+        resetEmployeeForm();
+        setShowAddEmployee(true);
+    };
+
     /**
      * Create or update a staff member.
-     *
-     * A password is optional: it is what makes the account able to sign in, and
-     * it is hashed with bcrypt server-side. Roles are `user_role` rows, so the
-     * selected role is sent as `role_ids`.
      */
     const handleEmployeeSubmit = () => {
-        const roleId = (rolesQuery.data?.items ?? []).find(
-            (role) => role.name === newEmployee.role,
-        )?.id;
+        if (!newEmployee.firstName.trim()) {
+            toast({ title: "Validation Error", description: "First Name is required", variant: "destructive" });
+            return;
+        }
+        if (!newEmployee.roleId) {
+            toast({ title: "Validation Error", description: "Role is required", variant: "destructive" });
+            return;
+        }
+        if (!newEmployee.countryCode || !newEmployee.mobile.trim()) {
+            toast({ title: "Validation Error", description: "Phone Country Code and Mobile Number are required", variant: "destructive" });
+            return;
+        }
+        if (!newEmployee.email.trim()) {
+            toast({ title: "Validation Error", description: "Email is required", variant: "destructive" });
+            return;
+        }
 
-        const body = {
-            first_name: newEmployee.firstName,
-            last_name: newEmployee.lastName || null,
-            phone_number: `${newEmployee.countryCode}${newEmployee.mobile}`,
-            email: newEmployee.email || null,
-            user_name: newEmployee.userId || null,
+        const fullPhoneNumber = `${newEmployee.countryCode}${newEmployee.mobile.trim()}`;
+        const selectedCountry = countries.find(c => `+${c.phone_code}` === newEmployee.countryCode || c.id === newEmployee.countryId);
+
+        const body: UserWrite = {
+            first_name: newEmployee.firstName.trim(),
+            last_name: newEmployee.lastName.trim() || null,
+            phone_number: fullPhoneNumber,
+            country: selectedCountry?.id ?? newEmployee.countryId ?? null,
+            email: newEmployee.email.trim() || null,
+            user_name: newEmployee.userId.trim() || null,
             ...(newEmployee.password ? { password: newEmployee.password } : {}),
-            ...(newEmployee.employeeId ? { emp_id: newEmployee.employeeId } : {}),
+            ...(newEmployee.employeeId.trim() ? { emp_id: newEmployee.employeeId.trim() } : {}),
             ...(newEmployee.dateOfJoining
                 ? { date_of_joining: new Date(newEmployee.dateOfJoining).toISOString() }
                 : {}),
-            address: newEmployee.address || null,
+            supervisor: newEmployee.supervisor || null,
+            address: newEmployee.address.trim() || null,
             department_id:
                 departmentData.find((d) => d.name === newEmployee.department)?.id ?? null,
             job_function_id:
                 functionData.find((f) => f.name === newEmployee.function)?.id ?? null,
             is_staff: 1,
-            ...(roleId ? { role_ids: [roleId] } : {}),
+            role_ids: [newEmployee.roleId],
         };
 
         if (editingEmployee) {
             updateEmployee.mutate(
                 { id: editingEmployee.userId, body },
-                { onSuccess: () => { setShowAddEmployee(false); setEditingEmployeeRow(null); } },
+                {
+                    onSuccess: () => {
+                        setShowAddEmployee(false);
+                        resetEmployeeForm();
+                        toast({ title: "Success", description: "Employee updated successfully" });
+                    },
+                    onError: (err: unknown) => {
+                        const errorObj = err as { response?: { data?: { error?: { message?: string } } }; message?: string };
+                        toast({
+                            title: "Update Failed",
+                            description: errorObj?.response?.data?.error?.message || errorObj?.message || "Failed to update employee",
+                            variant: "destructive",
+                        });
+                    },
+                },
             );
             return;
         }
-        createEmployee.mutate(body, { onSuccess: () => setShowAddEmployee(false) });
+        createEmployee.mutate(body, {
+            onSuccess: () => {
+                setShowAddEmployee(false);
+                resetEmployeeForm();
+                toast({ title: "Success", description: "Employee created successfully" });
+            },
+            onError: (err: unknown) => {
+                const errorObj = err as { response?: { data?: { error?: { message?: string } } }; message?: string };
+                toast({
+                    title: "Creation Failed",
+                    description: errorObj?.response?.data?.error?.message || errorObj?.message || "Failed to create employee",
+                    variant: "destructive",
+                });
+            },
+        });
     };
 
     const generatePassword = () => {
@@ -321,11 +395,13 @@ const Employees = () => {
                                 </div>
                             </div>
                             <div className="grid grid-cols-3 gap-4 items-center">
-                                <Label className="text-sm font-medium text-right">Supervisor<span className="text-red-500">*</span></Label>
+                                <Label className="text-sm font-medium text-right">Supervisor</Label>
                                 <div className="col-span-2">
                                     <Select value={newEmployee.supervisor} onValueChange={(val) => setNewEmployee({ ...newEmployee, supervisor: val })}>
                                         <SelectTrigger className="bg-muted/30 border-border/50"><SelectValue placeholder="Select Supervisor" /></SelectTrigger>
-                                        <SelectContent className="bg-popover">{supervisorOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
+                                        <SelectContent className="bg-popover">
+                                            {supervisorOptions.map(opt => (<SelectItem key={opt.id} value={opt.id}>{opt.name}</SelectItem>))}
+                                        </SelectContent>
                                     </Select>
                                 </div>
                             </div>
@@ -341,9 +417,29 @@ const Employees = () => {
                             <div className="grid grid-cols-3 gap-4 items-center">
                                 <Label className="text-sm font-medium text-right">Role<span className="text-red-500">*</span></Label>
                                 <div className="col-span-2">
-                                    <Select value={newEmployee.role} onValueChange={(val) => setNewEmployee({ ...newEmployee, role: val })}>
-                                        <SelectTrigger className="bg-muted/30 border-border/50"><SelectValue placeholder="Select Role" /></SelectTrigger>
-                                        <SelectContent className="bg-popover">{roleOptions.map(role => (<SelectItem key={role} value={role}>{role}</SelectItem>))}</SelectContent>
+                                    <Select
+                                        value={newEmployee.roleId}
+                                        onValueChange={(val) => setNewEmployee({ ...newEmployee, roleId: val })}
+                                        disabled={assignableRolesQuery.isLoading}
+                                    >
+                                        <SelectTrigger className="bg-muted/30 border-border/50">
+                                            <SelectValue placeholder={assignableRolesQuery.isLoading ? "Loading roles..." : assignableRolesQuery.isError ? "Error loading roles" : "Select Role"} />
+                                        </SelectTrigger>
+                                        <SelectContent className="bg-popover max-h-60">
+                                            {assignableRolesQuery.isLoading ? (
+                                                <div className="p-2 text-xs text-muted-foreground text-center">Loading roles...</div>
+                                            ) : assignableRolesQuery.isError ? (
+                                                <div className="p-2 text-xs text-red-500 text-center">Error loading roles</div>
+                                            ) : assignableRoles.length === 0 ? (
+                                                <div className="p-2 text-xs text-muted-foreground text-center">No assignable roles available</div>
+                                            ) : (
+                                                assignableRoles.map((role) => (
+                                                    <SelectItem key={role.id} value={role.id}>
+                                                        {role.name}
+                                                    </SelectItem>
+                                                ))
+                                            )}
+                                        </SelectContent>
                                     </Select>
                                 </div>
                             </div>
@@ -381,9 +477,36 @@ const Employees = () => {
                             <div className="grid grid-cols-3 gap-4 items-center">
                                 <Label className="text-sm font-medium text-right">Country Code<span className="text-red-500">*</span></Label>
                                 <div className="col-span-2">
-                                    <Select value={newEmployee.countryCode} onValueChange={(val) => setNewEmployee({ ...newEmployee, countryCode: val })}>
-                                        <SelectTrigger className="bg-muted/30 border-border/50"><SelectValue placeholder="Select Country Code" /></SelectTrigger>
-                                        <SelectContent className="bg-popover">{countryCodes.map(code => (<SelectItem key={code} value={code}>{code}</SelectItem>))}</SelectContent>
+                                    <Select
+                                        value={newEmployee.countryCode}
+                                        onValueChange={(val) => {
+                                            const matched = countries.find(c => `+${c.phone_code}` === val);
+                                            setNewEmployee({
+                                                ...newEmployee,
+                                                countryCode: val,
+                                                countryId: matched?.id ?? newEmployee.countryId,
+                                            });
+                                        }}
+                                        disabled={countriesQuery.isLoading}
+                                    >
+                                        <SelectTrigger className="bg-muted/30 border-border/50">
+                                            <SelectValue placeholder={countriesQuery.isLoading ? "Loading country codes..." : countriesQuery.isError ? "Error loading country codes" : "Select Country Code"} />
+                                        </SelectTrigger>
+                                        <SelectContent className="bg-popover max-h-60">
+                                            {countriesQuery.isLoading ? (
+                                                <div className="p-2 text-xs text-muted-foreground text-center">Loading country codes...</div>
+                                            ) : countriesQuery.isError ? (
+                                                <div className="p-2 text-xs text-red-500 text-center">Error loading country codes</div>
+                                            ) : countries.length === 0 ? (
+                                                <div className="p-2 text-xs text-muted-foreground text-center">No country codes available</div>
+                                            ) : (
+                                                countries.map((c) => (
+                                                    <SelectItem key={c.id} value={`+${c.phone_code}`}>
+                                                        +{c.phone_code} ({c.nice_name || c.name})
+                                                    </SelectItem>
+                                                ))
+                                            )}
+                                        </SelectContent>
                                     </Select>
                                 </div>
                             </div>
@@ -606,24 +729,77 @@ const Employees = () => {
                                                 size="sm"
                                                 className="bg-brand-teal hover:bg-brand-teal/90 text-white h-7 w-7 p-0 rounded-[3px]"
                                                 disabled={!mayWrite}
-                                                onClick={() => {
+                                                onClick={async () => {
                                                     setEditingEmployeeRow(item);
-                                                    setNewEmployee({
-                                                        employeeId: item.id,
-                                                        firstName: item.firstName,
-                                                        lastName: item.lastName,
-                                                        dateOfJoining: "",
-                                                        supervisor: "",
-                                                        department: item.department === "-" ? "" : item.department,
-                                                        role: item.role === "-" ? "" : item.role,
-                                                        function: item.function === "-" ? "" : item.function,
-                                                        userId: item.usrId === "-" ? "" : item.usrId,
-                                                        password: "",
-                                                        email: item.email === "-" ? "" : item.email,
-                                                        countryCode: "+91",
-                                                        mobile: item.mobile === "-" ? "" : item.mobile,
-                                                        address: "",
-                                                    });
+                                                    try {
+                                                        const detail = await api.getUser(item.userId);
+                                                        const savedRoleId = detail.roles?.[0]?.role_id || item.roleId || "";
+
+                                                        let country = countries.find(c => c.id === detail.country);
+                                                        let callingCode = country ? `+${country.phone_code}` : "";
+                                                        let mobileNum = detail.phone_number || "";
+
+                                                        if (!callingCode && mobileNum.startsWith("+")) {
+                                                            const matched = countries.find(c => mobileNum.startsWith(`+${c.phone_code}`));
+                                                            if (matched) {
+                                                                country = matched;
+                                                                callingCode = `+${matched.phone_code}`;
+                                                            }
+                                                        }
+
+                                                        if (callingCode && mobileNum.startsWith(callingCode)) {
+                                                            mobileNum = mobileNum.slice(callingCode.length);
+                                                        }
+
+                                                        setNewEmployee({
+                                                            employeeId: detail.emp_id || detail.user_uid || "",
+                                                            firstName: detail.first_name,
+                                                            lastName: detail.last_name || "",
+                                                            dateOfJoining: detail.date_of_joining ? detail.date_of_joining.split("T")[0] : "",
+                                                            supervisor: detail.supervisor || "",
+                                                            department: detail.department_name || (item.department === "-" ? "" : item.department),
+                                                            roleId: savedRoleId,
+                                                            function: detail.job_function_name || (item.function === "-" ? "" : item.function),
+                                                            userId: detail.user_name || (item.usrId === "-" ? "" : item.usrId),
+                                                            password: "",
+                                                            email: detail.email || (item.email === "-" ? "" : item.email),
+                                                            countryId: country?.id ?? null,
+                                                            countryCode: callingCode || (defaultCountry ? `+${defaultCountry.phone_code}` : ""),
+                                                            mobile: mobileNum,
+                                                            address: detail.address || "",
+                                                        });
+                                                    } catch {
+                                                        let mobileNum = item.mobile === "-" ? "" : item.mobile;
+                                                        let country = countries.find(c => c.id === item.country);
+                                                        let callingCode = country ? `+${country.phone_code}` : "";
+                                                        if (!callingCode && mobileNum.startsWith("+")) {
+                                                            const matched = countries.find(c => mobileNum.startsWith(`+${c.phone_code}`));
+                                                            if (matched) {
+                                                                country = matched;
+                                                                callingCode = `+${matched.phone_code}`;
+                                                            }
+                                                        }
+                                                        if (callingCode && mobileNum.startsWith(callingCode)) {
+                                                            mobileNum = mobileNum.slice(callingCode.length);
+                                                        }
+                                                        setNewEmployee({
+                                                            employeeId: item.id,
+                                                            firstName: item.firstName,
+                                                            lastName: item.lastName,
+                                                            dateOfJoining: "",
+                                                            supervisor: "",
+                                                            department: item.department === "-" ? "" : item.department,
+                                                            roleId: item.roleId || "",
+                                                            function: item.function === "-" ? "" : item.function,
+                                                            userId: item.usrId === "-" ? "" : item.usrId,
+                                                            password: "",
+                                                            email: item.email === "-" ? "" : item.email,
+                                                            countryId: country?.id ?? item.country,
+                                                            countryCode: callingCode || (defaultCountry ? `+${defaultCountry.phone_code}` : ""),
+                                                            mobile: mobileNum,
+                                                            address: "",
+                                                        });
+                                                    }
                                                     setShowAddEmployee(true);
                                                 }}
                                             >
@@ -673,7 +849,7 @@ const Employees = () => {
             <PageHeader
               title="Employee Management"
               actions={
-                <Button onClick={() => setShowAddEmployee(true)} className="px-4 text-xs font-semibold rounded-xl bg-brand hover:bg-brand-hover text-white shadow-md hover:shadow-lg transition-all">
+                <Button onClick={handleOpenAddEmployee} className="px-4 text-xs font-semibold rounded-xl bg-brand hover:bg-brand-hover text-white shadow-md hover:shadow-lg transition-all">
                     Add Employee
                 </Button>
               }

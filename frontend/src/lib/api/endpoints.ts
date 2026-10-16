@@ -56,10 +56,12 @@ import type {
   ServiceItemRead,
   ServiceRequestRead,
   ServiceStatusRead,
+  RoleTypeOption,
   ServiceTypeRead,
   StayOccupantRead,
   StayRead,
   TokenResponse,
+  UserDetail,
   UserPermissionRead,
   UserRead,
   ValueAlertRead,
@@ -102,11 +104,15 @@ export const listGenders = () =>
 
 export const listUsers = (params?: QueryParams) =>
   apiClient.get<Page<UserRead>>("/users", params);
-export const getUser = (userId: string) => apiClient.get<UserRead>(`/users/${userId}`);
+export const getUser = (userId: string) => apiClient.get<UserDetail>(`/users/${userId}`);
+export const listAssignableRoles = (params?: QueryParams) =>
+  apiClient.get<RoleRead[]>("/users/roles", params);
 export const listUserPermissions = (userId: string, params?: QueryParams) =>
   apiClient.get<UserPermissionRead[]>(`/users/${userId}/permissions`, params);
 export const listRoles = (params?: QueryParams) =>
   apiClient.get<Page<RoleRead>>("/roles", params);
+export const listRoleTypes = () =>
+  apiClient.get<RoleTypeOption[]>("/roles/types");
 export const listRolePermissions = (roleId: string) =>
   apiClient.get<RolePermissionRead[]>(`/roles/${roleId}/permissions`);
 export const listModules = (params?: QueryParams) =>

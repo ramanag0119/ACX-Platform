@@ -177,6 +177,30 @@ def list_roles(
     return rows, total
 
 
+def list_assignable_roles(
+    db: Session,
+    *,
+    facility_id: uuid.UUID | None = None,
+    is_admin: bool = False,
+) -> list[Role]:
+    """Roles assignable to staff members by the current user.
+
+    Excludes non-interactive system users and guest accounts.
+    Administrative roles are only included if the caller is an administrator.
+    """
+    stmt = (
+        select(Role)
+        .where(Role.role_type.notin_(["system_user", "guest"]))
+        .order_by(Role.name)
+    )
+    if not is_admin:
+        stmt = stmt.where(Role.role_type != "admin")
+    if facility_id:
+        stmt = stmt.where((Role.facility_id == facility_id) | (Role.facility_id.is_(None)))
+    stmt = stmt.where((Role.status == 1) | (Role.status.is_(None)))
+    return list(db.execute(stmt).scalars().all())
+
+
 def get_role(db: Session, role_id: uuid.UUID) -> Role | None:
     return db.get(Role, role_id)
 
@@ -211,11 +235,30 @@ def role_user_count(db: Session, role_id: uuid.UUID) -> int:
 
 
 def _user_stmt() -> Select:
+    role_name_subq = (
+        select(Role.name)
+        .select_from(UserRole)
+        .join(Role, Role.id == UserRole.role_id)
+        .where(UserRole.app_user_id == AppUser.id)
+        .limit(1)
+        .scalar_subquery()
+    ).label("role_name")
+
+    role_id_subq = (
+        select(UserRole.role_id)
+        .select_from(UserRole)
+        .where(UserRole.app_user_id == AppUser.id)
+        .limit(1)
+        .scalar_subquery()
+    ).label("role_id")
+
     return (
         select(
             *_USER_COLUMNS,
             Department.department_name.label("department_name"),
             JobFunction.function_name.label("job_function_name"),
+            role_name_subq,
+            role_id_subq,
         )
         .select_from(AppUser)
         .outerjoin(Department, Department.id == AppUser.department_id)

@@ -23,14 +23,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Trash2, X, ChevronDown, Edit } from "lucide-react";
 import { DataState, TableLoading } from "@/core/components/DataState";
-import { useNotificationTemplates, useRolePermissions, useRoles } from "@/lib/api/hooks";
+import { useNotificationTemplates, useRolePermissions, useRoles, useRoleTypes } from "@/lib/api/hooks";
 import { useAuth } from "@/core/contexts/AuthContext";
 import {
   useCreateRole,
   useReplaceRolePermissions,
   useUpdateRole,
 } from "@/lib/api/mutations";
-import { MAX_PAGE_SIZE } from "@/lib/api/types";
+import { MAX_PAGE_SIZE, RoleType } from "@/lib/api/types";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useScrollToTop } from "@/hooks/use-scroll-to-top";
 
@@ -80,6 +80,8 @@ const UserRoles = () => {
     >({});
     const templatesQuery = useNotificationTemplates({ page: 1, page_size: MAX_PAGE_SIZE });
     const notificationTypes = (templatesQuery.data?.items ?? []).map((template) => template.name);
+    const roleTypesQuery = useRoleTypes({ enabled: mayRead });
+    const roleTypes = roleTypesQuery.data ?? [];
 
     const roles = (rolesQuery.data?.items ?? []).map((role) => ({
         id: role.id,
@@ -161,7 +163,7 @@ const UserRoles = () => {
     const handleSubmit = () => {
         if (!roleName.trim() || !roleType) return;
         createRole.mutate(
-            { name: roleName.trim(), role_type: roleType as "staff" | "manager" | "admin" },
+            { name: roleName.trim(), role_type: roleType as RoleType },
             {
                 onSuccess: () => {
                     setRoleName("");
@@ -207,13 +209,18 @@ const UserRoles = () => {
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                                 <div className="space-y-2">
                                     <Label htmlFor="role-type" className="text-sm font-medium">Role Type</Label>
-                                    <Select value={roleType} onValueChange={setRoleType}>
+                                    <Select value={roleType} onValueChange={setRoleType} disabled={roleTypesQuery.isLoading}>
                                         <SelectTrigger className="h-10 bg-muted/20 border-border dark:border-slate-700/80">
-                                            <SelectValue placeholder="Select Role type" />
+                                            <SelectValue placeholder={roleTypesQuery.isLoading ? "Loading role types..." : roleTypesQuery.isError ? "Failed to load role types" : "Select Role type"} />
                                         </SelectTrigger>
                                         <SelectContent className="bg-popover text-popover-foreground border-border">
-                                            <SelectItem value="staff">Staff</SelectItem>
-                                            <SelectItem value="manager">Manager</SelectItem>
+                                            {roleTypes.length === 0 ? (
+                                                <div className="p-2 text-xs text-muted-foreground text-center">No role types available</div>
+                                            ) : (
+                                                roleTypes.map(t => (
+                                                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                                                ))
+                                            )}
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -508,9 +515,9 @@ const UserRoles = () => {
                                         )
                                     }
                                 >
-                                    <option value="manager">Manager</option>
-                                    <option value="staff">Staff</option>
-                                    <option value="admin">Admin</option>
+                                    {roleTypes.map(t => (
+                                        <option key={t.value} value={t.value}>{t.label}</option>
+                                    ))}
                                 </select>
                                 <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                             </div>

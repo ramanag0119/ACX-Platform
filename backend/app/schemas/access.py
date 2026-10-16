@@ -181,6 +181,8 @@ class UserRead(ORMModel):
     department_name: str | None = Field(default=None, examples=["Front Office"])
     job_function_id: uuid.UUID | None = None
     job_function_name: str | None = Field(default=None, examples=["Supervisor"])
+    role_id: uuid.UUID | None = Field(default=None, description="Primary assigned role ID")
+    role_name: str | None = Field(default=None, description="Primary assigned role name")
     created_on: datetime
     updated_on: datetime
 
