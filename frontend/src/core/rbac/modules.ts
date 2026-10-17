@@ -72,6 +72,7 @@ export const ROUTE_MODULE: Record<string, HmsModule> = {
   "/events": "events",
   "/reports": "reports",
   "/tickets": "tickets",
+  "/manage/tickets": "tickets",
   "/key-settings": "default_key",
 };
 

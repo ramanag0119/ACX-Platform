@@ -75,6 +75,7 @@ const App = () => (
               <Route path="/events" element={<Events />} />
               <Route path="/reports/*" element={<Reports />} />
               <Route path="/tickets" element={<Tickets />} />
+              <Route path="/manage/tickets" element={<Tickets />} />
               {/* /power-view, /energy-view and /room-view are retired. Their
                   room-level figures are part of Room Details on /occupancy,
                   so old links land there rather than on a dead page. */}
