@@ -85,6 +85,23 @@ def _stay_stmt() -> Select:
         .where(RoomAllocation.stay_id == Stay.id)
         .scalar_subquery()
     )
+    primary_room_name = (
+        select(Amenity.name)
+        .select_from(RoomAllocation)
+        .join(Amenity, Amenity.id == RoomAllocation.room_id)
+        .where(RoomAllocation.stay_id == Stay.id)
+        .limit(1)
+        .scalar_subquery()
+    )
+    primary_room_type = (
+        select(AmenityType.name)
+        .select_from(RoomAllocation)
+        .join(Amenity, Amenity.id == RoomAllocation.room_id)
+        .join(AmenityType, AmenityType.id == Amenity.amenity_type_id)
+        .where(RoomAllocation.stay_id == Stay.id)
+        .limit(1)
+        .scalar_subquery()
+    )
     return (
         select(
             Stay.id,
@@ -96,6 +113,10 @@ def _stay_stmt() -> Select:
             Stay.booking_user_id,
             Booker.first_name.label("booker_first_name"),
             Booker.last_name.label("booker_last_name"),
+            Booker.email.label("booker_email"),
+            Booker.phone_number.label("booker_phone_number"),
+            primary_room_name.label("room_number"),
+            primary_room_type.label("room_type_name"),
             Stay.no_of_rooms,
             Stay.no_of_guests,
             Stay.expected_checkin_time,
@@ -171,6 +192,8 @@ def _shape_stay(row) -> dict:
     address = data.pop("booker_address", None)
     nationality_name = data.pop("booker_nationality_name", None)
 
+    data["guest_email"] = email
+    data["guest_phone_number"] = phone
     data["booker"] = _user_ref(booker_id, first_name, last_name)
 
     data["display_status"] = _display_status(
@@ -209,12 +232,23 @@ def list_stays(
     is_checked_in: bool | None = None,
     is_in_house: bool | None = None,
     ref_number: str | None = None,
+    q: str | None = None,
     expected_checkin_from: datetime | None = None,
     expected_checkin_to: datetime | None = None,
     expected_checkout_from: datetime | None = None,
     expected_checkout_to: datetime | None = None,
 ):
     stmt = _stay_stmt().order_by(Stay.expected_checkin_time.desc())
+    if q:
+        search_pattern = f"%{q.strip()}%"
+        stmt = stmt.where(
+            Stay.internal_stay_ref_number.ilike(search_pattern)
+            | Stay.external_stay_ref_number.ilike(search_pattern)
+            | Booker.first_name.ilike(search_pattern)
+            | Booker.last_name.ilike(search_pattern)
+            | Booker.email.ilike(search_pattern)
+            | Booker.phone_number.ilike(search_pattern)
+        )
     if status:
         stmt = stmt.where(Stay.status == status)
     if request_source:

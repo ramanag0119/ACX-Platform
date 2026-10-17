@@ -25,6 +25,7 @@ from sqlalchemy.orm import Session
 
 from app.models import (
     AmenityType,
+    Attachment,
     Feature,
     FacilityEvent,
     Occasion,
@@ -100,6 +101,8 @@ class PromoCodeRead(BaseModel):
     max_discount_value: Decimal | None
     min_order_value: Decimal | None
     status: int | None
+    promo_code_icon: uuid.UUID | None = None
+    image_url: str | None = None
     room_names: list[str]
     created_on: datetime
     updated_on: datetime
@@ -117,6 +120,8 @@ class FacilityEventRead(BaseModel):
     interested_attendees: int | None
     start_date_time: datetime | None
     end_date_time: datetime | None
+    image_id: uuid.UUID | None = None
+    image_url: str | None = None
     cancellation_reason: str | None
     facility_id: uuid.UUID
     status: int | None
@@ -333,11 +338,23 @@ def get_package(db: Session, package_id: uuid.UUID) -> PackageRead | None:
     return next((item for item in items if item.id == package_id), None)
 
 
-def list_promo_codes(db: Session, *, page: int, page_size: int):
-    stmt = select(PromoCode).order_by(PromoCode.promo_code)
-    rows, total = _paged(db, stmt, page, page_size)
+def list_promo_codes(db: Session, *, page: int, page_size: int, q: str | None = None):
+    stmt = (
+        select(PromoCode, Attachment.file_path.label("image_url"))
+        .outerjoin(Attachment, Attachment.id == PromoCode.promo_code_icon)
+        .order_by(PromoCode.promo_code)
+    )
+    if q and q.strip():
+        term = f"%{q.strip()}%"
+        stmt = stmt.where(
+            PromoCode.promo_code.ilike(term)
+            | PromoCode.offer_name.ilike(term)
+            | PromoCode.offered_by.ilike(term)
+        )
+    total = _count(db, stmt)
+    rows = db.execute(stmt.limit(page_size).offset((page - 1) * page_size)).all()
 
-    ids = [row.id for row in rows]
+    ids = [promo.id for promo, _ in rows]
     room_names: dict[uuid.UUID, list[str]] = {}
     if ids:
         for promo_id, name in db.execute(
@@ -350,22 +367,24 @@ def list_promo_codes(db: Session, *, page: int, page_size: int):
 
     items = [
         PromoCodeRead(
-            id=row.id,
-            promo_code=row.promo_code,
-            offer_name=row.offer_name,
-            promo_code_description=row.promo_code_description,
-            offered_by=row.offered_by,
-            start_time=row.start_time,
-            expiry_time=row.expiry_time,
-            discount_percentage=row.discount_percentage,
-            max_discount_value=row.max_discount_value,
-            min_order_value=row.min_order_value,
-            status=row.status,
-            room_names=room_names.get(row.id, []),
-            created_on=row.created_on,
-            updated_on=row.updated_on,
+            id=promo.id,
+            promo_code=promo.promo_code,
+            offer_name=promo.offer_name,
+            promo_code_description=promo.promo_code_description,
+            offered_by=promo.offered_by,
+            start_time=promo.start_time,
+            expiry_time=promo.expiry_time,
+            discount_percentage=promo.discount_percentage,
+            max_discount_value=promo.max_discount_value,
+            min_order_value=promo.min_order_value,
+            status=promo.status,
+            promo_code_icon=promo.promo_code_icon,
+            image_url=img_url,
+            room_names=room_names.get(promo.id, []),
+            created_on=promo.created_on,
+            updated_on=promo.updated_on,
         )
-        for row in rows
+        for promo, img_url in rows
     ]
     return items, total
 
@@ -375,11 +394,45 @@ def get_promo_code(db: Session, promo_id: uuid.UUID) -> PromoCodeRead | None:
     return next((item for item in items if item.id == promo_id), None)
 
 
-def list_events(db: Session, *, page: int, page_size: int, facility_id=None):
-    stmt = select(FacilityEvent).order_by(FacilityEvent.start_date_time.desc())
+def list_events(db: Session, *, page: int, page_size: int, facility_id=None, q: str | None = None):
+    stmt = (
+        select(FacilityEvent, Attachment.file_path.label("image_url"))
+        .outerjoin(Attachment, Attachment.id == FacilityEvent.image_id)
+        .order_by(FacilityEvent.start_date_time.desc())
+    )
     if facility_id:
         stmt = stmt.where(FacilityEvent.facility_id == facility_id)
-    return _paged(db, stmt, page, page_size)
+    if q and q.strip():
+        term = f"%{q.strip()}%"
+        stmt = stmt.where(
+            FacilityEvent.name.ilike(term)
+            | FacilityEvent.venue.ilike(term)
+            | FacilityEvent.chief_guests.ilike(term)
+        )
+    total = _count(db, stmt)
+    rows = db.execute(stmt.limit(page_size).offset((page - 1) * page_size)).all()
+    items = [
+        FacilityEventRead(
+            id=event.id,
+            name=event.name,
+            venue=event.venue,
+            chief_guests=event.chief_guests,
+            description=event.description,
+            expected_attendees=event.expected_attendees,
+            interested_attendees=event.interested_attendees,
+            start_date_time=event.start_date_time,
+            end_date_time=event.end_date_time,
+            image_id=event.image_id,
+            image_url=img_url,
+            cancellation_reason=event.cancellation_reason,
+            facility_id=event.facility_id,
+            status=event.status,
+            created_on=event.created_on,
+            updated_on=event.updated_on,
+        )
+        for event, img_url in rows
+    ]
+    return items, total
 
 
 def list_occasions(db: Session, *, page: int, page_size: int, facility_id=None):

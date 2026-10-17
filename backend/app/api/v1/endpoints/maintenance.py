@@ -144,6 +144,7 @@ def list_maintenance_requests(
     start_date_from: date | None = Query(None),
     start_date_to: date | None = Query(None),
     include_removed: bool = Query(False, description="Include status = 0 rows"),
+    q: str | None = Query(None),
 ) -> Page[MaintenanceRequestRead]:
     rows, total = svc.list_maintenance_requests(
         db,
@@ -160,6 +161,7 @@ def list_maintenance_requests(
         start_date_from=start_date_from,
         start_date_to=start_date_to,
         include_removed=include_removed,
+        q=q,
     )
     return Page[MaintenanceRequestRead](
         items=_assemble(db, rows), page=page, page_size=page_size, total=total

@@ -175,12 +175,22 @@ def _item_stmt() -> Select:
             ServiceCategoryItem.item_icon,
             ServiceCategoryItem.facility_id,
             ServiceCategoryItem.status,
+            ServiceCategoryItem.item_metadata,
             ServiceCategoryItem.created_on,
             ServiceCategoryItem.updated_on,
         )
         .join(ServiceCategory, ServiceCategory.id == ServiceCategoryItem.category_id)
         .join(ServiceType, ServiceType.id == ServiceCategory.service_type)
     )
+
+
+def _shape_item(row) -> dict:
+    data = dict(row)
+    meta = data.get("item_metadata") or {}
+    data["is_veg"] = meta.get("is_veg")
+    data["is_spicy"] = meta.get("is_spicy")
+    data["type_of_service"] = meta.get("type_of_service")
+    return data
 
 
 def list_service_items(
@@ -194,6 +204,7 @@ def list_service_items(
     amenity_id: uuid.UUID | None = None,
     status: int | None = None,
     has_price: bool | None = None,
+    q: str | None = None,
 ):
     stmt = _item_stmt().order_by(ServiceCategoryItem.item_name)
     if facility_id:
@@ -209,15 +220,23 @@ def list_service_items(
     if has_price is not None:
         column = ServiceCategoryItem.price_per_unit
         stmt = stmt.where(column.is_not(None) if has_price else column.is_(None))
+    if q:
+        pattern = f"%{q.strip()}%"
+        stmt = stmt.where(
+            ServiceCategoryItem.item_name.ilike(pattern)
+            | ServiceCategoryItem.description.ilike(pattern)
+            | ServiceCategory.category_name.ilike(pattern)
+        )
     total = _count(db, stmt)
     rows = db.execute(_page(stmt, page=page, page_size=page_size)).mappings().all()
-    return rows, total
+    return [_shape_item(r) for r in rows], total
 
 
 def get_service_item(db: Session, item_id: uuid.UUID):
-    return db.execute(
+    row = db.execute(
         _item_stmt().where(ServiceCategoryItem.id == item_id)
     ).mappings().one_or_none()
+    return _shape_item(row) if row is not None else None
 
 
 # ---------------------------------------------------------------------------
@@ -310,6 +329,7 @@ def list_service_requests(
     unassigned: bool | None = None,
     created_from: datetime | None = None,
     created_to: datetime | None = None,
+    q: str | None = None,
 ):
     stmt = _request_stmt().order_by(ServiceRequest.created_on.desc())
     if facility_id:
@@ -339,10 +359,77 @@ def list_service_requests(
         stmt = stmt.where(ServiceRequest.created_on >= created_from)
     if created_to:
         stmt = stmt.where(ServiceRequest.created_on <= created_to)
+    if q:
+        pattern = f"%{q.strip()}%"
+        stmt = stmt.where(
+            ServiceRequest.ref_number.ilike(pattern)
+            | ServiceRequest.description.ilike(pattern)
+            | Amenity.name.ilike(pattern)
+            | ServiceCategory.category_name.ilike(pattern)
+            | Department.department_name.ilike(pattern)
+            | Requester.first_name.ilike(pattern)
+            | Requester.last_name.ilike(pattern)
+            | Assignee.first_name.ilike(pattern)
+            | Assignee.last_name.ilike(pattern)
+        )
 
     total = _count(db, stmt)
     rows = db.execute(_page(stmt, page=page, page_size=page_size)).mappings().all()
     return [_shape_request(r) for r in rows], total
+
+
+def get_service_tracking_summary(
+    db: Session, *, facility_id: uuid.UUID | None = None
+) -> dict:
+    from sqlalchemy import and_, case
+
+    types_stmt = (
+        select(
+            ServiceType.id,
+            ServiceType.name,
+            func.count(ServiceRequest.id).label("total_count"),
+            func.coalesce(
+                func.sum(case((ServiceRequest.status == 4, 1), else_=0)), 0
+            ).label("completed_count"),
+        )
+        .outerjoin(
+            ServiceRequest,
+            and_(
+                ServiceRequest.service_type == ServiceType.id,
+                (ServiceRequest.facility_id == facility_id) if facility_id else True,
+            ),
+        )
+        .group_by(ServiceType.id, ServiceType.name)
+        .order_by(ServiceType.id)
+    )
+
+    rows = db.execute(types_stmt).all()
+    by_type = []
+    total_services = 0
+    total_completed = 0
+
+    for r in rows:
+        total = int(r.total_count)
+        completed = int(r.completed_count)
+        pending = total - completed
+        total_services += total
+        total_completed += completed
+        by_type.append(
+            {
+                "service_type_id": r.id,
+                "name": r.name,
+                "total_count": total,
+                "completed_count": completed,
+                "pending_count": pending,
+            }
+        )
+
+    return {
+        "total_services": total_services,
+        "total_completed": total_completed,
+        "total_pending": total_services - total_completed,
+        "by_type": by_type,
+    }
 
 
 def get_service_request(db: Session, request_id: uuid.UUID):

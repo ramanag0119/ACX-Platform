@@ -118,7 +118,16 @@ const JobOrder = () => {
     const devicesQuery = useDevices({ page: 1, page_size: MAX_PAGE_SIZE });
     const allDevices = devicesQuery.data?.items ?? [];
 
-    const jobOrdersQuery = useJobOrders({ page: 1, page_size: MAX_PAGE_SIZE });
+    const [searchQuery, setSearchQuery] = useState("");
+    const [entriesPerPage, setEntriesPerPage] = useState("10");
+    const [currentPage, setCurrentPage] = useState(1);
+    const pageSize = parseInt(entriesPerPage) || 10;
+
+    const jobOrdersQuery = useJobOrders({
+        page: currentPage,
+        page_size: pageSize,
+        q: searchQuery.trim() || undefined,
+    });
     const jobOrders = jobOrdersQuery.data?.items ?? [];
 
     const { canWrite } = useAuth();
@@ -127,9 +136,6 @@ const JobOrder = () => {
     const updateJobOrder = useUpdateJobOrder();
 
     // Job Orders table state
-    const [searchQuery, setSearchQuery] = useState("");
-    const [entriesPerPage, setEntriesPerPage] = useState("10");
-    const [currentPage, setCurrentPage] = useState(1);
     // Pagination sits at the bottom of the table; without this the new
     // page kept the old scroll offset and the sticky header stayed
     // above the fold. See use-scroll-to-top.
@@ -366,21 +372,12 @@ const JobOrder = () => {
         );
     };
 
-    // Filter job orders over the fetched page.
-    const needle = searchQuery.trim().toLowerCase();
-    const filteredJobOrders = jobOrders.filter((job) => {
-        if (!needle) return true;
-        return (
-            job.order_reference.toLowerCase().includes(needle) ||
-            (job.description ?? "").toLowerCase().includes(needle) ||
-            job.rooms.some((room) => (room.room_name ?? "").toLowerCase().includes(needle))
-        );
-    });
-    const perPage = parseInt(entriesPerPage);
-    const totalPages = Math.max(1, Math.ceil(filteredJobOrders.length / perPage));
+    const totalEntries = jobOrdersQuery.data?.total ?? 0;
+    const perPage = pageSize;
+    const totalPages = Math.max(1, Math.ceil(totalEntries / perPage));
     const startIndex = (currentPage - 1) * perPage;
-    const endIndex = startIndex + perPage;
-    const paginatedJobOrders = filteredJobOrders.slice(startIndex, endIndex);
+    const endIndex = Math.min(startIndex + perPage, totalEntries);
+    const paginatedJobOrders = jobOrders;
 
     const tabs = [
         { id: "create-job" as TabType, label: "Create Job" },
@@ -737,7 +734,7 @@ const JobOrder = () => {
 
                     <div className="flex items-center justify-between mt-6">
                         <span className="text-muted-foreground text-sm">
-                            Showing {startIndex + 1} to {Math.min(endIndex, filteredJobOrders.length)} of {filteredJobOrders.length} entries
+                            Showing {totalEntries > 0 ? startIndex + 1 : 0} to {endIndex} of {totalEntries} entries
                         </span>
                         <div className="flex items-center gap-1">
                             <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>First</Button>

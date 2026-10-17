@@ -150,6 +150,7 @@ def list_maintenance_requests(
     start_date_from=None,
     start_date_to=None,
     include_removed: bool = False,
+    q: str | None = None,
 ):
     stmt = _request_stmt().order_by(
         MaintenanceRequest.maintenance_start_date.desc().nullslast(),
@@ -199,6 +200,22 @@ def list_maintenance_requests(
                 MaintenanceRequestAmenity.maintenance_request_id
                 == MaintenanceRequest.id,
                 MaintenanceRequestAmenity.amenity_id == amenity_id,
+                MaintenanceRequestAmenity.status == 1,
+            )
+            .exists()
+        )
+    if q and q.strip():
+        term = f"%{q.strip()}%"
+        stmt = stmt.where(
+            ServiceCategory.category_name.ilike(term)
+            | ServiceType.name.ilike(term)
+            | Department.department_name.ilike(term)
+            | MaintenanceRequest.non_room_comments.ilike(term)
+            | select(MaintenanceRequestAmenity.id)
+            .join(Amenity, Amenity.id == MaintenanceRequestAmenity.amenity_id)
+            .where(
+                MaintenanceRequestAmenity.maintenance_request_id == MaintenanceRequest.id,
+                Amenity.name.ilike(term),
                 MaintenanceRequestAmenity.status == 1,
             )
             .exists()

@@ -45,10 +45,20 @@ import { useScrollToTop } from "@/hooks/use-scroll-to-top";
  */
 
 const LimitConfigAlert = () => {
+    // Table state
+    const [searchQuery, setSearchQuery] = useState("");
+    const [entriesPerPage, setEntriesPerPage] = useState("10");
+    const [currentPage, setCurrentPage] = useState(1);
+    const pageSize = parseInt(entriesPerPage) || 10;
+
     // --- Live data -------------------------------------------------------
     const paramsQuery = useDeviceParams({ page: 1, page_size: MAX_PAGE_SIZE });
     const devicesQuery = useDevices({ page: 1, page_size: MAX_PAGE_SIZE });
-    const configsQuery = useLimitConfigs({ page: 1, page_size: MAX_PAGE_SIZE });
+    const configsQuery = useLimitConfigs({
+        page: currentPage,
+        page_size: pageSize,
+        q: searchQuery || undefined,
+    });
 
     // --- Mutations
     const createConfig = useCreateLimitConfig();
@@ -70,12 +80,12 @@ const LimitConfigAlert = () => {
             || device.id,
     }));
 
-    // Every column is a real `value_alert_limit_config` column now.
+    // Every column is a real `value_alert_limit_config` column, with room mapped from device.
     const limitConfigData = (configsQuery.data?.items ?? []).map((config) => ({
         id: config.id,
         parameter: config.parameter,
         deviceName: config.device_name,
-        roomNo: "-",
+        roomNo: config.room_number ?? "-",
         limitCheck: config.limit_check ? "Yes" : "No",
         limitBy: config.is_percentage_value ? "Percentage" : "Value",
         nominal: config.nominal ?? "-",
@@ -98,23 +108,16 @@ const LimitConfigAlert = () => {
     const [limitHigh, setLimitHigh] = useState("");
     const [comments, setComments] = useState("");
 
-    // Table state
-    const [searchQuery, setSearchQuery] = useState("");
-    const [entriesPerPage, setEntriesPerPage] = useState("10");
-    const [currentPage, setCurrentPage] = useState(1);
     // Pagination sits at the bottom of the table; without this the new
     // page kept the old scroll offset and the sticky header stayed
     // above the fold. See use-scroll-to-top.
     useScrollToTop(currentPage);
 
-    // Filter data
-    const filteredData = limitConfigData.filter(item =>
-        item.deviceName?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-    const totalPages = Math.ceil(filteredData.length / parseInt(entriesPerPage));
-    const startIndex = (currentPage - 1) * parseInt(entriesPerPage);
-    const endIndex = startIndex + parseInt(entriesPerPage);
-    const paginatedData = filteredData.slice(startIndex, endIndex);
+    const totalEntries = configsQuery.data?.total ?? 0;
+    const totalPages = Math.max(1, Math.ceil(totalEntries / pageSize));
+    const startIndex = totalEntries === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+    const endIndex = Math.min(currentPage * pageSize, totalEntries);
+    const paginatedData = limitConfigData;
 
     const handleReset = () => {
         setParameter("");
@@ -339,6 +342,7 @@ const LimitConfigAlert = () => {
                                 <TableRow className="bg-muted/40 dark:bg-[#0e1322] border-b border-border dark:border-slate-800">
                                     <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap">Parameter</TableHead>
                                     <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap">Device Name</TableHead>
+                                    <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap">Room No.</TableHead>
                                     <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap">Limit Check</TableHead>
                                     <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap">Limit By</TableHead>
                                     <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3 px-4 whitespace-nowrap">Nominal</TableHead>
@@ -352,13 +356,13 @@ const LimitConfigAlert = () => {
                             <TableBody>
                                 {configsQuery.isLoading || configsQuery.error || paginatedData.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={10} className="py-2">
+                                        <TableCell colSpan={11} className="py-2">
                                             <DataState
                                                 isLoading={configsQuery.isLoading}
                                                 error={configsQuery.error}
                                                 isEmpty
                                                 emptyTitle="No limit configurations yet"
-                                                loader={<TableLoading columns={10} />}
+                                                loader={<TableLoading columns={11} />}
                                             >
                                                 <span />
                                             </DataState>
@@ -369,6 +373,7 @@ const LimitConfigAlert = () => {
                                         <TableRow key={index} className="hover:bg-[var(--hms-table-row-hover-bg)] border-b border-border/50 dark:border-slate-800/70 transition-colors">
                                             <TableCell className="whitespace-nowrap text-xs py-3 px-4 text-foreground/90">{item.parameter}</TableCell>
                                             <TableCell className="whitespace-nowrap text-xs py-3 px-4 font-medium text-foreground">{item.deviceName}</TableCell>
+                                            <TableCell className="whitespace-nowrap text-xs py-3 px-4 text-foreground/90">{item.roomNo}</TableCell>
                                             <TableCell className="whitespace-nowrap text-xs py-3 px-4 text-foreground/90">{item.limitCheck}</TableCell>
                                             <TableCell className="whitespace-nowrap text-xs py-3 px-4 text-foreground/90">{item.limitBy}</TableCell>
                                             <TableCell className="whitespace-nowrap text-xs py-3 px-4 text-foreground/90">{item.nominal}</TableCell>
@@ -395,7 +400,7 @@ const LimitConfigAlert = () => {
 
                     <div className="flex flex-wrap items-center justify-between gap-4 mt-5">
                         <span className="text-muted-foreground text-xs">
-                            Showing {filteredData.length > 0 ? startIndex + 1 : 0} to {Math.min(endIndex, filteredData.length)} of {filteredData.length} entries
+                            Showing {totalEntries > 0 ? startIndex : 0} to {endIndex} of {totalEntries} entries
                         </span>
                         <div className="flex items-center gap-1">
                             <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>First</Button>

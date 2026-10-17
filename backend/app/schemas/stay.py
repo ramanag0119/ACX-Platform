@@ -163,6 +163,10 @@ class StayRead(ORMModel):
     checkout_initiated_by: uuid.UUID | None = None
     occupant_count: int
     room_count: int = Field(description="Rows in room_allocation")
+    room_number: str | None = Field(default=None, description="Primary allocated room name / number")
+    room_type_name: str | None = Field(default=None, description="Primary allocated room type name")
+    guest_email: str | None = Field(default=None, description="Booker / guest email")
+    guest_phone_number: str | None = Field(default=None, description="Booker / guest mobile number")
     created_on: datetime
     updated_on: datetime
 

@@ -128,6 +128,10 @@ class ServiceItemRead(ORMModel):
     item_icon: uuid.UUID | None = Field(default=None, description="attachment.id")
     facility_id: uuid.UUID | None = None
     status: int | None = None
+    is_veg: bool | None = Field(default=None, description="Veg/Non-Veg attribute stored in metadata")
+    is_spicy: bool | None = Field(default=None, description="Spicy indicator stored in metadata")
+    type_of_service: str | None = Field(default=None, description="Type of service/food_code stored in metadata")
+    item_metadata: dict | None = Field(default=None, description="Raw metadata bag")
     created_on: datetime
     updated_on: datetime
 
@@ -201,3 +205,19 @@ class ServiceRequestRead(ORMModel):
 class ServiceRequestDetail(ServiceRequestRead):
     items: list[ServiceRequestItemRead]
     item_count: int
+
+
+class ServiceTypeSummary(BaseModel):
+    service_type_id: int
+    name: str
+    total_count: int
+    completed_count: int
+    pending_count: int
+
+
+class ServiceTrackingSummary(BaseModel):
+    total_services: int
+    total_completed: int
+    total_pending: int
+    by_type: list[ServiceTypeSummary]
+

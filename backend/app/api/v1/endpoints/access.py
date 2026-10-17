@@ -112,6 +112,7 @@ def list_users(
     is_staff: int | None = Query(None, ge=0, le=1, description="1 staff, 0 guest"),
     department_id: uuid.UUID | None = Query(None),
     job_function_id: uuid.UUID | None = Query(None),
+    q: str | None = Query(None),
 ) -> Page[UserRead]:
     rows, total = service.list_users(
         db,
@@ -122,6 +123,7 @@ def list_users(
         is_staff=is_staff,
         department_id=department_id,
         job_function_id=job_function_id,
+        q=q,
     )
     return Page[UserRead](
         items=[UserRead.model_validate(r) for r in rows],

@@ -61,8 +61,17 @@ import { useScrollToTop } from "@/hooks/use-scroll-to-top";
  */
 
 const Tickets = () => {
+  const [entriesPerPage, setEntriesPerPage] = useState("10");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = parseInt(entriesPerPage) || 10;
+
   // --- Live data -----------------------------------------------------------
-  const requestsQuery = useServiceRequests({ page: 1, page_size: MAX_PAGE_SIZE });
+  const requestsQuery = useServiceRequests({
+    page: currentPage,
+    page_size: pageSize,
+    q: searchQuery.trim() || undefined,
+  });
   const roomsQuery = useRooms({ page: 1, page_size: MAX_PAGE_SIZE });
   const serviceTypesQuery = useServiceTypes({ page: 1, page_size: MAX_PAGE_SIZE });
   const usersQuery = useUsers({ page: 1, page_size: MAX_PAGE_SIZE, is_staff: 1 });
@@ -88,7 +97,6 @@ const Tickets = () => {
     label: [user.first_name, user.last_name].filter(Boolean).join(" "),
   }));
 
-
   // --- Mutations
   const { canWrite } = useAuth();
   const mayWrite = canWrite("service_tracking");
@@ -113,9 +121,6 @@ const Tickets = () => {
     assignedToId: request.assignee?.id ?? null,
   }));
 
-  const [entriesPerPage, setEntriesPerPage] = useState("10");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
   // Pagination sits at the bottom of the table; without this the new
   // page kept the old scroll offset and the sticky header stayed
   // above the fold. See use-scroll-to-top.
@@ -193,18 +198,11 @@ const Tickets = () => {
     setErrors({});
   };
 
-  const filteredTickets = ticketsData.filter(ticket =>
-    ticket.roomNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    ticket.assignTo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    ticket.serviceType.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const totalEntries = filteredTickets.length;
-  const pageSize = parseInt(entriesPerPage) || 10;
+  const totalEntries = requestsQuery.data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalEntries / pageSize));
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = Math.min(startIndex + pageSize, totalEntries);
-  const paginatedTickets = filteredTickets.slice(startIndex, endIndex);
+  const paginatedTickets = ticketsData;
 
   /**
    * The status pill.

@@ -454,8 +454,26 @@ export interface ServiceItemRead {
   item_icon: string | null;
   facility_id: string | null;
   status: number | null;
+  is_veg?: boolean | null;
+  is_spicy?: boolean | null;
+  type_of_service?: string | null;
   created_on: string;
   updated_on: string;
+}
+
+export interface ServiceTypeSummary {
+  service_type_id: number;
+  name: string;
+  total_count: number;
+  completed_count: number;
+  pending_count: number;
+}
+
+export interface ServiceTrackingSummary {
+  total_services: number;
+  total_completed: number;
+  total_pending: number;
+  by_type: ServiceTypeSummary[];
 }
 
 export interface ServiceRequestRead {
@@ -487,6 +505,26 @@ export interface ServiceRequestRead {
   completed_on: string | null;
   created_on: string;
   updated_on: string;
+}
+
+export interface ServiceRequestItemRead {
+  id: string;
+  item_id: string | null;
+  item_name: string | null;
+  category_id: string | null;
+  category_name: string | null;
+  quantity: number | null;
+  price_per_unit: string | null;
+  assigned_to: UserRef | null;
+  status: number | null;
+  status_name: string | null;
+  created_on: string;
+  updated_on: string;
+}
+
+export interface ServiceRequestDetail extends ServiceRequestRead {
+  items: ServiceRequestItemRead[];
+  item_count: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -813,6 +851,10 @@ export interface StayRead {
   checkout_initiated_by: string | null;
   occupant_count: number;
   room_count: number;
+  room_number?: string | null;
+  room_type_name?: string | null;
+  guest_email?: string | null;
+  guest_phone_number?: string | null;
   created_on: string;
   updated_on: string;
 }
