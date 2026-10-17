@@ -303,9 +303,8 @@ const ServicesSetup = () => {
         foodCategory: item.category_name ?? "-",
         name: item.item_name,
         description: item.description ?? "-",
-        // `service_item` stores neither a diet nor a spice flag.
-        vegNonveg: "-",
-        spicy: "-",
+        vegNonveg: item.is_veg === true ? "Veg" : item.is_veg === false ? "Non-Veg" : "-",
+        spicy: item.is_spicy === true ? "Spicy" : item.is_spicy === false ? "Non-Spicy" : "-",
         price: item.price_per_unit ?? "-",
     }));
 
@@ -317,12 +316,10 @@ const ServicesSetup = () => {
         id: option.id,
         facilityService: option.label,
     }));
-    // One category level only: the item name is the closest thing the schema
-    // has to a "type of service" under a facility service.
     const facilityServicesTypeData = itemsOfType("Facility Maintenance Service").map((item) => ({
         id: item.id,
         facilityService: item.category_name ?? "-",
-        typeOfService: item.item_name,
+        typeOfService: item.type_of_service ?? item.item_name,
     }));
 
     const healthFitnessMenuOptions = categoriesOfType("Health & Fitness").map((category) => ({
@@ -345,7 +342,7 @@ const ServicesSetup = () => {
     const sanitationServicesTypeData = itemsOfType("Sanitation Maintenance Service").map((item) => ({
         id: item.id,
         sanitationService: item.category_name ?? "-",
-        typeOfService: item.item_name,
+        typeOfService: item.type_of_service ?? item.item_name,
     }));
 
     const [activeTab, setActiveTab] = useState<TabType>("room-service");
@@ -480,7 +477,7 @@ const ServicesSetup = () => {
         categoryId: string,
         itemName: string,
         clear: () => void,
-        extra?: { description?: string | null; price_per_unit?: string | null },
+        extra?: { description?: string | null; price_per_unit?: string | null; is_veg?: boolean | null; is_spicy?: boolean | null; type_of_service?: string | null },
     ) => {
         const trimmed = itemName.trim();
         if (!categoryId || !trimmed) {
@@ -586,21 +583,18 @@ const ServicesSetup = () => {
     };
 
     /**
-     * Food Menu is a `service_category_item`. `food code`, `served by`, diet and
-     * spice level have no columns on that table; the ones that carry real
-     * meaning are folded into `description`, and nothing is invented.
+     * Food Menu is a `service_category_item`. Food code, veg/non-veg, and spicy
+     * indicators are persisted into metadata JSONB on the backend.
      */
     const handleFoodMenuSubmit = () => {
-        const notes = [
-            foodCode.trim() && `Code: ${foodCode.trim()}`,
-            servedBy.trim() && `Served by: ${servedBy.trim()}`,
-            vegNonveg && `Diet: ${vegNonveg}`,
-            spicy && `Spice: ${spicy}`,
-            foodDescription.trim(),
-        ].filter(Boolean).join(" | ");
+        const isVegBool = vegNonveg === "veg" ? true : vegNonveg === "non-veg" ? false : null;
+        const isSpicyBool = spicy === "yes" ? true : spicy === "no" ? false : null;
         submitItemForCategory(selectedFoodCategory, foodName, handleFoodMenuReset, {
-            ...(notes ? { description: notes } : {}),
-            ...(foodPrice.trim() ? { price_per_unit: foodPrice.trim() } : {}),
+            description: foodDescription.trim() || null,
+            price_per_unit: foodPrice.trim() || null,
+            is_veg: isVegBool,
+            is_spicy: isSpicyBool,
+            type_of_service: foodCode.trim() || null,
         });
     };
 

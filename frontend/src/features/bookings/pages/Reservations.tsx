@@ -123,8 +123,19 @@ const EMPTY_FORM = {
 };
 
 export const Reservations = () => {
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
+  const [entriesPerPage, setEntriesPerPage] = useState("10");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = parseInt(entriesPerPage) || 10;
+  useScrollToTop(currentPage);
+
   // --- Live data from PostgreSQL via backend APIs ---------------------------
-  const staysQuery = useStays({ page: 1, page_size: MAX_PAGE_SIZE });
+  const staysQuery = useStays({
+    page: currentPage,
+    page_size: pageSize,
+    q: searchQuery || undefined,
+  });
   const usersQuery = useUsers({ page: 1, page_size: MAX_PAGE_SIZE });
   const countriesQuery = useCountries({ page: 1, page_size: 250 });
   const gendersQuery = useGenders();
@@ -161,11 +172,11 @@ export const Reservations = () => {
     return {
       id: stay.id,
       name: guestName,
-      mobileNumber: bookerUser?.phone_number ?? "-",
-      email: bookerUser?.email ?? "-",
+      mobileNumber: stay.guest_phone_number ?? bookerUser?.phone_number ?? stay.booker?.phone_number ?? "-",
+      email: stay.guest_email ?? bookerUser?.email ?? stay.booker?.email ?? "-",
       occupants: stay.no_of_guests,
-      roomNo: "",
-      roomType: "-",
+      roomNo: stay.room_number ?? "-",
+      roomType: stay.room_type_name ?? "-",
       noOfRooms: stay.no_of_rooms ?? 0,
       checkIn: stay.actual_checkin_time
         ? new Date(stay.actual_checkin_time).toLocaleString()
@@ -213,12 +224,6 @@ export const Reservations = () => {
     (room) => room.status_name === ROOM_STATUS.AVAILABLE,
   );
 
-  const [viewMode, setViewMode] = useState<ViewMode>("list");
-  const [entriesPerPage, setEntriesPerPage] = useState("10");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  useScrollToTop(currentPage);
-
   const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [editingReservation, setEditingReservation] = useState<ReservationData | null>(null);
@@ -232,24 +237,11 @@ export const Reservations = () => {
   // Form state
   const [formData, setFormData] = useState(EMPTY_FORM);
 
-  const matchesSearch = (reservation: ReservationData) => {
-    const query = searchQuery.toLowerCase();
-    return (
-      reservation.name.toLowerCase().includes(query) ||
-      reservation.mobileNumber.toLowerCase().includes(query) ||
-      reservation.email.toLowerCase().includes(query) ||
-      reservation.roomType.toLowerCase().includes(query) ||
-      (reservation.nationalityName?.toLowerCase() ?? "").includes(query)
-    );
-  };
-
-  const filteredReservations = reservations.filter(matchesSearch);
-  const totalEntries = filteredReservations.length;
-  const pageSize = parseInt(entriesPerPage) || 10;
+  const totalEntries = staysQuery.data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalEntries / pageSize));
-  const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = Math.min(startIndex + pageSize, totalEntries);
-  const paginatedReservations = filteredReservations.slice(startIndex, endIndex);
+  const startIndex = totalEntries === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const endIndex = Math.min(currentPage * pageSize, totalEntries);
+  const paginatedReservations = reservations;
 
   const handleFormChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -1066,7 +1058,7 @@ export const Reservations = () => {
           {/* Footer */}
           <div className="flex flex-wrap items-center justify-between gap-4 mt-5">
             <span className="text-muted-foreground text-xs">
-              Showing {totalEntries > 0 ? startIndex + 1 : 0} to {endIndex} of {totalEntries} entries
+              Showing {totalEntries > 0 ? startIndex : 0} to {endIndex} of {totalEntries} entries
             </span>
 
             <div className="flex items-center gap-1">

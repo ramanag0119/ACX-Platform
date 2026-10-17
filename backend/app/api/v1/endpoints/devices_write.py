@@ -213,10 +213,12 @@ def list_configs(
     page_size: int = DEFAULT_PAGE_SIZE,
     device_id: uuid.UUID | None = None,
     parameter: str | None = None,
+    facility_id: uuid.UUID | None = None,
+    q: str | None = None,
 ) -> Page[LimitConfigRead]:
     page_size = min(page_size, MAX_PAGE_SIZE)
     rows, total = list_limit_configs(
-        db, page=page, page_size=page_size, device_id=device_id, parameter=parameter
+        db, page=page, page_size=page_size, device_id=device_id, parameter=parameter, facility_id=facility_id, q=q
     )
     return Page[LimitConfigRead](
         items=[LimitConfigRead.model_validate(r) for r in rows],

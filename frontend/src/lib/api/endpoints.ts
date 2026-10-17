@@ -56,8 +56,10 @@ import type {
   RoomRead,
   ServiceCategoryRead,
   ServiceItemRead,
+  ServiceRequestDetail,
   ServiceRequestRead,
   ServiceStatusRead,
+  ServiceTrackingSummary,
   RoleTypeOption,
   ServiceTypeRead,
   StayOccupantRead,
@@ -134,6 +136,10 @@ export const listServiceItems = (params?: QueryParams) =>
   apiClient.get<Page<ServiceItemRead>>("/service-items", params);
 export const listServiceRequests = (params?: QueryParams) =>
   apiClient.get<Page<ServiceRequestRead>>("/service-requests", params);
+export const getServiceRequest = (requestId: string) =>
+  apiClient.get<ServiceRequestDetail>(`/service-requests/${requestId}`);
+export const getServiceTrackingSummary = (params?: QueryParams) =>
+  apiClient.get<ServiceTrackingSummary>("/service-requests/summary", params);
 
 // --- Devices (Phase 2.6) ---------------------------------------------------
 

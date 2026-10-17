@@ -132,11 +132,16 @@ def list_job_orders(
                 .where(Amenity.facility_id == facility_id)
             )
         )
-    if search:
+    if search and search.strip():
         needle = f"%{search.strip()}%"
         stmt = stmt.where(
             JobOrder.order_reference.ilike(needle)
             | JobOrder.description.ilike(needle)
+            | JobOrder.id.in_(
+                select(JobOrderAmenity.job_order_id)
+                .join(Amenity, Amenity.id == JobOrderAmenity.amenity_id)
+                .where(Amenity.name.ilike(needle))
+            )
         )
 
     total = _count(db, stmt)

@@ -376,10 +376,13 @@ def update_feature(
     description="`promo_code` plus the room names from `promo_code_amenity`.",
 )
 def list_offers(
-    db: DbSession, page: int = 1, page_size: int = DEFAULT_PAGE_SIZE
+    db: DbSession,
+    page: int = 1,
+    page_size: int = DEFAULT_PAGE_SIZE,
+    q: str | None = None,
 ) -> Page[PromoCodeRead]:
     page, page_size = _page_args(page, page_size)
-    items, total = catalog.list_promo_codes(db, page=page, page_size=page_size)
+    items, total = catalog.list_promo_codes(db, page=page, page_size=page_size, q=q)
     return Page[PromoCodeRead](items=items, page=page, page_size=page_size, total=total)
 
 
@@ -427,12 +430,15 @@ def update_offer(
     summary="List events",
 )
 def list_events(
-    db: DbSession, page: int = 1, page_size: int = DEFAULT_PAGE_SIZE
+    db: DbSession,
+    page: int = 1,
+    page_size: int = DEFAULT_PAGE_SIZE,
+    q: str | None = None,
 ) -> Page[FacilityEventRead]:
     page, page_size = _page_args(page, page_size)
-    rows, total = catalog.list_events(db, page=page, page_size=page_size)
+    items, total = catalog.list_events(db, page=page, page_size=page_size, q=q)
     return Page[FacilityEventRead](
-        items=[FacilityEventRead.model_validate(r) for r in rows],
+        items=items,
         page=page, page_size=page_size, total=total,
     )
 

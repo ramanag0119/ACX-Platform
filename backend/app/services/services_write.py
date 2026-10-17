@@ -299,10 +299,15 @@ def create_service_item(
         if category is None:
             raise Invalid(f"Service category {data['category_id']} does not exist.")
         require_exists(db, Amenity, data.get("amenity_id"), "Room")
+        meta = {}
+        for key in ("is_veg", "is_spicy", "type_of_service"):
+            if key in data:
+                meta[key] = data.pop(key)
         row = ServiceCategoryItem(
             id=uuid.uuid4(),
             facility_id=data.pop("facility_id", None) or facility_id,
             created_by=actor_id,
+            item_metadata=meta if meta else None,
             **data,
         )
         db.add(row)
@@ -318,6 +323,15 @@ def update_service_item(
         if "category_id" in changes and db.get(ServiceCategory, changes["category_id"]) is None:
             raise Invalid(f"Service category {changes['category_id']} does not exist.")
         require_exists(db, Amenity, changes.get("amenity_id"), "Room")
+        meta = dict(row.item_metadata or {}) if row.item_metadata else {}
+        meta_updated = False
+        for key in ("is_veg", "is_spicy", "type_of_service"):
+            if key in changes:
+                meta[key] = changes.pop(key)
+                meta_updated = True
+        if meta_updated:
+            row.item_metadata = meta
         apply_changes(row, changes)
     db.refresh(row)
     return row
+

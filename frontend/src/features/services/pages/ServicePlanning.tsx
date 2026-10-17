@@ -80,10 +80,16 @@ const ServicePlanning = () => {
     const removePlan = useRemoveMaintenanceRequest();
 
     const [activeTab, setActiveTab] = useState<TabType>("scheduled");
-    // The tab's own rows, filtered BY THE BACKEND on request_type.
+    const [entriesPerPage, setEntriesPerPage] = useState("10");
+    const [searchQuery, setSearchQuery] = useState("");
+    const [currentPage, setCurrentPage] = useState(1);
+    const pageSize = Math.max(1, parseInt(entriesPerPage, 10) || 10);
+
+    // The tab's own rows, filtered BY THE BACKEND on request_type, search, and pagination.
     const plansQuery = useMaintenanceRequests({
-        page: 1,
-        page_size: MAX_PAGE_SIZE,
+        page: currentPage,
+        page_size: pageSize,
+        q: searchQuery.trim() || undefined,
         request_type:
             activeTab === "scheduled"
                 ? "scheduled"
@@ -91,9 +97,6 @@ const ServicePlanning = () => {
                   ? "planned"
                   : "disinfection",
     });
-    const [entriesPerPage, setEntriesPerPage] = useState("10");
-    const [searchQuery, setSearchQuery] = useState("");
-    const [currentPage, setCurrentPage] = useState(1);
     // Pagination sits at the bottom of the table; without this the new
     // page kept the old scroll offset and the sticky header stayed
     // above the fold. See use-scroll-to-top.
@@ -228,28 +231,11 @@ const ServicePlanning = () => {
     /** One table row, derived from the live payload rather than declared twice. */
     type PlanRow = (typeof planRows)[number];
 
-    // --- Search and pagination, both driven by the rows actually fetched.
-    // The whole tab is fetched in one page (`MAX_PAGE_SIZE` above), so the
-    // Search box and the "Show N entries" picker narrow that list here instead
-    // of re-querying. Previously neither control did anything and the footer
-    // printed fixed numbers, which made the table look paginated when it was not.
-    const searchTerm = searchQuery.trim().toLowerCase();
-    const filteredRows = searchTerm
-        ? planRows.filter((row) =>
-              [row.facilityServices, row.serviceType, row.roomNo].some((field) =>
-                  field.toLowerCase().includes(searchTerm),
-              ),
-          )
-        : planRows;
-
-    const pageSize = Math.max(1, parseInt(entriesPerPage, 10) || 10);
-    const totalRows = filteredRows.length;
+    const totalRows = plansQuery.data?.total ?? 0;
     const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
-    // A tab switch, a search or a smaller page size can leave `currentPage`
-    // past the end; clamp on render so the table never shows a blank page.
     const activePage = Math.min(currentPage, totalPages);
     const startIndex = (activePage - 1) * pageSize;
-    const paginatedRows = filteredRows.slice(startIndex, startIndex + pageSize);
+    const paginatedRows = planRows;
 
     /** Up to five page buttons, centred on the current page. */
     const pageNumbers = (() => {

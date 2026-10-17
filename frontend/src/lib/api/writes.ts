@@ -184,6 +184,9 @@ export interface ServiceItemWrite {
   price_per_unit?: string | null;
   amenity_id?: string | null;
   status?: number | null;
+  is_veg?: boolean | null;
+  is_spicy?: boolean | null;
+  type_of_service?: string | null;
 }
 
 export const createServiceItem = (body: ServiceItemWrite) =>
@@ -283,6 +286,8 @@ export interface LimitConfigRead {
   parameter: string;
   device_name: string;
   device_id: string | null;
+  room_id?: string | null;
+  room_number?: string | null;
   limit_check: boolean;
   is_percentage_value: boolean;
   nominal: string | null;
@@ -469,6 +474,8 @@ export interface OfferRead {
   max_discount_value: string | null;
   min_order_value: string | null;
   status: number | null;
+  promo_code_icon?: string | null;
+  image_url?: string | null;
   room_names: string[];
   created_on: string;
   updated_on: string;
@@ -484,6 +491,7 @@ export interface OfferWrite {
   discount_percentage?: string | null;
   max_discount_value?: string | null;
   min_order_value?: string | null;
+  promo_code_icon?: string | null;
   amenity_ids?: string[];
 }
 
@@ -503,6 +511,8 @@ export interface EventRead {
   interested_attendees: number | null;
   start_date_time: string | null;
   end_date_time: string | null;
+  image_id?: string | null;
+  image_url?: string | null;
   cancellation_reason: string | null;
   facility_id: string;
   status: number | null;
@@ -518,7 +528,8 @@ export interface EventWrite {
   expected_attendees?: number | null;
   start_date_time?: string | null;
   end_date_time?: string | null;
-  /** PATCH only: 0 retires the event. `interested_attendees` is not settable. */
+  image_id?: string | null;
+  facility_id?: string | null;
   status?: number | null;
   cancellation_reason?: string | null;
 }

@@ -50,7 +50,16 @@ interface EventRow {
  */
 
 const Events = () => {
-    const eventsQuery = useEvents({ page: 1, page_size: MAX_PAGE_SIZE });
+    const [searchQuery, setSearchQuery] = useState("");
+    const [entriesPerPage, setEntriesPerPage] = useState("10");
+    const [currentPage, setCurrentPage] = useState(1);
+    const pageSize = parseInt(entriesPerPage) || 10;
+
+    const eventsQuery = useEvents({
+        page: currentPage,
+        page_size: pageSize,
+        q: searchQuery.trim() || undefined,
+    });
     const { canWrite } = useAuth();
     const mayWrite = canWrite("events");
     const createEvent = useCreateEvent();
@@ -68,7 +77,7 @@ const Events = () => {
         endDateTime: event.end_date_time ? new Date(event.end_date_time).toLocaleString() : "-",
         attendees: event.expected_attendees ?? 0,
         interestedGuests: event.interested_attendees ?? 0,
-        image: "-",
+        image: event.image_url ? event.image_url.split("/").pop() || event.image_url : "-",
     }));
     const [isAddEventOpen, setIsAddEventOpen] = useState(false);
     const [editingEventId, setEditingEventId] = useState<string | null>(null);
@@ -81,9 +90,6 @@ const Events = () => {
         startDateTime: "",
         endDateTime: "",
     });
-    const [searchQuery, setSearchQuery] = useState("");
-    const [entriesPerPage, setEntriesPerPage] = useState("10");
-    const [currentPage, setCurrentPage] = useState(1);
     // Pagination sits at the bottom of the table; without this the new
     // page kept the old scroll offset and the sticky header stayed
     // above the fold. See use-scroll-to-top.
@@ -102,10 +108,11 @@ const Events = () => {
     const [attendees, setAttendees] = useState("");
     const [description, setDescription] = useState("");
 
-    const filteredData = eventsData.filter(item => item.eventName.toLowerCase().includes(searchQuery.toLowerCase()) || item.venue.toLowerCase().includes(searchQuery.toLowerCase()));
-    const totalPages = Math.ceil(filteredData.length / parseInt(entriesPerPage));
-    const startIndex = (currentPage - 1) * parseInt(entriesPerPage);
-    const paginatedData = filteredData.slice(startIndex, startIndex + parseInt(entriesPerPage));
+    const totalEntries = eventsQuery.data?.total ?? 0;
+    const totalPages = Math.max(1, Math.ceil(totalEntries / pageSize));
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = Math.min(startIndex + pageSize, totalEntries);
+    const paginatedData = eventsData;
 
     const handleReset = () => { setEventName(""); setVenue(""); setChiefGuests(""); setStartDate(""); setEndDate(""); setAttendees(""); setDescription(""); };
 
@@ -272,7 +279,7 @@ const Events = () => {
                     </DataState>
 
                     <div className="flex flex-wrap items-center justify-between gap-4 mt-5">
-                        <span className="text-muted-foreground text-xs">Showing {filteredData.length > 0 ? startIndex + 1 : 0} to {Math.min(startIndex + parseInt(entriesPerPage), filteredData.length)} of {filteredData.length} entries</span>
+                        <span className="text-muted-foreground text-xs">Showing {totalEntries > 0 ? startIndex + 1 : 0} to {endIndex} of {totalEntries} entries</span>
                         <div className="flex items-center gap-1">
                             <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>First</Button>
                             <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1}>Previous</Button>

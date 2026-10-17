@@ -87,9 +87,26 @@ const renderTabCount = (query: { total: number | null; isError: boolean }) => {
 };
 
 export const CheckIn = () => {
-  const staysQuery = useStays({ page: 1, page_size: MAX_PAGE_SIZE });
+  // Active Tab: In-Room, All Check-ins, or Pending Arrivals
+  const [activeTab, setActiveTab] = useState<CheckInTab>("in-room");
+  const [entriesPerPage, setEntriesPerPage] = useState("10");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = parseInt(entriesPerPage) || 10;
+  useScrollToTop(currentPage);
 
-  const allRecords: CheckInData[] = (staysQuery.data?.items ?? []).map((stay) => {
+  const stayFilters = {
+    page: currentPage,
+    page_size: pageSize,
+    q: searchQuery || undefined,
+    ...(activeTab === "in-room" ? { is_in_house: true } : {}),
+    ...(activeTab === "all-checkins" ? { is_checked_in: true } : {}),
+    ...(activeTab === "pending-arrivals" ? { status: "pending" } : {}),
+  };
+
+  const staysQuery = useStays(stayFilters);
+
+  const paginatedRecords: CheckInData[] = (staysQuery.data?.items ?? []).map((stay) => {
     const isCheckedIn = stay.is_checked_in;
     const isCheckedOut = Boolean(stay.actual_checkout_time);
     const isInHouse = isCheckedIn && !isCheckedOut;
@@ -97,11 +114,11 @@ export const CheckIn = () => {
     return {
       id: stay.id,
       name: stay.booker?.name ?? "-",
-      mobileNumber: "-",
-      email: "-",
+      mobileNumber: stay.guest_phone_number ?? stay.booker?.phone_number ?? "-",
+      email: stay.guest_email ?? stay.booker?.email ?? "-",
       occupants: stay.no_of_guests,
-      roomNo: "",
-      roomType: "-",
+      roomNo: stay.room_number ?? "-",
+      roomType: stay.room_type_name ?? "-",
       noOfRooms: stay.no_of_rooms ?? 0,
       actualCheckIn: stay.actual_checkin_time
         ? new Date(stay.actual_checkin_time).toLocaleString()
@@ -133,13 +150,6 @@ export const CheckIn = () => {
   const extend = useExtendStay();
   const approveDocs = useSetStayDocumentApproval();
 
-  // Active Tab: In-Room, All Check-ins, or Pending Arrivals
-  const [activeTab, setActiveTab] = useState<CheckInTab>("in-room");
-  const [entriesPerPage, setEntriesPerPage] = useState("10");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  useScrollToTop(currentPage);
-
   // Modal states
   const [checkInModalOpen, setCheckInModalOpen] = useState(false);
   const [extendModalOpen, setExtendModalOpen] = useState(false);
@@ -151,39 +161,10 @@ export const CheckIn = () => {
   const allCheckinsCountQuery = useCount("stays", { is_checked_in: true });
   const pendingArrivalsCountQuery = useCount("stays", { status: "pending" });
 
-  // Filter records by selected tab
-  const tabFilteredRecords = allRecords.filter((record) => {
-    if (activeTab === "in-room") {
-      return record.isInHouse;
-    }
-    if (activeTab === "all-checkins") {
-      return record.isCheckedIn;
-    }
-    if (activeTab === "pending-arrivals") {
-      return record.status === "pending";
-    }
-    return true;
-  });
-
-  // Filter records by search query
-  const matchesSearch = (record: CheckInData) => {
-    const query = searchQuery.toLowerCase();
-    return (
-      record.name.toLowerCase().includes(query) ||
-      record.mobileNumber.toLowerCase().includes(query) ||
-      record.email.toLowerCase().includes(query) ||
-      record.roomType.toLowerCase().includes(query) ||
-      record.stayRef.toLowerCase().includes(query)
-    );
-  };
-
-  const filteredRecords = tabFilteredRecords.filter(matchesSearch);
-  const totalEntries = filteredRecords.length;
-  const pageSize = parseInt(entriesPerPage) || 10;
+  const totalEntries = staysQuery.data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalEntries / pageSize));
-  const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = Math.min(startIndex + pageSize, totalEntries);
-  const paginatedRecords = filteredRecords.slice(startIndex, endIndex);
+  const startIndex = totalEntries === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const endIndex = Math.min(currentPage * pageSize, totalEntries);
 
   const handleActionClick = (record: CheckInData) => {
     setSelectedRecord(record);
@@ -503,7 +484,7 @@ export const CheckIn = () => {
           {/* Footer */}
           <div className="flex flex-wrap items-center justify-between gap-4 mt-5">
             <span className="text-muted-foreground text-xs">
-              Showing {totalEntries > 0 ? startIndex + 1 : 0} to {endIndex} of {totalEntries} entries
+              Showing {totalEntries > 0 ? startIndex : 0} to {endIndex} of {totalEntries} entries
             </span>
 
             <div className="flex items-center gap-1">

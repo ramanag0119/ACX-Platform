@@ -216,6 +216,14 @@ export const useServiceItems = (params?: QueryParams) =>
   useApiQuery(["service-items", params], () => api.listServiceItems(params));
 export const useServiceRequests = (params?: QueryParams) =>
   useApiQuery(["service-requests", params], () => api.listServiceRequests(params));
+export const useServiceRequest = (requestId: string | null) =>
+  useApiQuery(
+    ["service-requests", requestId],
+    () => api.getServiceRequest(requestId!),
+    { enabled: Boolean(requestId) },
+  );
+export const useServiceTrackingSummary = (params?: QueryParams) =>
+  useApiQuery(["service-requests", "summary", params], () => api.getServiceTrackingSummary(params));
 
 // --- Devices ---------------------------------------------------------------
 

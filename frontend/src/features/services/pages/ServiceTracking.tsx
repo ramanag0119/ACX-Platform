@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/dialog";
 import { DataState, TableLoading } from "@/core/components/DataState";
 import { TablePagination } from "@/core/components/TablePagination";
-import { useServiceRequests, useServiceTypes } from "@/lib/api/hooks";
+import { useServiceRequests, useServiceTypes, useServiceTrackingSummary, useServiceRequest } from "@/lib/api/hooks";
 import { serviceStatusBadgeClass } from "@/features/occupancy/lib/serviceStatus";
 import { useAuth } from "@/core/contexts/AuthContext";
 import {
@@ -126,39 +126,44 @@ const ServiceTracking = () => {
     const [actionTarget, setActionTarget] = useState<ServiceRequestActionTarget | null>(null);
     const { canWrite } = useAuth();
     const mayWriteTracking = canWrite("service_tracking");
-    const [itemsModalConfig, setItemsModalConfig] = useState<{ isOpen: boolean; roomNo: string }>({ isOpen: false, roomNo: "" });
+    const [itemsModalConfig, setItemsModalConfig] = useState<{ isOpen: boolean; roomNo: string; requestId: string | null }>({ isOpen: false, roomNo: "", requestId: null });
+    const selectedItemRequest = useServiceRequest(itemsModalConfig.requestId);
 
     // --- Live data -------------------------------------------------------
+    const summaryQuery = useServiceTrackingSummary();
     const typesQuery = useServiceTypes({ page: 1, page_size: MAX_PAGE_SIZE });
-    // One page of every request: the cards need per-type counts and the donut
-    // needs the status split, and the seeded volume fits inside one page.
-    const allRequestsQuery = useServiceRequests({ page: 1, page_size: MAX_PAGE_SIZE });
-
     const serviceTypeRows = typesQuery.data?.items ?? [];
-    const allRequests = allRequestsQuery.data?.items ?? [];
 
     const selectedTypeId = activeService ?? serviceTypeRows[0]?.id ?? null;
     const selectedType = serviceTypeRows.find((type) => type.id === selectedTypeId);
 
+    const pageSize = parseInt(entriesPerPage) || 10;
+    const requestsQuery = useServiceRequests({
+        page: currentPage,
+        page_size: pageSize,
+        service_type: selectedTypeId ?? undefined,
+        q: searchQuery || undefined,
+    });
+
+    const summaryByType = new Map(
+        (summaryQuery.data?.by_type ?? []).map((t) => [t.service_type_id, t])
+    );
+
     const serviceTypes = serviceTypeRows.map((type) => {
         const style = TYPE_STYLES[type.name] ?? DEFAULT_STYLE;
+        const typeSum = summaryByType.get(type.id);
         return {
             id: type.id,
             label: type.name,
-            count: String(allRequests.filter((request) => request.service_type === type.id).length),
+            count: String(typeSum?.total_count ?? 0),
             ...style,
         };
     });
 
-    const requestsForType = allRequests.filter(
-        (request) => request.service_type === selectedTypeId,
-    );
-
-    const completedCount = requestsForType.filter(
-        (request) => request.status_name === "Completed",
-    ).length;
-    const totalServices = requestsForType.length;
-    const pendingCount = totalServices - completedCount;
+    const currentTypeSummary = summaryByType.get(selectedTypeId ?? 0);
+    const completedCount = currentTypeSummary?.completed_count ?? 0;
+    const totalServices = currentTypeSummary?.total_count ?? 0;
+    const pendingCount = currentTypeSummary?.pending_count ?? 0;
 
     const currentChartData = useMemo(() => {
         if (!totalServices) return [];
@@ -196,7 +201,7 @@ const ServiceTracking = () => {
 
     // One row shape covering every table variant below. Each value is a real
     // `service_request` field; "-" means the schema has no such column.
-    const rows = requestsForType.map((request) => ({
+    const rows = (requestsQuery.data?.items ?? []).map((request) => ({
         id: request.id,
         statusId: request.status ?? null,
         assignedToId: request.assignee?.id ?? null,
@@ -226,8 +231,8 @@ const ServiceTracking = () => {
         status: request.status_name ?? "-",
     }));
 
-    const isLoading = typesQuery.isLoading || allRequestsQuery.isLoading;
-    const error = typesQuery.error ?? allRequestsQuery.error;
+    const isLoading = typesQuery.isLoading || requestsQuery.isLoading || summaryQuery.isLoading;
+    const error = typesQuery.error ?? requestsQuery.error ?? summaryQuery.error;
 
     const getStatusBadge = (status: string) => (
         <Badge variant="secondary" className={`${serviceStatusBadgeClass(status)} font-medium border-0`}>
@@ -270,22 +275,11 @@ const ServiceTracking = () => {
         );
     };
 
-    const filterData = <T extends Record<string, unknown>>(data: T[]) => {
-        if (!searchQuery.trim()) return data;
-        const query = searchQuery.toLowerCase().trim();
-        return data.filter((item) =>
-            Object.values(item).some((val) =>
-                val !== null && val !== undefined && String(val).toLowerCase().includes(query)
-            )
-        );
-    };
-
-    const filteredData = filterData(rows);
-    const totalEntries = filteredData.length;
-    const pageSize = parseInt(entriesPerPage) || 10;
-    const startIndex = (currentPage - 1) * pageSize;
-    const endIndex = Math.min(startIndex + pageSize, totalEntries);
-    const paginatedData = filteredData.slice(startIndex, endIndex);
+    const totalEntries = requestsQuery.data?.total ?? 0;
+    const totalPages = Math.max(1, Math.ceil(totalEntries / pageSize));
+    const startIndex = totalEntries === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+    const endIndex = Math.min(currentPage * pageSize, totalEntries);
+    const paginatedData = rows;
 
     const renderTable = () => {
         switch (selectedType?.name) {
@@ -317,7 +311,7 @@ const ServiceTracking = () => {
                                         <Badge
                                             variant="outline"
                                             className="text-amber-600 border-amber-600 bg-amber-50 hover:bg-amber-100 cursor-pointer transition-colors"
-                                            onClick={() => setItemsModalConfig({ isOpen: true, roomNo: row.roomNo })}
+                                            onClick={() => setItemsModalConfig({ isOpen: true, roomNo: row.roomNo, requestId: row.id })}
                                         >
                                             {row.item}
                                         </Badge>
@@ -434,7 +428,7 @@ const ServiceTracking = () => {
                                         <Badge
                                             variant="outline"
                                             className="text-amber-600 border-amber-600 bg-amber-50 hover:bg-amber-100 cursor-pointer transition-colors"
-                                            onClick={() => setItemsModalConfig({ isOpen: true, roomNo: row.roomNo })}
+                                            onClick={() => setItemsModalConfig({ isOpen: true, roomNo: row.roomNo, requestId: row.id })}
                                         >
                                             {row.menu}
                                         </Badge>
@@ -743,32 +737,32 @@ const ServiceTracking = () => {
                     </div>
 
                     <div className="p-8 pb-10">
-                        <table className="w-full text-sm text-left text-gray-800 border-collapse">
-                            <thead>
-                                <tr className="bg-gray-50">
-                                    <th className="border border-gray-200 p-4 font-semibold text-gray-700 w-24">S.No</th>
-                                    <th className="border border-gray-200 p-4 font-semibold text-gray-700">Item Name</th>
-                                    <th className="border border-gray-200 p-4 font-semibold text-gray-700 w-64">Quantity</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td className="border border-gray-200 p-4 font-medium">1</td>
-                                    <td className="border border-gray-200 p-4 font-medium">Wipes</td>
-                                    <td className="border border-gray-200 p-4 font-medium">1</td>
-                                </tr>
-                                <tr>
-                                    <td className="border border-gray-200 p-4 font-medium">2</td>
-                                    <td className="border border-gray-200 p-4 font-medium">Trimmer</td>
-                                    <td className="border border-gray-200 p-4 font-medium">1</td>
-                                </tr>
-                                <tr>
-                                    <td className="border border-gray-200 p-4 font-medium">3</td>
-                                    <td className="border border-gray-200 p-4 font-medium">Soap</td>
-                                    <td className="border border-gray-200 p-4 font-medium">1</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                        {selectedItemRequest.isLoading ? (
+                            <div className="p-8 text-center text-sm text-muted-foreground animate-pulse">Loading items from database...</div>
+                        ) : selectedItemRequest.isError ? (
+                            <div className="p-8 text-center text-sm text-red-500">Failed to load request items.</div>
+                        ) : (selectedItemRequest.data?.items ?? []).length === 0 ? (
+                            <div className="p-8 text-center text-sm text-muted-foreground">No specific line items recorded for this request.</div>
+                        ) : (
+                            <table className="w-full text-sm text-left text-gray-800 border-collapse">
+                                <thead>
+                                    <tr className="bg-gray-50">
+                                        <th className="border border-gray-200 p-4 font-semibold text-gray-700 w-24">S.No</th>
+                                        <th className="border border-gray-200 p-4 font-semibold text-gray-700">Item Name</th>
+                                        <th className="border border-gray-200 p-4 font-semibold text-gray-700 w-64">Quantity</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {(selectedItemRequest.data?.items ?? []).map((item, idx) => (
+                                        <tr key={item.id || idx}>
+                                            <td className="border border-gray-200 p-4 font-medium">{idx + 1}</td>
+                                            <td className="border border-gray-200 p-4 font-medium">{item.item_name ?? "Item"}</td>
+                                            <td className="border border-gray-200 p-4 font-medium">{item.quantity ?? 1}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        )}
                     </div>
                 </DialogContent>
             </Dialog>

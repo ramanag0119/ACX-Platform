@@ -122,6 +122,9 @@ class ServiceItemCreate(Body):
     amenity_id: uuid.UUID | None = None
     facility_id: uuid.UUID | None = None
     status: int | None = Field(default=1, ge=0, le=1)
+    is_veg: bool | None = None
+    is_spicy: bool | None = None
+    type_of_service: str | None = None
 
 
 class ServiceItemUpdate(Body):
@@ -131,6 +134,9 @@ class ServiceItemUpdate(Body):
     price_per_unit: Decimal | None = Field(default=None, ge=0)
     amenity_id: uuid.UUID | None = None
     status: int | None = Field(default=None, ge=0, le=1)
+    is_veg: bool | None = None
+    is_spicy: bool | None = None
+    type_of_service: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -409,6 +415,7 @@ class PromoCodeCreate(Body):
     max_discount_value: Decimal | None = Field(default=None, ge=0)
     min_order_value: Decimal | None = Field(default=None, ge=0)
     status: int | None = Field(default=1, ge=0, le=1)
+    promo_code_icon: uuid.UUID | None = None
     #: `promo_code_amenity` rows -- which rooms the offer applies to.
     amenity_ids: list[uuid.UUID] = Field(default_factory=list)
 
@@ -423,6 +430,7 @@ class PromoCodeUpdate(Body):
     max_discount_value: Decimal | None = Field(default=None, ge=0)
     min_order_value: Decimal | None = Field(default=None, ge=0)
     status: int | None = Field(default=None, ge=0, le=1)
+    promo_code_icon: uuid.UUID | None = None
     amenity_ids: list[uuid.UUID] | None = None
 
 
@@ -434,6 +442,7 @@ class FacilityEventCreate(Body):
     expected_attendees: int | None = Field(default=None, ge=0)
     start_date_time: datetime | None = None
     end_date_time: datetime | None = None
+    image_id: uuid.UUID | None = None
     facility_id: uuid.UUID | None = None
     status: int | None = Field(default=1, ge=0, le=1)
 
@@ -446,6 +455,7 @@ class FacilityEventUpdate(Body):
     expected_attendees: int | None = Field(default=None, ge=0)
     start_date_time: datetime | None = None
     end_date_time: datetime | None = None
+    image_id: uuid.UUID | None = None
     status: int | None = Field(default=None, ge=0, le=1)
     cancellation_reason: str | None = Field(default=None, max_length=255)
 

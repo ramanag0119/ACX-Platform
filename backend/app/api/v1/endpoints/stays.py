@@ -122,6 +122,7 @@ def list_stays(
         None, description="Checked in and not yet checked out"
     ),
     ref_number: str | None = Query(None, description="Exact internal_stay_ref_number"),
+    q: str | None = Query(None, description="Free-text search on reference number, booker name, email, or phone"),
     expected_checkin_from: datetime | None = Query(None),
     expected_checkin_to: datetime | None = Query(None),
     expected_checkout_from: datetime | None = Query(None),
@@ -134,7 +135,7 @@ def list_stays(
         booking_user_id=booking_user_id, guest_id=guest_id,
         facility_id=facility_id, room_id=room_id, building_id=building_id,
         floor_id=floor_id, is_checked_in=is_checked_in, is_in_house=is_in_house,
-        ref_number=ref_number,
+        ref_number=ref_number, q=q,
         expected_checkin_from=expected_checkin_from,
         expected_checkin_to=expected_checkin_to,
         expected_checkout_from=expected_checkout_from,

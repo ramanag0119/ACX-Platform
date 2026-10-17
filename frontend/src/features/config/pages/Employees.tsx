@@ -117,7 +117,14 @@ const Employees = () => {
     // --- Live data -------------------------------------------------------
     const { canWrite } = useAuth();
 
-    const usersQuery = useUsers({ page: 1, page_size: MAX_PAGE_SIZE, is_staff: 1 });
+    const employeePageSize = parseInt(employeeEntriesPerPage) || 10;
+    const usersQuery = useUsers({
+        page: employeeCurrentPage,
+        page_size: employeePageSize,
+        is_staff: 1,
+        q: employeeSearch.trim() || undefined,
+    });
+    const supervisorsQuery = useUsers({ page: 1, page_size: MAX_PAGE_SIZE, is_staff: 1 });
     const countriesQuery = useCountries({ page: 1, page_size: 250 });
     const assignableRolesQuery = useAssignableRoles();
     const departmentsQuery = useDepartments({ page: 1, page_size: MAX_PAGE_SIZE });
@@ -155,7 +162,7 @@ const Employees = () => {
     const [editingEmployee, setEditingEmployeeRow] = useState<(typeof employeeData)[number] | null>(null);
 
     // Staff members who can serve as supervisors
-    const supervisorOptions = users
+    const supervisorOptions = (supervisorsQuery.data?.items ?? [])
         .filter((user) => !editingEmployee || user.id !== editingEmployee.userId)
         .map((user) => ({
             id: user.id,
@@ -198,17 +205,11 @@ const Employees = () => {
     const functionEndIndex = functionStartIndex + parseInt(functionEntriesPerPage);
     const paginatedFunctions = filteredFunctions.slice(functionStartIndex, functionEndIndex);
 
-    // Filter employee data
-    const filteredEmployees = employeeData.filter(item =>
-        item.id.toLowerCase().includes(employeeSearch.toLowerCase()) ||
-        item.firstName.toLowerCase().includes(employeeSearch.toLowerCase()) ||
-        item.lastName.toLowerCase().includes(employeeSearch.toLowerCase()) ||
-        item.mobile.includes(employeeSearch)
-    );
-    const employeeTotalPages = Math.ceil(filteredEmployees.length / parseInt(employeeEntriesPerPage));
-    const employeeStartIndex = (employeeCurrentPage - 1) * parseInt(employeeEntriesPerPage);
-    const employeeEndIndex = employeeStartIndex + parseInt(employeeEntriesPerPage);
-    const paginatedEmployees = filteredEmployees.slice(employeeStartIndex, employeeEndIndex);
+    const totalEmployees = usersQuery.data?.total ?? 0;
+    const employeeTotalPages = Math.max(1, Math.ceil(totalEmployees / employeePageSize));
+    const employeeStartIndex = (employeeCurrentPage - 1) * employeePageSize;
+    const employeeEndIndex = Math.min(employeeStartIndex + employeePageSize, totalEmployees);
+    const paginatedEmployees = employeeData;
 
     const handleDepartmentReset = () => setDepartmentName("");
 
@@ -682,7 +683,7 @@ const Employees = () => {
                 <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-2">
                         <span className="text-muted-foreground text-sm">Show</span>
-                        <Select value={employeeEntriesPerPage} onValueChange={setEmployeeEntriesPerPage}>
+                        <Select value={employeeEntriesPerPage} onValueChange={(val) => { setEmployeeEntriesPerPage(val); setEmployeeCurrentPage(1); }}>
                             <SelectTrigger className="w-20 h-9 bg-muted/30 border-border/50"><SelectValue /></SelectTrigger>
                             <SelectContent className="bg-popover"><SelectItem value="10">10</SelectItem><SelectItem value="25">25</SelectItem><SelectItem value="50">50</SelectItem></SelectContent>
                         </Select>
@@ -690,7 +691,7 @@ const Employees = () => {
                     </div>
                     <div className="flex items-center gap-2">
                         <span className="text-muted-foreground text-sm">Search:</span>
-                        <Input placeholder="Employee ID, First name, Last name, Mobile Number" value={employeeSearch} onChange={(e) => setEmployeeSearch(e.target.value)} className="w-96 h-9 bg-muted/30 border-border/50" />
+                        <Input placeholder="Employee ID, First name, Last name, Mobile Number" value={employeeSearch} onChange={(e) => { setEmployeeSearch(e.target.value); setEmployeeCurrentPage(1); }} className="w-96 h-9 bg-muted/30 border-border/50" />
                     </div>
                 </div>
                 <div className="rounded-xl overflow-hidden border border-gray-200 overflow-x-auto">
@@ -829,7 +830,7 @@ const Employees = () => {
                     </Table>
                 </div>
                 <div className="flex items-center justify-between mt-6">
-                    <span className="text-muted-foreground text-sm">Showing {employeeStartIndex + 1} to {Math.min(employeeEndIndex, filteredEmployees.length)} of {filteredEmployees.length} entries</span>
+                    <span className="text-muted-foreground text-sm">Showing {totalEmployees > 0 ? employeeStartIndex + 1 : 0} to {employeeEndIndex} of {totalEmployees} entries</span>
                     <div className="flex items-center gap-1">
                         <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setEmployeeCurrentPage(1)} disabled={employeeCurrentPage === 1}>First</Button>
                         <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setEmployeeCurrentPage(Math.max(1, employeeCurrentPage - 1))} disabled={employeeCurrentPage === 1}>Previous</Button>

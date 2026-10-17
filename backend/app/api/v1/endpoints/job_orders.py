@@ -142,6 +142,7 @@ def list_job_orders(
     device_id: uuid.UUID | None = Query(None, description="Via job_order_device"),
     facility_id: uuid.UUID | None = Query(None, description="Via the job's rooms"),
     search: str | None = Query(None, description="order_reference or description"),
+    q: str | None = Query(None),
     include_removed: bool = Query(False, description="Include status = 0 rows"),
 ) -> Page[JobOrderRead]:
     rows, total = svc.list_job_orders(
@@ -154,7 +155,7 @@ def list_job_orders(
         amenity_id=amenity_id,
         device_id=device_id,
         facility_id=facility_id,
-        search=search,
+        search=q or search,
         include_removed=include_removed,
     )
     return Page[JobOrderRead](

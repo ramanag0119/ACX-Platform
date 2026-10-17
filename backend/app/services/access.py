@@ -276,6 +276,7 @@ def list_users(
     is_staff: int | None = None,
     department_id: uuid.UUID | None = None,
     job_function_id: uuid.UUID | None = None,
+    q: str | None = None,
 ):
     stmt = _user_stmt().order_by(AppUser.first_name, AppUser.last_name)
 
@@ -293,6 +294,16 @@ def list_users(
         stmt = stmt.where(AppUser.department_id == department_id)
     if job_function_id:
         stmt = stmt.where(AppUser.job_function_id == job_function_id)
+    if q and q.strip():
+        term = f"%{q.strip()}%"
+        stmt = stmt.where(
+            AppUser.first_name.ilike(term)
+            | AppUser.last_name.ilike(term)
+            | AppUser.email.ilike(term)
+            | AppUser.phone_number.ilike(term)
+            | AppUser.emp_id.ilike(term)
+            | AppUser.user_name.ilike(term)
+        )
 
     total = _count(db, stmt)
     rows = db.execute(_page(stmt, page=page, page_size=page_size)).mappings().all()
