@@ -359,9 +359,9 @@ export const AppSidebar = ({ collapsed }: AppSidebarProps) => {
         { to: "/config/limit-alert", label: "Limit Config Alert", icon: ShieldAlert },
       ],
     },
-    // Manage groups the calendar-driven screens. Like Stay, `/manage` is a
-    // nav-only prefix with no route of its own, so Holidays and Events keep
-    // their existing routes, components and module grants untouched.
+    // Manage groups the management screens: Holidays, Events, and Tickets.
+    // Like Stay, `/manage` is a nav-only prefix with no route of its own,
+    // so child screens keep their existing routes, components and module grants untouched.
     {
       to: "/manage",
       icon: CalendarRange,
@@ -369,10 +369,10 @@ export const AppSidebar = ({ collapsed }: AppSidebarProps) => {
       subItems: [
         { to: "/holidays", label: "Holidays", icon: PartyPopper },
         { to: "/events", label: "Events", icon: CalendarDays },
+        { to: "/tickets", label: "Tickets", icon: Ticket },
       ],
     },
     { to: "/reports/occupancy", icon: FileText, label: "Reports" },
-    { to: "/tickets", icon: Ticket, label: "Tickets" },
     // Power View / Energy View / Room View are gone: their room-level figures
     // now live inside the Occupancy Dashboard's Room Details dialog.
     { to: "/key-settings", icon: Key, label: "Default Key Settings" },
