@@ -42,8 +42,10 @@ import type {
   ModuleRead,
   NotificationRead,
   NotificationTemplateRead,
+  OccupancyDailyPoint,
   OccupancyDetail,
   OccupancyRead,
+  OccupancySummaryRead,
   OtherDeviceReadingRead,
   Page,
   PermissionRead,
@@ -162,6 +164,10 @@ export const listActivities = (params?: QueryParams) =>
 
 export const listOccupancy = (params?: QueryParams) =>
   apiClient.get<Page<OccupancyRead>>("/occupancy", params);
+export const getOccupancySummary = (params?: QueryParams) =>
+  apiClient.get<OccupancySummaryRead>("/occupancy/summary", params);
+export const listOccupancyDaily = (params: QueryParams) =>
+  apiClient.get<OccupancyDailyPoint[]>("/occupancy/daily", params);
 export const getOccupancy = (amenityId: string) =>
   apiClient.get<OccupancyDetail>(`/occupancy/${amenityId}`);
 export const listAmenityStatuses = (params?: QueryParams) =>

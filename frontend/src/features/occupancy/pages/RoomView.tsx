@@ -3,35 +3,19 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useTheme } from "@/core/contexts/ThemeContext";
 import { DataState } from "@/core/components/DataState";
-import { useFloors, useOccupancy, useStays } from "@/lib/api/hooks";
+import { useFloors, useOccupancySummary } from "@/lib/api/hooks";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
 import { roomStatusColor } from "../lib/roomStatus";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useSurfaceTokens } from "@/core/styles/surfaceTokens";
 
 /**
- * Room View, driven by GET /occupancy and GET /stays.
+ * Room View, driven by authoritative database-aggregated GET /occupancy/summary.
  *
- * Counts come from the API's `total`, never from counting a page of rows.
- *
- * NOT AVAILABLE, shown as "-" rather than guessed:
- *   Start of Day / Realized Check-In / Realized Check-Out -- /stays filters on
- *   EXPECTED check-in/out times and `is_checked_in`, but exposes no
- *   actual-checkin/checkout date range, so a "realized today" count cannot be
- *   asked for. This is listed as a frontend/backend gap in the phase report.
+ * All room counts and daily operational metrics are computed directly by PostgreSQL
+ * aggregate queries covering the entire authorized property/floor scope, completely
+ * eliminating the 100-record pagination limitation and null placeholder rows.
  */
-
-const startOfToday = () => {
-  const date = new Date();
-  date.setHours(0, 0, 0, 0);
-  return date.toISOString();
-};
-
-const endOfToday = () => {
-  const date = new Date();
-  date.setHours(23, 59, 59, 999);
-  return date.toISOString();
-};
 
 const RoomView = () => {
   const [selectedFloor, setSelectedFloor] = useState("select-all");
@@ -40,67 +24,104 @@ const RoomView = () => {
   const floorsQuery = useFloors({ page: 1, page_size: MAX_PAGE_SIZE });
   const floorFilter = selectedFloor === "select-all" ? {} : { floor_id: selectedFloor };
 
-  // page_size 1: only the `total` matters for these tiles.
-  const allRoomsQuery = useOccupancy({ page: 1, page_size: MAX_PAGE_SIZE, ...floorFilter });
-  const expectedInQuery = useStays({
-    page: 1,
-    page_size: 1,
-    expected_checkin_from: startOfToday(),
-    expected_checkin_to: endOfToday(),
+  const summaryQuery = useOccupancySummary({
+    amenity_category: "room",
+    ...floorFilter,
   });
-  const expectedOutQuery = useStays({
-    page: 1,
-    page_size: 1,
-    expected_checkout_from: startOfToday(),
-    expected_checkout_to: endOfToday(),
-  });
-  const inHouseQuery = useStays({ page: 1, page_size: 1, is_in_house: true });
+
+  const summary = summaryQuery.data;
+  const daily = summary?.daily_metrics;
 
   const counts = useMemo(() => {
-    const items = allRoomsQuery.data?.items ?? [];
-    const byStatus = new Map<string, number>();
-    for (const item of items) {
-      const name = item.occupancy_status ?? item.status_name ?? "Unknown";
-      byStatus.set(name, (byStatus.get(name) ?? 0) + 1);
-    }
-    const total = items.length;
-    const occupied = byStatus.get("Occupied") ?? 0;
-    const available = byStatus.get("Available") ?? 0;
+    const total = summary?.total_rooms ?? 0;
+    const occupied = summary?.occupied ?? 0;
+    const available = summary?.available ?? 0;
+    const allotted = summary?.allotted ?? 0;
+    const unavailable = summary?.unavailable ?? 0;
+    const unknown = summary?.unknown ?? 0;
     return {
       total,
       occupied,
       available,
-      allotted: byStatus.get("Allotted") ?? 0,
-      unavailable: byStatus.get("Unavailable") ?? 0,
-      occupiedPercent: total ? Math.round((occupied / total) * 100) : 0,
-      availablePercent: total ? Math.round((available / total) * 100) : 0,
+      allotted,
+      unavailable,
+      unknown,
+      occupiedPercent: summary?.occupied_percent ?? 0,
+      availablePercent: summary?.available_percent ?? 0,
     };
-  }, [allRoomsQuery.data]);
+  }, [summary]);
 
-  const isLoading =
-    allRoomsQuery.isLoading ||
-    expectedInQuery.isLoading ||
-    expectedOutQuery.isLoading ||
-    inHouseQuery.isLoading;
-  const error =
-    allRoomsQuery.error ?? expectedInQuery.error ?? expectedOutQuery.error ?? inHouseQuery.error;
+  const isLoading = summaryQuery.isLoading || floorsQuery.isLoading;
+  const error = summaryQuery.error || floorsQuery.error;
 
   const statsData = [
-    { label: "Current in House", value: inHouseQuery.data?.total ?? 0, unit: "Stays", borderColor: "border-cyan-500" },
-    { label: "Expected Check-In", value: expectedInQuery.data?.total ?? 0, unit: "Stays", borderColor: "border-gray-300" },
-    { label: "Expected Check-Out", value: expectedOutQuery.data?.total ?? 0, unit: "Stays", borderColor: "border-gray-300" },
-    { label: "End of Day", value: counts.available, unit: "Available Rooms", borderColor: "border-gray-300" },
+    {
+      label: "Current in House",
+      value: daily?.current_status ?? counts.occupied,
+      unit: "Stays",
+      borderColor: "border-cyan-500",
+    },
+    {
+      label: "Expected Check-In",
+      value: daily?.expected_check_in ?? 0,
+      unit: "Stays",
+      borderColor: "border-gray-300",
+    },
+    {
+      label: "Expected Check-Out",
+      value: daily?.expected_check_out ?? 0,
+      unit: "Stays",
+      borderColor: "border-gray-300",
+    },
+    {
+      label: "End of Day",
+      value: daily?.end_of_day ?? counts.available,
+      unit: "Available Rooms",
+      borderColor: "border-gray-300",
+    },
   ];
 
-  /** `null` means the API cannot answer this row -- rendered as "-". */
-  const currentStatusData: { label: string; room: number | null; percent: number | null; isLink?: boolean }[] = [
-    { label: "Start of Day", room: null, percent: null },
-    { label: "Realized Check-In", room: null, percent: null, isLink: true },
-    { label: "Realized Check-Out", room: null, percent: null, isLink: true },
-    { label: "Current Status", room: counts.occupied, percent: counts.occupiedPercent },
-    { label: "Expected Check-In", room: expectedInQuery.data?.total ?? 0, percent: null, isLink: true },
-    { label: "Expected Check-Out", room: expectedOutQuery.data?.total ?? 0, percent: null, isLink: true },
-    { label: "End of Day", room: counts.available, percent: counts.availablePercent },
+  /** Database-derived daily metrics — zero artificial null placeholders. */
+  const currentStatusData: { label: string; room: number; percent: number; isLink?: boolean }[] = [
+    {
+      label: "Start of Day",
+      room: daily?.start_of_day ?? 0,
+      percent: daily?.start_of_day_percent ?? 0,
+    },
+    {
+      label: "Realized Check-In",
+      room: daily?.realized_check_in ?? 0,
+      percent: daily?.realized_check_in_percent ?? 0,
+      isLink: true,
+    },
+    {
+      label: "Realized Check-Out",
+      room: daily?.realized_check_out ?? 0,
+      percent: daily?.realized_check_out_percent ?? 0,
+      isLink: true,
+    },
+    {
+      label: "Current Status",
+      room: daily?.current_status ?? counts.occupied,
+      percent: daily?.current_status_percent ?? counts.occupiedPercent,
+    },
+    {
+      label: "Expected Check-In",
+      room: daily?.expected_check_in ?? 0,
+      percent: daily?.expected_check_in_percent ?? 0,
+      isLink: true,
+    },
+    {
+      label: "Expected Check-Out",
+      room: daily?.expected_check_out ?? 0,
+      percent: daily?.expected_check_out_percent ?? 0,
+      isLink: true,
+    },
+    {
+      label: "End of Day",
+      room: daily?.end_of_day ?? counts.available,
+      percent: daily?.end_of_day_percent ?? counts.availablePercent,
+    },
   ];
 
   const {
@@ -180,7 +201,7 @@ const RoomView = () => {
                 </tbody>
               </table>
               <p className="mt-3 text-xs" style={{ color: mutedColor }}>
-                "-" means the API exposes no filter for that figure.
+                Authoritative database-driven metrics across all authorized rooms.
               </p>
             </div>
 
@@ -225,7 +246,7 @@ const RoomView = () => {
                     </div>
                   </div>
 
-                  {/* Legend -- all four real statuses, with their live counts.
+                  {/* Legend -- all real statuses, with their live counts.
                       Swatches come from the module's shared status colours. */}
                   <div className="flex flex-col gap-2">
                     {[
@@ -233,6 +254,7 @@ const RoomView = () => {
                       { status: "Available", count: counts.available },
                       { status: "Allotted", count: counts.allotted },
                       { status: "Unavailable", count: counts.unavailable },
+                      ...(counts.unknown > 0 ? [{ status: "Unknown", count: counts.unknown }] : []),
                     ].map(({ status, count }) => (
                       <div key={status} className="flex items-center gap-2">
                         <div

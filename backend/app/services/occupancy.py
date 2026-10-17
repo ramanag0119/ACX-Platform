@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import uuid
 from collections import defaultdict
+from datetime import date, datetime, time, timedelta
 
 from sqlalchemy import Select, and_, case, func, or_, select
 from sqlalchemy.orm import Session, aliased
@@ -136,7 +137,8 @@ def _authoritative_occupancy_status_expr():
         (_in_house_exists(), "Occupied"),
         (or_(Amenity.status == 3, _pending_allocation_exists()), "Allotted"),
         (or_(Amenity.status == 2, _blocking_condition_exists()), "Unavailable"),
-        else_="Available",
+        (Amenity.status == 0, "Available"),
+        else_=None,
     )
 
 
@@ -290,7 +292,10 @@ def list_occupancy(
     if status is not None:
         stmt = stmt.where(Amenity.status == status)
     if occupancy_status:
-        stmt = stmt.where(_authoritative_occupancy_status_expr() == occupancy_status)
+        if occupancy_status in ("Unknown", "Not Set"):
+            stmt = stmt.where(_authoritative_occupancy_status_expr().is_(None))
+        else:
+            stmt = stmt.where(_authoritative_occupancy_status_expr() == occupancy_status)
     if condition_id is not None:
         stmt = stmt.where(
             select(AmenityConditionStatus.amenity_id)
@@ -350,3 +355,275 @@ def get_occupancy(db: Session, amenity_id: uuid.UUID):
         select(func.count()).select_from(Device).where(Device.amenity_id == amenity_id)
     ).scalar_one()
     return enriched
+
+
+def get_occupancy_summary(
+    db: Session,
+    *,
+    facility_id: uuid.UUID | None = None,
+    building_id: uuid.UUID | None = None,
+    floor_id: uuid.UUID | None = None,
+    amenity_type_id: uuid.UUID | None = None,
+    amenity_category: str | None = "room",
+    target_date: date | None = None,
+) -> dict:
+    if target_date is None:
+        target_date = datetime.now().date()
+
+    day_start = datetime.combine(target_date, time.min)
+    day_end = datetime.combine(target_date, time.max)
+
+    # Base query for rooms
+    room_base = select(Amenity.id).join(AmenityType, AmenityType.id == Amenity.amenity_type_id)
+    if amenity_category:
+        room_base = room_base.where(AmenityType.amenity_category == amenity_category)
+    if facility_id:
+        room_base = room_base.where(Amenity.facility_id == facility_id)
+    if building_id or floor_id:
+        room_base = room_base.outerjoin(PropertyChain, PropertyChain.id == Amenity.property_chain_id)
+        if building_id:
+            room_base = room_base.where(PropertyChain.level_one_id == building_id)
+        if floor_id:
+            room_base = room_base.where(PropertyChain.level_two_id == floor_id)
+    if amenity_type_id:
+        room_base = room_base.where(Amenity.amenity_type_id == amenity_type_id)
+
+    room_ids_subquery = room_base.scalar_subquery()
+    status_expr = _authoritative_occupancy_status_expr()
+
+    # Query room counts in one aggregation
+    agg_stmt = (
+        select(
+            func.count().label("total"),
+            func.count().filter(status_expr == "Occupied").label("occupied"),
+            func.count().filter(status_expr == "Available").label("available"),
+            func.count().filter(status_expr == "Allotted").label("allotted"),
+            func.count().filter(status_expr == "Unavailable").label("unavailable"),
+            func.count().filter(status_expr.is_(None)).label("unknown"),
+        )
+        .select_from(Amenity)
+        .join(AmenityType, AmenityType.id == Amenity.amenity_type_id)
+    )
+    if amenity_category:
+        agg_stmt = agg_stmt.where(AmenityType.amenity_category == amenity_category)
+    if facility_id:
+        agg_stmt = agg_stmt.where(Amenity.facility_id == facility_id)
+    if building_id or floor_id:
+        agg_stmt = agg_stmt.outerjoin(PropertyChain, PropertyChain.id == Amenity.property_chain_id)
+        if building_id:
+            agg_stmt = agg_stmt.where(PropertyChain.level_one_id == building_id)
+        if floor_id:
+            agg_stmt = agg_stmt.where(PropertyChain.level_two_id == floor_id)
+    if amenity_type_id:
+        agg_stmt = agg_stmt.where(Amenity.amenity_type_id == amenity_type_id)
+
+    agg = db.execute(agg_stmt).mappings().one()
+    total = agg["total"] or 0
+    occupied = agg["occupied"] or 0
+    available = agg["available"] or 0
+    allotted = agg["allotted"] or 0
+    unavailable = agg["unavailable"] or 0
+    unknown = agg["unknown"] or 0
+
+    def pct(val: int) -> float:
+        return round((val / total) * 100, 1) if total > 0 else 0.0
+
+    # Daily metrics for target_date
+    realized_in = db.execute(
+        select(func.count(func.distinct(RoomAllocation.room_id)))
+        .select_from(Stay)
+        .join(RoomAllocation, RoomAllocation.stay_id == Stay.id)
+        .where(
+            RoomAllocation.room_id.in_(room_ids_subquery),
+            Stay.actual_checkin_time >= day_start,
+            Stay.actual_checkin_time <= day_end,
+        )
+    ).scalar_one() or 0
+
+    realized_out = db.execute(
+        select(func.count(func.distinct(RoomAllocation.room_id)))
+        .select_from(Stay)
+        .join(RoomAllocation, RoomAllocation.stay_id == Stay.id)
+        .where(
+            RoomAllocation.room_id.in_(room_ids_subquery),
+            Stay.actual_checkout_time >= day_start,
+            Stay.actual_checkout_time <= day_end,
+        )
+    ).scalar_one() or 0
+
+    expected_in = db.execute(
+        select(func.count(func.distinct(RoomAllocation.room_id)))
+        .select_from(Stay)
+        .join(RoomAllocation, RoomAllocation.stay_id == Stay.id)
+        .where(
+            RoomAllocation.room_id.in_(room_ids_subquery),
+            Stay.expected_checkin_time >= day_start,
+            Stay.expected_checkin_time <= day_end,
+        )
+    ).scalar_one() or 0
+
+    expected_out = db.execute(
+        select(func.count(func.distinct(RoomAllocation.room_id)))
+        .select_from(Stay)
+        .join(RoomAllocation, RoomAllocation.stay_id == Stay.id)
+        .where(
+            RoomAllocation.room_id.in_(room_ids_subquery),
+            Stay.expected_checkout_time >= day_start,
+            Stay.expected_checkout_time <= day_end,
+        )
+    ).scalar_one() or 0
+
+    current_status = db.execute(
+        select(func.count(func.distinct(RoomAllocation.room_id)))
+        .select_from(Stay)
+        .join(RoomAllocation, RoomAllocation.stay_id == Stay.id)
+        .where(
+            RoomAllocation.room_id.in_(room_ids_subquery),
+            IN_HOUSE,
+        )
+    ).scalar_one() or 0
+
+    sod_occupied = db.execute(
+        select(func.count(func.distinct(RoomAllocation.room_id)))
+        .select_from(Stay)
+        .join(RoomAllocation, RoomAllocation.stay_id == Stay.id)
+        .where(
+            RoomAllocation.room_id.in_(room_ids_subquery),
+            Stay.actual_checkin_time < day_start,
+            or_(
+                Stay.actual_checkout_time.is_(None),
+                Stay.actual_checkout_time >= day_start,
+            ),
+        )
+    ).scalar_one() or 0
+
+    by_status = [
+        {"status": "Occupied", "count": occupied, "percent": pct(occupied)},
+        {"status": "Available", "count": available, "percent": pct(available)},
+        {"status": "Allotted", "count": allotted, "percent": pct(allotted)},
+        {"status": "Unavailable", "count": unavailable, "percent": pct(unavailable)},
+    ]
+    if unknown > 0:
+        by_status.append({"status": "Unknown", "count": unknown, "percent": pct(unknown)})
+
+    return {
+        "total_rooms": total,
+        "occupied": occupied,
+        "available": available,
+        "allotted": allotted,
+        "unavailable": unavailable,
+        "unknown": unknown,
+        "occupied_percent": pct(occupied),
+        "available_percent": pct(available),
+        "allotted_percent": pct(allotted),
+        "unavailable_percent": pct(unavailable),
+        "unknown_percent": pct(unknown),
+        "by_status": by_status,
+        "daily_metrics": {
+            "target_date": target_date,
+            "start_of_day": sod_occupied,
+            "start_of_day_percent": pct(sod_occupied),
+            "realized_check_in": realized_in,
+            "realized_check_in_percent": pct(realized_in),
+            "realized_check_out": realized_out,
+            "realized_check_out_percent": pct(realized_out),
+            "current_status": current_status,
+            "current_status_percent": pct(current_status),
+            "expected_check_in": expected_in,
+            "expected_check_in_percent": pct(expected_in),
+            "expected_check_out": expected_out,
+            "expected_check_out_percent": pct(expected_out),
+            "end_of_day": available,
+            "end_of_day_percent": pct(available),
+        },
+    }
+
+
+def get_occupancy_daily_series(
+    db: Session,
+    *,
+    date_from: date,
+    date_to: date,
+    facility_id: uuid.UUID | None = None,
+    building_id: uuid.UUID | None = None,
+    floor_id: uuid.UUID | None = None,
+    amenity_category: str | None = "room",
+) -> list[dict]:
+    if date_from > date_to:
+        raise ValueError("date_from cannot be after date_to")
+
+    # Base query for room count
+    room_base = select(Amenity.id).join(AmenityType, AmenityType.id == Amenity.amenity_type_id)
+    if amenity_category:
+        room_base = room_base.where(AmenityType.amenity_category == amenity_category)
+    if facility_id:
+        room_base = room_base.where(Amenity.facility_id == facility_id)
+    if building_id or floor_id:
+        room_base = room_base.outerjoin(PropertyChain, PropertyChain.id == Amenity.property_chain_id)
+        if building_id:
+            room_base = room_base.where(PropertyChain.level_one_id == building_id)
+        if floor_id:
+            room_base = room_base.where(PropertyChain.level_two_id == floor_id)
+
+    total_rooms = db.execute(select(func.count()).select_from(room_base.subquery())).scalar_one() or 0
+    room_ids_subquery = room_base.scalar_subquery()
+
+    days_count = (date_to - date_from).days + 1
+    series = []
+    for d_idx in range(days_count):
+        cur_date = date_from + timedelta(days=d_idx)
+        cur_start = datetime.combine(cur_date, time.min)
+        cur_end = datetime.combine(cur_date, time.max)
+
+        cin = db.execute(
+            select(func.count(func.distinct(RoomAllocation.room_id)))
+            .select_from(Stay)
+            .join(RoomAllocation, RoomAllocation.stay_id == Stay.id)
+            .where(
+                RoomAllocation.room_id.in_(room_ids_subquery),
+                Stay.actual_checkin_time >= cur_start,
+                Stay.actual_checkin_time <= cur_end,
+            )
+        ).scalar_one() or 0
+
+        cout = db.execute(
+            select(func.count(func.distinct(RoomAllocation.room_id)))
+            .select_from(Stay)
+            .join(RoomAllocation, RoomAllocation.stay_id == Stay.id)
+            .where(
+                RoomAllocation.room_id.in_(room_ids_subquery),
+                Stay.actual_checkout_time >= cur_start,
+                Stay.actual_checkout_time <= cur_end,
+            )
+        ).scalar_one() or 0
+
+        in_house_on_day = db.execute(
+            select(func.count(func.distinct(RoomAllocation.room_id)))
+            .select_from(Stay)
+            .join(RoomAllocation, RoomAllocation.stay_id == Stay.id)
+            .where(
+                RoomAllocation.room_id.in_(room_ids_subquery),
+                Stay.actual_checkin_time.is_not(None),
+                Stay.actual_checkin_time <= cur_end,
+                or_(
+                    Stay.actual_checkout_time.is_(None),
+                    Stay.actual_checkout_time >= cur_start,
+                ),
+            )
+        ).scalar_one() or 0
+
+        avail = max(0, total_rooms - in_house_on_day)
+        occ_pct = round((in_house_on_day / total_rooms) * 100, 1) if total_rooms > 0 else 0.0
+        has_data = (cin > 0 or cout > 0 or in_house_on_day > 0)
+
+        series.append({
+            "metric_date": cur_date,
+            "total_rooms": total_rooms,
+            "occupied_rooms": in_house_on_day,
+            "available_rooms": avail,
+            "occupancy_percent": occ_pct,
+            "check_ins": cin,
+            "check_outs": cout,
+            "has_data": has_data,
+        })
+    return series
