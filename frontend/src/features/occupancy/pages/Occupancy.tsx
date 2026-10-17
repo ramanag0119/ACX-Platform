@@ -97,7 +97,7 @@ const toRow = (item: OccupancyRead): RoomRow => ({
   buildingName: item.building_name ?? "-",
   floorName: item.floor_name ?? "-",
   guestName: item.current_stay?.booker?.name ?? "-",
-  occupancyStatus: item.occupancy_status ?? item.status_name ?? "Available",
+  occupancyStatus: item.occupancy_status ?? item.status_name ?? "Unknown",
   statusName: item.status_name ?? "-",
   // Display label only -- `conditionIds` below still carries the stored ids,
   // so filtering and saving keep working on the backend vocabulary.

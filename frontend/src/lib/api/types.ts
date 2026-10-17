@@ -740,6 +740,57 @@ export interface OccupancyDetail extends OccupancyRead {
   device_count: number;
 }
 
+export interface OccupancyStatusSummary {
+  status: string;
+  count: number;
+  percent: number;
+}
+
+export interface DailyOccupancyMetrics {
+  target_date: string;
+  start_of_day: number;
+  start_of_day_percent: number;
+  realized_check_in: number;
+  realized_check_in_percent: number;
+  realized_check_out: number;
+  realized_check_out_percent: number;
+  current_status: number;
+  current_status_percent: number;
+  expected_check_in: number;
+  expected_check_in_percent: number;
+  expected_check_out: number;
+  expected_check_out_percent: number;
+  end_of_day: number;
+  end_of_day_percent: number;
+}
+
+export interface OccupancySummaryRead {
+  total_rooms: number;
+  occupied: number;
+  available: number;
+  allotted: number;
+  unavailable: number;
+  unknown: number;
+  occupied_percent: number;
+  available_percent: number;
+  allotted_percent: number;
+  unavailable_percent: number;
+  unknown_percent: number;
+  by_status: OccupancyStatusSummary[];
+  daily_metrics: DailyOccupancyMetrics;
+}
+
+export interface OccupancyDailyPoint {
+  metric_date: string;
+  total_rooms: number;
+  occupied_rooms: number;
+  available_rooms: number;
+  occupancy_percent: number;
+  check_ins: number;
+  check_outs: number;
+  has_data: boolean;
+}
+
 export interface StayRead {
   id: string;
   internal_stay_ref_number: string;

@@ -25,7 +25,7 @@ WHAT THE SCHEMA ACTUALLY CONTAINS (verified against the live database):
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -122,3 +122,54 @@ class OccupancyDetail(OccupancyRead):
         description="stay_user rows for the current in-house stay"
     )
     device_count: int = Field(description="Devices installed in this room")
+
+
+class OccupancyStatusSummary(BaseModel):
+    status: str
+    count: int
+    percent: float
+
+
+class DailyOccupancyMetrics(BaseModel):
+    target_date: date
+    start_of_day: int
+    start_of_day_percent: float
+    realized_check_in: int
+    realized_check_in_percent: float
+    realized_check_out: int
+    realized_check_out_percent: float
+    current_status: int
+    current_status_percent: float
+    expected_check_in: int
+    expected_check_in_percent: float
+    expected_check_out: int
+    expected_check_out_percent: float
+    end_of_day: int
+    end_of_day_percent: float
+
+
+class OccupancyDailyPoint(BaseModel):
+    metric_date: date
+    total_rooms: int
+    occupied_rooms: int
+    available_rooms: int
+    occupancy_percent: float
+    check_ins: int
+    check_outs: int
+    has_data: bool
+
+
+class OccupancySummaryRead(BaseModel):
+    total_rooms: int
+    occupied: int
+    available: int
+    allotted: int
+    unavailable: int
+    unknown: int
+    occupied_percent: float
+    available_percent: float
+    allotted_percent: float
+    unavailable_percent: float
+    unknown_percent: float
+    by_status: list[OccupancyStatusSummary]
+    daily_metrics: DailyOccupancyMetrics

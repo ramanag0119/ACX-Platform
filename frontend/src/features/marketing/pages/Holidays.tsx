@@ -29,7 +29,6 @@ import { MAX_PAGE_SIZE } from "@/lib/api/types";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useScrollToTop } from "@/hooks/use-scroll-to-top";
 
-// Sample holidays data
 /**
  * Holidays, connected to GET/POST/PATCH /holidays (`occasion`).
  *
@@ -53,11 +52,12 @@ const Holidays = () => {
         endDate: row.occasion_end_date ?? "-",
         lockMessage: row.occasion_name ?? row.occasion_type_name ?? "-",
         description: row.occasion_type_name ?? "-",
+        occasionTypeId: row.occasion_type,
     }));
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
     const [lockMessage, setLockMessage] = useState("");
-    const [description, setDescription] = useState("");
+    const [occasionTypeId, setOccasionTypeId] = useState<string>("");
     const [editingId, setEditingId] = useState<string | null>(null);
     const [errors, setErrors] = useState<{ startDate?: string; endDate?: string; lockMessage?: string; description?: string; }>({});
     // Rows come straight from the API; there is no local copy to drift.
@@ -79,7 +79,7 @@ const Holidays = () => {
         if (!startDate) newErrors.startDate = "Start Date is required";
         if (!endDate) newErrors.endDate = "End Date is required";
         if (!lockMessage.trim()) newErrors.lockMessage = "Lock message is required";
-        if (!description.trim()) newErrors.description = "Description is required";
+        if (!occasionTypeId) newErrors.description = "Occasion type is required";
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -87,22 +87,16 @@ const Holidays = () => {
     /**
      * Create or update an `occasion`.
      *
-     * The type comes from the `occasion_type` lookup -- the Description field is
-     * that choice, so it is matched against the real type names. `month` and
-     * `day_of_month` are derived server-side from the start date.
+     * The type comes directly from the PostgreSQL `occasion_type` database table.
      */
     const handleSubmit = () => {
         if (!validateForm()) return;
 
-        const types = typesQuery.data ?? [];
-        const occasionType =
-            types.find((type) => type.name.toLowerCase() === description.trim().toLowerCase())
-            ?? types.find((type) => type.name === "Holiday")
-            ?? types[0];
-        if (!occasionType) return;
+        const typeId = Number(occasionTypeId);
+        if (!typeId) return;
 
         const body = {
-            occasion_type: occasionType.id,
+            occasion_type: typeId,
             occasion_name: lockMessage.trim(),
             occasion_start_date: startDate,
             occasion_end_date: endDate || null,
@@ -115,7 +109,7 @@ const Holidays = () => {
         createHoliday.mutate(body, { onSuccess: handleReset });
     };
 
-    const handleReset = () => { setStartDate(""); setEndDate(""); setLockMessage(""); setDescription(""); setErrors({}); setEditingId(null); };
+    const handleReset = () => { setStartDate(""); setEndDate(""); setLockMessage(""); setOccasionTypeId(""); setErrors({}); setEditingId(null); };
 
     const handleEdit = (item: typeof initialHolidaysData[0]) => {
         setEditingId(item.id);
@@ -123,7 +117,7 @@ const Holidays = () => {
         setStartDate(item.startDate);
         setEndDate(item.endDate === "-" ? "" : item.endDate);
         setLockMessage(item.lockMessage);
-        setDescription(item.description);
+        setOccasionTypeId(item.occasionTypeId ? String(item.occasionTypeId) : "");
     };
 
     /**
@@ -165,8 +159,19 @@ const Holidays = () => {
                             {errors.lockMessage && <p className="text-red-500 text-xs">{errors.lockMessage}</p>}
                         </div>
                         <div className="space-y-2 md:col-span-2">
-                            <Label>Description<span className="text-red-500">*</span></Label>
-                            <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Enter description" className="bg-muted/20 border-border dark:border-slate-700/80 min-h-[100px]" />
+                            <Label>Occasion Type<span className="text-red-500">*</span></Label>
+                            <Select value={occasionTypeId} onValueChange={setOccasionTypeId}>
+                                <SelectTrigger className="bg-muted/20 border-border dark:border-slate-700/80">
+                                    <SelectValue placeholder="Select occasion type" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-popover text-popover-foreground border-border">
+                                    {(typesQuery.data ?? []).map((t) => (
+                                        <SelectItem key={t.id} value={String(t.id)}>
+                                            {t.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                             {errors.description && <p className="text-red-500 text-xs">{errors.description}</p>}
                         </div>
                     </div>

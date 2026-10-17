@@ -29,7 +29,6 @@ import { MAX_PAGE_SIZE } from "@/lib/api/types";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useScrollToTop } from "@/hooks/use-scroll-to-top";
 
-// Sample Events Data
 interface EventRow {
     id: string;
     eventName: string;

@@ -23,6 +23,7 @@ is why the occupancy view is separated from the `bookings`-gated stay APIs.
 from __future__ import annotations
 
 import uuid
+from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status as http_status
 
@@ -33,8 +34,10 @@ from app.schemas.health import ErrorResponse
 from app.schemas.occupancy import (
     AmenityConditionRead,
     AmenityStatusRead,
+    OccupancyDailyPoint,
     OccupancyDetail,
     OccupancyRead,
+    OccupancySummaryRead,
 )
 from app.services import occupancy as svc
 
@@ -113,6 +116,67 @@ def list_occupancy(
         items=[OccupancyRead.model_validate(r) for r in rows],
         page=page, page_size=page_size, total=total,
     )
+
+
+@occupancy_router.get(
+    "/summary",
+    response_model=OccupancySummaryRead,
+    summary="Occupancy aggregate summary",
+    description="Database aggregate counts and daily metrics for rooms matching filters.",
+)
+def get_occupancy_summary(
+    db: DbSession,
+    facility_id: uuid.UUID | None = Query(None),
+    building_id: uuid.UUID | None = Query(None),
+    floor_id: uuid.UUID | None = Query(None),
+    amenity_type_id: uuid.UUID | None = Query(None),
+    amenity_category: AmenityCategory | None = Query(
+        None, description="amenity_category: room | restaurant | others"
+    ),
+    target_date: date | None = Query(None, description="Target date for daily metrics, defaults to today"),
+) -> OccupancySummaryRead:
+    data = svc.get_occupancy_summary(
+        db,
+        target_date=target_date,
+        facility_id=facility_id,
+        building_id=building_id,
+        floor_id=floor_id,
+        amenity_type_id=amenity_type_id,
+        amenity_category=amenity_category,
+    )
+    return OccupancySummaryRead.model_validate(data)
+
+
+@occupancy_router.get(
+    "/daily",
+    response_model=list[OccupancyDailyPoint],
+    summary="Daily occupancy time series",
+    description="Authoritative daily occupancy time series generated from database records.",
+)
+def get_occupancy_daily_series(
+    db: DbSession,
+    date_from: date = Query(..., description="Start date (inclusive)"),
+    date_to: date = Query(..., description="End date (inclusive)"),
+    facility_id: uuid.UUID | None = Query(None),
+    building_id: uuid.UUID | None = Query(None),
+    floor_id: uuid.UUID | None = Query(None),
+    amenity_category: AmenityCategory | None = Query(
+        None, description="amenity_category: room | restaurant | others"
+    ),
+) -> list[OccupancyDailyPoint]:
+    try:
+        series = svc.get_occupancy_daily_series(
+            db,
+            date_from=date_from,
+            date_to=date_to,
+            facility_id=facility_id,
+            building_id=building_id,
+            floor_id=floor_id,
+            amenity_category=amenity_category,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail=str(e))
+    return [OccupancyDailyPoint.model_validate(pt) for pt in series]
 
 
 @occupancy_router.get(

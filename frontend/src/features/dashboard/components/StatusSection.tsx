@@ -4,7 +4,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useTheme } from "@/core/contexts/ThemeContext";
 import { useAuth } from "@/core/contexts/AuthContext";
 import { DataState, InlineLoading } from "@/core/components/DataState";
-import { useCount, useFloors, useOccupancy } from "@/lib/api/hooks";
+import { useAllOccupancy, useCount, useFloors } from "@/lib/api/hooks";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
 import type { QueryParams } from "@/lib/api/client";
 import { useSurfaceTokens } from "@/core/styles/surfaceTokens";
@@ -116,27 +116,27 @@ export const StatusSection = ({
   );
   const floors = floorsQuery.data?.items ?? [];
 
-  // Server-side: only the selected floor's rooms, with their real status and
-  // conditions, straight from the occupancy projection.
-  const roomsQuery = useOccupancy(
-    selectedFloor ? { page: 1, page_size: MAX_PAGE_SIZE, floor_id: selectedFloor } : undefined,
+  // Server-side: all rooms on the selected floor, with their real status and
+  // conditions, straight from the occupancy projection without one-page truncation.
+  const roomsQuery = useAllOccupancy(
+    selectedFloor ? { floor_id: selectedFloor } : {},
+    { enabled: Boolean(selectedFloor) },
   );
 
   const rooms = useMemo(() => {
-    const items = roomsQuery.data?.items ?? [];
+    const items = roomsQuery.data ?? [];
     const mapped = items.map((item) => ({
       id: item.amenity_id,
       number: item.room_name,
       type: item.amenity_type_name ?? "-",
-      statusName: item.occupancy_status ?? item.status_name ?? "Available",
+      statusName: item.occupancy_status ?? item.status_name ?? "Unknown",
       conditions: item.conditions.map((condition) => conditionLabel(condition.name)),
     }));
     return affectedOnly ? mapped.filter((room) => room.conditions.length > 0) : mapped;
   }, [roomsQuery.data, affectedOnly]);
 
-  /** True when the floor holds more rooms than the page returned. */
-  const roomsTruncated =
-    (roomsQuery.data?.total ?? 0) > (roomsQuery.data?.items.length ?? 0);
+  /** useAllOccupancy retrieves all pages so the list is never truncated. */
+  const roomsTruncated = false;
 
   const {
     cardBg,
