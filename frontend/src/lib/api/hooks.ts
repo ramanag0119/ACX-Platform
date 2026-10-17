@@ -193,6 +193,10 @@ export const useUser = (userId: string | null) =>
   });
 export const useRoles = (params?: QueryParams) =>
   useApiQuery(["roles", params], () => api.listRoles(params));
+export const useAssignableRoles = (params?: QueryParams, options?: EnabledOption) =>
+  useApiQuery(["users", "roles", params], () => api.listAssignableRoles(params), options);
+export const useRoleTypes = (options?: EnabledOption) =>
+  useApiQuery(["roles", "types"], () => api.listRoleTypes(), options);
 export const useRolePermissions = (roleId: string | null) =>
   useApiQuery(["roles", roleId, "permissions"], () => api.listRolePermissions(roleId!), {
     enabled: Boolean(roleId),
