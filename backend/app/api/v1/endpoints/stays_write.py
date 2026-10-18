@@ -379,10 +379,11 @@ def update_room_state(
     "/{amenity_id}/conditions",
     response_model=RoomRead,
     dependencies=OCCUPANCY_WRITE,
-    summary="Set a room's housekeeping conditions",
+    summary="Set a room's operational condition",
     description=(
-        "Replaces the room's `amenity_condition_status` rows. Conditions are the "
-        "four seeded ones: Dirty, Low battery, Under maintenance, Sanitation."
+        "Sets the room's single active operational condition. Exactly one condition ID must be "
+        "provided from the seeded set: Dirty (1), Low battery (2), Under maintenance (3), "
+        "Sanitation (4), Ready for occupant (5)."
     ),
 )
 def set_room_conditions(

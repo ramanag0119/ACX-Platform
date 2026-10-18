@@ -268,7 +268,7 @@ export interface RoomStateWrite {
 
 export const updateRoomState = (amenityId: string, body: RoomStateWrite) =>
   apiClient.patch<OccupancyDetail>(`/occupancy/${amenityId}`, body);
-/** `amenity_condition` ids: 1 Dirty, 2 Low battery, 3 Under maintenance, 4 Sanitation. */
+/** `amenity_condition` ids: 1 Dirty, 2 Low battery, 3 Under maintenance, 4 Sanitation, 5 Ready for occupant. */
 export const setRoomConditions = (amenityId: string, condition_ids: number[]) =>
   apiClient.put<RoomRead>(`/occupancy/${amenityId}/conditions`, { condition_ids });
 

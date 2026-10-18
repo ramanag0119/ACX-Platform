@@ -125,3 +125,107 @@ const CONDITION_LABELS: Record<string, string> = {
 
 export const conditionLabel = (name: string | null | undefined) =>
   name ? CONDITION_LABELS[name.trim().toLowerCase()] ?? name : "";
+
+export const READY_CONDITION_ID = 5;
+export const BLOCKING_CONDITION_IDS = new Set([1, 3, 4]);
+
+export const READY_CONDITION_NAMES = new Set([
+  "ready for occupant",
+  "ready to occupy",
+]);
+
+export const BLOCKING_CONDITION_NAMES = new Set([
+  "dirty",
+  "need maintenance",
+  "under maintenance",
+  "sanitation",
+]);
+
+export interface ConditionLookupItem {
+  id: number;
+  name: string;
+}
+
+export const isReadyCondition = (
+  idOrName: number | string,
+  conditions?: ConditionLookupItem[],
+): boolean => {
+  if (typeof idOrName === "number") {
+    if (idOrName === READY_CONDITION_ID) return true;
+    const found = conditions?.find((c) => c.id === idOrName);
+    return found ? READY_CONDITION_NAMES.has(found.name.trim().toLowerCase()) : false;
+  }
+  return READY_CONDITION_NAMES.has(idOrName.trim().toLowerCase());
+};
+
+export const isBlockingCondition = (
+  idOrName: number | string,
+  conditions?: ConditionLookupItem[],
+): boolean => {
+  if (typeof idOrName === "number") {
+    if (BLOCKING_CONDITION_IDS.has(idOrName)) return true;
+    const found = conditions?.find((c) => c.id === idOrName);
+    return found ? BLOCKING_CONDITION_NAMES.has(found.name.trim().toLowerCase()) : false;
+  }
+  return BLOCKING_CONDITION_NAMES.has(idOrName.trim().toLowerCase());
+};
+
+/**
+ * Computes the next set of selected condition IDs when toggling a condition ID.
+ *
+ * Compatibility rules:
+ * 1. If unchecking: simply removes it.
+ * 2. If checking Ready to Occupy: removes any blocking conditions (Dirty/Need Maintenance,
+ *    Under maintenance, Sanitation), while preserving independent conditions (e.g. Low battery).
+ * 3. If checking a blocking condition: removes Ready to Occupy, while preserving independent
+ *    conditions and other compatible blocking conditions.
+ * 4. If checking an independent condition (e.g. Low battery): preserves all existing selections.
+ */
+export const getNextConditionIds = (
+  toggledId: number,
+  currentIds: number[],
+  conditions?: ConditionLookupItem[],
+): number[] => {
+  if (currentIds.includes(toggledId)) {
+    return currentIds.filter((id) => id !== toggledId);
+  }
+
+  if (isReadyCondition(toggledId, conditions)) {
+    const withoutBlocking = currentIds.filter((id) => !isBlockingCondition(id, conditions));
+    return [...withoutBlocking, toggledId];
+  }
+
+  if (isBlockingCondition(toggledId, conditions)) {
+    const withoutReady = currentIds.filter((id) => !isReadyCondition(id, conditions));
+    return [...withoutReady, toggledId];
+  }
+
+  return [...currentIds, toggledId];
+};
+
+/**
+ * Validates whether the given condition IDs contain contradictory conditions.
+ */
+export const validateConditions = (
+  conditionIds: number[],
+  conditions?: ConditionLookupItem[],
+): { valid: boolean; error?: string } => {
+  const hasReady = conditionIds.some((id) => isReadyCondition(id, conditions));
+  const blockingIds = conditionIds.filter((id) => isBlockingCondition(id, conditions));
+
+  if (hasReady && blockingIds.length > 0) {
+    const blockingNames = blockingIds
+      .map((id) => {
+        const found = conditions?.find((c) => c.id === id);
+        return conditionLabel(found?.name ?? `Condition ${id}`);
+      })
+      .join(", ");
+    return {
+      valid: false,
+      error: `Ready to occupy cannot coexist with blocking condition(s): ${blockingNames}.`,
+    };
+  }
+
+  return { valid: true };
+};
+

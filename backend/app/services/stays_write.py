@@ -605,35 +605,48 @@ def update_room_state(
 def set_room_conditions(
     db: Session, amenity_id: uuid.UUID, *, condition_ids: list[int]
 ) -> list[int]:
-    """Replace a room's conditions (`amenity_condition_status`).
+    """Replace a room's condition (`amenity_condition_status`).
 
-    Housekeeping flags -- Dirty, Low battery, Under maintenance, Sanitation --
-    are rows in a composite-key link table, so setting them means inserting and
-    deleting rows, not writing a column.
+    A room must have exactly ONE active operational condition at a time.
+    Housekeeping flags -- Dirty, Low battery, Under maintenance, Sanitation,
+    Ready for occupant -- are rows in a composite-key link table.
     """
     with transaction(db):
         require_row(db, Amenity, amenity_id, "Room")
-        for condition_id in condition_ids:
-            if db.get(AmenityCondition, condition_id) is None:
-                raise Invalid(f"Amenity condition {condition_id} does not exist.")
 
-        current = {
-            row.amenity_condition_id: row
-            for row in db.execute(
-                select(AmenityConditionStatus).where(
-                    AmenityConditionStatus.amenity_id == amenity_id
-                )
-            ).scalars()
-        }
-        wanted = set(condition_ids)
+        # Deduplicate while preserving order
+        condition_ids = list(dict.fromkeys(condition_ids))
 
-        for condition_id, row in current.items():
-            if condition_id not in wanted:
+        # Enforce single-active-condition business rule
+        if len(condition_ids) != 1:
+            raise Invalid("A room must have exactly one active condition.")
+
+        target_condition_id = condition_ids[0]
+        cond = db.get(AmenityCondition, target_condition_id)
+        if cond is None:
+            raise Invalid(f"Amenity condition {target_condition_id} does not exist.")
+
+        # Read existing condition status rows for this room
+        current_rows = db.execute(
+            select(AmenityConditionStatus).where(
+                AmenityConditionStatus.amenity_id == amenity_id
+            )
+        ).scalars().all()
+
+        already_set = False
+        for row in current_rows:
+            if row.amenity_condition_id == target_condition_id and row.status == 1:
+                already_set = True
+            else:
                 db.delete(row)
-        for condition_id in wanted - set(current):
+
+        if not already_set:
             db.add(
                 AmenityConditionStatus(
-                    amenity_id=amenity_id, amenity_condition_id=condition_id, status=1
+                    amenity_id=amenity_id,
+                    amenity_condition_id=target_condition_id,
+                    status=1,
                 )
             )
-    return sorted(condition_ids)
+
+    return [target_condition_id]
