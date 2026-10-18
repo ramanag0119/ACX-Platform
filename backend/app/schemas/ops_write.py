@@ -222,7 +222,7 @@ class RoomStateUpdate(Body):
 
 
 class RoomConditionsBody(Body):
-    #: `amenity_condition` ids: 1 Dirty, 2 Low battery, 3 Under maintenance, 4 Sanitation.
+    #: Exactly one `amenity_condition` id: 1 Dirty, 2 Low battery, 3 Under maintenance, 4 Sanitation, 5 Ready for occupant.
     condition_ids: list[int] = Field(default_factory=list)
 
 

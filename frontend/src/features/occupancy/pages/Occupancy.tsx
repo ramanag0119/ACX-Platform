@@ -473,8 +473,8 @@ const Occupancy = () => {
                     <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3.5 px-5 whitespace-nowrap min-w-[150px] text-left">Check-In</TableHead>
                     <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3.5 px-5 whitespace-nowrap min-w-[170px] text-left">Check-Out</TableHead>
                     <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3.5 px-8 whitespace-nowrap min-w-[170px] text-center">Generate <span className="text-muted-foreground/60">↓</span></TableHead>
-                    <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3.5 px-8 whitespace-nowrap min-w-[220px] text-center">Room Status</TableHead>
                     <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3.5 px-8 whitespace-nowrap min-w-[240px] text-center">Room Condition</TableHead>
+                    <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3.5 px-8 whitespace-nowrap min-w-[220px] text-center">Room Status</TableHead>
                     <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3.5 px-6 whitespace-nowrap min-w-[120px] text-center">Reassign</TableHead>
                     <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3.5 px-6 whitespace-nowrap min-w-[130px] text-center">Invoice <span className="text-muted-foreground/60">↓</span></TableHead>
                   </TableRow>
@@ -536,14 +536,6 @@ const Occupancy = () => {
                           <span className="badge hms-muted text-[11px] font-medium tracking-wide uppercase px-3 py-1 rounded-full bg-muted/40 border border-border/50">No stay</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-center py-3.5 px-8 whitespace-nowrap min-w-[220px]">
-                        <Badge
-                          variant="outline"
-                          className={`${roomStatusBadgeClass(room.occupancyStatus)} px-3.5 py-1 text-xs tracking-wider uppercase font-semibold`}
-                        >
-                          {room.occupancyStatus}
-                        </Badge>
-                      </TableCell>
                       <TableCell className="text-center py-3.5 px-8 min-w-[240px]">
                         <div
                           role="button"
@@ -575,6 +567,14 @@ const Occupancy = () => {
                             </span>
                           )}
                         </div>
+                      </TableCell>
+                      <TableCell className="text-center py-3.5 px-8 whitespace-nowrap min-w-[220px]">
+                        <Badge
+                          variant="outline"
+                          className={`${roomStatusBadgeClass(room.occupancyStatus)} px-3.5 py-1 text-xs tracking-wider uppercase font-semibold`}
+                        >
+                          {room.occupancyStatus}
+                        </Badge>
                       </TableCell>
                       <TableCell className="text-center py-3.5 px-6 whitespace-nowrap min-w-[120px]">
                         <Button

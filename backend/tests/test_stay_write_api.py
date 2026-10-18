@@ -544,49 +544,274 @@ def test_marking_a_room_unavailable_while_a_stay_holds_it_is_409(
     assert "still holds this room" in r.json()["error"]["message"]
 
 
-def test_room_conditions_are_replaced_not_appended(api, db, free_room, cleanup):
+def _track_room_conditions(cleanup, db, room_id):
     original = db.execute(
         text("SELECT amenity_condition_id FROM amenity_condition_status WHERE amenity_id = :i"),
-        {"i": free_room},
+        {"i": room_id},
     ).scalars().all()
     cleanup.sql(
         "DELETE FROM amenity_condition_status WHERE amenity_id = :value",
-        {"value": free_room},
+        {"value": room_id},
     )
     for condition_id in original:
         cleanup.sql(
             "INSERT INTO amenity_condition_status (amenity_id, amenity_condition_id, status) "
             "VALUES (:value, :c, 1) ON CONFLICT DO NOTHING",
-            {"value": free_room, "c": condition_id},
+            {"value": room_id, "c": condition_id},
         )
 
-    r = api.put(f"{V1}/occupancy/{free_room}/conditions", json={"condition_ids": [1, 3]})
+
+def test_single_condition_room_104_ready_to_under_maintenance(api, db, cleanup):
+    room_104_id = db.execute(text("SELECT id FROM amenity WHERE name = '104'")).scalar_one()
+    _track_room_conditions(cleanup, db, room_104_id)
+
+    # Initial condition: Ready to Occupy (5)
+    r = api.put(f"{V1}/occupancy/{room_104_id}/conditions", json={"condition_ids": [5]})
     assert r.status_code == 200
+
+    # Electrical short circuit -> Under Maintenance (3)
+    r = api.put(f"{V1}/occupancy/{room_104_id}/conditions", json={"condition_ids": [3]})
+    assert r.status_code == 200
+
     db.rollback()
     stored = set(
         db.execute(
-            text("SELECT amenity_condition_id FROM amenity_condition_status "
-                 "WHERE amenity_id = :i"),
-            {"i": free_room},
+            text("SELECT amenity_condition_id FROM amenity_condition_status WHERE amenity_id = :i"),
+            {"i": room_104_id},
         ).scalars()
     )
-    assert stored == {1, 3}
+    # Expected final state: exactly Under Maintenance (3), previous condition removed
+    assert stored == {3}
 
-    api.put(f"{V1}/occupancy/{free_room}/conditions", json={"condition_ids": [4]})
+
+def test_single_condition_room_104_under_maintenance_to_ready(api, db, cleanup):
+    room_104_id = db.execute(text("SELECT id FROM amenity WHERE name = '104'")).scalar_one()
+    _track_room_conditions(cleanup, db, room_104_id)
+
+    # Initial condition: Under Maintenance (3)
+    r = api.put(f"{V1}/occupancy/{room_104_id}/conditions", json={"condition_ids": [3]})
+    assert r.status_code == 200
+
+    # Maintenance resolved -> Ready to Occupy (5)
+    r = api.put(f"{V1}/occupancy/{room_104_id}/conditions", json={"condition_ids": [5]})
+    assert r.status_code == 200
+
     db.rollback()
     stored = set(
         db.execute(
-            text("SELECT amenity_condition_id FROM amenity_condition_status "
-                 "WHERE amenity_id = :i"),
+            text("SELECT amenity_condition_id FROM amenity_condition_status WHERE amenity_id = :i"),
+            {"i": room_104_id},
+        ).scalars()
+    )
+    # Expected final state: exactly Ready to Occupy (5)
+    assert stored == {5}
+
+
+def test_single_condition_cycle_ready_to_need_maintenance_and_back(api, db, free_room, cleanup):
+    """Verify complete cycle: Ready to Occupy -> Need Maintenance -> Ready to Occupy."""
+    _track_room_conditions(cleanup, db, free_room)
+
+    # Step 1: Save Ready to Occupy (5)
+    r1 = api.put(f"{V1}/occupancy/{free_room}/conditions", json={"condition_ids": [5]})
+    assert r1.status_code == 200
+    db.rollback()
+    assert set(
+        db.execute(
+            text("SELECT amenity_condition_id FROM amenity_condition_status WHERE amenity_id = :i"),
+            {"i": free_room},
+        ).scalars()
+    ) == {5}
+
+    # Step 2: Change to Need Maintenance (Dirty: 1)
+    r2 = api.put(f"{V1}/occupancy/{free_room}/conditions", json={"condition_ids": [1]})
+    assert r2.status_code == 200
+
+    # Step 3: Confirm only Need Maintenance (1) is active
+    db.rollback()
+    assert set(
+        db.execute(
+            text("SELECT amenity_condition_id FROM amenity_condition_status WHERE amenity_id = :i"),
+            {"i": free_room},
+        ).scalars()
+    ) == {1}
+
+    # Step 4: Change it back to Ready to Occupy (5)
+    r3 = api.put(f"{V1}/occupancy/{free_room}/conditions", json={"condition_ids": [5]})
+    assert r3.status_code == 200
+
+    # Step 5: Confirm only Ready to Occupy (5) is active
+    db.rollback()
+    assert set(
+        db.execute(
+            text("SELECT amenity_condition_id FROM amenity_condition_status WHERE amenity_id = :i"),
+            {"i": free_room},
+        ).scalars()
+    ) == {5}
+
+
+def test_single_condition_rejects_multiple_condition_ids(api, db, free_room, cleanup):
+    _track_room_conditions(cleanup, db, free_room)
+    # Initial valid condition: Ready to Occupy (5)
+    r = api.put(f"{V1}/occupancy/{free_room}/conditions", json={"condition_ids": [5]})
+    assert r.status_code == 200
+
+    # Submitting multiple IDs must be rejected
+    r = api.put(f"{V1}/occupancy/{free_room}/conditions", json={"condition_ids": [1, 5]})
+    assert r.status_code == 422
+    assert "exactly one active condition" in r.json()["error"]["message"]
+
+    r2 = api.put(f"{V1}/occupancy/{free_room}/conditions", json={"condition_ids": [1, 3]})
+    assert r2.status_code == 422
+    assert "exactly one active condition" in r2.json()["error"]["message"]
+
+    # Verify existing data was NOT modified
+    db.rollback()
+    stored = set(
+        db.execute(
+            text("SELECT amenity_condition_id FROM amenity_condition_status WHERE amenity_id = :i"),
             {"i": free_room},
         ).scalars()
     )
-    assert stored == {4}, "conditions must be replaced, not accumulated"
+    assert stored == {5}
 
 
-def test_unknown_condition_is_rejected(api, free_room):
+def test_single_condition_rejects_invalid_condition_id(api, db, free_room, cleanup):
+    _track_room_conditions(cleanup, db, free_room)
+    r = api.put(f"{V1}/occupancy/{free_room}/conditions", json={"condition_ids": [5]})
+    assert r.status_code == 200
+
+    # Unknown ID 99
     r = api.put(f"{V1}/occupancy/{free_room}/conditions", json={"condition_ids": [99]})
     assert r.status_code == 422
+    assert "does not exist" in r.json()["error"]["message"]
+
+    # Verify previous condition remains intact
+    db.rollback()
+    stored = set(
+        db.execute(
+            text("SELECT amenity_condition_id FROM amenity_condition_status WHERE amenity_id = :i"),
+            {"i": free_room},
+        ).scalars()
+    )
+    assert stored == {5}
+
+
+def test_single_condition_update_room_104_leaves_room_105_unchanged(api, db, cleanup):
+    room_104_id = db.execute(text("SELECT id FROM amenity WHERE name = '104'")).scalar_one()
+    room_105_id = db.execute(text("SELECT id FROM amenity WHERE name = '105'")).scalar_one()
+    _track_room_conditions(cleanup, db, room_104_id)
+    _track_room_conditions(cleanup, db, room_105_id)
+
+    # Establish baseline for 104 (Dirty 1) and 105 (Under maintenance 3)
+    r = api.put(f"{V1}/occupancy/{room_104_id}/conditions", json={"condition_ids": [1]})
+    assert r.status_code == 200
+    r = api.put(f"{V1}/occupancy/{room_105_id}/conditions", json={"condition_ids": [3]})
+    assert r.status_code == 200
+
+    # Update Room 104 to Ready (5)
+    r = api.put(f"{V1}/occupancy/{room_104_id}/conditions", json={"condition_ids": [5]})
+    assert r.status_code == 200
+
+    # Verify Room 104 has {5} and Room 105 is completely unchanged with {3}
+    db.rollback()
+    stored_104 = set(
+        db.execute(
+            text("SELECT amenity_condition_id FROM amenity_condition_status WHERE amenity_id = :i"),
+            {"i": room_104_id},
+        ).scalars()
+    )
+    stored_105 = set(
+        db.execute(
+            text("SELECT amenity_condition_id FROM amenity_condition_status WHERE amenity_id = :i"),
+            {"i": room_105_id},
+        ).scalars()
+    )
+    assert stored_104 == {5}
+    assert stored_105 == {3}
+
+
+def test_single_condition_saving_same_condition_twice_creates_no_duplicates(api, db, free_room, cleanup):
+    _track_room_conditions(cleanup, db, free_room)
+
+    # First save: Under Maintenance (3)
+    r1 = api.put(f"{V1}/occupancy/{free_room}/conditions", json={"condition_ids": [3]})
+    assert r1.status_code == 200
+
+    # Second save with same condition: Under Maintenance (3)
+    r2 = api.put(f"{V1}/occupancy/{free_room}/conditions", json={"condition_ids": [3]})
+    assert r2.status_code == 200
+
+    # Verify exactly one record exists, no duplicates
+    db.rollback()
+    stored = db.execute(
+        text("SELECT amenity_condition_id FROM amenity_condition_status WHERE amenity_id = :i"),
+        {"i": free_room},
+    ).scalars().all()
+    assert stored == [3]
+
+
+def test_single_condition_database_failure_rolls_back_cleanly(monkeypatch, api, db, free_room, cleanup):
+    _track_room_conditions(cleanup, db, free_room)
+    # Baseline: Low battery (2)
+    r = api.put(f"{V1}/occupancy/{free_room}/conditions", json={"condition_ids": [2]})
+    assert r.status_code == 200
+
+    # Force a failure during database persistence inside stays_write.set_room_conditions
+    from app.services import stays_write
+    original_add = stays_write.Session.add
+
+    def failing_add(self, instance):
+        if isinstance(instance, stays_write.AmenityConditionStatus):
+            raise RuntimeError("Forced DB error during persistence")
+        return original_add(self, instance)
+
+    monkeypatch.setattr(stays_write.Session, "add", failing_add)
+
+    # Attempting to update to 5 will hit the forced failure
+    with pytest.raises(RuntimeError, match="Forced DB error"):
+        stays_write.set_room_conditions(db, free_room, condition_ids=[5])
+
+    # Verify session rollback preserved original condition 2
+    db.rollback()
+    stored = set(
+        db.execute(
+            text("SELECT amenity_condition_id FROM amenity_condition_status WHERE amenity_id = :i"),
+            {"i": free_room},
+        ).scalars()
+    )
+    assert stored == {2}
+
+
+def test_single_condition_does_not_change_primary_room_status(api, db, free_room, cleanup):
+    _track_room_conditions(cleanup, db, free_room)
+    initial_status = db.execute(
+        text("SELECT status FROM amenity WHERE id = :i"),
+        {"i": free_room},
+    ).scalar_one()
+
+    # Change to Under maintenance
+    r = api.put(f"{V1}/occupancy/{free_room}/conditions", json={"condition_ids": [3]})
+    assert r.status_code == 200
+    db.rollback()
+    assert db.execute(
+        text("SELECT status FROM amenity WHERE id = :i"),
+        {"i": free_room},
+    ).scalar_one() == initial_status
+
+    # Change to Ready for occupant
+    r = api.put(f"{V1}/occupancy/{free_room}/conditions", json={"condition_ids": [5]})
+    assert r.status_code == 200
+    db.rollback()
+    assert db.execute(
+        text("SELECT status FROM amenity WHERE id = :i"),
+        {"i": free_room},
+    ).scalar_one() == initial_status
+
+
+def test_single_condition_authorization_enforced(anon_api, free_room):
+    # Anonymous request must be rejected with 401 Unauthorized
+    r = anon_api.put(f"{V1}/occupancy/{free_room}/conditions", json={"condition_ids": [5]})
+    assert r.status_code == 401
 
 
 # ---------------------------------------------------------------------------
