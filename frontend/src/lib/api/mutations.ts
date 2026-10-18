@@ -25,7 +25,7 @@ const INVALIDATE = {
   serviceRequests: ["service-requests", "service-statuses", "daily-data-points"],
   serviceCatalogue: ["service-categories", "service-items", "service-types"],
   stays: ["stays", "occupancy", "rooms", "invoices", "daily-data-points", "count"],
-  occupancy: ["occupancy", "rooms", "amenity-conditions", "amenity-statuses"],
+  occupancy: ["occupancy", "rooms", "amenity-conditions", "amenity-statuses", "count"],
   limitConfigs: ["limit-configs", "value-alerts"],
   facility: ["facilities", "rooms", "buildings", "floors", "properties"],
   catalogue: ["amenity-types", "packages", "features", "rooms"],

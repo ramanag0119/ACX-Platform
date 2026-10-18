@@ -4,81 +4,41 @@ import { RefreshCw } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { cn } from "@/lib/utils";
 import { DataState } from "@/core/components/DataState";
-import { useAmenityStatuses, useCount, useCounts } from "@/lib/api/hooks";
-import type { QueryParams } from "@/lib/api/client";
-import { MAX_PAGE_SIZE } from "@/lib/api/types";
+import { useOccupancySummary } from "@/lib/api/hooks";
 import { useSurfaceTokens } from "@/core/styles/surfaceTokens";
 import { roomStatusColor } from "../lib/roomStatus";
 import { OCCUPANCY_PATH, statusDetailPath } from "../lib/occupancyLinks";
 
 /**
- * Room counts by the real `amenity_status` row, from GET /occupancy.
+ * Room counts by primary status, driven directly by GET /occupancy/summary.
  *
- * The slices are the FOUR statuses the lookup table actually holds --
- * Available, Occupied, Unavailable, Allotted -- read from GET
- * /amenity-statuses so the chart can never drift from the table. The mock's
- * two-slice Occupied/Vacant split would have folded two of them away.
- *
- * Each slice is a separate backend COUNT(*) (`?status=<id>&page_size=1`), not
- * a tally of one fetched page: a page holds at most 100 rows, and counting
- * client-side would quietly undercount a property with more rooms than that.
- *
- * The centre figure comes from the same counts as the slices. It used to show
- * a stay-based in-house figure (`is_occupied=true`) for Occupied, which could
- * disagree with the Occupied arc it sat inside; that request is gone, and the
- * centre now reads only what the ring draws.
+ * Slices are the real database-aggregated room counts for guest bedrooms
+ * (`amenity_category == 'room'`). All eligible rooms are reconciled with
+ * 100% accuracy to the total room count.
  */
 
-/**
- * The inactive treatment is OPACITY, not a fixed grey.
- *
- * The spec offered either a muted slate (#2D3748 / #374151) or a fade. This
- * card is themed -- `useSurfaceTokens` returns a LIGHT palette as well as the
- * dark one -- so a hardcoded slate would sit on a white card as a dark smudge
- * and read as a fifth, darker status rather than as "dimmed". Fading the real
- * accent colour dims correctly against either background and keeps each slice
- * recognisable as its own status while muted.
- *
- * Two values, because the ring and the legend need different depths: a faded
- * arc still has to read as a coloured band, while faded text only has to stay
- * legible.
- */
 const INACTIVE_SLICE_OPACITY = 0.2;
 const INACTIVE_LEGEND_OPACITY = 0.45;
 
 export const OccupancyStatisticsChart = () => {
   const navigate = useNavigate();
 
-  const statusesQuery = useAmenityStatuses({ page: 1, page_size: MAX_PAGE_SIZE });
-  // Memoised so the identity is stable between renders: a bare `?? []` hands a
-  // new array to the useMemo/useCounts dependencies on every pass.
-  const statuses = useMemo(() => statusesQuery.data?.items ?? [], [statusesQuery.data]);
+  const summaryQuery = useOccupancySummary({ amenity_category: "room" });
+  const summary = summaryQuery.data;
 
-  const filterSets = useMemo<QueryParams[]>(
-    () =>
-      statuses.map((status) => ({
-        amenity_category: "room",
-        occupancy_status: status.amenity_status_name,
-      })),
-    [statuses],
-  );
-  const perStatus = useCounts("occupancy", filterSets, statuses.length > 0);
-
-  const roomTotal = useCount("occupancy", { amenity_category: "room" });
+  const total = summary?.total_rooms ?? null;
 
   const data = useMemo(
     () =>
-      statuses
-        .map((status, index) => ({
-          name: status.amenity_status_name,
-          value: perStatus.totals[index] ?? 0,
-          color: roomStatusColor(status.amenity_status_name),
+      (summary?.by_status ?? [])
+        .map((entry) => ({
+          name: entry.status,
+          value: entry.count,
+          color: roomStatusColor(entry.status),
         }))
         .filter((slice) => slice.value > 0),
-    [statuses, perStatus.totals],
+    [summary?.by_status],
   );
-
-  const total = roomTotal.total;
 
   /**
    * Which status the pointer is on. `null` means "the pointer is nowhere near
@@ -129,9 +89,9 @@ export const OccupancyStatisticsChart = () => {
   const centrePercent = total ? Math.round((centreValue / total) * 100) : null;
   const centreLabel = hoveredSlice ? hoveredSlice.name : "Total Rooms";
 
-  const isLoading = statusesQuery.isLoading || perStatus.isLoading || roomTotal.isLoading;
-  const error = statusesQuery.error ?? perStatus.error ?? roomTotal.error;
-  const isFetching = roomTotal.isFetching || statusesQuery.isFetching;
+  const isLoading = summaryQuery.isLoading;
+  const error = summaryQuery.error;
+  const isFetching = summaryQuery.isFetching;
 
   /** Green = settled, amber = refetching, red = last attempt failed. */
   const dotColor = error ? "#ef4444" : isFetching ? "#f59e0b" : "#22c55e";
@@ -172,8 +132,7 @@ export const OccupancyStatisticsChart = () => {
             className="transition-colors"
             style={{ color: mutedColor }}
             onClick={() => {
-              void roomTotal.refetch();
-              void statusesQuery.refetch();
+              void summaryQuery.refetch();
             }}
             title="Refresh"
           >

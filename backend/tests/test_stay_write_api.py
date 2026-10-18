@@ -859,3 +859,11 @@ def test_seeded_stays_are_untouched_by_this_module(db):
     assert rows["STY-2026-0003"] == "pending"
     assert rows["STY-2026-0004"] == "checked out"
     assert rows["STY-2026-0005"] == "cancelled"
+                 "WHERE internal_stay_ref_number LIKE 'STY-2026-000%' "
+                 "AND length(internal_stay_ref_number) = 13 ORDER BY 1")
+        ).all()
+    )
+    assert rows["STY-2026-0001"] == "active"
+    assert rows["STY-2026-0003"] == "pending"
+    assert rows["STY-2026-0004"] == "checked out"
+    assert rows["STY-2026-0005"] == "cancelled"

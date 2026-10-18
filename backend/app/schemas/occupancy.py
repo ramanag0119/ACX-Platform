@@ -91,7 +91,17 @@ class OccupancyRead(ORMModel):
     occupancy_status: str | None = Field(
         default=None,
         examples=["Available"],
-        description="Authoritative derived occupancy status: Available | Occupied | Allotted | Unavailable",
+        description="Authoritative derived occupancy category: Available | Occupied | Allotted | Unavailable",
+    )
+    room_status: str | None = Field(
+        default=None,
+        examples=["Ready to Occupy"],
+        description="Authoritative unified Room Status: Ready to Occupy | Need Maintenance | Under Maintenance | Sanitation | Low Battery",
+    )
+    room_status_id: int | None = Field(
+        default=None,
+        examples=[5],
+        description="Authoritative unified Room Status ID from amenity_condition",
     )
     conditions: list[AmenityConditionRead] = Field(
         default_factory=list, description="Active rows from amenity_condition_status"
@@ -166,10 +176,12 @@ class OccupancySummaryRead(BaseModel):
     allotted: int
     unavailable: int
     unknown: int
+    unclassified: int = 0
     occupied_percent: float
     available_percent: float
     allotted_percent: float
     unavailable_percent: float
     unknown_percent: float
+    unclassified_percent: float = 0.0
     by_status: list[OccupancyStatusSummary]
     daily_metrics: DailyOccupancyMetrics

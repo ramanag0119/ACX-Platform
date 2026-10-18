@@ -95,8 +95,35 @@ def _in_house_exists():
     )
 
 
+CONDITION_NEED_MAINTENANCE = 1  # "Dirty"
+CONDITION_LOW_BATTERY = 2       # "Low battery"
+CONDITION_UNDER_MAINTENANCE = 3 # "Under maintenance"
+CONDITION_SANITATION = 4        # "Sanitation"
+CONDITION_READY_TO_OCCUPY = 5   # "Ready for occupant"
+
 BLOCKING_CONDITION_NAMES = {"dirty", "under maintenance", "sanitation", "need maintenance"}
-BLOCKING_CONDITION_IDS = {1, 3, 4}
+BLOCKING_CONDITION_IDS = {CONDITION_NEED_MAINTENANCE, CONDITION_UNDER_MAINTENANCE, CONDITION_SANITATION}
+
+READY_CONDITION_NAMES = {"ready for occupant", "ready to occupy"}
+READY_CONDITION_IDS = {CONDITION_READY_TO_OCCUPY}
+
+CONDITION_DISPLAY_NAMES = {
+    CONDITION_NEED_MAINTENANCE: "Need Maintenance",
+    CONDITION_LOW_BATTERY: "Low Battery",
+    CONDITION_UNDER_MAINTENANCE: "Under Maintenance",
+    CONDITION_SANITATION: "Sanitation",
+    CONDITION_READY_TO_OCCUPY: "Ready to Occupy",
+}
+
+CONDITION_NAME_TO_ID = {
+    "need maintenance": CONDITION_NEED_MAINTENANCE,
+    "dirty": CONDITION_NEED_MAINTENANCE,
+    "low battery": CONDITION_LOW_BATTERY,
+    "under maintenance": CONDITION_UNDER_MAINTENANCE,
+    "sanitation": CONDITION_SANITATION,
+    "ready to occupy": CONDITION_READY_TO_OCCUPY,
+    "ready for occupant": CONDITION_READY_TO_OCCUPY,
+}
 
 
 def _blocking_condition_exists():
@@ -118,6 +145,26 @@ def _blocking_condition_exists():
     )
 
 
+def _ready_condition_exists():
+    return (
+        select(AmenityConditionStatus.amenity_id)
+        .join(
+            AmenityCondition,
+            AmenityCondition.id == AmenityConditionStatus.amenity_condition_id,
+        )
+        .where(
+            AmenityConditionStatus.amenity_id == Amenity.id,
+            AmenityConditionStatus.status == 1,
+            or_(
+                AmenityConditionStatus.amenity_condition_id.in_(READY_CONDITION_IDS),
+                func.lower(AmenityCondition.name).in_(READY_CONDITION_NAMES),
+                AmenityConditionStatus.amenity_condition_id == CONDITION_LOW_BATTERY,
+            ),
+        )
+        .exists()
+    )
+
+
 def _pending_allocation_exists():
     return (
         select(RoomAllocation.id)
@@ -133,12 +180,29 @@ def _pending_allocation_exists():
 
 
 def _authoritative_occupancy_status_expr():
+    """Authoritative derived dashboard status.
+
+    Precedence:
+    1. Active in-house stay exists -> 'Occupied'
+    2. Pending reservation allotment exists -> 'Allotted'
+    3. Blocking condition exists (Under Maintenance, Need Maintenance, Sanitation) -> 'Unavailable'
+    4. Ready condition exists (Ready to Occupy / Low Battery telemetry) -> 'Available'
+    5. Fallback from legacy Amenity.status:
+       - Amenity.status == 1 -> 'Occupied'
+       - Amenity.status == 3 -> 'Allotted'
+       - Amenity.status == 2 -> 'Unavailable'
+       - Amenity.status == 0 -> 'Available'
+    """
     return case(
         (_in_house_exists(), "Occupied"),
-        (or_(Amenity.status == 3, _pending_allocation_exists()), "Allotted"),
-        (or_(Amenity.status == 2, _blocking_condition_exists()), "Unavailable"),
+        (Amenity.status == 1, "Occupied"),
+        (_pending_allocation_exists(), "Allotted"),
+        (Amenity.status == 3, "Allotted"),
+        (_blocking_condition_exists(), "Unavailable"),
+        (Amenity.status == 2, "Unavailable"),
+        (_ready_condition_exists(), "Available"),
         (Amenity.status == 0, "Available"),
-        else_=None,
+        else_="Available",
     )
 
 
@@ -258,8 +322,23 @@ def _enrich(db: Session, rows: list[dict]) -> list[dict]:
     conditions = _conditions_for(db, ids)
     current = _current_stays(db, ids)
     for row in rows:
-        row["conditions"] = conditions.get(row["amenity_id"], [])
+        room_conds = conditions.get(row["amenity_id"], [])
+        row["conditions"] = room_conds
         row["current_stay"] = current.get(row["amenity_id"])
+        if room_conds:
+            prim = room_conds[0]
+            row["room_status_id"] = prim["id"]
+            row["room_status"] = CONDITION_DISPLAY_NAMES.get(prim["id"], prim["name"])
+        else:
+            if row.get("current_stay") or row.get("occupancy_status") == "Occupied":
+                row["room_status_id"] = None
+                row["room_status"] = None
+            elif row.get("status") == 2 or row.get("occupancy_status") == "Unavailable":
+                row["room_status_id"] = CONDITION_UNDER_MAINTENANCE
+                row["room_status"] = "Under Maintenance"
+            else:
+                row["room_status_id"] = CONDITION_READY_TO_OCCUPY
+                row["room_status"] = "Ready to Occupy"
     return rows
 
 
@@ -292,8 +371,22 @@ def list_occupancy(
     if status is not None:
         stmt = stmt.where(Amenity.status == status)
     if occupancy_status:
+        norm = occupancy_status.strip().lower()
         if occupancy_status in ("Unknown", "Not Set"):
             stmt = stmt.where(_authoritative_occupancy_status_expr().is_(None))
+        elif occupancy_status in ("Available", "Occupied", "Allotted", "Unavailable"):
+            stmt = stmt.where(_authoritative_occupancy_status_expr() == occupancy_status)
+        elif norm in CONDITION_NAME_TO_ID:
+            cid = CONDITION_NAME_TO_ID[norm]
+            stmt = stmt.where(
+                select(AmenityConditionStatus.amenity_id)
+                .where(
+                    AmenityConditionStatus.amenity_id == Amenity.id,
+                    AmenityConditionStatus.amenity_condition_id == cid,
+                    AmenityConditionStatus.status == 1,
+                )
+                .exists()
+            )
         else:
             stmt = stmt.where(_authoritative_occupancy_status_expr() == occupancy_status)
     if condition_id is not None:
@@ -513,11 +606,13 @@ def get_occupancy_summary(
         "allotted": allotted,
         "unavailable": unavailable,
         "unknown": unknown,
+        "unclassified": unknown,
         "occupied_percent": pct(occupied),
         "available_percent": pct(available),
         "allotted_percent": pct(allotted),
         "unavailable_percent": pct(unavailable),
         "unknown_percent": pct(unknown),
+        "unclassified_percent": pct(unknown),
         "by_status": by_status,
         "daily_metrics": {
             "target_date": target_date,

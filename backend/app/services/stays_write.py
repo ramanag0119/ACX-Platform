@@ -90,10 +90,91 @@ LIVE_STAY_STATUSES = (
 
 ALLOCATION_ACTIVE = 1
 
+#: Housekeeping condition IDs and names
+BLOCKING_CONDITION_NAMES = {"dirty", "need maintenance", "under maintenance", "sanitation"}
+BLOCKING_CONDITION_IDS = {1, 3, 4}
+READY_CONDITION_NAMES = {"ready for occupant", "ready to occupy"}
+READY_CONDITION_ID = 5
+LOW_BATTERY_CONDITION_ID = 2
+
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+def _has_blocking_condition(db: Session, room_id: uuid.UUID) -> bool:
+    """Check whether a room currently has an active blocking condition."""
+    return db.execute(
+        select(AmenityConditionStatus.amenity_id).where(
+            AmenityConditionStatus.amenity_id == room_id,
+            AmenityConditionStatus.status == 1,
+            AmenityConditionStatus.amenity_condition_id.in_(BLOCKING_CONDITION_IDS),
+        )
+    ).first() is not None
+
+
+def sync_room_status_for_condition(
+    db: Session,
+    room: Amenity,
+    target_condition_id: int,
+    cond_name: str,
+) -> None:
+    """Synchronize room status (Amenity.status) with its operational condition.
+
+    Business Rules:
+    - If the room is Occupied (active in-house stay or status=Occupied):
+      Preserve Occupied status. Operational issues can be recorded without altering
+      current guest occupancy.
+    - If the room is Allotted (pending allocation or status=Allotted):
+      Preserve Allotted status.
+    - If the room is not Occupied and not Allotted:
+      - Blocking conditions (Under Maintenance, Need Maintenance/Dirty, Sanitation)
+        transition room status to Unavailable.
+      - Ready to Occupy transitions room status to Available.
+      - Low Battery is an IoT device telemetry alert and does not alter room availability.
+    """
+    name_norm = cond_name.strip().lower()
+
+    # Check for in-house stay
+    in_house = db.execute(
+        select(Stay.id)
+        .join(RoomAllocation, RoomAllocation.stay_id == Stay.id)
+        .where(
+            RoomAllocation.room_id == room.id,
+            Stay.actual_checkin_time.is_not(None),
+            Stay.actual_checkout_time.is_(None),
+        )
+    ).first() is not None
+
+    if room.status == _room_status_id(db, ROOM_OCCUPIED) or in_house:
+        # Preserve Occupied status
+        return
+
+    # Check for pending allocation (Allotted)
+    pending_alloc = db.execute(
+        select(Stay.id)
+        .join(RoomAllocation, RoomAllocation.stay_id == Stay.id)
+        .where(
+            RoomAllocation.room_id == room.id,
+            Stay.status == STAY_PENDING,
+            Stay.actual_checkin_time.is_(None),
+            Stay.actual_checkout_time.is_(None),
+        )
+    ).first() is not None
+
+    if room.status == _room_status_id(db, ROOM_ALLOTTED) or pending_alloc:
+        # Preserve Allotted status
+        return
+
+    # For non-occupied, non-allotted rooms:
+    is_blocking = (target_condition_id in BLOCKING_CONDITION_IDS) or (name_norm in BLOCKING_CONDITION_NAMES)
+    is_ready = (target_condition_id == READY_CONDITION_ID) or (name_norm in READY_CONDITION_NAMES)
+
+    if is_blocking:
+        room.status = _room_status_id(db, ROOM_UNAVAILABLE)
+    elif is_ready:
+        room.status = _room_status_id(db, ROOM_AVAILABLE)
 
 
 def _room_status_id(db: Session, status_name: str) -> int:
@@ -241,12 +322,30 @@ def check_in(
         if not allocations:
             raise Invalid("Allocate a room before checking this stay in.")
 
+        for allocation in allocations:
+            if _has_blocking_condition(db, allocation.room_id):
+                room = db.get(Amenity, allocation.room_id)
+                r_name = room.name if room else str(allocation.room_id)
+                raise Conflict(
+                    f"Room {r_name} cannot be checked in because it has an active maintenance condition. "
+                    "Room must be Ready to Occupy."
+                )
+
         stay.actual_checkin_time = when or datetime.now(UTC)
         stay.status = STAY_ACTIVE
         stay.modified_by = actor_id
 
         for allocation in allocations:
             _set_room_status(db, allocation.room_id, ROOM_OCCUPIED)
+            # Pre-occupancy condition "Ready for occupant" (5) must not remain active on an occupied room.
+            ready_rows = db.execute(
+                select(AmenityConditionStatus).where(
+                    AmenityConditionStatus.amenity_id == allocation.room_id,
+                    AmenityConditionStatus.amenity_condition_id == READY_CONDITION_ID,
+                )
+            ).scalars().all()
+            for r_row in ready_rows:
+                db.delete(r_row)
 
     db.refresh(stay)
     return stay
@@ -255,13 +354,7 @@ def check_in(
 def check_out(
     db: Session, stay_id: uuid.UUID, *, actor_id: uuid.UUID, when: datetime | None = None
 ) -> Stay:
-    """Check a stay out: stamp the departure, close it, release its rooms.
-
-    Room condition is deliberately NOT touched: `amenity_condition` has a
-    'Dirty' row, but no seeded stay links check-out to a condition change, so
-    setting one would be an invented rule. Housekeeping sets conditions
-    explicitly through the occupancy endpoint.
-    """
+    """Check a stay out: stamp departure, close stay, set operational status to Need Maintenance."""
     with transaction(db):
         stay = require_row(db, Stay, stay_id, "Stay")
 
@@ -276,7 +369,27 @@ def check_out(
         stay.modified_by = actor_id
 
         for allocation in _stay_rooms(db, stay_id):
-            _set_room_status(db, allocation.room_id, ROOM_AVAILABLE)
+            room_id = allocation.room_id
+            # Set operational status to Need Maintenance (Dirty) upon check-out
+            # unless an existing maintenance condition (Under Maintenance/Sanitation) is already active
+            curr_cond_rows = db.execute(
+                select(AmenityConditionStatus).where(
+                    AmenityConditionStatus.amenity_id == room_id,
+                    AmenityConditionStatus.status == 1,
+                )
+            ).scalars().all()
+            has_other_maint = any(c.amenity_condition_id in (3, 4) for c in curr_cond_rows)
+            if not has_other_maint:
+                for c_row in curr_cond_rows:
+                    db.delete(c_row)
+                db.add(
+                    AmenityConditionStatus(
+                        amenity_id=room_id,
+                        amenity_condition_id=1,  # Dirty / Need Maintenance
+                        status=1,
+                    )
+                )
+            _set_room_status(db, room_id, ROOM_UNAVAILABLE)
 
     db.refresh(stay)
     return stay
@@ -354,7 +467,10 @@ def cancel_stay(
         stay.status = STAY_CANCELLED
         stay.modified_by = actor_id
         for allocation in _stay_rooms(db, stay_id):
-            _set_room_status(db, allocation.room_id, ROOM_AVAILABLE)
+            if _has_blocking_condition(db, allocation.room_id):
+                _set_room_status(db, allocation.room_id, ROOM_UNAVAILABLE)
+            else:
+                _set_room_status(db, allocation.room_id, ROOM_AVAILABLE)
     db.refresh(stay)
     return stay
 
@@ -376,6 +492,12 @@ def _allocate(
     if room is None:
         raise Invalid(f"Room {room_id} does not exist.")
     _assert_room_free(db, room_id, ignore_stay_id=stay.id)
+
+    # If the stay is already checked in (in-house), ensure target room does not have a blocking condition
+    if stay.actual_checkin_time is not None and _has_blocking_condition(db, room_id):
+        raise Conflict(
+            f"Room {room.name} cannot be allocated to an in-house stay because it has an active maintenance condition."
+        )
 
     existing = db.execute(
         select(RoomAllocation)
@@ -451,14 +573,34 @@ def reallocate_room(
             raise Invalid(f"Room {room_id} does not exist.")
         _assert_room_free(db, room_id, ignore_stay_id=stay.id)
 
+        if stay.actual_checkin_time is not None and _has_blocking_condition(db, room_id):
+            raise Conflict(
+                f"Room {new_room.name} cannot be allocated because it has an active maintenance condition."
+            )
+
         old_room_id = allocation.room_id
         allocation.room_id = room_id
         allocation.package_id = new_room.package_id
 
-        _set_room_status(db, old_room_id, ROOM_AVAILABLE)
+        if _has_blocking_condition(db, old_room_id):
+            _set_room_status(db, old_room_id, ROOM_UNAVAILABLE)
+        else:
+            _set_room_status(db, old_room_id, ROOM_AVAILABLE)
+
         _set_room_status(
             db, room_id, ROOM_OCCUPIED if stay.actual_checkin_time else ROOM_ALLOTTED
         )
+        # If in-house move, remove ready condition from new room
+        if stay.actual_checkin_time is not None:
+            ready_rows = db.execute(
+                select(AmenityConditionStatus).where(
+                    AmenityConditionStatus.amenity_id == room_id,
+                    AmenityConditionStatus.amenity_condition_id == READY_CONDITION_ID,
+                )
+            ).scalars().all()
+            for r_row in ready_rows:
+                db.delete(r_row)
+
         stay.modified_by = actor_id
 
     db.refresh(allocation)
@@ -478,7 +620,10 @@ def release_allocation(
         room_id = allocation.room_id
         db.delete(allocation)
         db.flush()
-        _set_room_status(db, room_id, ROOM_AVAILABLE)
+        if _has_blocking_condition(db, room_id):
+            _set_room_status(db, room_id, ROOM_UNAVAILABLE)
+        else:
+            _set_room_status(db, room_id, ROOM_AVAILABLE)
         _refresh_room_count(db, stay)
         stay.modified_by = actor_id
 
@@ -596,6 +741,11 @@ def update_room_state(
                     raise Conflict(
                         f"Stay {holder} still holds this room; check it out first."
                     )
+            if new_status_name == ROOM_AVAILABLE:
+                if _has_blocking_condition(db, amenity_id):
+                    raise Conflict(
+                        f"Room {room.name} has an active maintenance condition and cannot be marked Available. Resolve maintenance first."
+                    )
 
         apply_changes(room, changes)
     db.refresh(room)
@@ -612,7 +762,7 @@ def set_room_conditions(
     Ready for occupant -- are rows in a composite-key link table.
     """
     with transaction(db):
-        require_row(db, Amenity, amenity_id, "Room")
+        room = require_row(db, Amenity, amenity_id, "Room")
 
         # Deduplicate while preserving order
         condition_ids = list(dict.fromkeys(condition_ids))
@@ -625,6 +775,22 @@ def set_room_conditions(
         cond = db.get(AmenityCondition, target_condition_id)
         if cond is None:
             raise Invalid(f"Amenity condition {target_condition_id} does not exist.")
+
+        # Business Rule: An occupied room (active in-house stay) CANNOT be marked Ready to Occupy
+        if target_condition_id == READY_CONDITION_ID:
+            in_house_stay = db.execute(
+                select(Stay.internal_stay_ref_number)
+                .join(RoomAllocation, RoomAllocation.stay_id == Stay.id)
+                .where(
+                    RoomAllocation.room_id == amenity_id,
+                    Stay.actual_checkin_time.is_not(None),
+                    Stay.actual_checkout_time.is_(None),
+                )
+            ).scalars().first()
+            if in_house_stay:
+                raise Conflict(
+                    f"Room {room.name} has an active in-house stay ({in_house_stay}) and cannot be marked Ready to Occupy."
+                )
 
         # Read existing condition status rows for this room
         current_rows = db.execute(
@@ -648,5 +814,8 @@ def set_room_conditions(
                     status=1,
                 )
             )
+
+        # Synchronize Amenity.status with the condition
+        sync_room_status_for_condition(db, room, target_condition_id, cond.name)
 
     return [target_condition_id]

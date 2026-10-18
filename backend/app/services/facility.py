@@ -327,8 +327,25 @@ def list_rooms(
     total = _count(db, stmt)
     rows = [dict(r) for r in db.execute(_page(stmt, page=page, page_size=page_size)).mappings().all()]
     conditions = _conditions_for(db, [r["id"] for r in rows])
+    from app.services.occupancy import CONDITION_DISPLAY_NAMES
     for row in rows:
-        row["conditions"] = conditions.get(row["id"], [])
+        conds = conditions.get(row["id"], [])
+        row["conditions"] = conds
+        if conds:
+            row["room_status_id"] = conds[0]["id"]
+            row["room_status"] = CONDITION_DISPLAY_NAMES.get(conds[0]["id"], conds[0]["name"])
+        else:
+            if row.get("status") == 1:
+                row["room_status_id"] = None
+                row["room_status"] = None
+            elif row.get("status") == 2:
+                row["room_status_id"] = 3
+                row["room_status"] = "Under Maintenance"
+            else:
+                row["room_status_id"] = 5
+                row["room_status"] = "Ready to Occupy"
+        st = row.get("status")
+        row["occupancy_status"] = "Occupied" if st == 1 else ("Allotted" if st == 3 else ("Unavailable" if st == 2 else "Available"))
     return rows, total
 
 
@@ -337,7 +354,24 @@ def get_room(db: Session, room_id: uuid.UUID):
     if row is None:
         return None
     row = dict(row)
-    row["conditions"] = _conditions_for(db, [row["id"]]).get(row["id"], [])
+    conds = _conditions_for(db, [row["id"]]).get(row["id"], [])
+    row["conditions"] = conds
+    from app.services.occupancy import CONDITION_DISPLAY_NAMES
+    if conds:
+        row["room_status_id"] = conds[0]["id"]
+        row["room_status"] = CONDITION_DISPLAY_NAMES.get(conds[0]["id"], conds[0]["name"])
+    else:
+        if row.get("status") == 1:
+            row["room_status_id"] = None
+            row["room_status"] = None
+        elif row.get("status") == 2:
+            row["room_status_id"] = 3
+            row["room_status"] = "Under Maintenance"
+        else:
+            row["room_status_id"] = 5
+            row["room_status"] = "Ready to Occupy"
+    st = row.get("status")
+    row["occupancy_status"] = "Occupied" if st == 1 else ("Allotted" if st == 3 else ("Unavailable" if st == 2 else "Available"))
     return row
 
 
