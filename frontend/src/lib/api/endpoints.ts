@@ -180,6 +180,8 @@ export const listAmenityStatuses = (params?: QueryParams) =>
   apiClient.get<Page<AmenityStatusRead>>("/amenity-statuses", params);
 export const listAmenityConditions = (params?: QueryParams) =>
   apiClient.get<Page<AmenityConditionRead>>("/amenity-conditions", params);
+export const getRoomApplicableConditions = (amenityId: string) =>
+  apiClient.get<AmenityConditionRead[]>(`/occupancy/${amenityId}/applicable-conditions`);
 export const listStays = (params?: QueryParams) =>
   apiClient.get<Page<StayRead>>("/stays", params);
 export const getStay = (stayId: string) => apiClient.get<StayRead>(`/stays/${stayId}`);

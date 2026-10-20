@@ -58,6 +58,7 @@ from app.models.amenity import (
     Feature,
     Package,
     PackageFeature,
+    RoomStatusConditionApplicability,
     SubPackage,
 )
 from app.models.device import (
@@ -331,6 +332,8 @@ __all__ = [
     "SubPackage",
     "Feature",
     "PackageFeature",
+    "RoomStatusConditionApplicability",
+
     # C
     "Stay",
     "StayUser",

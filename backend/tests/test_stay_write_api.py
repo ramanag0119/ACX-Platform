@@ -546,18 +546,18 @@ def test_marking_a_room_unavailable_while_a_stay_holds_it_is_409(
 
 def _track_room_conditions(cleanup, db, room_id):
     original = db.execute(
-        text("SELECT amenity_condition_id FROM amenity_condition_status WHERE amenity_id = :i"),
+        text("SELECT amenity_condition_id, status FROM amenity_condition_status WHERE amenity_id = :i"),
         {"i": room_id},
-    ).scalars().all()
+    ).all()
     cleanup.sql(
         "DELETE FROM amenity_condition_status WHERE amenity_id = :value",
         {"value": room_id},
     )
-    for condition_id in original:
+    for condition_id, status in original:
         cleanup.sql(
             "INSERT INTO amenity_condition_status (amenity_id, amenity_condition_id, status) "
-            "VALUES (:value, :c, 1) ON CONFLICT DO NOTHING",
-            {"value": room_id, "c": condition_id},
+            "VALUES (:value, :c, :s) ON CONFLICT (amenity_id, amenity_condition_id) DO UPDATE SET status = EXCLUDED.status",
+            {"value": room_id, "c": condition_id, "s": status},
         )
 
 
@@ -859,11 +859,5 @@ def test_seeded_stays_are_untouched_by_this_module(db):
     assert rows["STY-2026-0003"] == "pending"
     assert rows["STY-2026-0004"] == "checked out"
     assert rows["STY-2026-0005"] == "cancelled"
-                 "WHERE internal_stay_ref_number LIKE 'STY-2026-000%' "
-                 "AND length(internal_stay_ref_number) = 13 ORDER BY 1")
-        ).all()
-    )
-    assert rows["STY-2026-0001"] == "active"
-    assert rows["STY-2026-0003"] == "pending"
-    assert rows["STY-2026-0004"] == "checked out"
-    assert rows["STY-2026-0005"] == "cancelled"
+
+

@@ -728,8 +728,13 @@ export interface AmenityStatusRead {
 export interface AmenityConditionRead {
   id: number;
   name: string;
+  display_name?: string | null;
   created_on: string;
   updated_on: string;
+  is_active?: boolean;
+  is_applicable?: boolean;
+  blocks_checkin?: boolean;
+  blocks_readiness?: boolean;
 }
 
 export interface CurrentStayRef {

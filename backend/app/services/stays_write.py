@@ -35,7 +35,7 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models import (
@@ -46,9 +46,11 @@ from app.models import (
     AppUser,
     Package,
     RoomAllocation,
+    RoomStatusConditionApplicability,
     Stay,
     StayUser,
 )
+from app.services.occupancy import determine_room_status_for_applicability
 from app.services.writes import (
     Conflict,
     Invalid,
@@ -369,27 +371,7 @@ def check_out(
         stay.modified_by = actor_id
 
         for allocation in _stay_rooms(db, stay_id):
-            room_id = allocation.room_id
-            # Set operational status to Need Maintenance (Dirty) upon check-out
-            # unless an existing maintenance condition (Under Maintenance/Sanitation) is already active
-            curr_cond_rows = db.execute(
-                select(AmenityConditionStatus).where(
-                    AmenityConditionStatus.amenity_id == room_id,
-                    AmenityConditionStatus.status == 1,
-                )
-            ).scalars().all()
-            has_other_maint = any(c.amenity_condition_id in (3, 4) for c in curr_cond_rows)
-            if not has_other_maint:
-                for c_row in curr_cond_rows:
-                    db.delete(c_row)
-                db.add(
-                    AmenityConditionStatus(
-                        amenity_id=room_id,
-                        amenity_condition_id=1,  # Dirty / Need Maintenance
-                        status=1,
-                    )
-                )
-            _set_room_status(db, room_id, ROOM_UNAVAILABLE)
+            _set_room_status(db, allocation.room_id, ROOM_AVAILABLE)
 
     db.refresh(stay)
     return stay
@@ -757,9 +739,10 @@ def set_room_conditions(
 ) -> list[int]:
     """Replace a room's condition (`amenity_condition_status`).
 
-    A room must have exactly ONE active operational condition at a time.
-    Housekeeping flags -- Dirty, Low battery, Under maintenance, Sanitation,
-    Ready for occupant -- are rows in a composite-key link table.
+    A room maintains its active operational condition.
+    Applicable conditions are validated against the PostgreSQL database
+    configuration table `room_status_condition_applicability` for the room's
+    actual workflow status.
     """
     with transaction(db):
         room = require_row(db, Amenity, amenity_id, "Room")
@@ -771,10 +754,42 @@ def set_room_conditions(
         if len(condition_ids) != 1:
             raise Invalid("A room must have exactly one active condition.")
 
+        # Read existing condition status rows for this room
+        current_rows = db.execute(
+            select(AmenityConditionStatus).where(
+                AmenityConditionStatus.amenity_id == amenity_id
+            )
+        ).scalars().all()
+
         target_condition_id = condition_ids[0]
         cond = db.get(AmenityCondition, target_condition_id)
         if cond is None:
             raise Invalid(f"Amenity condition {target_condition_id} does not exist.")
+        if not getattr(cond, "is_active", True):
+            raise Invalid(f"Amenity condition {target_condition_id} is inactive and cannot be selected.")
+
+        # Determine authoritative room status from PostgreSQL
+        canonical_status = determine_room_status_for_applicability(db, amenity_id)
+
+        # Validate applicability against PostgreSQL room_status_condition_applicability table
+        status_candidates = [canonical_status]
+        if canonical_status.lower() == "allocated":
+            status_candidates.append("Allotted")
+        elif canonical_status.lower() == "allotted":
+            status_candidates.append("Allocated")
+
+        applicability = db.execute(
+            select(RoomStatusConditionApplicability).where(
+                func.lower(RoomStatusConditionApplicability.room_status).in_([s.lower() for s in status_candidates]),
+                RoomStatusConditionApplicability.condition_id == target_condition_id,
+                RoomStatusConditionApplicability.is_active == True,
+            )
+        ).scalars().first()
+
+        if applicability is None or not applicability.is_applicable:
+            raise Invalid(
+                f"Condition '{cond.name}' is not applicable to room {room.name} with status '{canonical_status}'."
+            )
 
         # Business Rule: An occupied room (active in-house stay) CANNOT be marked Ready to Occupy
         if target_condition_id == READY_CONDITION_ID:
@@ -792,13 +807,6 @@ def set_room_conditions(
                     f"Room {room.name} has an active in-house stay ({in_house_stay}) and cannot be marked Ready to Occupy."
                 )
 
-        # Read existing condition status rows for this room
-        current_rows = db.execute(
-            select(AmenityConditionStatus).where(
-                AmenityConditionStatus.amenity_id == amenity_id
-            )
-        ).scalars().all()
-
         already_set = False
         for row in current_rows:
             if row.amenity_condition_id == target_condition_id and row.status == 1:
@@ -815,7 +823,7 @@ def set_room_conditions(
                 )
             )
 
-        # Synchronize Amenity.status with the condition
-        sync_room_status_for_condition(db, room, target_condition_id, cond.name)
+        # Room Status and Room Condition remain separate concepts;
+        # setting a condition does NOT mutate room.status.
 
     return [target_condition_id]

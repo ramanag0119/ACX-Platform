@@ -291,6 +291,15 @@ export const useAmenityStatuses = (params?: QueryParams, options?: EnabledOption
   useApiQuery(["amenity-statuses", params], () => api.listAmenityStatuses(params), options);
 export const useAmenityConditions = (params?: QueryParams) =>
   useApiQuery(["amenity-conditions", params], () => api.listAmenityConditions(params));
+export const useRoomApplicableConditions = (
+  amenityId: string | null | undefined,
+  options?: EnabledOption,
+) =>
+  useApiQuery(
+    ["occupancy", amenityId, "applicable-conditions"],
+    () => api.getRoomApplicableConditions(amenityId!),
+    { enabled: Boolean(amenityId), ...options },
+  );
 export const useStays = (params?: QueryParams) =>
   useApiQuery(["stays", params], () => api.listStays(params));
 export const useStayRoomAllocations = (stayId: string | null) =>

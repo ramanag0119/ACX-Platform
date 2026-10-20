@@ -5,7 +5,7 @@ Blueprint §5, tables 9-17.
 
 import uuid
 
-from sqlalchemy import Boolean, ForeignKey, Index, SmallInteger, String, Text
+from sqlalchemy import Boolean, ForeignKey, Index, Integer, SmallInteger, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -54,12 +54,24 @@ class AmenityCondition(Base, TimestampMixin, SmallIntLookupPk):
     """Housekeeping condition badges, independent of status.
     IKANOS `amenity_conditions`. USE.
 
-    Seeded Dirty / Low battery / Under maintenance / Sanitation.
+    Seeded Dirty / Low battery / Under maintenance / Sanitation / Ready for occupant /
+    Guest Assistance Required / Device Offline.
     """
 
     __tablename__ = "amenity_condition"
 
     name: Mapped[str] = mapped_column(String(45), nullable=False)
+    display_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    applicable_to_occupied: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="true"
+    )
+    applicable_to_vacant: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="true"
+    )
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="true"
+    )
+
 
 
 class Amenity(HMSBase, UUIDPk):
@@ -140,6 +152,44 @@ class AmenityConditionStatus(Base, TimestampMixin):
     status: Mapped[int] = mapped_column(
         SmallInteger, nullable=False, server_default="1"
     )
+
+
+class RoomStatusConditionApplicability(Base, TimestampMixin):
+    """Status-specific condition applicability configuration.
+    Maps canonical room status to applicable conditions with policy flags.
+    """
+
+    __tablename__ = "room_status_condition_applicability"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    room_status: Mapped[str] = mapped_column(String(50), nullable=False)
+    amenity_status_id: Mapped[int | None] = mapped_column(
+        SmallInteger,
+        ForeignKey("amenity_status.id", ondelete="CASCADE"),
+        nullable=True,
+    )
+    condition_id: Mapped[int] = mapped_column(
+        SmallInteger,
+        ForeignKey("amenity_condition.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    is_applicable: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="true"
+    )
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="true"
+    )
+    blocks_checkin: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="false"
+    )
+    blocks_readiness: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="false"
+    )
+
+    __table_args__ = (
+        UniqueConstraint("room_status", "condition_id", name="uq_room_status_condition"),
+    )
+
 
 
 class Package(HMSBase, UUIDPk):

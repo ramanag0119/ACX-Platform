@@ -29,6 +29,7 @@ from app.models import (
     Property,
     PropertyChain,
     RoomAllocation,
+    RoomStatusConditionApplicability,
     Stay,
     StayUser,
 )
@@ -74,11 +75,38 @@ def list_amenity_statuses(db: Session, *, page: int, page_size: int):
     return rows, total
 
 
-def list_amenity_conditions(db: Session, *, page: int, page_size: int):
-    stmt = select(AmenityCondition).order_by(AmenityCondition.id)
+def list_amenity_conditions(
+    db: Session,
+    *,
+    page: int = 1,
+    page_size: int = 50,
+    room_status: str | None = None,
+    amenity_id: uuid.UUID | None = None,
+):
+    if amenity_id is not None:
+        items = get_applicable_conditions_for_room(db, amenity_id)
+        return items, len(items)
+
+    if room_status is not None:
+        items = list_applicable_conditions_by_status(db, room_status)
+        return items, len(items)
+
+    stmt = (
+        select(
+            AmenityCondition.id,
+            AmenityCondition.name,
+            func.coalesce(AmenityCondition.display_name, AmenityCondition.name).label("display_name"),
+            AmenityCondition.created_on,
+            AmenityCondition.updated_on,
+            AmenityCondition.is_active,
+        )
+        .where(AmenityCondition.is_active == True)
+        .order_by(AmenityCondition.id)
+    )
     total = _count(db, stmt)
-    rows = db.execute(_page(stmt, page=page, page_size=page_size)).scalars().all()
+    rows = [dict(r) for r in db.execute(_page(stmt, page=page, page_size=page_size)).mappings().all()]
     return rows, total
+
 
 
 # ---------------------------------------------------------------------------
@@ -126,7 +154,117 @@ CONDITION_NAME_TO_ID = {
 }
 
 
+def determine_room_status_for_applicability(db: Session, amenity_id: uuid.UUID) -> str:
+    """Determine the authoritative room status for condition applicability lookup."""
+    in_house = db.execute(
+        select(Stay.id)
+        .join(RoomAllocation, RoomAllocation.stay_id == Stay.id)
+        .where(
+            RoomAllocation.room_id == amenity_id,
+            Stay.actual_checkin_time.is_not(None),
+            Stay.actual_checkout_time.is_(None),
+        )
+    ).first() is not None
+    if in_house:
+        return "Occupied"
+
+    status_val = db.execute(
+        select(Amenity.status).where(Amenity.id == amenity_id)
+    ).scalar_one_or_none()
+
+    if status_val == 1:
+        return "Occupied"
+
+    pending_alloc = db.execute(
+        select(Stay.id)
+        .join(RoomAllocation, RoomAllocation.stay_id == Stay.id)
+        .where(
+            RoomAllocation.room_id == amenity_id,
+            Stay.status == "pending",
+            Stay.actual_checkin_time.is_(None),
+            Stay.actual_checkout_time.is_(None),
+        )
+    ).first() is not None
+    if pending_alloc or status_val == 3:
+        return "Allocated"
+
+    blocking = db.execute(
+        select(AmenityConditionStatus.amenity_id).where(
+            AmenityConditionStatus.amenity_id == amenity_id,
+            AmenityConditionStatus.status == 1,
+            AmenityConditionStatus.amenity_condition_id.in_(BLOCKING_CONDITION_IDS),
+        )
+    ).first() is not None
+    if blocking or status_val == 2:
+        return "Unavailable"
+
+    ready = db.execute(
+        select(AmenityConditionStatus.amenity_id).where(
+            AmenityConditionStatus.amenity_id == amenity_id,
+            AmenityConditionStatus.status == 1,
+            AmenityConditionStatus.amenity_condition_id == CONDITION_READY_TO_OCCUPY,
+        )
+    ).first() is not None
+    if ready:
+        return "Ready to Occupy"
+
+    return "Available"
+
+
+def list_applicable_conditions_by_status(db: Session, status_name: str) -> list[dict]:
+    """Retrieve only active condition options applicable to the specified status."""
+    status_clean = status_name.strip()
+    status_candidates = [status_clean]
+    if status_clean.lower() == "allocated":
+        status_candidates.append("Allotted")
+    elif status_clean.lower() == "allotted":
+        status_candidates.append("Allocated")
+    elif status_clean.lower() == "ready to occupy":
+        status_candidates.append("Available")
+
+    stmt = (
+        select(
+            AmenityCondition.id,
+            AmenityCondition.name,
+            func.coalesce(AmenityCondition.display_name, AmenityCondition.name).label("display_name"),
+            AmenityCondition.created_on,
+            AmenityCondition.updated_on,
+            AmenityCondition.is_active,
+            RoomStatusConditionApplicability.is_applicable,
+            RoomStatusConditionApplicability.blocks_checkin,
+            RoomStatusConditionApplicability.blocks_readiness,
+        )
+        .join(
+            RoomStatusConditionApplicability,
+            RoomStatusConditionApplicability.condition_id == AmenityCondition.id,
+        )
+        .where(
+            func.lower(RoomStatusConditionApplicability.room_status).in_([s.lower() for s in status_candidates]),
+            RoomStatusConditionApplicability.is_applicable == True,
+            RoomStatusConditionApplicability.is_active == True,
+            AmenityCondition.is_active == True,
+        )
+        .order_by(AmenityCondition.id)
+    )
+
+    rows = db.execute(stmt).mappings().all()
+    seen_ids = set()
+    result = []
+    for r in rows:
+        if r["id"] not in seen_ids:
+            seen_ids.add(r["id"])
+            result.append(dict(r))
+    return result
+
+
+def get_applicable_conditions_for_room(db: Session, amenity_id: uuid.UUID) -> list[dict]:
+    """Retrieve active applicable conditions for a specific room based on its DB status."""
+    canonical_status = determine_room_status_for_applicability(db, amenity_id)
+    return list_applicable_conditions_by_status(db, canonical_status)
+
+
 def _blocking_condition_exists():
+
     return (
         select(AmenityConditionStatus.amenity_id)
         .join(
@@ -180,29 +318,12 @@ def _pending_allocation_exists():
 
 
 def _authoritative_occupancy_status_expr():
-    """Authoritative derived dashboard status.
-
-    Precedence:
-    1. Active in-house stay exists -> 'Occupied'
-    2. Pending reservation allotment exists -> 'Allotted'
-    3. Blocking condition exists (Under Maintenance, Need Maintenance, Sanitation) -> 'Unavailable'
-    4. Ready condition exists (Ready to Occupy / Low Battery telemetry) -> 'Available'
-    5. Fallback from legacy Amenity.status:
-       - Amenity.status == 1 -> 'Occupied'
-       - Amenity.status == 3 -> 'Allotted'
-       - Amenity.status == 2 -> 'Unavailable'
-       - Amenity.status == 0 -> 'Available'
-    """
     return case(
         (_in_house_exists(), "Occupied"),
-        (Amenity.status == 1, "Occupied"),
-        (_pending_allocation_exists(), "Allotted"),
-        (Amenity.status == 3, "Allotted"),
-        (_blocking_condition_exists(), "Unavailable"),
-        (Amenity.status == 2, "Unavailable"),
-        (_ready_condition_exists(), "Available"),
+        (or_(Amenity.status == 3, _pending_allocation_exists()), "Allotted"),
+        (or_(Amenity.status == 2, _blocking_condition_exists()), "Unavailable"),
         (Amenity.status == 0, "Available"),
-        else_="Available",
+        else_=None,
     )
 
 

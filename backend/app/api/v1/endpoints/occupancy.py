@@ -196,6 +196,24 @@ def get_occupancy(amenity_id: uuid.UUID, db: DbSession) -> OccupancyDetail:
     return OccupancyDetail.model_validate(row)
 
 
+@occupancy_router.get(
+    "/{amenity_id}/applicable-conditions",
+    response_model=list[AmenityConditionRead],
+    responses=NOT_FOUND,
+    summary="List applicable conditions for a room",
+    description="Returns database-configured active applicable conditions for the room's current status.",
+)
+def get_room_applicable_conditions(amenity_id: uuid.UUID, db: DbSession) -> list[AmenityConditionRead]:
+    row = svc.get_occupancy(db, amenity_id)
+    if row is None:
+        raise HTTPException(
+            status_code=http_status.HTTP_404_NOT_FOUND,
+            detail=f"Room {amenity_id} does not exist.",
+        )
+    items = svc.get_applicable_conditions_for_room(db, amenity_id)
+    return [AmenityConditionRead.model_validate(item) for item in items]
+
+
 @amenity_statuses_router.get(
     "",
     response_model=Page[AmenityStatusRead],
@@ -216,12 +234,18 @@ def list_amenity_statuses(
     "",
     response_model=Page[AmenityConditionRead],
     summary="List amenity conditions",
-    description="Dirty, Low battery, Under maintenance, Sanitation.",
+    description="Dirty, Low battery, Under maintenance, Sanitation, etc.",
 )
 def list_amenity_conditions(
-    db: DbSession, page: int = PageParam, page_size: int = SizeParam
+    db: DbSession,
+    page: int = PageParam,
+    page_size: int = SizeParam,
+    room_status: str | None = Query(None, description="Filter applicable conditions by room status"),
+    amenity_id: uuid.UUID | None = Query(None, description="Filter applicable conditions by room amenity id"),
 ) -> Page[AmenityConditionRead]:
-    rows, total = svc.list_amenity_conditions(db, page=page, page_size=page_size)
+    rows, total = svc.list_amenity_conditions(
+        db, page=page, page_size=page_size, room_status=room_status, amenity_id=amenity_id
+    )
     return Page[AmenityConditionRead](
         items=[AmenityConditionRead.model_validate(r) for r in rows],
         page=page, page_size=page_size, total=total,

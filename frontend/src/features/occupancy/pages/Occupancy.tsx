@@ -645,6 +645,8 @@ const Occupancy = () => {
         amenityId={conditionsRoom?.amenityId ?? null}
         roomName={conditionsRoom?.roomNo ?? ""}
         selectedIds={conditionsRoom?.conditionIds ?? []}
+        currentConditions={conditionsRoom?.conditions ?? []}
+        roomStatus={conditionsRoom?.occupancyStatus ?? conditionsRoom?.statusName}
       />
 
       <RoomDetailsModal

@@ -46,13 +46,18 @@ class AmenityStatusRead(ORMModel):
 
 
 class AmenityConditionRead(ORMModel):
-    """A row of `amenity_condition`: Dirty, Low battery, Under maintenance,
-    Sanitation."""
+    """A row of `amenity_condition` or status-specific applicable condition option."""
 
     id: int = Field(examples=[3])
     name: str = Field(examples=["Under maintenance"])
-    created_on: datetime
-    updated_on: datetime
+    display_name: str | None = Field(default=None, examples=["Under Maintenance"])
+    is_active: bool = Field(default=True)
+    is_applicable: bool = Field(default=True)
+    blocks_checkin: bool = Field(default=False)
+    blocks_readiness: bool = Field(default=False)
+    created_on: datetime | None = None
+    updated_on: datetime | None = None
+
 
 
 class OccupantRef(ORMModel):
