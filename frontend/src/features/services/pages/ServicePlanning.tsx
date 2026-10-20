@@ -1040,12 +1040,12 @@ const ServicePlanning = () => {
                                         error={plansQuery.error}
                                         isEmpty
                                         emptyTitle={
-                                            searchTerm
+                                            searchQuery
                                                 ? "No planned services match that search"
                                                 : "No planned services yet"
                                         }
                                         emptyDescription={
-                                            searchTerm
+                                            searchQuery
                                                 ? "Clear the search box to see the whole list."
                                                 : "Create one with the form above."
                                         }
