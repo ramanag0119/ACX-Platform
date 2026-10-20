@@ -10,7 +10,11 @@ python-dotenv==1.0.1
 
 # --- Testing ---
 pytest==9.1.1
-httpx==0.28.1  # required by fastapi.testclient
+
+# --- HTTP client ---
+# Used by fastapi.testclient AND at runtime by app/services/oss_client.py to
+# reach the OSS microservice when OSS_ENABLED.
+httpx==0.28.1
 
 # --- Authentication (Phase 2.4) ---
 python-jose[cryptography]==3.5.0

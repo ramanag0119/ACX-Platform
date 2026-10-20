@@ -17,6 +17,7 @@ from datetime import date, datetime, time, timedelta
 from sqlalchemy import Select, and_, case, func, or_, select
 from sqlalchemy.orm import Session, aliased
 
+from app.core.config import settings
 from app.models import (
     Amenity,
     AmenityCondition,
@@ -32,6 +33,22 @@ from app.models import (
     Stay,
     StayUser,
 )
+from app.services import oss_client
+
+
+def _resolve_device_count(db: Session, amenity_id: uuid.UUID) -> int | None:
+    """Devices installed in a room.
+
+    With OSS dispatch on, the figure comes from the OSS microservice, and
+    `None` means UNKNOWN (OSS unreachable) -- it is deliberately NOT coerced to
+    0, so an outage never looks like a room with no devices. With OSS off, it is
+    the local count from hms_db, exactly as before.
+    """
+    if settings.OSS_ENABLED:
+        return oss_client.device_count(amenity_id)
+    return db.execute(
+        select(func.count()).select_from(Device).where(Device.amenity_id == amenity_id)
+    ).scalar_one()
 
 BuildingProp = aliased(Property, name="building_property")
 FloorProp = aliased(Property, name="floor_property")
@@ -351,9 +368,7 @@ def get_occupancy(db: Session, amenity_id: uuid.UUID):
         ]
 
     enriched["occupants"] = occupants
-    enriched["device_count"] = db.execute(
-        select(func.count()).select_from(Device).where(Device.amenity_id == amenity_id)
-    ).scalar_one()
+    enriched["device_count"] = _resolve_device_count(db, amenity_id)
     return enriched
 
 

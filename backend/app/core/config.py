@@ -53,6 +53,19 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str | None = None
 
+    # --- OSS (device/operations) microservice dispatch ---
+    # When OSS_ENABLED is true, the OSS-surfaced routes forward to the OSS
+    # microservice instead of reading hms_db locally, and occupancy's
+    # per-room device_count is composed from it. Default false so HMS runs
+    # exactly as before until the OSS service is wired and reachable.
+    OSS_ENABLED: bool = False
+    OSS_SERVICE_URL: str = "http://127.0.0.1:8001"
+    OSS_TIMEOUT_SECONDS: float = 5.0
+    # Optional inter-service token. Unset by default (trusted-LAN PoC). When set,
+    # it is sent as `X-OSS-Service-Token` and the OSS service must be configured
+    # with the same value. Never logged.
+    OSS_SERVICE_TOKEN: str | None = None
+
     @property
     def cors_origins(self) -> list[str]:
         """CORS_ORIGINS parsed into the list CORSMiddleware expects."""
