@@ -135,8 +135,6 @@ export const StatusSection = ({
     return affectedOnly ? mapped.filter((room) => room.conditions.length > 0) : mapped;
   }, [roomsQuery.data, affectedOnly]);
 
-  /** useAllOccupancy retrieves all pages so the list is never truncated. */
-  const roomsTruncated = false;
 
   const {
     cardBg,
@@ -409,12 +407,6 @@ export const StatusSection = ({
                 );
               })}
             </div>
-            {roomsTruncated && (
-              <p className="mt-3 text-[11px]" style={{ color: mutedColor }}>
-                Showing {roomsQuery.data?.items.length} of {roomsQuery.data?.total} rooms on this
-                floor -- one page is the backend's maximum.
-              </p>
-            )}
           </DataState>
         </div>
       )}
