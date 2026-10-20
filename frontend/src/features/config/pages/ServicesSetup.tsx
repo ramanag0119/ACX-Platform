@@ -27,9 +27,12 @@ import { useAuth } from "@/core/contexts/AuthContext";
 import {
   useCreateServiceCategory,
   useCreateServiceItem,
+  useUpdateServiceCategory,
+  useUpdateServiceItem,
 } from "@/lib/api/mutations";
 import { toast } from "@/hooks/use-toast";
-import { MAX_PAGE_SIZE } from "@/lib/api/types";
+import { MAX_PAGE_SIZE, type ServiceCategoryRead, type ServiceItemRead } from "@/lib/api/types";
+import { describeApiError } from "@/lib/api/client";
 import { PageHeader } from "@/components/layout/PageHeader";
 
 type TabType = "room-service" | "travel-desk" | "business-center" | "food-order" | "facility-maintenance" | "health-fitness" | "sanitation-maintenance";
@@ -200,6 +203,9 @@ const ServicesSetup = () => {
     const mayWrite = canWrite("service_setup");
     const createCategory = useCreateServiceCategory();
     const createItem = useCreateServiceItem();
+    const updateCategory = useUpdateServiceCategory();
+    const updateItem = useUpdateServiceItem();
+    const isDeleting = updateCategory.isPending || updateItem.isPending;
 
     /**
      * Create a catalogue row for the tab in view.
@@ -261,11 +267,11 @@ const ServicesSetup = () => {
 
     const categoriesOfType = (name: string) => {
         const id = typeId(name);
-        return id === undefined ? [] : allCategories.filter((category) => category.service_type === id);
+        return id === undefined ? [] : allCategories.filter((category) => category.service_type === id && category.status !== 0);
     };
     const itemsOfType = (name: string) => {
         const id = typeId(name);
-        return id === undefined ? [] : allItems.filter((item) => item.service_type === id);
+        return id === undefined ? [] : allItems.filter((item) => item.service_type === id && item.status !== 0);
     };
 
     // Room Service: one row per item, labelled with its category.
@@ -296,6 +302,7 @@ const ServicesSetup = () => {
     const foodCategoryData = categoriesOfType("Food Order").map((category) => ({
         id: category.id,
         category: category.category_name ?? "-",
+        raw: category,
     }));
     const servedByOptions = (roomsQuery.data?.items ?? []).map((room) => room.name);
     const foodMenuData = itemsOfType("Food Order").map((item) => ({
@@ -306,6 +313,7 @@ const ServicesSetup = () => {
         vegNonveg: item.is_veg === true ? "Veg" : item.is_veg === false ? "Non-Veg" : "-",
         spicy: item.is_spicy === true ? "Spicy" : item.is_spicy === false ? "Non-Spicy" : "-",
         price: item.price_per_unit ?? "-",
+        raw: item,
     }));
 
     const facilityServicesOptions = categoriesOfType("Facility Maintenance Service").map((category) => ({
@@ -343,6 +351,7 @@ const ServicesSetup = () => {
         id: item.id,
         sanitationService: item.category_name ?? "-",
         typeOfService: item.type_of_service ?? item.item_name,
+        raw: item,
     }));
 
     const [activeTab, setActiveTab] = useState<TabType>("room-service");
@@ -422,10 +431,34 @@ const ServicesSetup = () => {
     const [sanitationServicesTypeEntriesPerPage, setSanitationServicesTypeEntriesPerPage] = useState("10");
     const [sanitationServicesTypeCurrentPage, setSanitationServicesTypeCurrentPage] = useState(1);
 
-    // Modal states
+    // Modal states & controlled form state
     const [editFoodCategoryOpen, setEditFoodCategoryOpen] = useState(false);
+    const [selectedCategoryToEdit, setSelectedCategoryToEdit] = useState<ServiceCategoryRead | null>(null);
+    const [editFoodCategoryName, setEditFoodCategoryName] = useState("");
+
     const [editSanitationServiceOpen, setEditSanitationServiceOpen] = useState(false);
+    const [selectedSanitationItemToEdit, setSelectedSanitationItemToEdit] = useState<ServiceItemRead | null>(null);
+    const [editSanitationCategoryId, setEditSanitationCategoryId] = useState("");
+    const [editSanitationTypeName, setEditSanitationTypeName] = useState("");
+    const [editSanitationEstimateTime, setEditSanitationEstimateTime] = useState("");
+
     const [editFoodMenuOpen, setEditFoodMenuOpen] = useState(false);
+    const [selectedFoodItemToEdit, setSelectedFoodItemToEdit] = useState<ServiceItemRead | null>(null);
+    const [editFoodCategoryId, setEditFoodCategoryId] = useState("");
+    const [editFoodItemName, setEditFoodItemName] = useState("");
+    const [editFoodDescription, setEditFoodDescription] = useState("");
+    const [editFoodVegNonveg, setEditFoodVegNonveg] = useState("");
+    const [editFoodSpicy, setEditFoodSpicy] = useState("");
+    const [editFoodPrice, setEditFoodPrice] = useState("");
+
+    // Soft delete confirmation state
+    const [deleteTarget, setDeleteTarget] = useState<{
+        id: string;
+        name: string;
+        type: "category" | "item";
+        label: string;
+    } | null>(null);
+    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
     const tabs = [
         { id: "room-service" as TabType, label: "Room Service" },
@@ -607,6 +640,240 @@ const ServicesSetup = () => {
         setVegNonveg("");
         setSpicy("");
         setFoodPrice("");
+    };
+
+    // --- Food Category Edit & Delete Handlers ---
+    const handleOpenEditFoodCategory = (category: ServiceCategoryRead) => {
+        setSelectedCategoryToEdit(category);
+        setEditFoodCategoryName(category.category_name ?? "");
+        setEditFoodCategoryOpen(true);
+    };
+
+    const handleEditFoodCategoryReset = () => {
+        setEditFoodCategoryName(selectedCategoryToEdit?.category_name ?? "");
+    };
+
+    const handleEditFoodCategorySubmit = () => {
+        if (!selectedCategoryToEdit) return;
+        const trimmed = editFoodCategoryName.trim();
+        if (!trimmed) {
+            toast({ title: "Category name is required", variant: "destructive" });
+            return;
+        }
+        updateCategory.mutate(
+            { id: selectedCategoryToEdit.id, body: { category_name: trimmed } },
+            {
+                onSuccess: () => {
+                    setEditFoodCategoryOpen(false);
+                },
+                onError: (err) => {
+                    toast({
+                        title: "Failed to update category",
+                        description: describeApiError(err),
+                        variant: "destructive",
+                    });
+                },
+            }
+        );
+    };
+
+    // --- Sanitation Service Edit & Delete Handlers ---
+    const handleOpenEditSanitationService = (item: ServiceItemRead) => {
+        setSelectedSanitationItemToEdit(item);
+        setEditSanitationCategoryId(item.category_id);
+        setEditSanitationTypeName(item.type_of_service ?? item.item_name);
+        const desc = item.description ?? "";
+        const match = desc.match(/Estimated time:\s*(.*)/i);
+        setEditSanitationEstimateTime(match ? match[1] : desc);
+        setEditSanitationServiceOpen(true);
+    };
+
+    const handleEditSanitationServiceReset = () => {
+        if (!selectedSanitationItemToEdit) return;
+        setEditSanitationCategoryId(selectedSanitationItemToEdit.category_id);
+        setEditSanitationTypeName(selectedSanitationItemToEdit.type_of_service ?? selectedSanitationItemToEdit.item_name);
+        const desc = selectedSanitationItemToEdit.description ?? "";
+        const match = desc.match(/Estimated time:\s*(.*)/i);
+        setEditSanitationEstimateTime(match ? match[1] : desc);
+    };
+
+    const handleEditSanitationServiceSubmit = () => {
+        if (!selectedSanitationItemToEdit) return;
+        const trimmedName = editSanitationTypeName.trim();
+        if (!trimmedName) {
+            toast({ title: "Service type name is required", variant: "destructive" });
+            return;
+        }
+        if (!editSanitationCategoryId) {
+            toast({ title: "Please select a sanitation service category", variant: "destructive" });
+            return;
+        }
+        const description = editSanitationEstimateTime.trim()
+            ? `Estimated time: ${editSanitationEstimateTime.trim()}`
+            : null;
+
+        updateItem.mutate(
+            {
+                id: selectedSanitationItemToEdit.id,
+                body: {
+                    item_name: trimmedName,
+                    type_of_service: trimmedName,
+                    category_id: editSanitationCategoryId,
+                    description,
+                },
+            },
+            {
+                onSuccess: () => {
+                    setEditSanitationServiceOpen(false);
+                },
+                onError: (err) => {
+                    toast({
+                        title: "Failed to update sanitation service",
+                        description: describeApiError(err),
+                        variant: "destructive",
+                    });
+                },
+            }
+        );
+    };
+
+    // --- Food Menu Edit & Delete Handlers ---
+    const handleOpenEditFoodMenu = (item: ServiceItemRead) => {
+        setSelectedFoodItemToEdit(item);
+        setEditFoodCategoryId(item.category_id);
+        setEditFoodItemName(item.item_name);
+        setEditFoodDescription(item.description ?? "");
+        setEditFoodVegNonveg(item.is_veg === true ? "veg" : item.is_veg === false ? "non-veg" : "");
+        setEditFoodSpicy(item.is_spicy === true ? "yes" : item.is_spicy === false ? "no" : "");
+        setEditFoodPrice(item.price_per_unit ?? "");
+        setEditFoodMenuOpen(true);
+    };
+
+    const handleEditFoodMenuReset = () => {
+        if (!selectedFoodItemToEdit) return;
+        setEditFoodCategoryId(selectedFoodItemToEdit.category_id);
+        setEditFoodItemName(selectedFoodItemToEdit.item_name);
+        setEditFoodDescription(selectedFoodItemToEdit.description ?? "");
+        setEditFoodVegNonveg(
+            selectedFoodItemToEdit.is_veg === true ? "veg" : selectedFoodItemToEdit.is_veg === false ? "non-veg" : ""
+        );
+        setEditFoodSpicy(
+            selectedFoodItemToEdit.is_spicy === true ? "yes" : selectedFoodItemToEdit.is_spicy === false ? "no" : ""
+        );
+        setEditFoodPrice(selectedFoodItemToEdit.price_per_unit ?? "");
+    };
+
+    const handleEditFoodMenuSubmit = () => {
+        if (!selectedFoodItemToEdit) return;
+        const trimmedName = editFoodItemName.trim();
+        if (!trimmedName) {
+            toast({ title: "Item name is required", variant: "destructive" });
+            return;
+        }
+        if (!editFoodCategoryId) {
+            toast({ title: "Please select a food category", variant: "destructive" });
+            return;
+        }
+        const isVegBool = editFoodVegNonveg === "veg" ? true : editFoodVegNonveg === "non-veg" ? false : null;
+        const isSpicyBool = editFoodSpicy === "yes" ? true : editFoodSpicy === "no" ? false : null;
+
+        updateItem.mutate(
+            {
+                id: selectedFoodItemToEdit.id,
+                body: {
+                    item_name: trimmedName,
+                    category_id: editFoodCategoryId,
+                    description: editFoodDescription.trim() || null,
+                    price_per_unit: editFoodPrice.trim() || null,
+                    is_veg: isVegBool,
+                    is_spicy: isSpicyBool,
+                },
+            },
+            {
+                onSuccess: () => {
+                    setEditFoodMenuOpen(false);
+                },
+                onError: (err) => {
+                    toast({
+                        title: "Failed to update food menu item",
+                        description: describeApiError(err),
+                        variant: "destructive",
+                    });
+                },
+            }
+        );
+    };
+
+    // --- Soft Delete Handlers ---
+    const handleRequestDeleteCategory = (category: ServiceCategoryRead) => {
+        const hasItems = allItems.some(i => i.category_id === category.id && i.status !== 0);
+        if (hasItems) {
+            toast({
+                title: "Cannot delete category",
+                description: "This category still has active items. Please delete or reassign them first.",
+                variant: "destructive",
+            });
+            return;
+        }
+        setDeleteTarget({
+            id: category.id,
+            name: category.category_name ?? "Unnamed Category",
+            type: "category",
+            label: "Food Category",
+        });
+        setDeleteConfirmOpen(true);
+    };
+
+    const handleRequestDeleteItem = (item: ServiceItemRead, label: string) => {
+        setDeleteTarget({
+            id: item.id,
+            name: item.item_name,
+            type: "item",
+            label,
+        });
+        setDeleteConfirmOpen(true);
+    };
+
+    const handleConfirmDelete = () => {
+        if (!deleteTarget) return;
+
+        if (deleteTarget.type === "category") {
+            updateCategory.mutate(
+                { id: deleteTarget.id, body: { status: 0 } },
+                {
+                    onSuccess: () => {
+                        toast({ title: `${deleteTarget.label} "${deleteTarget.name}" deleted successfully` });
+                        setDeleteConfirmOpen(false);
+                        setDeleteTarget(null);
+                    },
+                    onError: (err) => {
+                        toast({
+                            title: "Failed to delete category",
+                            description: describeApiError(err),
+                            variant: "destructive",
+                        });
+                    },
+                }
+            );
+        } else {
+            updateItem.mutate(
+                { id: deleteTarget.id, body: { status: 0 } },
+                {
+                    onSuccess: () => {
+                        toast({ title: `${deleteTarget.label} "${deleteTarget.name}" deleted successfully` });
+                        setDeleteConfirmOpen(false);
+                        setDeleteTarget(null);
+                    },
+                    onError: (err) => {
+                        toast({
+                            title: "Failed to delete item",
+                            description: describeApiError(err),
+                            variant: "destructive",
+                        });
+                    },
+                }
+            );
+        }
     };
 
     // Filter Room Services data
@@ -1290,10 +1557,22 @@ const ServicesSetup = () => {
                                                 <TableCell className="text-cyan-600 hover:underline text-center cursor-pointer">{item.category}</TableCell>
                                                 <TableCell className="text-center">
                                                     <div className="flex justify-center gap-2">
-                                                        <Button size="sm" className="h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditFoodCategoryOpen(true)}>
+                                                        <Button
+                                                            size="sm"
+                                                            className="h-7 w-7 p-0 rounded-[3px]"
+                                                            disabled={!mayWrite}
+                                                            title={!mayWrite ? "Permission required" : "Edit category"}
+                                                            onClick={() => handleOpenEditFoodCategory(item.raw)}
+                                                        >
                                                             <Edit className="h-[14px] w-[14px]" />
                                                         </Button>
-                                                        <Button size="sm" className="bg-red-500 hover:bg-red-600 text-white h-7 w-7 p-0 rounded-[3px]">
+                                                        <Button
+                                                            size="sm"
+                                                            className="bg-red-500 hover:bg-red-600 text-white h-7 w-7 p-0 rounded-[3px]"
+                                                            disabled={!mayWrite || isDeleting}
+                                                            title={!mayWrite ? "Permission required" : "Delete category"}
+                                                            onClick={() => handleRequestDeleteCategory(item.raw)}
+                                                        >
                                                             <Trash2 className="h-[14px] w-[14px]" />
                                                         </Button>
                                                     </div>
@@ -1443,10 +1722,22 @@ const ServicesSetup = () => {
                                                 <TableCell className="text-foreground">{item.price}</TableCell>
                                                 <TableCell className="text-center">
                                                     <div className="flex justify-center gap-2">
-                                                        <Button size="sm" className="h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditFoodMenuOpen(true)}>
+                                                        <Button
+                                                            size="sm"
+                                                            className="h-7 w-7 p-0 rounded-[3px]"
+                                                            disabled={!mayWrite}
+                                                            title={!mayWrite ? "Permission required" : "Edit item"}
+                                                            onClick={() => handleOpenEditFoodMenu(item.raw)}
+                                                        >
                                                             <Edit className="h-[14px] w-[14px]" />
                                                         </Button>
-                                                        <Button size="sm" className="bg-red-500 hover:bg-red-600 text-white h-7 w-7 p-0 rounded-[3px]">
+                                                        <Button
+                                                            size="sm"
+                                                            className="bg-red-500 hover:bg-red-600 text-white h-7 w-7 p-0 rounded-[3px]"
+                                                            disabled={!mayWrite || isDeleting}
+                                                            title={!mayWrite ? "Permission required" : "Delete item"}
+                                                            onClick={() => handleRequestDeleteItem(item.raw, "Food Menu Item")}
+                                                        >
                                                             <Trash2 className="h-[14px] w-[14px]" />
                                                         </Button>
                                                     </div>
@@ -1928,10 +2219,22 @@ const ServicesSetup = () => {
                                                 <TableCell className="text-cyan-600 hover:underline text-center cursor-pointer">{item.typeOfService}</TableCell>
                                                 <TableCell className="text-center">
                                                     <div className="flex justify-center gap-2">
-                                                        <Button size="sm" className="h-7 w-7 p-0 rounded-[3px]" onClick={() => setEditSanitationServiceOpen(true)}>
+                                                        <Button
+                                                            size="sm"
+                                                            className="h-7 w-7 p-0 rounded-[3px]"
+                                                            disabled={!mayWrite}
+                                                            title={!mayWrite ? "Permission required" : "Edit service"}
+                                                            onClick={() => handleOpenEditSanitationService(item.raw)}
+                                                        >
                                                             <Edit className="h-[14px] w-[14px]" />
                                                         </Button>
-                                                        <Button size="sm" className="bg-red-500 hover:bg-red-600 text-white h-7 w-7 p-0 rounded-[3px]">
+                                                        <Button
+                                                            size="sm"
+                                                            className="bg-red-500 hover:bg-red-600 text-white h-7 w-7 p-0 rounded-[3px]"
+                                                            disabled={!mayWrite || isDeleting}
+                                                            title={!mayWrite ? "Permission required" : "Delete service"}
+                                                            onClick={() => handleRequestDeleteItem(item.raw, "Sanitation Service")}
+                                                        >
                                                             <Trash2 className="h-[14px] w-[14px]" />
                                                         </Button>
                                                     </div>
@@ -2030,15 +2333,30 @@ const ServicesSetup = () => {
                             <Label className="text-sm font-medium text-gray-800">Food Category <span className="text-red-500">*</span></Label>
                             <input
                                 type="text"
-                                defaultValue="Curry"
-                                className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-500 focus:ring-0 px-0 pb-1 text-sm outline-none"
+                                value={editFoodCategoryName}
+                                onChange={(e) => setEditFoodCategoryName(e.target.value)}
+                                placeholder="Enter category name"
+                                className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-800 focus:ring-0 px-0 pb-1 text-sm outline-none"
                             />
                         </div>
                     </div>
 
                     <div className="flex justify-center gap-4 pb-8">
-                        <Button variant="outline" className="h-10 px-8 min-w-[110px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all" onClick={() => setEditFoodCategoryOpen(false)}>Reset</Button>
-                        <Button className="h-10 px-8 min-w-[110px] rounded-2xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all" onClick={() => setEditFoodCategoryOpen(false)}>Submit</Button>
+                        <Button
+                            variant="outline"
+                            className="h-10 px-8 min-w-[110px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all"
+                            onClick={handleEditFoodCategoryReset}
+                            disabled={updateCategory.isPending}
+                        >
+                            Reset
+                        </Button>
+                        <Button
+                            className="h-10 px-8 min-w-[110px] rounded-2xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
+                            onClick={handleEditFoodCategorySubmit}
+                            disabled={updateCategory.isPending || !editFoodCategoryName.trim()}
+                        >
+                            {updateCategory.isPending ? "Submitting..." : "Submit"}
+                        </Button>
                     </div>
                 </DialogContent>
             </Dialog>
@@ -2055,36 +2373,59 @@ const ServicesSetup = () => {
                     <div className="p-8 px-12 space-y-7">
                         <div className="grid grid-cols-[200px_1fr] items-center gap-4">
                             <Label className="text-sm font-medium text-gray-800">Sanitation service <span className="text-red-500">*</span></Label>
-                            <div className="relative">
-                                <select className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-400 focus:ring-0 px-0 pb-1 text-sm appearance-none outline-none">
-                                    <option>Sanitation</option>
-                                </select>
-                                <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-                            </div>
+                            <Select value={editSanitationCategoryId} onValueChange={setEditSanitationCategoryId}>
+                                <SelectTrigger className="w-full bg-transparent border-0 border-b border-gray-300 rounded-none text-gray-800 focus:ring-0 px-0 pb-1 text-sm shadow-none">
+                                    <SelectValue placeholder="Select sanitation service" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-white">
+                                    {sanitationServicesOptions.map((option) => (
+                                        <SelectItem key={option.id} value={option.id}>
+                                            {option.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
 
                         <div className="grid grid-cols-[200px_1fr] items-center gap-4">
                             <Label className="text-sm font-medium text-gray-800">Services Type <span className="text-red-500">*</span></Label>
                             <input
                                 type="text"
-                                defaultValue="Guest Room sanitation"
-                                className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-500 focus:ring-0 px-0 pb-1 text-sm outline-none"
+                                value={editSanitationTypeName}
+                                onChange={(e) => setEditSanitationTypeName(e.target.value)}
+                                placeholder="Enter service type name"
+                                className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-800 focus:ring-0 px-0 pb-1 text-sm outline-none"
                             />
                         </div>
 
                         <div className="grid grid-cols-[200px_1fr] items-center gap-4">
-                            <Label className="text-sm font-medium text-gray-800">Estimate time <span className="text-red-500">*</span></Label>
+                            <Label className="text-sm font-medium text-gray-800">Estimate time</Label>
                             <input
                                 type="text"
-                                defaultValue="1"
-                                className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-500 focus:ring-0 px-0 pb-1 text-sm outline-none"
+                                value={editSanitationEstimateTime}
+                                onChange={(e) => setEditSanitationEstimateTime(e.target.value)}
+                                placeholder="Enter estimate time"
+                                className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-800 focus:ring-0 px-0 pb-1 text-sm outline-none"
                             />
                         </div>
                     </div>
 
                     <div className="flex justify-center gap-4 pb-8">
-                        <Button variant="outline" className="h-10 px-8 min-w-[110px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all" onClick={() => setEditSanitationServiceOpen(false)}>Reset</Button>
-                        <Button className="h-10 px-8 min-w-[110px] rounded-2xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all" onClick={() => setEditSanitationServiceOpen(false)}>Submit</Button>
+                        <Button
+                            variant="outline"
+                            className="h-10 px-8 min-w-[110px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all"
+                            onClick={handleEditSanitationServiceReset}
+                            disabled={updateItem.isPending}
+                        >
+                            Reset
+                        </Button>
+                        <Button
+                            className="h-10 px-8 min-w-[110px] rounded-2xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
+                            onClick={handleEditSanitationServiceSubmit}
+                            disabled={updateItem.isPending || !editSanitationTypeName.trim() || !editSanitationCategoryId}
+                        >
+                            {updateItem.isPending ? "Submitting..." : "Submit"}
+                        </Button>
                     </div>
                 </DialogContent>
             </Dialog>
@@ -2101,75 +2442,154 @@ const ServicesSetup = () => {
                     <div className="p-8 px-12 space-y-6">
                         <div className="grid grid-cols-[140px_1fr] items-center gap-4">
                             <Label className="text-sm font-medium text-gray-800 text-left">Food Category <span className="text-red-500">*</span></Label>
-                            <div className="relative">
-                                <select className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-400 focus:ring-0 px-0 pb-1 text-sm appearance-none outline-none">
-                                    <option>Dessert</option>
-                                </select>
-                                <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-                            </div>
+                            <Select value={editFoodCategoryId} onValueChange={setEditFoodCategoryId}>
+                                <SelectTrigger className="w-full bg-transparent border-0 border-b border-gray-300 rounded-none text-gray-800 focus:ring-0 px-0 pb-1 text-sm shadow-none">
+                                    <SelectValue placeholder="Select food category" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-white">
+                                    {foodCategoryData.map((cat) => (
+                                        <SelectItem key={cat.id} value={cat.id}>
+                                            {cat.category}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
 
                         <div className="grid grid-cols-[140px_1fr] items-center gap-4">
                             <Label className="text-sm font-medium text-gray-800 text-left">Food Menu <span className="text-red-500">*</span></Label>
                             <input
                                 type="text"
-                                defaultValue="Brownie"
-                                className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-500 focus:ring-0 px-0 pb-1 text-sm outline-none"
+                                value={editFoodItemName}
+                                onChange={(e) => setEditFoodItemName(e.target.value)}
+                                placeholder="Enter food item name"
+                                className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-800 focus:ring-0 px-0 pb-1 text-sm outline-none"
                             />
                         </div>
 
                         <div className="grid grid-cols-[140px_1fr] items-start gap-4 h-24">
-                            <Label className="text-sm font-medium text-gray-800 text-left pt-2">Description <span className="text-red-500">*</span></Label>
+                            <Label className="text-sm font-medium text-gray-800 text-left pt-2">Description</Label>
                             <textarea
-                                defaultValue="2 Brownies"
-                                className="w-full h-full bg-transparent border-0 border-b border-gray-300 text-gray-500 focus:ring-0 px-0 pb-1 text-sm outline-none resize-none pt-2"
+                                value={editFoodDescription}
+                                onChange={(e) => setEditFoodDescription(e.target.value)}
+                                placeholder="Enter description"
+                                className="w-full h-full bg-transparent border-0 border-b border-gray-300 text-gray-800 focus:ring-0 px-0 pb-1 text-sm outline-none resize-none pt-2"
                             />
                         </div>
 
                         <div className="grid grid-cols-[140px_1fr] items-center gap-4 pt-4">
-                            <Label className="text-sm font-medium text-gray-800 text-left">Veg/Nonveg <span className="text-red-500">*</span></Label>
+                            <Label className="text-sm font-medium text-gray-800 text-left">Veg/Nonveg</Label>
                             <div className="flex gap-4">
-                                <label className="flex items-center gap-2 text-sm text-gray-600">
-                                    <input type="radio" name="veg-type" defaultChecked className="h-4 w-4 border-gray-300 text-cyan-600 focus:ring-cyan-600" /> Veg
+                                <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                                    <input
+                                        type="radio"
+                                        name="edit-veg-type"
+                                        checked={editFoodVegNonveg === "veg"}
+                                        onChange={() => setEditFoodVegNonveg("veg")}
+                                        className="h-4 w-4 border-gray-300 text-cyan-600 focus:ring-cyan-600"
+                                    /> Veg
                                 </label>
-                                <label className="flex items-center gap-2 text-sm text-gray-600">
-                                    <input type="radio" name="veg-type" className="h-4 w-4 border-gray-300 text-cyan-600 focus:ring-cyan-600" /> Non Veg
+                                <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                                    <input
+                                        type="radio"
+                                        name="edit-veg-type"
+                                        checked={editFoodVegNonveg === "non-veg"}
+                                        onChange={() => setEditFoodVegNonveg("non-veg")}
+                                        className="h-4 w-4 border-gray-300 text-cyan-600 focus:ring-cyan-600"
+                                    /> Non Veg
                                 </label>
                             </div>
                         </div>
 
                         <div className="grid grid-cols-[140px_1fr] items-center gap-4">
-                            <Label className="text-sm font-medium text-gray-800 text-left">Spicy <span className="text-red-500">*</span></Label>
+                            <Label className="text-sm font-medium text-gray-800 text-left">Spicy</Label>
                             <div className="flex gap-4">
-                                <label className="flex items-center gap-2 text-sm text-gray-600">
-                                    <input type="radio" name="spicy" className="h-4 w-4 border-gray-300 text-cyan-600 focus:ring-cyan-600" /> Yes
+                                <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                                    <input
+                                        type="radio"
+                                        name="edit-spicy"
+                                        checked={editFoodSpicy === "yes"}
+                                        onChange={() => setEditFoodSpicy("yes")}
+                                        className="h-4 w-4 border-gray-300 text-cyan-600 focus:ring-cyan-600"
+                                    /> Yes
                                 </label>
-                                <label className="flex items-center gap-2 text-sm text-gray-600">
-                                    <input type="radio" name="spicy" defaultChecked className="h-4 w-4 border-gray-300 text-cyan-600 focus:ring-cyan-600" /> No
+                                <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                                    <input
+                                        type="radio"
+                                        name="edit-spicy"
+                                        checked={editFoodSpicy === "no"}
+                                        onChange={() => setEditFoodSpicy("no")}
+                                        className="h-4 w-4 border-gray-300 text-cyan-600 focus:ring-cyan-600"
+                                    /> No
                                 </label>
                             </div>
                         </div>
 
                         <div className="grid grid-cols-[140px_1fr] items-center gap-4">
                             <Label className="text-sm font-medium text-gray-800 text-left">Price <span className="text-red-500">*</span></Label>
-                            <input type="text" defaultValue="200" className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-500 focus:ring-0 px-0 pb-1 text-sm outline-none" />
-                        </div>
-
-                        <div className="grid grid-cols-[140px_1fr] items-center gap-4 pt-2">
-                            <Label className="text-sm font-medium text-gray-800 text-left">Food Image</Label>
-                            <div className="space-y-3">
-                                <div className="flex items-center border-b border-gray-300 pb-1">
-                                    <Button variant="outline" className="h-7 px-3 bg-gray-100 text-gray-700 text-xs border border-gray-300 rounded-[2px]">Choose file</Button>
-                                    <span className="ml-3 text-xs text-gray-400">No file chosen</span>
-                                </div>
-                                <div className="text-brand-teal text-xs cursor-pointer hover:underline">Click here for previous image</div>
-                            </div>
+                            <input
+                                type="text"
+                                value={editFoodPrice}
+                                onChange={(e) => setEditFoodPrice(e.target.value)}
+                                placeholder="Enter price"
+                                className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-800 focus:ring-0 px-0 pb-1 text-sm outline-none"
+                            />
                         </div>
                     </div>
 
                     <div className="flex justify-center gap-4 pb-8 mt-2">
-                        <Button variant="outline" className="h-10 px-8 min-w-[110px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all" onClick={() => setEditFoodMenuOpen(false)}>Reset</Button>
-                        <Button className="h-10 px-8 min-w-[110px] rounded-2xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all" onClick={() => setEditFoodMenuOpen(false)}>Submit</Button>
+                        <Button
+                            variant="outline"
+                            className="h-10 px-8 min-w-[110px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all"
+                            onClick={handleEditFoodMenuReset}
+                            disabled={updateItem.isPending}
+                        >
+                            Reset
+                        </Button>
+                        <Button
+                            className="h-10 px-8 min-w-[110px] rounded-2xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
+                            onClick={handleEditFoodMenuSubmit}
+                            disabled={updateItem.isPending || !editFoodItemName.trim() || !editFoodCategoryId}
+                        >
+                            {updateItem.isPending ? "Submitting..." : "Submit"}
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Soft Delete Confirmation Dialog */}
+            <Dialog open={deleteConfirmOpen} onOpenChange={(open) => !isDeleting && setDeleteConfirmOpen(open)}>
+                <DialogContent className="max-w-[440px] bg-white text-gray-900 border-0 p-6 overflow-hidden rounded-xl shadow-2xl [&>button]:hidden">
+                    <div className="flex flex-col space-y-4">
+                        <div className="flex items-center gap-3 text-red-600">
+                            <div className="p-2 bg-red-100 rounded-full">
+                                <Trash2 className="h-5 w-5" />
+                            </div>
+                            <h3 className="text-lg font-semibold text-gray-900">
+                                Delete {deleteTarget?.label}
+                            </h3>
+                        </div>
+                        <p className="text-sm text-gray-600">
+                            Are you sure you want to delete <span className="font-semibold text-gray-900">"{deleteTarget?.name}"</span>? This will deactivate the record from active services.
+                        </p>
+                        <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+                            <Button
+                                variant="outline"
+                                disabled={isDeleting}
+                                onClick={() => setDeleteConfirmOpen(false)}
+                                className="rounded-lg px-4"
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                disabled={isDeleting}
+                                onClick={handleConfirmDelete}
+                                className="bg-red-600 hover:bg-red-700 text-white rounded-lg px-4 flex items-center gap-2"
+                            >
+                                {isDeleting ? "Deleting..." : "Confirm Delete"}
+                            </Button>
+                        </div>
                     </div>
                 </DialogContent>
             </Dialog>

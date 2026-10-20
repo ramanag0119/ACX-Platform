@@ -194,12 +194,14 @@ export const useCreateServiceCategory = (opts?: Options<writes.ServiceCategoryWr
     ...opts,
   });
 
-export const useUpdateServiceCategory = () =>
+export const useUpdateServiceCategory = (
+  opts?: Options<{ id: string; body: Partial<writes.ServiceCategoryWrite> }, unknown>,
+) =>
   useApiMutation(
     ({ id, body }: { id: string; body: Partial<writes.ServiceCategoryWrite> }) =>
       writes.updateServiceCategory(id, body),
     INVALIDATE.serviceCatalogue,
-    { success: "Category updated" },
+    { success: "Category updated", ...opts },
   );
 
 export const useCreateServiceItem = (opts?: Options<writes.ServiceItemWrite, unknown>) =>
@@ -208,12 +210,14 @@ export const useCreateServiceItem = (opts?: Options<writes.ServiceItemWrite, unk
     ...opts,
   });
 
-export const useUpdateServiceItem = () =>
+export const useUpdateServiceItem = (
+  opts?: Options<{ id: string; body: Partial<writes.ServiceItemWrite> }, unknown>,
+) =>
   useApiMutation(
     ({ id, body }: { id: string; body: Partial<writes.ServiceItemWrite> }) =>
       writes.updateServiceItem(id, body),
     INVALIDATE.serviceCatalogue,
-    { success: "Item updated" },
+    { success: "Item updated", ...opts },
   );
 
 // ---------------------------------------------------------------------------
