@@ -405,3 +405,8 @@ export const useReport = (
 
 export const useKeySettings = (options?: { enabled?: boolean }) =>
   useApiQuery(["key-settings"], () => writeApi.getKeySettings(), options);
+
+export const useCurrencies = (params?: QueryParams) =>
+  useApiQuery(["currencies", params], () => api.listCurrencies(params), {
+    staleTime: 10 * 60_000,
+  });

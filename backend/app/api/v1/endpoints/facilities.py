@@ -27,6 +27,7 @@ from app.schemas.common import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, Page
 from app.schemas.facility import (
     BuildingRead,
     CountryRead,
+    CurrencyRead,
     FacilityDetail,
     FacilityRead,
     FloorRead,
@@ -355,4 +356,59 @@ def list_countries(
 def list_genders(db: DbSession) -> list[GenderOption]:
     options = service.get_gender_options(db)
     return [GenderOption.model_validate(o) for o in options]
+
+
+# ---------------------------------------------------------------------------
+# Currency reference data (ISO 4217 master)
+# ---------------------------------------------------------------------------
+
+currencies_router = APIRouter(
+    prefix="/currencies", tags=["facilities"], responses=AUTH_RESPONSES
+)
+
+
+@currencies_router.get(
+    "",
+    response_model=list[CurrencyRead],
+    summary="List supported currencies",
+    description="Authoritative ISO 4217 currencies from the database master table.",
+)
+def list_currencies(
+    db: DbSession,
+    active_only: bool = Query(True, description="Filter only active currencies"),
+) -> list[CurrencyRead]:
+    from sqlalchemy import select
+    from app.models import Currency
+
+    stmt = select(Currency).order_by(Currency.id)
+    if active_only:
+        stmt = stmt.where(Currency.is_active == True)  # noqa: E712
+    currencies = db.execute(stmt).scalars().all()
+    return [CurrencyRead.model_validate(c) for c in currencies]
+
+
+@currencies_router.get(
+    "/{id_or_code}",
+    response_model=CurrencyRead,
+    responses=NOT_FOUND,
+    summary="Get currency by ID or ISO code",
+)
+def get_currency(id_or_code: str, db: DbSession) -> CurrencyRead:
+    from sqlalchemy import select
+    from app.models import Currency
+
+    if id_or_code.isdigit():
+        currency = db.get(Currency, int(id_or_code))
+    else:
+        currency = (
+            db.execute(select(Currency).where(Currency.code == id_or_code.upper()))
+            .scalars()
+            .first()
+        )
+    if currency is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Currency '{id_or_code}' not found.",
+        )
+    return CurrencyRead.model_validate(currency)
 

@@ -27,6 +27,7 @@ import { DataState, TableLoading } from "@/core/components/DataState";
 import {
     useAmenityTypes,
     useBuildings,
+    useCurrencies,
     useFacilities,
     useFeatures,
     useFloors,
@@ -102,6 +103,7 @@ const FacilityManagement = () => {
         email: "",
         additionalEmail: "",
         googleMapLink: "",
+        currencyId: null as number | null,
     });
 
     const [editAmenityForm, setEditAmenityForm] = useState({
@@ -112,6 +114,7 @@ const FacilityManagement = () => {
     const [editPackageForm, setEditPackageForm] = useState({
         name: "",
         amenityTypeId: "",
+        price: "",
         selectedFeatureIds: [] as string[],
         subPackageId: "",
         parentPackageId: "",
@@ -135,6 +138,7 @@ const FacilityManagement = () => {
     const [packageForm, setPackageForm] = useState({
         packages: "",
         roomType: "",
+        price: "",
         selectedFeatureIds: [] as string[],
         subPackageId: "",
         packageImage: "",
@@ -169,6 +173,8 @@ const FacilityManagement = () => {
     const amenityTypesQuery = useAmenityTypes({ page: 1, page_size: MAX_PAGE_SIZE });
     const packagesQuery = usePackages({ page: 1, page_size: MAX_PAGE_SIZE });
     const featuresQuery = useFeatures({ page: 1, page_size: MAX_PAGE_SIZE });
+    const currenciesQuery = useCurrencies();
+    const currencies = currenciesQuery.data ?? [];
 
     // --- Mutations ---
     const { canWrite } = useAuth();
@@ -213,6 +219,7 @@ const FacilityManagement = () => {
         hospitalityName: facility.facility_uid || "-",
         guestRooms: facility.guest_rooms ?? "-",
         hotelImage: facility.facility_image_id ? "View" : "-",
+        currency: facility.currency?.code ?? (facility.currency_id === 1 ? "INR" : (facility.currency_id ? String(facility.currency_id) : "-")),
         city: facility.city ?? "-",
         state: facility.state ?? "-",
         pinCode: facility.pin_code ?? "-",
@@ -233,6 +240,7 @@ const FacilityManagement = () => {
         raw: row,
         packageName: row.name,
         amenityType: row.amenity_type_name ?? "-",
+        price: row.price ? `${row.currency_symbol || "₹"} ${row.price}` : "-",
         subPackages: row.sub_package_names?.length ? row.sub_package_names.join(", ") : "-",
         features: row.feature_names?.join(", ") || "-",
         image: "-",
@@ -245,6 +253,7 @@ const FacilityManagement = () => {
         sNo: index + 1,
         packageName: row.name,
         amenityType: row.amenity_type_name ?? "-",
+        price: row.price ? `${row.currency_symbol || "₹"} ${row.price}` : "-",
         parentPackages: row.parent_package_names?.length ? row.parent_package_names.join(", ") : "-",
         features: row.feature_names?.join(", ") || "-",
         image: "-",
@@ -381,6 +390,7 @@ const FacilityManagement = () => {
                         name: packageForm.packages.trim(),
                         amenity_type: packageForm.roomType,
                         is_sub_package: false,
+                        price: packageForm.price ? packageForm.price : undefined,
                         feature_ids: packageForm.selectedFeatureIds,
                         sub_package_ids: packageForm.subPackageId ? [packageForm.subPackageId] : [],
                     },
@@ -438,6 +448,7 @@ const FacilityManagement = () => {
             email: facility.email || "",
             additionalEmail: facility.additional_email || "",
             googleMapLink: facility.google_map_link || "",
+            currencyId: facility.currency_id ?? null,
         });
         setEditFacilityOpen(true);
     };
@@ -457,6 +468,7 @@ const FacilityManagement = () => {
                     email: editFacilityForm.email.trim() || undefined,
                     additional_email: editFacilityForm.additionalEmail.trim() || null,
                     google_map_link: editFacilityForm.googleMapLink.trim() || null,
+                    currency_id: editFacilityForm.currencyId ? Number(editFacilityForm.currencyId) : null,
                 },
             },
             {
@@ -499,6 +511,7 @@ const FacilityManagement = () => {
         setEditPackageForm({
             name: pkg.name,
             amenityTypeId: pkg.amenity_type,
+            price: pkg.price !== null && pkg.price !== undefined ? String(pkg.price) : "",
             selectedFeatureIds: [...(pkg.feature_ids || [])],
             subPackageId: pkg.sub_package_ids?.[0] || "",
             parentPackageId: pkg.parent_package_ids?.[0] || "",
@@ -515,6 +528,7 @@ const FacilityManagement = () => {
                 body: {
                     name: editPackageForm.name.trim(),
                     amenity_type: editPackageForm.amenityTypeId || undefined,
+                    price: editPackageForm.price ? editPackageForm.price : undefined,
                     feature_ids: editPackageForm.selectedFeatureIds,
                     sub_package_ids: !isSub && editPackageForm.subPackageId ? [editPackageForm.subPackageId] : [],
                     parent_package_id: isSub && editPackageForm.parentPackageId ? editPackageForm.parentPackageId : undefined,
@@ -611,6 +625,7 @@ const FacilityManagement = () => {
                                 <TableHead className="text-gray-600 font-medium">Hospitality Name</TableHead>
                                 <TableHead className="text-gray-600 font-medium">Guest Rooms</TableHead>
                                 <TableHead className="text-gray-600 font-medium">Hotel Image</TableHead>
+                                <TableHead className="text-gray-600 font-medium">Base Currency</TableHead>
                                 <TableHead className="text-gray-600 font-medium">City</TableHead>
                                 <TableHead className="text-gray-600 font-medium">State</TableHead>
                                 <TableHead className="text-gray-600 font-medium">PIN Code</TableHead>
@@ -623,7 +638,7 @@ const FacilityManagement = () => {
                         <TableBody>
                             {filteredFacilityData.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={11} className="text-center py-6 text-muted-foreground">
+                                    <TableCell colSpan={12} className="text-center py-6 text-muted-foreground">
                                         No facilities found
                                     </TableCell>
                                 </TableRow>
@@ -639,6 +654,7 @@ const FacilityManagement = () => {
                                         <TableCell>
                                             <span className="text-cyan-400 cursor-pointer hover:underline">{row.hotelImage}</span>
                                         </TableCell>
+                                        <TableCell className="font-semibold text-brand">{row.currency}</TableCell>
                                         <TableCell>{row.city}</TableCell>
                                         <TableCell>{row.state}</TableCell>
                                         <TableCell>{row.pinCode}</TableCell>
@@ -973,6 +989,18 @@ const FacilityManagement = () => {
                                         </SelectContent>
                                     </Select>
                                 </div>
+
+                                <div className="space-y-2">
+                                    <Label className="text-sm font-medium">Rate / Price</Label>
+                                    <Input
+                                        type="number"
+                                        step="0.01"
+                                        placeholder="e.g. 2500.00"
+                                        value={packageForm.price}
+                                        onChange={(e) => setPackageForm({ ...packageForm, price: e.target.value })}
+                                        className="h-10 bg-muted/30 border-border/50"
+                                    />
+                                </div>
                             </div>
 
                             <div className="space-y-4">
@@ -1223,6 +1251,7 @@ const FacilityManagement = () => {
                                     <TableRow className="bg-gray-50 hover:bg-gray-50 border-b border-gray-200">
                                         <TableHead className="text-primary font-semibold">Package Name</TableHead>
                                         <TableHead className="text-gray-600 font-medium">Amenity Type</TableHead>
+                                        <TableHead className="text-gray-600 font-medium">Rate / Price</TableHead>
                                         <TableHead className="text-gray-600 font-medium">Sub Packages</TableHead>
                                         <TableHead className="text-gray-600 font-medium">Features</TableHead>
                                         <TableHead className="text-gray-600 font-medium">Image</TableHead>
@@ -1232,7 +1261,7 @@ const FacilityManagement = () => {
                                 <TableBody>
                                     {filteredPackagesData.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
+                                            <TableCell colSpan={7} className="text-center py-6 text-muted-foreground">
                                                 No parent packages found
                                             </TableCell>
                                         </TableRow>
@@ -1244,6 +1273,7 @@ const FacilityManagement = () => {
                                             >
                                                 <TableCell className="text-primary">{row.packageName}</TableCell>
                                                 <TableCell className="text-primary">{row.amenityType}</TableCell>
+                                                <TableCell className="font-semibold text-emerald-600">{row.price}</TableCell>
                                                 <TableCell>
                                                     {row.subPackages === "-" ? "-" : (
                                                         <span className="text-primary">{row.subPackages}</span>
@@ -1294,6 +1324,7 @@ const FacilityManagement = () => {
                                         <TableHead className="text-gray-600 font-medium">S No</TableHead>
                                         <TableHead className="text-primary font-semibold">Package Name</TableHead>
                                         <TableHead className="text-gray-600 font-medium">Amenity Type</TableHead>
+                                        <TableHead className="text-gray-600 font-medium">Rate / Price</TableHead>
                                         <TableHead className="text-gray-600 font-medium">Parent Package</TableHead>
                                         <TableHead className="text-gray-600 font-medium">Features</TableHead>
                                         <TableHead className="text-gray-600 font-medium">Image</TableHead>
@@ -1303,7 +1334,7 @@ const FacilityManagement = () => {
                                 <TableBody>
                                     {filteredSubPackagesData.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={7} className="text-center py-6 text-muted-foreground">
+                                            <TableCell colSpan={8} className="text-center py-6 text-muted-foreground">
                                                 No sub-packages found
                                             </TableCell>
                                         </TableRow>
@@ -1316,6 +1347,7 @@ const FacilityManagement = () => {
                                                 <TableCell>{row.sNo}</TableCell>
                                                 <TableCell className="text-primary">{row.packageName}</TableCell>
                                                 <TableCell className="text-primary">{row.amenityType}</TableCell>
+                                                <TableCell className="font-semibold text-emerald-600">{row.price}</TableCell>
                                                 <TableCell className="text-primary">{row.parentPackages}</TableCell>
                                                 <TableCell className="max-w-[300px] truncate">{row.features}</TableCell>
                                                 <TableCell>{row.image}</TableCell>
@@ -1785,6 +1817,24 @@ const FacilityManagement = () => {
                             />
                         </div>
                         <div className="grid grid-cols-[160px_1fr] items-center gap-4">
+                            <Label className="text-sm font-medium text-gray-800">Base Currency</Label>
+                            <Select
+                                value={editFacilityForm.currencyId ? String(editFacilityForm.currencyId) : "1"}
+                                onValueChange={(v) => setEditFacilityForm({ ...editFacilityForm, currencyId: Number(v) })}
+                            >
+                                <SelectTrigger className="h-9 bg-white border border-gray-300 rounded-[2px] text-sm">
+                                    <SelectValue placeholder="Select Currency" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-popover">
+                                    {currencies.map((c) => (
+                                        <SelectItem key={c.id} value={String(c.id)}>
+                                            {c.code} ({c.symbol}) - {c.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="grid grid-cols-[160px_1fr] items-center gap-4">
                             <Label className="text-sm font-medium text-gray-800">Email <span className="text-red-500">*</span></Label>
                             <input
                                 type="email"
@@ -1919,6 +1969,17 @@ const FacilityManagement = () => {
                                     ))}
                                 </SelectContent>
                             </Select>
+                        </div>
+                        <div className="grid grid-cols-[160px_1fr] items-center gap-4">
+                            <Label className="text-sm font-medium text-gray-800">Rate / Price</Label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                placeholder="e.g. 2500.00"
+                                value={editPackageForm.price}
+                                onChange={(e) => setEditPackageForm({ ...editPackageForm, price: e.target.value })}
+                                className="w-full bg-white border border-gray-300 text-gray-900 focus:ring-1 focus:ring-brand px-3 py-1.5 text-sm outline-none rounded-[2px]"
+                            />
                         </div>
                         {editingPackage?.is_sub_package ? (
                             <div className="grid grid-cols-[160px_1fr] items-center gap-4">

@@ -55,6 +55,17 @@ class GenderOption(BaseModel):
     label: str = Field(examples=["Male"])
 
 
+class CurrencyRead(ORMModel):
+    """Authoritative ISO 4217 currency."""
+
+    id: int = Field(examples=[1])
+    code: str = Field(examples=["INR"])
+    name: str = Field(examples=["Indian Rupee"])
+    symbol: str = Field(examples=["₹"])
+    minor_units: int = Field(examples=[2])
+    is_active: bool = Field(default=True)
+
+
 # ---------------------------------------------------------------------------
 # Facility
 # ---------------------------------------------------------------------------
@@ -76,8 +87,9 @@ class FacilityRead(ORMModel):
     google_map_link: str | None = None
     currency_id: int | None = Field(
         default=None,
-        description="No `currency` table exists in the schema, so this is a bare id.",
+        description="Foreign key to `currency.id`.",
     )
+    currency: CurrencyRead | None = None
     facility_image_id: uuid.UUID | None = None
     default_key_user: uuid.UUID | None = None
     created_on: datetime

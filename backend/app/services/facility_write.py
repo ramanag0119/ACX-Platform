@@ -27,6 +27,7 @@ from app.models import (
     Amenity,
     AmenityType,
     AppUser,
+    Currency,
     Facility,
     FacilityEvent,
     Feature,
@@ -59,6 +60,8 @@ def update_facility(db: Session, facility_id: uuid.UUID, *, changes: dict) -> Fa
     with transaction(db):
         facility = require_row(db, Facility, facility_id, "Facility")
         require_exists(db, AppUser, changes.get("default_key_user"), "Default key user")
+        if changes.get("currency_id") is not None:
+            require_exists(db, Currency, changes["currency_id"], "Currency")
         apply_changes(facility, changes)
     db.refresh(facility)
     return facility
@@ -170,6 +173,8 @@ def create_package(
     with transaction(db):
         ensure_unique(db, Package, Package.name, data["name"], "Package")
         require_exists(db, AmenityType, data["amenity_type"], "Amenity type")
+        if data.get("currency_id") is not None:
+            require_exists(db, Currency, data["currency_id"], "Currency")
         is_sub = data.get("is_sub_package", False)
 
         if is_sub and parent_package_id:
@@ -232,6 +237,8 @@ def update_package(
                 db, Package, Package.name, changes["name"], "Package", exclude_id=package_id
             )
         require_exists(db, AmenityType, changes.get("amenity_type"), "Amenity type")
+        if changes.get("currency_id") is not None:
+            require_exists(db, Currency, changes["currency_id"], "Currency")
         if changes.get("status") == 0:
             _assert_package_unused(db, package_id)
         apply_changes(row, changes)

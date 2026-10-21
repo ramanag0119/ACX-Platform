@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session, aliased
 from app.models import (
     Amenity,
     AppUser,
+    Currency,
     Department,
     ServiceCategory,
     ServiceCategoryItem,
@@ -171,6 +172,9 @@ def _item_stmt() -> Select:
             ServiceCategory.service_type,
             ServiceType.name.label("service_type_name"),
             ServiceCategoryItem.price_per_unit,
+            ServiceCategoryItem.currency_id,
+            Currency.code.label("currency_code"),
+            Currency.symbol.label("currency_symbol"),
             ServiceCategoryItem.amenity_id,
             ServiceCategoryItem.item_icon,
             ServiceCategoryItem.facility_id,
@@ -181,6 +185,7 @@ def _item_stmt() -> Select:
         )
         .join(ServiceCategory, ServiceCategory.id == ServiceCategoryItem.category_id)
         .join(ServiceType, ServiceType.id == ServiceCategory.service_type)
+        .outerjoin(Currency, Currency.id == ServiceCategoryItem.currency_id)
     )
 
 

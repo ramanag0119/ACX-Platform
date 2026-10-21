@@ -4,15 +4,16 @@ Blueprint §5, tables 9-17.
 """
 
 import uuid
+from decimal import Decimal
 
-from sqlalchemy import Boolean, ForeignKey, Index, Integer, SmallInteger, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, ForeignKey, Index, Integer, Numeric, SmallInteger, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, HMSBase, SmallIntLookupPk, TimestampMixin, UUIDPk
 from app.models import enums
-from app.models.facility import attachment_fk, user_fk
+from app.models.facility import Currency, attachment_fk, user_fk
 
 
 class AmenityType(HMSBase, UUIDPk):
@@ -220,12 +221,19 @@ class Package(HMSBase, UUIDPk):
     is_sub_package: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default="false"
     )
+    # Rate plan pricing and currency
+    price: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
+    currency_id: Mapped[int | None] = mapped_column(
+        SmallInteger, ForeignKey("currency.id", ondelete="RESTRICT"), nullable=True
+    )
     image_id: Mapped[uuid.UUID | None] = mapped_column(
         PGUUID(as_uuid=True), attachment_fk(ondelete="RESTRICT"), nullable=True
     )
     created_by: Mapped[uuid.UUID] = mapped_column(
         PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=False
     )
+
+    currency: Mapped[Currency | None] = relationship("Currency")
 
 
 class SubPackage(Base, TimestampMixin):

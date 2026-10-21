@@ -8,6 +8,7 @@ The catalogue is generic, not food-specific: the Phase 1 `food_category` /
 
 import uuid
 from datetime import datetime
+from decimal import Decimal
 
 from sqlalchemy import (
     DateTime,
@@ -20,11 +21,11 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, HMSBase, SmallIntLookupPk, TimestampMixin, UUIDPk
 from app.models import enums
-from app.models.facility import attachment_fk, user_fk
+from app.models.facility import Currency, attachment_fk, user_fk
 
 
 class ServiceType(Base, TimestampMixin, SmallIntLookupPk):
@@ -106,7 +107,10 @@ class ServiceCategoryItem(HMSBase, UUIDPk):
         index=True,
     )
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    price_per_unit: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
+    price_per_unit: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
+    currency_id: Mapped[int | None] = mapped_column(
+        SmallInteger, ForeignKey("currency.id", ondelete="RESTRICT"), nullable=True
+    )
     amenity_id: Mapped[uuid.UUID | None] = mapped_column(
         PGUUID(as_uuid=True),
         ForeignKey("amenity.id", ondelete="RESTRICT"),
@@ -127,6 +131,8 @@ class ServiceCategoryItem(HMSBase, UUIDPk):
     created_by: Mapped[uuid.UUID] = mapped_column(
         PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=False
     )
+
+    currency: Mapped[Currency | None] = relationship("Currency")
 
     __table_args__ = (
         Index(
@@ -199,9 +205,9 @@ class ServiceRequest(HMSBase, UUIDPk):
         nullable=True,
         index=True,
     )
-    net_amount: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
-    total_tax: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
-    total_amount: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
+    net_amount: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
+    total_tax: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
+    total_amount: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
     expected_date: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
@@ -253,7 +259,7 @@ class ServiceRequestItem(HMSBase, UUIDPk):
         index=True,
     )
     quantity: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
-    price_per_unit: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
+    price_per_unit: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
     assigned_to: Mapped[uuid.UUID | None] = mapped_column(
         PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=True
     )

@@ -192,6 +192,9 @@ class InvoiceRef(ORMModel):
     id: uuid.UUID
     invoice_number: str
     total_amount: Decimal | None = None
+    currency_id: int | None = None
+    currency_code: str | None = None
+    currency_symbol: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -222,6 +225,9 @@ class InvoiceRead(ORMModel):
     net_amount: Decimal | None = None
     total_tax: Decimal | None = None
     total_amount: Decimal | None = None
+    currency_id: int | None = Field(default=None, description="Foreign key to `currency.id`")
+    currency_code: str | None = Field(default=None, examples=["INR"])
+    currency_symbol: str | None = Field(default=None, examples=["₹"])
     created_on: datetime
     updated_on: datetime
 

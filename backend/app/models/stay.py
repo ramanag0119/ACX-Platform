@@ -8,14 +8,15 @@ check-in, check-out and cancellation are all states of one `stay` row.
 
 import uuid
 from datetime import datetime
+from decimal import Decimal
 
 from sqlalchemy import DateTime, ForeignKey, Integer, Numeric, SmallInteger, String, Text
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import HMSBase, UUIDPk
 from app.models import enums
-from app.models.facility import attachment_fk, user_fk
+from app.models.facility import Currency, attachment_fk, user_fk
 
 
 class Stay(HMSBase, UUIDPk):
@@ -227,12 +228,20 @@ class Invoice(HMSBase, UUIDPk):
         nullable=False,
         index=True,
     )
-    net_amount: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
-    total_tax: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
-    total_amount: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
+    currency_id: Mapped[int | None] = mapped_column(
+        SmallInteger,
+        ForeignKey("currency.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
+    net_amount: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
+    total_tax: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
+    total_amount: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
     created_by: Mapped[uuid.UUID] = mapped_column(
         PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=False
     )
+
+    currency: Mapped[Currency | None] = relationship("Currency")
 
 
 class ImportJob(HMSBase, UUIDPk):

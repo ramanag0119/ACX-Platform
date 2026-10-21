@@ -85,8 +85,7 @@ def seed(session: Session, ctx: dict) -> dict[str, int]:
         google_map_link="https://maps.example.invalid/ikanos-grand-chennai",
         cloud_details={"region": "ap-south-1", "tier": "demo"},
         created_by=system.id,
-        # currency_id is left NULL: there is no `currencies` table in IKANOS,
-        # so there is nothing to point at. Blueprint OPEN DECISION #1.
+        currency_id=1,  # INR (Indian Rupee)
     )
     ctx["facility"] = facility
     counts["facility"] = 1

@@ -80,6 +80,7 @@ from app.models.device import (
 from app.models.facility import (
     Attachment,
     Country,
+    Currency,
     Facility,
     FacilityUser,
     Organisation,
@@ -322,6 +323,7 @@ __all__ = [
     "PropertyChain",
     "Attachment",
     "Country",
+    "Currency",
     # B
     "AmenityType",
     "Amenity",

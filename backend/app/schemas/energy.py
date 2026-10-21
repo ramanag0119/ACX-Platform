@@ -53,11 +53,19 @@ class ORMModel(BaseModel):
 
 
 class EnergyStatRead(ORMModel):
-    """One hourly energy row, exactly as stored."""
+    """One hourly energy row, mapped to authoritative Device."""
 
+    device_id: uuid.UUID = Field(
+        description="Foreign key to `device.id`.",
+    )
+    device_uid: str | None = Field(
+        default=None,
+        examples=["DEV101MIK"],
+        description="Authoritative device hardware identifier.",
+    )
     device_name: str = Field(
         examples=["101-mik"],
-        description="Free text, varchar(11). There is no FK to `device`.",
+        description="Stored device identifier on energy telemetry.",
     )
     facility_id: uuid.UUID
     amenity_id: uuid.UUID
@@ -75,14 +83,67 @@ class EnergyStatRead(ORMModel):
     )
     energy_consumed: float = Field(
         examples=[0.42],
-        description="Raw stored value. `energy_stat` carries NO unit column.",
+        description="Stored active energy measurement.",
     )
-    energy_unit: None = Field(
-        default=None,
-        description="Always null: no unit is stored on this table. Do not assume kWh.",
+    energy_unit: str | None = Field(
+        default="kWh",
+        description="Authoritative telemetry unit from `device_param` active_energy configuration.",
     )
     created_on: datetime
     updated_on: datetime
+
+
+class EnergyStatCreate(BaseModel):
+    """Payload for ingesting hourly energy telemetry."""
+
+    facility_id: uuid.UUID | None = Field(
+        default=None,
+        description="Facility UUID. If omitted, resolved from the authoritative device record.",
+    )
+    amenity_id: uuid.UUID | None = Field(
+        default=None,
+        description="Amenity UUID. If omitted, resolved from the authoritative device record.",
+    )
+    device_id: uuid.UUID | None = Field(
+        default=None,
+        description="Authoritative Device UUID. If omitted, resolved via device_uid or device_name.",
+    )
+    device_uid: str | None = Field(
+        default=None,
+        description="Authoritative device hardware identifier (e.g. 'DEV101MIK').",
+    )
+    device_name: str | None = Field(
+        default=None,
+        max_length=30,
+        description="External/protocol device identifier (e.g. '101-mik').",
+    )
+    hour: int | None = Field(
+        default=None,
+        description="Hours elapsed since 2000-01-01 UTC. If omitted, derived from hour_timestamp.",
+    )
+    hour_timestamp: datetime | None = Field(
+        default=None,
+        description="Timestamp of the reading. Used to derive `hour` if `hour` is not supplied.",
+    )
+    energy_consumed: float = Field(
+        default=0.0,
+        ge=0.0,
+        description="Energy consumed in kWh.",
+    )
+    energy: float | None = Field(
+        default=None,
+        ge=0.0,
+        description="Alias for energy_consumed.",
+    )
+    power: float | None = None
+    voltage: float | None = None
+    current: float | None = None
+
+    def resolved_energy_consumed(self) -> float:
+        if self.energy is not None:
+            return float(self.energy)
+        return float(self.energy_consumed)
+
 
 
 class EnergySummaryBucket(ORMModel):

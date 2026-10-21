@@ -118,10 +118,12 @@ class ServiceItemRead(ORMModel):
         default=None,
         examples=["150.00"],
         description=(
-            "Real column. Service-item price only -- NOT room tariff. "
-            "OPEN DECISION #10 (package.price, invoice.status) remains unresolved."
+            "Service-item price stored as NUMERIC(10, 2)."
         ),
     )
+    currency_id: int | None = Field(default=None, description="Foreign key to `currency.id`")
+    currency_code: str | None = Field(default=None, examples=["INR"])
+    currency_symbol: str | None = Field(default=None, examples=["₹"])
     amenity_id: uuid.UUID | None = Field(
         default=None, description="Venue this item belongs to, e.g. a restaurant"
     )

@@ -419,6 +419,10 @@ export interface PackageRead {
   amenity_type_name: string | null;
   is_sub_package: boolean;
   facility_id: string | null;
+  price?: number | string | null;
+  currency_id?: number | null;
+  currency_code?: string | null;
+  currency_symbol?: string | null;
   status: number;
   feature_ids?: string[];
   feature_names: string[];
@@ -438,6 +442,8 @@ export const createPackage = (body: {
   amenity_type: string;
   description?: string | null;
   is_sub_package?: boolean;
+  price?: number | string | null;
+  currency_id?: number | null;
   feature_ids?: string[];
   sub_package_ids?: string[];
   parent_package_id?: string | null;
@@ -448,6 +454,8 @@ export const updatePackage = (
     name?: string;
     amenity_type?: string;
     description?: string | null;
+    price?: number | string | null;
+    currency_id?: number | null;
     feature_ids?: string[];
     sub_package_ids?: string[];
     parent_package_id?: string | null;

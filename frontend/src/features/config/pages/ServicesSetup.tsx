@@ -312,7 +312,7 @@ const ServicesSetup = () => {
         description: item.description ?? "-",
         vegNonveg: item.is_veg === true ? "Veg" : item.is_veg === false ? "Non-Veg" : "-",
         spicy: item.is_spicy === true ? "Spicy" : item.is_spicy === false ? "Non-Spicy" : "-",
-        price: item.price_per_unit ?? "-",
+        price: item.price_per_unit ? `${item.currency_symbol || "₹"} ${item.price_per_unit}` : "-",
         raw: item,
     }));
 

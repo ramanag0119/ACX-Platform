@@ -24,18 +24,19 @@ from sqlalchemy import Select, func, select
 from sqlalchemy.orm import Session
 
 from app.models import (
+    Amenity,
     AmenityType,
     Attachment,
-    Feature,
+    Currency,
     FacilityEvent,
+    Feature,
     Occasion,
     OccasionType,
     Package,
     PackageFeature,
-    SubPackage,
     PromoCode,
     PromoCodeAmenity,
-    Amenity,
+    SubPackage,
 )
 
 
@@ -77,6 +78,10 @@ class PackageRead(BaseModel):
     amenity_type_name: str | None
     is_sub_package: bool
     facility_id: uuid.UUID | None
+    price: Decimal | None = None
+    currency_id: int | None = None
+    currency_code: str | None = None
+    currency_symbol: str | None = None
     status: int
     feature_ids: list[uuid.UUID] = []
     feature_names: list[str] = []
@@ -315,6 +320,10 @@ def list_packages(
             amenity_type_name=type_names.get(row.amenity_type),
             is_sub_package=row.is_sub_package,
             facility_id=row.facility_id,
+            price=row.price,
+            currency_id=row.currency_id,
+            currency_code=row.currency.code if row.currency else None,
+            currency_symbol=row.currency.symbol if row.currency else None,
             status=row.status,
             feature_ids=feat_ids_map.get(row.id, []),
             feature_names=feat_names_map.get(row.id, []),

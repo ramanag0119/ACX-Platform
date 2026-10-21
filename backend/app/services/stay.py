@@ -22,6 +22,7 @@ from app.models import (
     Amenity,
     AmenityType,
     AppUser,
+    Currency,
     Invoice,
     Package,
     Property,
@@ -426,7 +427,15 @@ def stay_documents(db: Session, stay_id: uuid.UUID) -> list[dict]:
 
 def stay_invoice_refs(db: Session, stay_id: uuid.UUID) -> list[dict]:
     rows = db.execute(
-        select(Invoice.id, Invoice.invoice_number, Invoice.total_amount)
+        select(
+            Invoice.id,
+            Invoice.invoice_number,
+            Invoice.total_amount,
+            Invoice.currency_id,
+            Currency.code.label("currency_code"),
+            Currency.symbol.label("currency_symbol"),
+        )
+        .outerjoin(Currency, Currency.id == Invoice.currency_id)
         .where(Invoice.stay_id == stay_id)
         .order_by(Invoice.invoice_date)
     ).mappings().all()
@@ -456,11 +465,15 @@ def _invoice_stmt() -> Select:
             Invoice.net_amount,
             Invoice.total_tax,
             Invoice.total_amount,
+            Invoice.currency_id,
+            Currency.code.label("currency_code"),
+            Currency.symbol.label("currency_symbol"),
             Invoice.created_on,
             Invoice.updated_on,
         )
         .select_from(Invoice)
         .outerjoin(Stay, Stay.id == Invoice.stay_id)
+        .outerjoin(Currency, Currency.id == Invoice.currency_id)
     )
 
 

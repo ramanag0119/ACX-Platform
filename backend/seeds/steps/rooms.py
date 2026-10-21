@@ -10,6 +10,7 @@ no price anywhere in the IKANOS dump and that room tariff has no source
 
 from __future__ import annotations
 
+from decimal import Decimal
 from sqlalchemy.orm import Session
 
 from app.models import (
@@ -37,16 +38,16 @@ AMENITY_TYPES = [
     ("conference", "Conference Room", "others"),
 ]
 
-# (key, name, amenity_type, is_sub_package)
+# (key, name, amenity_type, is_sub_package, price)
 PACKAGES = [
-    ("standard", "Standard", "guest-room", False),
-    ("deluxe", "Deluxe", "guest-room", False),
-    ("premium", "Premium", "suite", False),
-    ("golden", "Golden", "suite", False),
-    ("room-only", "Room Only", "guest-room", True),
-    ("breakfast", "Breakfast Included", "guest-room", True),
-    ("half-board", "Half Board", "guest-room", True),
-    ("full-board", "Full Board", "guest-room", True),
+    ("standard", "Standard", "guest-room", False, Decimal("1800.00")),
+    ("deluxe", "Deluxe", "guest-room", False, Decimal("2500.00")),
+    ("premium", "Premium", "suite", False, Decimal("4000.00")),
+    ("golden", "Golden", "suite", False, Decimal("6000.00")),
+    ("room-only", "Room Only", "guest-room", True, Decimal("1500.00")),
+    ("breakfast", "Breakfast Included", "guest-room", True, Decimal("400.00")),
+    ("half-board", "Half Board", "guest-room", True, Decimal("800.00")),
+    ("full-board", "Full Board", "guest-room", True, Decimal("1400.00")),
 ]
 
 SUB_PACKAGE_LINKS = [
@@ -137,7 +138,7 @@ def seed(session: Session, ctx: dict) -> dict[str, int]:
     counts["amenity_type"] = len(amenity_types)
 
     packages = {}
-    for key, name, atype, is_sub in PACKAGES:
+    for key, name, atype, is_sub, price in PACKAGES:
         packages[key] = upsert(
             session,
             Package,
@@ -145,11 +146,12 @@ def seed(session: Session, ctx: dict) -> dict[str, int]:
             facility_id=facility.id,
             name=name,
             description=f"{name} package",
+            price=price,
+            currency_id=1,
             status=1,
             amenity_type=amenity_types[atype].id,
             is_sub_package=is_sub,
             created_by=system.id,
-            # No `price`: the column does not exist. OPEN DECISION #10.
         )
     ctx["packages"] = packages
     counts["package"] = len(packages)

@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session, aliased
 from app.models import (
     Amenity,
     DailyDualDataPoint,
+    Device,
     DeviceParam,
     EnergyStat,
     Property,
@@ -38,20 +39,32 @@ GROUP_BY_CHOICES = ("hour", "day", "amenity", "device")
 ACTIVE_ENERGY_PARAM = "active_energy"
 
 
-def active_energy_unit(db: Session) -> str | None:
+def active_energy_unit(db: Session, device_id: uuid.UUID | None = None) -> str | None:
     """The unit `energy_stat.energy_consumed` is recorded in.
 
-    RESOLVED FROM CONFIGURATION, NOT PER READING, and deliberately so.
-    `energy_stat` has no unit column and cannot be joined to `device`: its
-    `device_name` is free text and none of its values match `device.device_name`
-    or `device.device_uid`. So there is no path from a reading to the device
-    type that would carry a per-row unit. What the schema does register is the
-    unit of the `active_energy` parameter itself, in `device_param`.
+    RESOLVED FROM CONFIGURATION:
+    If `device_id` is specified, resolves the parameter unit for the device's
+    specific device type. Otherwise resolves the uniform active energy unit across
+    the telemetry parameter registry in `device_param`.
 
     Returns None when the registry holds no unit for the parameter, or when
-    device types disagree on it -- one label cannot honestly describe every
-    reading in that case, and a null keeps the caller from implying otherwise.
+    device types disagree on it without a specific device filter.
     """
+    if device_id is not None:
+        unit = (
+            db.execute(
+                select(DeviceParam.unit)
+                .join(Device, Device.device_type == DeviceParam.device_type)
+                .where(Device.id == device_id)
+                .where(DeviceParam.param_name == ACTIVE_ENERGY_PARAM)
+                .where(DeviceParam.unit.is_not(None))
+            )
+            .scalars()
+            .first()
+        )
+        if unit:
+            return unit
+
     units = (
         db.execute(
             select(DeviceParam.unit)
@@ -93,6 +106,8 @@ def _page(stmt: Select, *, page: int, page_size: int) -> Select:
 def _energy_stmt() -> Select:
     return (
         select(
+            EnergyStat.device_id,
+            Device.device_uid.label("device_uid"),
             EnergyStat.device_name,
             EnergyStat.facility_id,
             EnergyStat.amenity_id,
@@ -108,6 +123,7 @@ def _energy_stmt() -> Select:
         )
         .select_from(EnergyStat)
         .join(Amenity, Amenity.id == EnergyStat.amenity_id)
+        .join(Device, Device.id == EnergyStat.device_id)
         .outerjoin(PropertyChain, PropertyChain.id == Amenity.property_chain_id)
         .outerjoin(BuildingProp, BuildingProp.id == PropertyChain.level_one_id)
         .outerjoin(FloorProp, FloorProp.id == PropertyChain.level_two_id)
@@ -121,6 +137,7 @@ def _apply_energy_filters(
     amenity_id: uuid.UUID | None,
     building_id: uuid.UUID | None,
     floor_id: uuid.UUID | None,
+    device_id: uuid.UUID | None = None,
     device_name: str | None,
     hour_from: int | None,
     hour_to: int | None,
@@ -133,6 +150,8 @@ def _apply_energy_filters(
         stmt = stmt.where(BuildingProp.id == building_id)
     if floor_id:
         stmt = stmt.where(FloorProp.id == floor_id)
+    if device_id:
+        stmt = stmt.where(EnergyStat.device_id == device_id)
     if device_name:
         stmt = stmt.where(EnergyStat.device_name == device_name)
     if hour_from is not None:
@@ -151,6 +170,7 @@ def list_energy_stats(
     amenity_id: uuid.UUID | None = None,
     building_id: uuid.UUID | None = None,
     floor_id: uuid.UUID | None = None,
+    device_id: uuid.UUID | None = None,
     device_name: str | None = None,
     hour_from: int | None = None,
     hour_to: int | None = None,
@@ -158,12 +178,17 @@ def list_energy_stats(
     stmt = _apply_energy_filters(
         _energy_stmt().order_by(EnergyStat.hour.desc(), EnergyStat.device_name),
         facility_id=facility_id, amenity_id=amenity_id, building_id=building_id,
-        floor_id=floor_id, device_name=device_name,
+        floor_id=floor_id, device_id=device_id, device_name=device_name,
         hour_from=hour_from, hour_to=hour_to,
     )
     total = _count(db, stmt)
+    unit = active_energy_unit(db, device_id=device_id) or "kWh"
     rows = [
-        {**dict(r), "hour_timestamp": hour_to_timestamp(r["hour"])}
+        {
+            **dict(r),
+            "hour_timestamp": hour_to_timestamp(r["hour"]),
+            "energy_unit": unit,
+        }
         for r in db.execute(_page(stmt, page=page, page_size=page_size)).mappings().all()
     ]
     return rows, total
@@ -177,6 +202,7 @@ def energy_summary(
     amenity_id: uuid.UUID | None = None,
     building_id: uuid.UUID | None = None,
     floor_id: uuid.UUID | None = None,
+    device_id: uuid.UUID | None = None,
     device_name: str | None = None,
     hour_from: int | None = None,
     hour_to: int | None = None,
@@ -185,18 +211,6 @@ def energy_summary(
 ) -> dict:
     """SUM/COUNT rollup. IKANOS stores energy hourly only; day and per-room
     views are aggregated here at query time, never precomputed.
-
-    `date_from` / `date_to` are the caller-facing way to bound the period. They
-    are converted to the stored `hour` (hours elapsed from 2000) with
-    `timestamp_to_hour`, so the filter runs against the real stored column and
-    uses `ix_energy_stat_amenity_id_hour` rather than computing a timestamp per
-    row. Callers that already hold raw hour numbers can still pass
-    `hour_from` / `hour_to`; when both forms are given the NARROWER bound wins,
-    so neither can silently widen the other's window.
-
-    Every figure returned -- `total_energy_consumed`, `reading_count` and the
-    buckets -- is summed from the rows this filter selects. There is no
-    all-time aggregate in the response.
     """
     if group_by not in GROUP_BY_CHOICES:
         raise ValueError(f"group_by must be one of {GROUP_BY_CHOICES}")
@@ -216,16 +230,6 @@ def energy_summary(
     if group_by == "hour":
         key, label = EnergyStat.hour, None
     elif group_by == "day":
-        # Whole days since the epoch: FLOOR division of the stored hour.
-        #
-        # `//` is deliberate. `cast(hour / 24, Integer)` looks equivalent but is
-        # not: SQLAlchemy renders `/` as true division
-        # (`hour / CAST(24 AS NUMERIC)`) and PostgreSQL ROUNDS when casting
-        # numeric to integer, so hour 233388 (2026-08-16 12:00) produced 9724.5
-        # -> 9725 and was reported under 2026-08-17. Every reading from midday
-        # onward was attributed to the following day, and two calendar days of
-        # data collapsed into one bucket. `//` emits plain integer division,
-        # which truncates; `hour` is never negative, so truncation is floor.
         key, label = EnergyStat.hour // 24, None
     elif group_by == "amenity":
         key, label = EnergyStat.amenity_id, Amenity.name
@@ -240,14 +244,15 @@ def energy_summary(
         select(*columns)
         .select_from(EnergyStat)
         .join(Amenity, Amenity.id == EnergyStat.amenity_id)
+        .join(Device, Device.id == EnergyStat.device_id)
         .outerjoin(PropertyChain, PropertyChain.id == Amenity.property_chain_id)
         .outerjoin(BuildingProp, BuildingProp.id == PropertyChain.level_one_id)
         .outerjoin(FloorProp, FloorProp.id == PropertyChain.level_two_id)
     )
     stmt = _apply_energy_filters(
         stmt, facility_id=facility_id, amenity_id=amenity_id,
-        building_id=building_id, floor_id=floor_id, device_name=device_name,
-        hour_from=hour_from, hour_to=hour_to,
+        building_id=building_id, floor_id=floor_id, device_id=device_id,
+        device_name=device_name, hour_from=hour_from, hour_to=hour_to,
     )
     group_cols = [key] + ([label] if label is not None else [])
     stmt = stmt.group_by(*group_cols).order_by(key)
@@ -277,10 +282,100 @@ def energy_summary(
             sum(b["total_energy_consumed"] for b in buckets), 6
         ),
         "reading_count": sum(b["reading_count"] for b in buckets),
-        # Read from `device_param`, never a literal -- see active_energy_unit.
-        "energy_unit": active_energy_unit(db),
+        "energy_unit": active_energy_unit(db, device_id=device_id) or "kWh",
         "buckets": buckets,
     }
+
+
+def ingest_energy_stat(
+    db: Session,
+    *,
+    energy_consumed: float,
+    facility_id: uuid.UUID | None = None,
+    amenity_id: uuid.UUID | None = None,
+    device_id: uuid.UUID | None = None,
+    device_uid: str | None = None,
+    device_name: str | None = None,
+    hour: int | None = None,
+    hour_timestamp: datetime | None = None,
+) -> EnergyStat:
+    """Ingest a new energy telemetry record into energy_stat.
+
+    Enforces authoritative Device foreign key referential integrity.
+    Validates external/unregistered device identifiers.
+    Applies idempotent upsert semantics for duplicate-event protection.
+    """
+    # 1. Resolve Device FK
+    target_device: Device | None = None
+    if device_id is not None:
+        target_device = db.get(Device, device_id)
+        if target_device is None:
+            raise ValueError(f"Unknown device identifier '{device_id}'. Device not found.")
+    else:
+        ident = device_uid or device_name
+        if ident:
+            clean_name = ident.strip()
+            compact_name = clean_name.replace("-", "").upper()
+            target_device = (
+                db.execute(
+                    select(Device).where(
+                        (Device.device_uid == clean_name)
+                        | (Device.device_name == clean_name)
+                        | (Device.device_uid.ilike(f"%{compact_name}%"))
+                    )
+                )
+                .scalars()
+                .first()
+            )
+            if target_device is None:
+                raise ValueError(
+                    f"Unknown device identifier '{ident}'. Telemetry records must reference a registered device."
+                )
+        else:
+            raise ValueError("At least one device identifier (device_id, device_uid, or device_name) must be provided.")
+
+    resolved_device_id = target_device.id
+    resolved_device_name = (
+        device_name.strip() if device_name else (target_device.device_name or target_device.device_uid[:11])
+    )
+    resolved_facility_id = facility_id or target_device.facility_id
+    resolved_amenity_id = amenity_id or target_device.amenity_id
+    if not resolved_amenity_id:
+        raise ValueError("amenity_id must be provided or configured on the device.")
+
+    # 2. Determine hour
+    if hour is None:
+        if hour_timestamp is None:
+            hour_timestamp = datetime.now(UTC)
+        hour = timestamp_to_hour(hour_timestamp)
+
+    # 3. Idempotent upsert (four-column PK: device_name, facility_id, amenity_id, hour)
+    existing = db.execute(
+        select(EnergyStat).where(
+            EnergyStat.device_name == resolved_device_name,
+            EnergyStat.facility_id == resolved_facility_id,
+            EnergyStat.amenity_id == resolved_amenity_id,
+            EnergyStat.hour == hour,
+        )
+    ).scalar_one_or_none()
+
+    if existing:
+        existing.energy_consumed = energy_consumed
+        existing.device_id = resolved_device_id
+        db.flush()
+        return existing
+
+    stat = EnergyStat(
+        device_id=resolved_device_id,
+        device_name=resolved_device_name,
+        facility_id=resolved_facility_id,
+        amenity_id=resolved_amenity_id,
+        hour=hour,
+        energy_consumed=energy_consumed,
+    )
+    db.add(stat)
+    db.flush()
+    return stat
 
 
 # ---------------------------------------------------------------------------

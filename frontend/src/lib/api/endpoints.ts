@@ -24,6 +24,7 @@ import type {
   ApiVersion,
   BuildingRead,
   CountryRead,
+  CurrencyRead,
   CurrentUser,
   CaleidoAtWorkRead,
   DailyDataPointRead,
@@ -32,6 +33,7 @@ import type {
   DeviceRead,
   DeviceStatRead,
   DeviceTypeRead,
+  EnergyStatCreate,
   EnergyStatRead,
   EnergySummaryRead,
   FacilityRead,
@@ -211,3 +213,12 @@ export const listDailyDataPoints = (params?: QueryParams) =>
 /** The Caleido At Work rings, aggregated backend-side -- one row per metric. */
 export const getCaleidoAtWork = (params?: QueryParams) =>
   apiClient.get<CaleidoAtWorkRead>("/daily-data-points/summary", params);
+
+// --- Currencies & Telemetry Ingestion ---------------------------------------
+
+export const listCurrencies = (params?: QueryParams) =>
+  apiClient.get<CurrencyRead[]>("/currencies", params);
+export const getCurrency = (idOrCode: string | number) =>
+  apiClient.get<CurrencyRead>(`/currencies/${idOrCode}`);
+export const ingestEnergyStat = (body: EnergyStatCreate) =>
+  apiClient.post<EnergyStatRead>("/energy-stats", body);

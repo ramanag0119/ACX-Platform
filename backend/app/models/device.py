@@ -367,6 +367,12 @@ class OtherDevice(HMSBase, BigIntPk):
 
     __tablename__ = "other_device"
 
+    device_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("device.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     msg_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     device_name: Mapped[str | None] = mapped_column(String(225), nullable=True)
     voltage: Mapped[float | None] = mapped_column(DOUBLE_PRECISION, nullable=True)

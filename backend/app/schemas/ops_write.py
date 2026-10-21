@@ -325,6 +325,7 @@ class FacilityUpdate(Body):
     google_map_link: str | None = Field(default=None, max_length=500)
     guest_rooms: int | None = Field(default=None, ge=0)
     default_key_user: uuid.UUID | None = None
+    currency_id: int | None = Field(default=None, description="Authoritative ISO 4217 Currency ID")
 
 
 class RoomCreate(Body):
@@ -370,6 +371,8 @@ class PackageCreate(Body):
     description: str | None = None
     is_sub_package: bool = False
     facility_id: uuid.UUID | None = None
+    price: Decimal | None = Field(default=None, ge=0, description="Authoritative rate plan price")
+    currency_id: int | None = Field(default=None, description="Currency ID (FK to currency)")
     status: int = Field(default=1, ge=0, le=1)
     #: `package_feature` rows; each references a `feature`.
     feature_ids: list[uuid.UUID] = Field(default_factory=list)
@@ -382,6 +385,8 @@ class PackageUpdate(Body):
     name: str | None = Field(default=None, min_length=1, max_length=255)
     amenity_type: uuid.UUID | None = None
     description: str | None = None
+    price: Decimal | None = Field(default=None, ge=0, description="Authoritative rate plan price")
+    currency_id: int | None = Field(default=None, description="Currency ID (FK to currency)")
     status: int | None = Field(default=None, ge=0, le=1)
     feature_ids: list[uuid.UUID] | None = None
     sub_package_ids: list[uuid.UUID] | None = None

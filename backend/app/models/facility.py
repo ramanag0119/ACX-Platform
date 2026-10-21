@@ -6,10 +6,10 @@ Blueprint §5, tables 1-8.
 import uuid
 from datetime import datetime
 
-from sqlalchemy import ForeignKey, Integer, SmallInteger, String, Text
+from sqlalchemy import Boolean, ForeignKey, Integer, SmallInteger, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, HMSBase, SmallIntLookupPk, TimestampMixin, UUIDPk
 
@@ -63,8 +63,11 @@ class Facility(HMSBase, UUIDPk):
     # tables are dropped -- blueprint §2.5, OPEN DECISION #2.
     facility_uid: Mapped[str] = mapped_column(String(3), nullable=False, unique=True)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
-    # REVIEW: no `currencies` table exists in the dump, so no FK is declared.
-    currency_id: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+    # Authoritative ISO 4217 currency.
+    currency_id: Mapped[int | None] = mapped_column(
+        SmallInteger, ForeignKey("currency.id", ondelete="RESTRICT"), nullable=True
+    )
+    currency: Mapped["Currency | None"] = relationship("Currency")
     city: Mapped[str | None] = mapped_column(String(100), nullable=True)
     state: Mapped[str | None] = mapped_column(String(100), nullable=True)
     pin_code: Mapped[str | None] = mapped_column(String(20), nullable=True)
@@ -238,3 +241,15 @@ class Country(Base, TimestampMixin, SmallIntLookupPk):
     nice_name: Mapped[str] = mapped_column(String(50), nullable=False)
     iso3: Mapped[str | None] = mapped_column(String(3), nullable=True)
     num_code: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+
+
+class Currency(Base, TimestampMixin, SmallIntLookupPk):
+    """Authoritative ISO 4217 currency master table."""
+
+    __tablename__ = "currency"
+
+    code: Mapped[str] = mapped_column(String(3), nullable=False, unique=True, index=True)
+    name: Mapped[str] = mapped_column(String(50), nullable=False)
+    symbol: Mapped[str] = mapped_column(String(10), nullable=False)
+    minor_units: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=2, server_default="2")
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")

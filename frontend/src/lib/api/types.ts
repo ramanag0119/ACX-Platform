@@ -326,6 +326,15 @@ export interface RoleTypeOption {
 // Facility & property hierarchy (Phase 2.2)
 // ---------------------------------------------------------------------------
 
+export interface CurrencyRead {
+  id: number;
+  code: string;
+  name: string;
+  symbol: string;
+  minor_units: number;
+  is_active: boolean;
+}
+
 export interface FacilityRead {
   id: string;
   facility_uid: string;
@@ -339,6 +348,7 @@ export interface FacilityRead {
   additional_email: string | null;
   google_map_link: string | null;
   currency_id: number | null;
+  currency?: CurrencyRead | null;
   facility_image_id: string | null;
   default_key_user: string | null;
   created_on: string;
@@ -451,6 +461,9 @@ export interface ServiceItemRead {
   service_type: number | null;
   service_type_name: string | null;
   price_per_unit: string | null;
+  currency_id?: number | null;
+  currency_code?: string | null;
+  currency_symbol?: string | null;
   amenity_id: string | null;
   item_icon: string | null;
   facility_id: string | null;
@@ -912,6 +925,9 @@ export interface InvoiceRead {
   net_amount: string | null;
   total_tax: string | null;
   total_amount: string | null;
+  currency_id?: number | null;
+  currency_code?: string | null;
+  currency_symbol?: string | null;
   created_on: string;
   updated_on: string;
 }
@@ -989,9 +1005,9 @@ export interface OtherDeviceReadingRead {
   created_on: string;
 }
 
-/** `energy_unit` is ALWAYS null: `energy_stat` stores no unit column.
- *  Never label these values kWh. */
 export interface EnergyStatRead {
+  device_id: string;
+  device_uid: string | null;
   device_name: string;
   facility_id: string;
   amenity_id: string;
@@ -1003,9 +1019,19 @@ export interface EnergyStatRead {
   hour: number;
   hour_timestamp: string;
   energy_consumed: number;
-  energy_unit: null;
+  energy_unit: string | null;
   created_on: string;
   updated_on: string;
+}
+
+export interface EnergyStatCreate {
+  facility_id: string;
+  amenity_id: string;
+  device_id?: string | null;
+  device_name?: string | null;
+  hour?: number | null;
+  hour_timestamp?: string | null;
+  energy_consumed: number;
 }
 
 export interface EnergySummaryBucket {
