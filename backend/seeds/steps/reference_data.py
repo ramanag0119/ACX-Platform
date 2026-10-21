@@ -59,8 +59,18 @@ def seed(session: Session) -> dict[str, int]:
         upsert(session, AmenityStatus, {"id": cid}, amenity_status_name=name)
     counts["amenity_status"] = len(ref.AMENITY_STATUSES)
 
+    condition_displays = {
+        1: "Need Maintenance",
+        2: "Low Battery",
+        3: "Under Maintenance",
+        4: "Sanitation Required",
+        5: "Ready to Occupy",
+        6: "Guest Assistance Required",
+        7: "Device Offline",
+    }
     for cid, name in ref.AMENITY_CONDITIONS:
-        upsert(session, AmenityCondition, {"id": cid}, name=name)
+        disp = condition_displays.get(cid, name)
+        upsert(session, AmenityCondition, {"id": cid}, name=name, display_name=disp)
     counts["amenity_condition"] = len(ref.AMENITY_CONDITIONS)
 
     for cid, name in ref.SERVICE_TYPES:

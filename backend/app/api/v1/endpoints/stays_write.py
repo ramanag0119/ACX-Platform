@@ -28,7 +28,7 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, File, Response, UploadFile, status
 
 from app.api.deps import CurrentUser, DbSession, require_permission
 from app.schemas.facility import RoomRead
@@ -36,10 +36,12 @@ from app.schemas.health import ErrorResponse
 from app.schemas.occupancy import OccupancyDetail
 from app.schemas.ops_write import (
     AllocateRoomBody,
+    BulkUploadResult,
     CheckInBody,
     CheckOutBody,
     DocumentApprovalBody,
     ExtendStayBody,
+    ImportJobRead,
     OccupantBody,
     ReallocateRoomBody,
     RoomConditionsBody,
@@ -49,6 +51,7 @@ from app.schemas.ops_write import (
     StayUpdate,
 )
 from app.schemas.stay import RoomAllocationRead, StayDetail, StayOccupantRead, StayRead
+from app.services import access_write
 from app.services import facility as facility_read
 from app.services import occupancy as occupancy_read
 from app.services import stay as read_service
@@ -117,6 +120,62 @@ def create_stay(
         db, data=payload.model_dump(), actor_id=current_user.id
     )
     return _stay_detail(db, stay.id)
+
+
+@stays_write_router.post(
+    "/bulk-upload",
+    response_model=BulkUploadResult,
+    dependencies=BOOKINGS_WRITE,
+    summary="Bulk upload reservations via CSV",
+    description="Processes uploaded CSV file, persists valid stays, registers an ImportJob record, and returns detailed results.",
+)
+async def bulk_upload_reservations(
+    file: UploadFile = File(...),
+    db: DbSession = None,
+    current_user: CurrentUser = None,
+) -> BulkUploadResult:
+    facility_id = current_user.facility_ids[0] if current_user.facility_ids else access_write.default_facility_id(db, current_user.facility_ids)
+    file_bytes = await file.read()
+    res = service.process_bulk_reservations_csv(
+        db,
+        file_bytes=file_bytes,
+        filename=file.filename or "reservations.csv",
+        actor_id=current_user.id,
+        facility_id=facility_id,
+    )
+    return BulkUploadResult(**res)
+
+
+@stays_write_router.get(
+    "/bulk-upload/template",
+    summary="Download reservations bulk upload sample template",
+)
+def get_bulk_upload_template() -> Response:
+    content = (
+        "guest_name,guest_email,guest_phone_number,room_number,checkin_date,checkout_date,no_of_guests,comments\n"
+        "Aarav Sharma,aarav.sharma@example.com,+1234567890,101,2026-11-01 14:00,2026-11-05 11:00,2,Quiet room requested\n"
+        "Diya Patel,diya.patel@example.com,+1987654321,102,2026-11-02 12:00,2026-11-06 10:00,1,High floor preferred\n"
+    )
+    return Response(
+        content=content,
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="reservations_template.csv"'},
+    )
+
+
+@stays_write_router.get(
+    "/bulk-upload/last-report",
+    response_model=ImportJobRead | None,
+    dependencies=BOOKINGS_WRITE,
+    summary="Get last reservation import report",
+)
+def get_last_bulk_upload_report(
+    db: DbSession,
+    current_user: CurrentUser,
+) -> ImportJobRead | None:
+    facility_id = current_user.facility_ids[0] if current_user.facility_ids else None
+    job = service.get_last_reservation_import_job(db, facility_id=facility_id)
+    return ImportJobRead.model_validate(job) if job else None
 
 
 @stays_write_router.patch(

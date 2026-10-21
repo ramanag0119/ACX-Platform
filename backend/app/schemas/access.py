@@ -124,6 +124,7 @@ class RoleRead(ORMModel):
     )
     status: int | None = None
     facility_id: uuid.UUID
+    notification_preferences: list[str] = Field(default_factory=list)
     created_on: datetime
     updated_on: datetime
 

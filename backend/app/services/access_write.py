@@ -25,7 +25,7 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from app.core.security import hash_password
@@ -253,10 +253,33 @@ def create_role(
     return role
 
 
+def validate_role_deactivation(db: Session, role: Role) -> None:
+    if role.role_type == "admin" or role.name.strip().lower() in ("admin", "administrator", "super admin"):
+        raise Conflict("Protected administrative roles cannot be deactivated.")
+    assigned_count = db.execute(
+        select(func.count()).select_from(UserRole).where(UserRole.role_id == role.id)
+    ).scalar() or 0
+    if assigned_count > 0:
+        raise Conflict(
+            f"Cannot delete role '{role.name}' because it is assigned to {assigned_count} user(s). Please reassign them first."
+        )
+
+
+def deactivate_role(db: Session, role_id: uuid.UUID) -> Role:
+    with transaction(db):
+        role = require_row(db, Role, role_id, "Role")
+        validate_role_deactivation(db, role)
+        role.status = 0
+    db.refresh(role)
+    return role
+
+
 def update_role(db: Session, role_id: uuid.UUID, *, changes: dict) -> Role:
     permissions = changes.pop("permissions", None)
     with transaction(db):
         role = require_row(db, Role, role_id, "Role")
+        if changes.get("status") == 0 and role.status != 0:
+            validate_role_deactivation(db, role)
         if "name" in changes:
             ensure_unique(db, Role, Role.name, changes["name"], "Role", exclude_id=role_id)
         apply_changes(role, changes)

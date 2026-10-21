@@ -130,7 +130,7 @@ export const StatusSection = ({
       number: item.room_name,
       type: item.amenity_type_name ?? "-",
       statusName: item.occupancy_status ?? item.status_name ?? "Unknown",
-      conditions: item.conditions.map((condition) => conditionLabel(condition.name)),
+      conditions: item.conditions.map((condition) => conditionLabel(condition)),
     }));
     return affectedOnly ? mapped.filter((room) => room.conditions.length > 0) : mapped;
   }, [roomsQuery.data, affectedOnly]);

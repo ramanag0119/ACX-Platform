@@ -110,6 +110,7 @@ class RoleCreate(BaseModel):
     role_type: RoleType = "staff"
     status: int | None = Field(default=1, ge=0, le=1)
     facility_id: uuid.UUID | None = None
+    notification_preferences: list[str] = Field(default_factory=list)
     permissions: list[PermissionEntry] = Field(default_factory=list)
 
 
@@ -120,6 +121,7 @@ class RoleUpdate(BaseModel):
     description: str | None = Field(default=None, max_length=500)
     role_type: RoleType | None = None
     status: int | None = Field(default=None, ge=0, le=1)
+    notification_preferences: list[str] | None = None
     permissions: list[PermissionEntry] | None = None
 
 

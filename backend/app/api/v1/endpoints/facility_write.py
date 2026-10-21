@@ -30,7 +30,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.api.deps import CurrentUser, DbSession, require_permission
 from app.schemas.common import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, Page
-from app.schemas.facility import FacilityRead, RoomRead
+from app.schemas.facility import FacilityRead, KeySettingsRead, KeySettingsUpdate, RoomRead
 from app.schemas.health import ErrorResponse
 from app.schemas.ops_write import (
     AmenityTypeCreate,
@@ -542,3 +542,55 @@ def update_holiday(
 ) -> OccasionRead:
     service.update_occasion(db, occasion_id, changes=payload.model_dump(exclude_unset=True))
     return _found(catalog.get_occasion(db, occasion_id), "Occasion", occasion_id)
+
+
+# ---------------------------------------------------------------------------
+# Default Key Settings
+# ---------------------------------------------------------------------------
+
+DEFAULT_KEY_READ = [Depends(require_permission("default_key", "read"))]
+DEFAULT_KEY_WRITE = [Depends(require_permission("default_key", "write"))]
+
+key_settings_router = APIRouter(
+    prefix="/key-settings", tags=["key-settings"], responses=WRITE_RESPONSES
+)
+
+
+@key_settings_router.get(
+    "",
+    response_model=KeySettingsRead,
+    dependencies=DEFAULT_KEY_READ,
+    summary="Get current default key configuration",
+)
+def get_key_settings(db: DbSession, current_user: CurrentUser) -> KeySettingsRead:
+    facility_id = current_user.facility_ids[0] if current_user.facility_ids else access_write.default_facility_id(db, current_user.facility_ids)
+    data = facility_read.get_key_settings(db, facility_id)
+    return KeySettingsRead(**data)
+
+
+@key_settings_router.put(
+    "",
+    response_model=KeySettingsRead,
+    dependencies=DEFAULT_KEY_WRITE,
+    summary="Save default key configuration (manager assignment)",
+)
+def update_key_settings(
+    payload: KeySettingsUpdate, db: DbSession, current_user: CurrentUser
+) -> KeySettingsRead:
+    facility_id = current_user.facility_ids[0] if current_user.facility_ids else access_write.default_facility_id(db, current_user.facility_ids)
+    data = facility_read.update_key_settings(
+        db, facility_id, default_key_user=payload.default_key_user, actor_id=current_user.id
+    )
+    return KeySettingsRead(**data)
+
+
+@key_settings_router.post(
+    "/reset",
+    response_model=KeySettingsRead,
+    dependencies=DEFAULT_KEY_WRITE,
+    summary="Reset default key: revoke all default keys and clear manager assignment",
+)
+def reset_key_settings(db: DbSession, current_user: CurrentUser) -> KeySettingsRead:
+    facility_id = current_user.facility_ids[0] if current_user.facility_ids else access_write.default_facility_id(db, current_user.facility_ids)
+    data = facility_read.reset_key_settings(db, facility_id, actor_id=current_user.id)
+    return KeySettingsRead(**data)

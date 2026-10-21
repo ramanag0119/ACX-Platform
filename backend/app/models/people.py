@@ -166,6 +166,9 @@ class Role(HMSBase, UUIDPk):
     role_type: Mapped[str] = mapped_column(
         enums.role_type, nullable=False, server_default="staff"
     )
+    notification_preferences: Mapped[list[str] | None] = mapped_column(
+        JSONB, nullable=True, server_default="[]"
+    )
     status: Mapped[int | None] = mapped_column(
         SmallInteger, nullable=True, server_default="1"
     )

@@ -178,7 +178,7 @@ export const RoomConditionsDialog = ({
             </div>
 
             <p className="text-xs text-muted-foreground pt-1">
-              Selecting an applicable option updates the room's operational condition without altering room status.
+              Selecting an applicable option updates the room's operational condition and synchronizes room workflow status according to configured business rules.
             </p>
           </div>
         </DataState>

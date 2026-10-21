@@ -297,6 +297,9 @@ class LimitConfigCreate(Body):
 
 
 class LimitConfigUpdate(Body):
+    parameter: str | None = Field(default=None, min_length=1, max_length=100)
+    device_name: str | None = Field(default=None, min_length=1, max_length=255)
+    device_id: uuid.UUID | None = None
     limit_check: bool | None = None
     is_percentage_value: bool | None = None
     nominal: Decimal | None = None
@@ -481,3 +484,32 @@ class OccasionUpdate(Body):
     is_repeatable: int | None = Field(default=None, ge=0, le=1)
     notify_to_hub: int | None = Field(default=None, ge=0, le=1)
     status: int | None = Field(default=None, ge=0, le=1)
+
+
+class BulkUploadRowError(BaseModel):
+    row: int
+    error: str
+
+
+class BulkUploadResult(BaseModel):
+    import_job_id: uuid.UUID
+    total_records: int
+    success_count: int
+    error_count: int
+    status: str
+    errors: list[BulkUploadRowError] = Field(default_factory=list)
+
+
+class ImportJobRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    import_job_name: str | None = None
+    entity_type: str
+    import_status: str
+    total_records: int | None = None
+    success_count: int | None = None
+    error_count: int | None = None
+    import_file_name: str | None = None
+    completed_on: datetime | None = None
+    created_on: datetime

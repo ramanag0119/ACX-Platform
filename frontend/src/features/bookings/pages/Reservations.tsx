@@ -57,6 +57,13 @@ import {
   useExtendStay,
   useSetStayDocumentApproval,
 } from "@/lib/api/mutations";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  downloadBulkReservationsTemplate,
+  getLastBulkUploadReport,
+  uploadBulkReservations,
+} from "@/lib/api/writes";
+import type { BulkUploadResult, ImportJobRead } from "@/lib/api/types";
 import { useAuth } from "@/core/contexts/AuthContext";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useScrollToTop } from "@/hooks/use-scroll-to-top";
@@ -224,8 +231,12 @@ export const Reservations = () => {
     (room) => room.status_name === ROOM_STATUS.AVAILABLE,
   );
 
+  const queryClient = useQueryClient();
   const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadResult, setUploadResult] = useState<BulkUploadResult | null>(null);
+  const [lastReport, setLastReport] = useState<ImportJobRead | null>(null);
   const [editingReservation, setEditingReservation] = useState<ReservationData | null>(null);
 
   // Modal states
@@ -399,14 +410,41 @@ export const Reservations = () => {
     cancel.mutate(reservationId);
   };
 
-  const handleBulkUpload = () => {
-    toast({
-      title: "Bulk upload is not connected yet",
-      description:
-        "Imports are tracked in `import_job`, which no API endpoint exposes, " +
-        "and the API has no file-upload route. Nothing was uploaded.",
-      variant: "destructive",
-    });
+  const handleBulkUpload = async () => {
+    if (!selectedFile) return;
+    setIsUploading(true);
+    setUploadResult(null);
+    try {
+      const res = await uploadBulkReservations(selectedFile);
+      setUploadResult(res);
+      queryClient.invalidateQueries({ queryKey: ["stays"] });
+      queryClient.invalidateQueries({ queryKey: ["occupancy"] });
+      if (res.success_count > 0 && res.error_count === 0) {
+        toast({
+          title: "Bulk Upload Successful",
+          description: `Successfully imported ${res.success_count} reservation(s).`,
+        });
+      } else if (res.success_count > 0 && res.error_count > 0) {
+        toast({
+          title: "Partial Bulk Upload",
+          description: `Imported ${res.success_count} reservation(s). ${res.error_count} row(s) had errors.`,
+        });
+      } else {
+        toast({
+          title: "Bulk Upload Failed",
+          description: `None of the ${res.total_records} record(s) could be imported. Review the errors below.`,
+          variant: "destructive",
+        });
+      }
+    } catch (err: any) {
+      toast({
+        title: "Bulk Upload Failed",
+        description: err?.message || "Failed to process bulk upload file.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleCheckInClick = (reservation: ReservationData) => {
@@ -1120,65 +1158,156 @@ export const Reservations = () => {
       </Card>
 
       {/* Bulk Upload Modal */}
-      <Dialog open={bulkUploadOpen} onOpenChange={setBulkUploadOpen}>
-        <DialogContent className="sm:max-w-md">
+      <Dialog open={bulkUploadOpen} onOpenChange={(open) => {
+        if (!isUploading) {
+          setBulkUploadOpen(open);
+          if (!open) {
+            setSelectedFile(null);
+            setUploadResult(null);
+          }
+        }
+      }}>
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="text-xl font-semibold">Bulk Upload Reservations</DialogTitle>
           </DialogHeader>
-          <div className="space-y-6 py-4">
+          <div className="space-y-5 py-3">
             <div className="flex items-center gap-4">
               <Button
-                className="bg-brand hover:bg-brand-hover text-white font-medium px-5 h-10 rounded-xl shadow-sm"
+                type="button"
+                className="bg-brand hover:bg-brand-hover text-white font-medium px-4 h-10 rounded-xl shadow-sm text-xs"
+                onClick={async () => {
+                  try {
+                    await downloadBulkReservationsTemplate();
+                    toast({
+                      title: "Template Downloaded",
+                      description: "Sample reservations template CSV has been downloaded.",
+                    });
+                  } catch (err: any) {
+                    toast({
+                      title: "Failed to download template",
+                      description: err?.message || "Could not download sample template.",
+                      variant: "destructive",
+                    });
+                  }
+                }}
               >
                 <Download className="h-4 w-4 mr-2" />
                 Sample Template
               </Button>
               <div className="flex-1">
                 <Button
+                  type="button"
                   variant="outline"
-                  className="h-10 px-4 border-dashed border-2"
+                  disabled={isUploading}
+                  className="h-10 px-3 border-dashed border-2 text-xs"
                   onClick={() => document.getElementById("bulk-file-upload")?.click()}
                 >
-                  <FileText className="h-4 w-4 mr-2" />
+                  <FileText className="h-4 w-4 mr-1.5" />
                   Choose File
                 </Button>
-                <span className="ml-3 text-sm text-muted-foreground">
+                <span className="ml-2 text-xs text-muted-foreground truncate inline-block max-w-[150px] align-middle" title={selectedFile ? selectedFile.name : "No file chosen"}>
                   {selectedFile ? selectedFile.name : "No file chosen"}
                 </span>
                 <input
                   id="bulk-file-upload"
                   type="file"
                   className="hidden"
-                  accept=".csv,.xlsx,.xls"
-                  onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                  accept=".csv,.txt"
+                  disabled={isUploading}
+                  onChange={(e) => {
+                    setSelectedFile(e.target.files?.[0] || null);
+                    setUploadResult(null);
+                  }}
                 />
               </div>
             </div>
 
-            <p className="text-sm text-muted-foreground">
-              <a href="#" className="text-primary hover:underline">
+            {uploadResult && (
+              <div className="rounded-lg border p-3 text-xs space-y-2 bg-muted/30">
+                <div className="flex justify-between font-semibold">
+                  <span>Processed: {uploadResult.total_records}</span>
+                  <span className="text-emerald-600">Imported: {uploadResult.success_count}</span>
+                  <span className={uploadResult.error_count > 0 ? "text-rose-600" : "text-muted-foreground"}>
+                    Errors: {uploadResult.error_count}
+                  </span>
+                </div>
+                {uploadResult.errors.length > 0 && (
+                  <div className="max-h-36 overflow-y-auto space-y-1 pr-1 border-t pt-2 border-border/50">
+                    {uploadResult.errors.map((err, i) => (
+                      <div key={i} className="text-rose-500 font-mono text-[11px]">
+                        Row {err.row}: {err.error}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <p className="text-xs text-muted-foreground">
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    const report = await getLastBulkUploadReport();
+                    if (report) {
+                      setLastReport(report);
+                      toast({
+                        title: "Last Import Summary",
+                        description: `Status: ${report.import_status.toUpperCase()} | Total: ${report.total_records ?? 0} | Succeeded: ${report.success_count ?? 0} | Failed: ${report.error_count ?? 0}`,
+                      });
+                    } else {
+                      toast({
+                        title: "No Previous Import",
+                        description: "No past reservation import jobs were found.",
+                      });
+                    }
+                  } catch (err: any) {
+                    toast({
+                      title: "Failed to retrieve report",
+                      description: err?.message || "Could not fetch report.",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+                className="text-primary hover:underline font-medium cursor-pointer"
+              >
                 Click here
-              </a>{" "}
-              to download the report of the last uploaded reservations.
+              </button>{" "}
+              to check the summary report of the last uploaded reservations.
             </p>
 
-            <div className="flex justify-end gap-3 pt-4">
+            {lastReport && (
+              <div className="rounded border border-border/60 p-2.5 bg-muted/20 text-[11px] space-y-1">
+                <div className="font-semibold text-foreground">Last Upload Report ({lastReport.import_file_name || "booking import"})</div>
+                <div className="text-muted-foreground">
+                  Status: <span className="font-medium text-foreground">{lastReport.import_status}</span> | Total: {lastReport.total_records ?? 0} | Success: {lastReport.success_count ?? 0} | Error: {lastReport.error_count ?? 0}
+                </div>
+                {lastReport.completed_on && (
+                  <div className="text-muted-foreground">Completed: {new Date(lastReport.completed_on).toLocaleString()}</div>
+                )}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3 pt-2">
               <Button
                 variant="outline"
+                disabled={isUploading}
                 onClick={() => {
                   setBulkUploadOpen(false);
                   setSelectedFile(null);
+                  setUploadResult(null);
                 }}
-                className="h-10 px-6"
+                className="h-9 px-5 text-xs"
               >
                 Close
               </Button>
               <Button
                 onClick={handleBulkUpload}
-                disabled={!selectedFile}
-                className="h-10 px-6 bg-brand hover:bg-brand-hover text-white font-semibold rounded-lg"
+                disabled={!selectedFile || isUploading}
+                className="h-9 px-6 bg-brand hover:bg-brand-hover text-white font-semibold rounded-lg text-xs"
               >
-                Submit
+                {isUploading ? "Uploading..." : "Submit"}
               </Button>
             </div>
           </div>

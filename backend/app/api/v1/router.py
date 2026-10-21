@@ -87,6 +87,7 @@ api_router.include_router(facility_write.features_router)
 api_router.include_router(facility_write.offers_router)
 api_router.include_router(facility_write.events_router)
 api_router.include_router(facility_write.holidays_router)
+api_router.include_router(facility_write.key_settings_router)
 
 # Phase 2.7 -- alerts, incidents and value alerts (read-only).
 api_router.include_router(alerts.alert_types_router)

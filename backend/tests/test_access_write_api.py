@@ -204,6 +204,49 @@ def test_unknown_module_in_matrix_is_rejected(api, unique, cleanup):
     assert r.status_code == 422
 
 
+def test_deactivate_role_soft_deletes_and_excludes_from_list(api, db, unique, cleanup):
+    role_id = api.post(f"{V1}/roles", json={"name": f"Deact Role {unique}", "role_type": "staff"}).json()["id"]
+    cleanup.add("role", role_id)
+
+    del_r = api.delete(f"{V1}/roles/{role_id}")
+    assert del_r.status_code == 200
+
+    # Verify database persistence: status is set to 0
+    assert db.execute(
+        text("SELECT status FROM role WHERE id = :i"), {"i": role_id}
+    ).scalar_one() == 0
+
+    # Verify role is excluded from GET /roles
+    roles_list = api.get(f"{V1}/roles?page=1&page_size=100").json()["items"]
+    assert not any(r["id"] == role_id for r in roles_list)
+
+
+def test_deactivate_admin_role_rejected(api, db):
+    admin_id = db.execute(
+        text("SELECT id FROM role WHERE role_type = 'admin' LIMIT 1")
+    ).scalar_one()
+
+    r = api.delete(f"{V1}/roles/{admin_id}")
+    assert r.status_code == 409
+    assert "admin" in r.json()["error"]["message"].lower()
+
+
+def test_deactivate_role_assigned_to_user_rejected(api, db, unique, cleanup):
+    role_id = api.post(f"{V1}/roles", json={"name": f"Assigned Role {unique}", "role_type": "staff"}).json()["id"]
+    cleanup.sql("DELETE FROM user_role WHERE role_id = :value", {"value": role_id})
+    cleanup.add("role", role_id)
+
+    # Create a user with this role
+    user_payload = _new_user_payload(unique, role_ids=[role_id])
+    user_id = api.post(f"{V1}/users", json=user_payload).json()["id"]
+    cleanup.sql("DELETE FROM user_role WHERE app_user_id = :value", {"value": user_id})
+    cleanup.add("app_user", user_id)
+
+    r = api.delete(f"{V1}/roles/{role_id}")
+    assert r.status_code == 409
+    assert "assigned" in r.json()["error"]["message"].lower()
+
+
 # ---------------------------------------------------------------------------
 # Users
 # ---------------------------------------------------------------------------

@@ -35,7 +35,7 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.models import (
@@ -44,6 +44,8 @@ from app.models import (
     AmenityConditionStatus,
     AmenityStatus,
     AppUser,
+    Facility,
+    ImportJob,
     Package,
     RoomAllocation,
     RoomStatusConditionApplicability,
@@ -56,6 +58,7 @@ from app.services.writes import (
     Invalid,
     apply_changes,
     ensure_unique,
+    next_reference,
     next_yearly_reference,
     require_exists,
     require_row,
@@ -92,13 +95,6 @@ LIVE_STAY_STATUSES = (
 
 ALLOCATION_ACTIVE = 1
 
-#: Housekeeping condition IDs and names
-BLOCKING_CONDITION_NAMES = {"dirty", "need maintenance", "under maintenance", "sanitation"}
-BLOCKING_CONDITION_IDS = {1, 3, 4}
-READY_CONDITION_NAMES = {"ready for occupant", "ready to occupy"}
-READY_CONDITION_ID = 5
-LOW_BATTERY_CONDITION_ID = 2
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -106,12 +102,25 @@ LOW_BATTERY_CONDITION_ID = 2
 
 
 def _has_blocking_condition(db: Session, room_id: uuid.UUID) -> bool:
-    """Check whether a room currently has an active blocking condition."""
+    """Check whether a room currently has an active blocking condition from DB configuration.
+
+    Driven by `room_status_condition_applicability` where blocks_readiness=True
+    or blocks_checkin=True for active conditions.
+    """
     return db.execute(
-        select(AmenityConditionStatus.amenity_id).where(
+        select(AmenityConditionStatus.amenity_id)
+        .join(
+            RoomStatusConditionApplicability,
+            RoomStatusConditionApplicability.condition_id == AmenityConditionStatus.amenity_condition_id,
+        )
+        .where(
             AmenityConditionStatus.amenity_id == room_id,
             AmenityConditionStatus.status == 1,
-            AmenityConditionStatus.amenity_condition_id.in_(BLOCKING_CONDITION_IDS),
+            RoomStatusConditionApplicability.is_active == True,
+            or_(
+                RoomStatusConditionApplicability.blocks_readiness == True,
+                RoomStatusConditionApplicability.blocks_checkin == True,
+            ),
         )
     ).first() is not None
 
@@ -120,24 +129,26 @@ def sync_room_status_for_condition(
     db: Session,
     room: Amenity,
     target_condition_id: int,
-    cond_name: str,
+    cond: AmenityCondition,
 ) -> None:
     """Synchronize room status (Amenity.status) with its operational condition.
 
     Business Rules:
-    - If the room is Occupied (active in-house stay or status=Occupied):
+    - If the room is Occupied (active in-house stay or stored status=Occupied):
       Preserve Occupied status. Operational issues can be recorded without altering
       current guest occupancy.
-    - If the room is Allotted (pending allocation or status=Allotted):
+    - If the room is Allotted (pending allocation or stored status=Allotted):
       Preserve Allotted status.
-    - If the room is not Occupied and not Allotted:
-      - Blocking conditions (Under Maintenance, Need Maintenance/Dirty, Sanitation)
-        transition room status to Unavailable.
-      - Ready to Occupy transitions room status to Available.
-      - Low Battery is an IoT device telemetry alert and does not alter room availability.
+    - If the room is not Occupied and not Allotted (vacant & unallocated):
+      - If the condition is a blocking condition (blocks_readiness=True or blocks_checkin=True
+        in room_status_condition_applicability, e.g. Under maintenance, Dirty, Sanitation):
+        Transition room status to Unavailable.
+      - If the condition is a readiness condition (e.g. Ready for occupant):
+        Transition room status to Available.
+      - If the condition is an operational device condition (e.g. Low Battery, Device Offline)
+        that does not block readiness/checkin:
+        Preserve the existing valid status (no unnecessary status mutation).
     """
-    name_norm = cond_name.strip().lower()
-
     # Check for in-house stay
     in_house = db.execute(
         select(Stay.id)
@@ -170,8 +181,22 @@ def sync_room_status_for_condition(
         return
 
     # For non-occupied, non-allotted rooms:
-    is_blocking = (target_condition_id in BLOCKING_CONDITION_IDS) or (name_norm in BLOCKING_CONDITION_NAMES)
-    is_ready = (target_condition_id == READY_CONDITION_ID) or (name_norm in READY_CONDITION_NAMES)
+    # Query database configuration for blocking conditions
+    is_blocking = db.execute(
+        select(RoomStatusConditionApplicability.id).where(
+            RoomStatusConditionApplicability.condition_id == target_condition_id,
+            RoomStatusConditionApplicability.is_active == True,
+            or_(
+                RoomStatusConditionApplicability.blocks_readiness == True,
+                RoomStatusConditionApplicability.blocks_checkin == True,
+            ),
+        )
+    ).first() is not None
+
+    is_ready = (
+        "ready" in (cond.name or "").lower()
+        or "ready" in (cond.display_name or "").lower()
+    )
 
     if is_blocking:
         room.status = _room_status_id(db, ROOM_UNAVAILABLE)
@@ -339,14 +364,19 @@ def check_in(
 
         for allocation in allocations:
             _set_room_status(db, allocation.room_id, ROOM_OCCUPIED)
-            # Pre-occupancy condition "Ready for occupant" (5) must not remain active on an occupied room.
-            ready_rows = db.execute(
+            # Conditions not applicable to an occupied room (e.g. Ready for occupant) must be cleared
+            inapplicable_cond_ids = select(AmenityCondition.id).where(
+                or_(
+                    AmenityCondition.applicable_to_occupied == False,
+                    func.lower(AmenityCondition.name).in_(["ready for occupant", "ready to occupy"]),
+                )
+            )
+            for r_row in db.execute(
                 select(AmenityConditionStatus).where(
                     AmenityConditionStatus.amenity_id == allocation.room_id,
-                    AmenityConditionStatus.amenity_condition_id == READY_CONDITION_ID,
+                    AmenityConditionStatus.amenity_condition_id.in_(inapplicable_cond_ids),
                 )
-            ).scalars().all()
-            for r_row in ready_rows:
+            ).scalars().all():
                 db.delete(r_row)
 
     db.refresh(stay)
@@ -356,7 +386,7 @@ def check_in(
 def check_out(
     db: Session, stay_id: uuid.UUID, *, actor_id: uuid.UUID, when: datetime | None = None
 ) -> Stay:
-    """Check a stay out: stamp departure, close stay, set operational status to Need Maintenance."""
+    """Check a stay out: stamp departure, close stay, release rooms with status synchronization."""
     with transaction(db):
         stay = require_row(db, Stay, stay_id, "Stay")
 
@@ -371,7 +401,22 @@ def check_out(
         stay.modified_by = actor_id
 
         for allocation in _stay_rooms(db, stay_id):
-            _set_room_status(db, allocation.room_id, ROOM_AVAILABLE)
+            # Clear conditions not applicable to vacant rooms (e.g. Guest Assistance Required)
+            inapplicable_cond_ids = select(AmenityCondition.id).where(
+                AmenityCondition.applicable_to_vacant == False
+            )
+            for r_row in db.execute(
+                select(AmenityConditionStatus).where(
+                    AmenityConditionStatus.amenity_id == allocation.room_id,
+                    AmenityConditionStatus.amenity_condition_id.in_(inapplicable_cond_ids),
+                )
+            ).scalars().all():
+                db.delete(r_row)
+
+            if _has_blocking_condition(db, allocation.room_id):
+                _set_room_status(db, allocation.room_id, ROOM_UNAVAILABLE)
+            else:
+                _set_room_status(db, allocation.room_id, ROOM_AVAILABLE)
 
     db.refresh(stay)
     return stay
@@ -572,15 +617,20 @@ def reallocate_room(
         _set_room_status(
             db, room_id, ROOM_OCCUPIED if stay.actual_checkin_time else ROOM_ALLOTTED
         )
-        # If in-house move, remove ready condition from new room
+        # If in-house move, remove ready / inapplicable conditions from new room
         if stay.actual_checkin_time is not None:
-            ready_rows = db.execute(
+            inapplicable_cond_ids = select(AmenityCondition.id).where(
+                or_(
+                    AmenityCondition.applicable_to_occupied == False,
+                    func.lower(AmenityCondition.name).in_(["ready for occupant", "ready to occupy"]),
+                )
+            )
+            for r_row in db.execute(
                 select(AmenityConditionStatus).where(
                     AmenityConditionStatus.amenity_id == room_id,
-                    AmenityConditionStatus.amenity_condition_id == READY_CONDITION_ID,
+                    AmenityConditionStatus.amenity_condition_id.in_(inapplicable_cond_ids),
                 )
-            ).scalars().all()
-            for r_row in ready_rows:
+            ).scalars().all():
                 db.delete(r_row)
 
         stay.modified_by = actor_id
@@ -792,7 +842,12 @@ def set_room_conditions(
             )
 
         # Business Rule: An occupied room (active in-house stay) CANNOT be marked Ready to Occupy
-        if target_condition_id == READY_CONDITION_ID:
+        is_ready_cond = (
+            "ready" in (cond.name or "").lower()
+            or "ready" in (cond.display_name or "").lower()
+            or not getattr(cond, "applicable_to_occupied", True)
+        )
+        if is_ready_cond:
             in_house_stay = db.execute(
                 select(Stay.internal_stay_ref_number)
                 .join(RoomAllocation, RoomAllocation.stay_id == Stay.id)
@@ -823,7 +878,272 @@ def set_room_conditions(
                 )
             )
 
-        # Room Status and Room Condition remain separate concepts;
-        # setting a condition does NOT mutate room.status.
+        # Synchronize room status with operational condition according to business rules
+        sync_room_status_for_condition(db, room, target_condition_id, cond)
 
     return [target_condition_id]
+
+
+# ---------------------------------------------------------------------------
+# Bulk Reservations Upload
+# ---------------------------------------------------------------------------
+
+
+def _parse_datetime(val: str) -> datetime:
+    val = val.strip()
+    if not val:
+        raise ValueError("Date string is empty")
+    try:
+        dt = datetime.fromisoformat(val.replace("Z", "+00:00"))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=UTC)
+        return dt
+    except ValueError:
+        pass
+    for fmt in (
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%d %H:%M",
+        "%Y-%m-%d",
+        "%d-%m-%Y %H:%M:%S",
+        "%d-%m-%Y %H:%M",
+        "%d-%m-%Y",
+        "%d/%m/%Y %H:%M:%S",
+        "%d/%m/%Y %H:%M",
+        "%d/%m/%Y",
+        "%m/%d/%Y %H:%M:%S",
+        "%m/%d/%Y %H:%M",
+        "%m/%d/%Y",
+    ):
+        try:
+            dt = datetime.strptime(val, fmt)
+            return dt.replace(tzinfo=UTC)
+        except ValueError:
+            continue
+    raise ValueError(f"Unrecognized date/time format: {val!r}")
+
+
+def process_bulk_reservations_csv(
+    db: Session,
+    *,
+    file_bytes: bytes,
+    filename: str,
+    actor_id: uuid.UUID,
+    facility_id: uuid.UUID,
+) -> dict:
+    import csv
+    import io
+
+    if not file_bytes:
+        raise Invalid("Uploaded file is empty.")
+
+    try:
+        text_content = file_bytes.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        try:
+            text_content = file_bytes.decode("latin-1")
+        except Exception:
+            raise Invalid("Unable to decode uploaded file as text/CSV.")
+
+    reader = csv.DictReader(io.StringIO(text_content))
+    if not reader.fieldnames:
+        raise Invalid("CSV file must contain a header row.")
+
+    headers_map = {fn.strip().lower().replace(" ", "_"): fn for fn in reader.fieldnames}
+
+    has_guest = "guest_email" in headers_map or "email" in headers_map
+    has_name = "guest_name" in headers_map or "name" in headers_map or "booker_name" in headers_map
+    has_checkin = "checkin" in headers_map or "checkin_date" in headers_map or "expected_checkin_time" in headers_map
+    has_checkout = "checkout" in headers_map or "checkout_date" in headers_map or "expected_checkout_time" in headers_map
+    has_room = "room_number" in headers_map or "room" in headers_map or "room_name" in headers_map
+
+    missing = []
+    if not has_guest:
+        missing.append("guest_email")
+    if not has_name:
+        missing.append("guest_name")
+    if not has_checkin:
+        missing.append("checkin_date")
+    if not has_checkout:
+        missing.append("checkout_date")
+    if not has_room:
+        missing.append("room_number")
+
+    if missing:
+        raise Invalid(f"CSV is missing required columns: {', '.join(missing)}")
+
+    job = ImportJob(
+        id=uuid.uuid4(),
+        import_job_name=f"Bulk Reservation - {filename[:50]}",
+        entity_type="booking",
+        import_status="processing",
+        import_file_name=filename[:100],
+        created_by=actor_id,
+    )
+    db.add(job)
+    db.flush()
+
+    total_records = 0
+    success_count = 0
+    errors: list[dict] = []
+    imported_stay_ids: list[uuid.UUID] = []
+
+    def get_val(row: dict, *keys: str) -> str:
+        for k in keys:
+            orig = headers_map.get(k)
+            if orig and orig in row and row[orig] is not None:
+                v = str(row[orig]).strip()
+                if v:
+                    return v
+        return ""
+
+    for row_idx, row in enumerate(reader, start=2):
+        if not any(str(v).strip() for v in row.values() if v is not None):
+            continue
+
+        total_records += 1
+        guest_email = get_val(row, "guest_email", "email")
+        guest_name = get_val(row, "guest_name", "name", "booker_name")
+        checkin_str = get_val(row, "checkin", "checkin_date", "expected_checkin_time")
+        checkout_str = get_val(row, "checkout", "checkout_date", "expected_checkout_time")
+        room_str = get_val(row, "room_number", "room", "room_name")
+        phone_str = get_val(row, "guest_phone_number", "phone_number", "phone")
+        no_of_guests_str = get_val(row, "no_of_guests", "guests", "number_of_guests") or "1"
+        comments_str = get_val(row, "comments", "special_requests", "notes")
+
+        if not guest_email or "@" not in guest_email:
+            errors.append({"row": row_idx, "error": f"Invalid or missing guest_email: '{guest_email}'"})
+            continue
+        if not guest_name:
+            errors.append({"row": row_idx, "error": "Missing guest_name"})
+            continue
+        if not checkin_str:
+            errors.append({"row": row_idx, "error": "Missing checkin_date"})
+            continue
+        if not checkout_str:
+            errors.append({"row": row_idx, "error": "Missing checkout_date"})
+            continue
+        if not room_str:
+            errors.append({"row": row_idx, "error": "Missing room_number"})
+            continue
+
+        try:
+            checkin_dt = _parse_datetime(checkin_str)
+            checkout_dt = _parse_datetime(checkout_str)
+        except Exception as e:
+            errors.append({"row": row_idx, "error": f"Date error: {e}"})
+            continue
+
+        if checkout_dt <= checkin_dt:
+            errors.append({"row": row_idx, "error": f"Check-out ({checkout_str}) must be after check-in ({checkin_str})"})
+            continue
+
+        try:
+            no_of_guests = max(1, int(no_of_guests_str))
+        except ValueError:
+            errors.append({"row": row_idx, "error": f"Invalid number of guests: '{no_of_guests_str}'"})
+            continue
+
+        room_match = db.execute(
+            select(Amenity).where(
+                Amenity.facility_id == facility_id,
+                or_(
+                    func.lower(Amenity.name) == room_str.lower(),
+                    func.lower(Amenity.name) == f"room {room_str.lower()}",
+                    func.lower(Amenity.name) == f"rm {room_str.lower()}",
+                ),
+            )
+        ).scalars().first()
+
+        if not room_match:
+            errors.append({"row": row_idx, "error": f"Room '{room_str}' not found in this facility"})
+            continue
+
+        clash = db.execute(
+            select(Stay.internal_stay_ref_number)
+            .join(RoomAllocation, RoomAllocation.stay_id == Stay.id)
+            .where(
+                RoomAllocation.room_id == room_match.id,
+                Stay.status.in_(LIVE_STAY_STATUSES),
+                Stay.expected_checkin_time < checkout_dt,
+                Stay.expected_checkout_time > checkin_dt,
+            )
+        ).scalars().first()
+
+        if clash:
+            errors.append({"row": row_idx, "error": f"Room '{room_str}' is already allocated to stay {clash} for these dates"})
+            continue
+
+        try:
+            user = db.execute(
+                select(AppUser).where(func.lower(AppUser.email) == guest_email.lower())
+            ).scalars().first()
+
+            if not user:
+                name_parts = guest_name.split(" ", 1)
+                first_name = name_parts[0]
+                last_name = name_parts[1] if len(name_parts) > 1 else ""
+                user_uid = next_reference(db, AppUser, AppUser.user_uid, "PE", width=5)
+                user = AppUser(
+                    id=uuid.uuid4(),
+                    user_uid=user_uid,
+                    first_name=first_name,
+                    last_name=last_name or None,
+                    email=guest_email.lower(),
+                    phone_number=phone_str or None,
+                    is_staff=0,
+                    facility_id=facility_id,
+                    created_by=actor_id,
+                )
+                db.add(user)
+                db.flush()
+
+            stay = create_stay(
+                db,
+                data={
+                    "booking_user_id": user.id,
+                    "expected_checkin_time": checkin_dt,
+                    "expected_checkout_time": checkout_dt,
+                    "no_of_guests": no_of_guests,
+                    "comments": comments_str or None,
+                    "room_ids": [room_match.id],
+                    "facility_id": facility_id,
+                },
+                actor_id=actor_id,
+            )
+            success_count += 1
+            imported_stay_ids.append(stay.id)
+        except Exception as err:
+            errors.append({"row": row_idx, "error": str(err)})
+
+    job.total_records = total_records
+    job.success_count = success_count
+    job.error_count = len(errors)
+    job.completed_on = datetime.now(UTC)
+    if success_count > 0:
+        job.import_status = "success"
+    else:
+        job.import_status = "error" if total_records > 0 else "success"
+
+    if errors:
+        job.error_file_name = f"{len(errors)} row(s) failed validation"
+
+    db.commit()
+    db.refresh(job)
+
+    return {
+        "import_job_id": job.id,
+        "total_records": total_records,
+        "success_count": success_count,
+        "error_count": len(errors),
+        "status": job.import_status,
+        "errors": errors,
+    }
+
+
+def get_last_reservation_import_job(db: Session, facility_id: uuid.UUID | None = None) -> ImportJob | None:
+    return db.execute(
+        select(ImportJob)
+        .where(ImportJob.entity_type == "booking")
+        .order_by(ImportJob.created_on.desc())
+        .limit(1)
+    ).scalars().first()

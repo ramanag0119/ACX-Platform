@@ -199,3 +199,16 @@ class RoomRead(ORMModel):
     )
     created_on: datetime
     updated_on: datetime
+
+
+class KeySettingsRead(ORMModel):
+    facility_id: uuid.UUID
+    default_key_user: uuid.UUID | None = None
+    manager_name: str | None = None
+    manager_email: str | None = None
+    active_keys_count: int = 0
+
+
+class KeySettingsUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    default_key_user: uuid.UUID | None = None

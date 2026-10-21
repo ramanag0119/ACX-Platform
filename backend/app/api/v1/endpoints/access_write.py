@@ -205,6 +205,18 @@ def update_role(role_id: uuid.UUID, payload: RoleUpdate, db: DbSession) -> RoleR
     return RoleRead.model_validate(role)
 
 
+@roles_write_router.delete(
+    "/{role_id}",
+    response_model=RoleRead,
+    dependencies=USER_ROLES_WRITE,
+    summary="Deactivate a role",
+)
+def delete_role(role_id: uuid.UUID, db: DbSession) -> RoleRead:
+    role = service.deactivate_role(db, role_id)
+    return RoleRead.model_validate(role)
+
+
+
 @roles_write_router.put(
     "/{role_id}/permissions",
     response_model=list[RolePermissionRead],

@@ -545,6 +545,7 @@ def test_marking_a_room_unavailable_while_a_stay_holds_it_is_409(
 
 
 def _track_room_conditions(cleanup, db, room_id):
+    _restore_room(cleanup, db, room_id)
     original = db.execute(
         text("SELECT amenity_condition_id, status FROM amenity_condition_status WHERE amenity_id = :i"),
         {"i": room_id},
@@ -782,30 +783,27 @@ def test_single_condition_database_failure_rolls_back_cleanly(monkeypatch, api, 
     assert stored == {2}
 
 
-def test_single_condition_does_not_change_primary_room_status(api, db, free_room, cleanup):
+def test_single_condition_synchronizes_primary_room_status(api, db, free_room, cleanup):
+    _restore_room(cleanup, db, free_room)
     _track_room_conditions(cleanup, db, free_room)
-    initial_status = db.execute(
-        text("SELECT status FROM amenity WHERE id = :i"),
-        {"i": free_room},
-    ).scalar_one()
 
-    # Change to Under maintenance
+    # Change to Under maintenance (3) -> transitions to Unavailable (2)
     r = api.put(f"{V1}/occupancy/{free_room}/conditions", json={"condition_ids": [3]})
     assert r.status_code == 200
     db.rollback()
     assert db.execute(
         text("SELECT status FROM amenity WHERE id = :i"),
         {"i": free_room},
-    ).scalar_one() == initial_status
+    ).scalar_one() == 2
 
-    # Change to Ready for occupant
+    # Change to Ready for occupant (5) -> transitions to Available (0)
     r = api.put(f"{V1}/occupancy/{free_room}/conditions", json={"condition_ids": [5]})
     assert r.status_code == 200
     db.rollback()
     assert db.execute(
         text("SELECT status FROM amenity WHERE id = :i"),
         {"i": free_room},
-    ).scalar_one() == initial_status
+    ).scalar_one() == 0
 
 
 def test_single_condition_authorization_enforced(anon_api, free_room):

@@ -90,20 +90,46 @@ const NEUTRAL: RoomStatusStyle = {
     tint: { light: "#F1F5F9", dark: "#1e293b", border: "#94A3B8", text: "#334155" },
 };
 
-const styleOf = (statusName: string | null | undefined) =>
-    (statusName && STATUS_STYLE[statusName as AmenityStatusName]) || NEUTRAL;
+export const STATUS_ID_TO_NAME: Record<number, AmenityStatusName> = {
+    0: ROOM_STATUS.AVAILABLE,
+    1: ROOM_STATUS.OCCUPIED,
+    2: ROOM_STATUS.UNAVAILABLE,
+    3: ROOM_STATUS.ALLOTTED,
+};
 
-export const roomStatusBadgeClass = (statusName: string | null | undefined) =>
-    styleOf(statusName).badgeClass;
+export const normalizeAmenityStatusName = (
+    statusName: string | null | undefined,
+    statusId?: number | null,
+): AmenityStatusName | null => {
+    if (typeof statusId === "number" && statusId in STATUS_ID_TO_NAME) {
+        return STATUS_ID_TO_NAME[statusId];
+    }
+    if (!statusName) return null;
+    const trimmed = statusName.trim().toLowerCase();
+    for (const name of KNOWN_AMENITY_STATUSES) {
+        if (name.toLowerCase() === trimmed) {
+            return name;
+        }
+    }
+    return null;
+};
 
-export const roomStatusTextClass = (statusName: string | null | undefined) =>
-    styleOf(statusName).textClass;
+const styleOf = (statusName: string | null | undefined, statusId?: number | null) => {
+    const normalized = normalizeAmenityStatusName(statusName, statusId);
+    return (normalized && STATUS_STYLE[normalized]) || NEUTRAL;
+};
 
-export const roomStatusColor = (statusName: string | null | undefined) =>
-    styleOf(statusName).color;
+export const roomStatusBadgeClass = (statusName: string | null | undefined, statusId?: number | null) =>
+    styleOf(statusName, statusId).badgeClass;
 
-export const roomStatusTint = (statusName: string | null | undefined) =>
-    styleOf(statusName).tint;
+export const roomStatusTextClass = (statusName: string | null | undefined, statusId?: number | null) =>
+    styleOf(statusName, statusId).textClass;
+
+export const roomStatusColor = (statusName: string | null | undefined, statusId?: number | null) =>
+    styleOf(statusName, statusId).color;
+
+export const roomStatusTint = (statusName: string | null | undefined, statusId?: number | null) =>
+    styleOf(statusName, statusId).tint;
 
 /**
  * Display label for an `amenity_condition` name.
@@ -118,13 +144,28 @@ export const roomStatusTint = (statusName: string | null | undefined) =>
  * falls through unchanged, so a condition added to the table later shows its
  * real name rather than vanishing.
  */
-const CONDITION_LABELS: Record<string, string> = {
-  dirty: "Need Maintenance",
-  "ready for occupant": "Ready to occupy",
+/**
+ * Display label for an `amenity_condition` record or name.
+ * Authoritative display names come directly from the database via the API (display_name).
+ * If display_name is absent, falls back to the condition name.
+ */
+export const conditionLabel = (
+  conditionOrName:
+    | { display_name?: string | null; name?: string | null }
+    | string
+    | null
+    | undefined,
+): string => {
+  if (!conditionOrName) return "";
+  if (typeof conditionOrName === "object") {
+    return (
+      conditionOrName.display_name?.trim() ||
+      conditionOrName.name?.trim() ||
+      ""
+    );
+  }
+  return conditionOrName.trim();
 };
-
-export const conditionLabel = (name: string | null | undefined) =>
-  name ? CONDITION_LABELS[name.trim().toLowerCase()] ?? name : "";
 
 export const READY_CONDITION_ID = 5;
 export const BLOCKING_CONDITION_IDS = new Set([1, 3, 4]);
@@ -144,6 +185,7 @@ export const BLOCKING_CONDITION_NAMES = new Set([
 export interface ConditionLookupItem {
   id: number;
   name: string;
+  display_name?: string | null;
 }
 
 export const isReadyCondition = (
@@ -217,7 +259,7 @@ export const validateConditions = (
     const blockingNames = blockingIds
       .map((id) => {
         const found = conditions?.find((c) => c.id === id);
-        return conditionLabel(found?.name ?? `Condition ${id}`);
+        return conditionLabel(found ?? `Condition ${id}`);
       })
       .join(", ");
     return {

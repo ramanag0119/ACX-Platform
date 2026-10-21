@@ -328,6 +328,7 @@ const ServicesSetup = () => {
         id: item.id,
         facilityService: item.category_name ?? "-",
         typeOfService: item.type_of_service ?? item.item_name,
+        raw: item,
     }));
 
     const healthFitnessMenuOptions = categoriesOfType("Health & Fitness").map((category) => ({
@@ -441,6 +442,12 @@ const ServicesSetup = () => {
     const [editSanitationCategoryId, setEditSanitationCategoryId] = useState("");
     const [editSanitationTypeName, setEditSanitationTypeName] = useState("");
     const [editSanitationEstimateTime, setEditSanitationEstimateTime] = useState("");
+
+    const [editFacilityServiceOpen, setEditFacilityServiceOpen] = useState(false);
+    const [selectedFacilityItemToEdit, setSelectedFacilityItemToEdit] = useState<ServiceItemRead | null>(null);
+    const [editFacilityCategoryId, setEditFacilityCategoryId] = useState("");
+    const [editFacilityTypeName, setEditFacilityTypeName] = useState("");
+    const [editFacilityEstimateTime, setEditFacilityEstimateTime] = useState("");
 
     const [editFoodMenuOpen, setEditFoodMenuOpen] = useState(false);
     const [selectedFoodItemToEdit, setSelectedFoodItemToEdit] = useState<ServiceItemRead | null>(null);
@@ -729,6 +736,66 @@ const ServicesSetup = () => {
                 onError: (err) => {
                     toast({
                         title: "Failed to update sanitation service",
+                        description: describeApiError(err),
+                        variant: "destructive",
+                    });
+                },
+            }
+        );
+    };
+
+    // --- Facility Service Edit Handlers ---
+    const handleOpenEditFacilityService = (item: ServiceItemRead) => {
+        setSelectedFacilityItemToEdit(item);
+        setEditFacilityCategoryId(item.category_id);
+        setEditFacilityTypeName(item.type_of_service ?? item.item_name);
+        const desc = item.description ?? "";
+        const match = desc.match(/Estimated time:\s*(.*)/i);
+        setEditFacilityEstimateTime(match ? match[1] : desc);
+        setEditFacilityServiceOpen(true);
+    };
+
+    const handleEditFacilityServiceReset = () => {
+        if (!selectedFacilityItemToEdit) return;
+        setEditFacilityCategoryId(selectedFacilityItemToEdit.category_id);
+        setEditFacilityTypeName(selectedFacilityItemToEdit.type_of_service ?? selectedFacilityItemToEdit.item_name);
+        const desc = selectedFacilityItemToEdit.description ?? "";
+        const match = desc.match(/Estimated time:\s*(.*)/i);
+        setEditFacilityEstimateTime(match ? match[1] : desc);
+    };
+
+    const handleEditFacilityServiceSubmit = () => {
+        if (!selectedFacilityItemToEdit) return;
+        const trimmedName = editFacilityTypeName.trim();
+        if (!trimmedName) {
+            toast({ title: "Service type name is required", variant: "destructive" });
+            return;
+        }
+        if (!editFacilityCategoryId) {
+            toast({ title: "Please select a facility service category", variant: "destructive" });
+            return;
+        }
+        const description = editFacilityEstimateTime.trim()
+            ? `Estimated time: ${editFacilityEstimateTime.trim()}`
+            : null;
+
+        updateItem.mutate(
+            {
+                id: selectedFacilityItemToEdit.id,
+                body: {
+                    item_name: trimmedName,
+                    type_of_service: trimmedName,
+                    category_id: editFacilityCategoryId,
+                    description,
+                },
+            },
+            {
+                onSuccess: () => {
+                    setEditFacilityServiceOpen(false);
+                },
+                onError: (err) => {
+                    toast({
+                        title: "Failed to update facility service",
                         description: describeApiError(err),
                         variant: "destructive",
                     });
@@ -1930,12 +1997,26 @@ const ServicesSetup = () => {
                                                 <TableCell className="text-cyan-600 hover:underline cursor-pointer">{item.typeOfService}</TableCell>
                                                 <TableCell>30</TableCell>
                                                 <TableCell className="text-center">
-                                                    {/* NOT IMPLEMENTED: there is no facility-service edit dialog on this
-    tab. The click was setting an `editFacilityServiceOpen` flag nothing
-    rendered, so the button has never opened anything. */}
-                                                    <Button size="sm" className="h-7 w-7 p-0 rounded-[3px]" disabled title="Editing a facility service is not available yet">
-                                                        <Edit className="h-[14px] w-[14px]" />
-                                                    </Button>
+                                                    <div className="flex justify-center gap-2">
+                                                        <Button
+                                                            size="sm"
+                                                            className="h-7 w-7 p-0 rounded-[3px]"
+                                                            disabled={!mayWrite}
+                                                            title={!mayWrite ? "Permission required" : "Edit service"}
+                                                            onClick={() => handleOpenEditFacilityService(item.raw)}
+                                                        >
+                                                            <Edit className="h-[14px] w-[14px]" />
+                                                        </Button>
+                                                        <Button
+                                                            size="sm"
+                                                            className="bg-red-500 hover:bg-red-600 text-white h-7 w-7 p-0 rounded-[3px]"
+                                                            disabled={!mayWrite || isDeleting}
+                                                            title={!mayWrite ? "Permission required" : "Delete service"}
+                                                            onClick={() => handleRequestDeleteItem(item.raw, "Facility Service")}
+                                                        >
+                                                            <Trash2 className="h-[14px] w-[14px]" />
+                                                        </Button>
+                                                    </div>
                                                 </TableCell>
                                             </TableRow>
                                         ))}
@@ -2423,6 +2504,75 @@ const ServicesSetup = () => {
                             className="h-10 px-8 min-w-[110px] rounded-2xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
                             onClick={handleEditSanitationServiceSubmit}
                             disabled={updateItem.isPending || !editSanitationTypeName.trim() || !editSanitationCategoryId}
+                        >
+                            {updateItem.isPending ? "Submitting..." : "Submit"}
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Edit Facility Service Modal */}
+            <Dialog open={editFacilityServiceOpen} onOpenChange={setEditFacilityServiceOpen}>
+                <DialogContent className="max-w-[500px] bg-white text-gray-900 border-0 p-0 overflow-hidden flex flex-col hide-close-button shadow-2xl [&>button]:hidden rounded-[4px]">
+                    <div className="flex justify-between items-center p-3 px-5 bg-white border-b border-gray-200">
+                        <h2 className="text-[17px] font-semibold text-gray-800 tracking-wide">Edit Facility Service</h2>
+                        <Button variant="ghost" className="h-7 w-7 p-0 border-[1.5px] border-gray-300 rounded-[2px] hover:bg-gray-100" onClick={() => setEditFacilityServiceOpen(false)}>
+                            <X className="h-4 w-4 text-gray-500 stroke-[3]" />
+                        </Button>
+                    </div>
+                    <div className="p-8 px-12 space-y-7">
+                        <div className="grid grid-cols-[200px_1fr] items-center gap-4">
+                            <Label className="text-sm font-medium text-gray-800">Facility service <span className="text-red-500">*</span></Label>
+                            <Select value={editFacilityCategoryId} onValueChange={setEditFacilityCategoryId}>
+                                <SelectTrigger className="w-full bg-transparent border-0 border-b border-gray-300 rounded-none text-gray-800 focus:ring-0 px-0 pb-1 text-sm shadow-none">
+                                    <SelectValue placeholder="Select facility service" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-white">
+                                    {facilityServicesOptions.map((option) => (
+                                        <SelectItem key={option.id} value={option.id}>
+                                            {option.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div className="grid grid-cols-[200px_1fr] items-center gap-4">
+                            <Label className="text-sm font-medium text-gray-800">Services Type <span className="text-red-500">*</span></Label>
+                            <input
+                                type="text"
+                                value={editFacilityTypeName}
+                                onChange={(e) => setEditFacilityTypeName(e.target.value)}
+                                placeholder="Enter service type name"
+                                className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-800 focus:ring-0 px-0 pb-1 text-sm outline-none"
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-[200px_1fr] items-center gap-4">
+                            <Label className="text-sm font-medium text-gray-800">Estimate time</Label>
+                            <input
+                                type="text"
+                                value={editFacilityEstimateTime}
+                                onChange={(e) => setEditFacilityEstimateTime(e.target.value)}
+                                placeholder="Enter estimate time"
+                                className="w-full bg-transparent border-0 border-b border-gray-300 text-gray-800 focus:ring-0 px-0 pb-1 text-sm outline-none"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="flex justify-center gap-4 pb-8">
+                        <Button
+                            variant="outline"
+                            className="h-10 px-8 min-w-[110px] rounded-2xl bg-slate-100 dark:bg-[#1e2336]/80 hover:bg-slate-200 dark:hover:bg-[#283049] border border-slate-300 dark:border-slate-700/60 text-slate-700 dark:text-white font-semibold text-sm shadow-sm transition-all"
+                            onClick={handleEditFacilityServiceReset}
+                            disabled={updateItem.isPending}
+                        >
+                            Reset
+                        </Button>
+                        <Button
+                            className="h-10 px-8 min-w-[110px] rounded-2xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
+                            onClick={handleEditFacilityServiceSubmit}
+                            disabled={updateItem.isPending || !editFacilityTypeName.trim() || !editFacilityCategoryId}
                         >
                             {updateItem.isPending ? "Submitting..." : "Submit"}
                         </Button>

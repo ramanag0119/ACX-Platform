@@ -101,7 +101,7 @@ const toRow = (item: OccupancyRead): RoomRow => ({
   statusName: item.status_name ?? "-",
   // Display label only -- `conditionIds` below still carries the stored ids,
   // so filtering and saving keep working on the backend vocabulary.
-  conditions: item.conditions.map((condition) => conditionLabel(condition.name)),
+  conditions: item.conditions.map((condition) => conditionLabel(condition)),
   stayId: item.current_stay?.stay_id ?? null,
   // `actual_checkin_time` is what makes a stay in-house.
   checkedIn: Boolean(item.current_stay?.actual_checkin_time),

@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Response, status
 
 from app.api.deps import CurrentUser, DbSession, require_permission
 from app.schemas.alert import IncidentDetail, IncidentRead, ValueAlertRead
@@ -266,3 +266,15 @@ def update_config(
         db, config_id, changes=payload.model_dump(exclude_unset=True)
     )
     return LimitConfigRead.model_validate(row)
+
+
+@limit_configs_router.delete(
+    "/{config_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=NETWORK_WRITE,
+    summary="Delete a limit configuration",
+)
+def delete_config(config_id: uuid.UUID, db: DbSession) -> Response:
+    service.delete_limit_config(db, config_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+

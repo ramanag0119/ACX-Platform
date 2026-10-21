@@ -177,7 +177,7 @@ export function RoomDetailsModal({
     // The detail read is live, so a condition edited while the dialog is open
     // shows here; the row's copy only covers the moment before it arrives.
     const conditions =
-        occupancy?.conditions.map((condition) => conditionLabel(condition.name)) ?? rowConditions;
+        occupancy?.conditions.map((condition) => conditionLabel(condition)) ?? rowConditions;
     const resolvedOccupancyStatus =
         occupancy?.occupancy_status ?? (occupancyStatus !== EMPTY_VALUE ? occupancyStatus : null) ?? occupancy?.status_name ?? status;
 

@@ -245,6 +245,11 @@ def get_service_item(db: Session, item_id: uuid.UUID):
 
 
 def _request_stmt() -> Select:
+    item_qty_subquery = (
+        select(func.sum(ServiceRequestItem.quantity))
+        .where(ServiceRequestItem.service_request_id == ServiceRequest.id)
+        .scalar_subquery()
+    )
     return (
         select(
             ServiceRequest.id,
@@ -279,6 +284,7 @@ def _request_stmt() -> Select:
             ServiceRequest.total_amount,
             ServiceRequest.expected_date,
             ServiceRequest.completed_on,
+            item_qty_subquery.label("quantity"),
             ServiceRequest.created_on,
             ServiceRequest.updated_on,
         )
@@ -391,6 +397,18 @@ def get_service_tracking_summary(
             func.coalesce(
                 func.sum(case((ServiceRequest.status == 4, 1), else_=0)), 0
             ).label("completed_count"),
+            func.coalesce(
+                func.sum(case((ServiceRequest.status == 1, 1), else_=0)), 0
+            ).label("pending_count"),
+            func.coalesce(
+                func.sum(case((ServiceRequest.status == 2, 1), else_=0)), 0
+            ).label("assigned_count"),
+            func.coalesce(
+                func.sum(case((ServiceRequest.status == 3, 1), else_=0)), 0
+            ).label("in_progress_count"),
+            func.coalesce(
+                func.sum(case((ServiceRequest.status == 5, 1), else_=0)), 0
+            ).label("canceled_count"),
         )
         .outerjoin(
             ServiceRequest,
@@ -407,29 +425,56 @@ def get_service_tracking_summary(
     by_type = []
     total_services = 0
     total_completed = 0
+    total_pending = 0
+    total_assigned = 0
+    total_in_progress = 0
+    total_canceled = 0
 
     for r in rows:
         total = int(r.total_count)
         completed = int(r.completed_count)
-        pending = total - completed
+        pending = int(r.pending_count)
+        assigned = int(r.assigned_count)
+        in_progress = int(r.in_progress_count)
+        canceled = int(r.canceled_count)
         total_services += total
         total_completed += completed
+        total_pending += pending
+        total_assigned += assigned
+        total_in_progress += in_progress
+        total_canceled += canceled
         by_type.append(
             {
                 "service_type_id": r.id,
                 "name": r.name,
                 "total_count": total,
                 "completed_count": completed,
-                "pending_count": pending,
+                "pending_count": pending if (pending > 0 or total == 0) else (total - completed),
+                "in_progress_count": in_progress,
+                "assigned_count": assigned,
+                "canceled_count": canceled,
             }
         )
+
+    by_status = {
+        "Pending": total_pending,
+        "Assigned": total_assigned,
+        "In Progress": total_in_progress,
+        "Completed": total_completed,
+        "Canceled": total_canceled,
+    }
 
     return {
         "total_services": total_services,
         "total_completed": total_completed,
-        "total_pending": total_services - total_completed,
+        "total_pending": total_pending if (total_pending > 0 or total_services == 0) else (total_services - total_completed),
+        "total_in_progress": total_in_progress,
+        "total_assigned": total_assigned,
+        "total_canceled": total_canceled,
         "by_type": by_type,
+        "by_status": by_status,
     }
+
 
 
 def get_service_request(db: Session, request_id: uuid.UUID):

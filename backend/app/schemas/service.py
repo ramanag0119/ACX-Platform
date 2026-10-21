@@ -198,6 +198,9 @@ class ServiceRequestRead(ORMModel):
     total_amount: Decimal | None = None
     expected_date: datetime | None = None
     completed_on: datetime | None = None
+    quantity: int | None = Field(
+        default=None, description="Total item quantity from service_request_item"
+    )
     created_on: datetime
     updated_on: datetime
 
@@ -213,11 +216,18 @@ class ServiceTypeSummary(BaseModel):
     total_count: int
     completed_count: int
     pending_count: int
+    in_progress_count: int = 0
+    assigned_count: int = 0
+    canceled_count: int = 0
 
 
 class ServiceTrackingSummary(BaseModel):
     total_services: int
     total_completed: int
     total_pending: int
+    total_in_progress: int = 0
+    total_assigned: int = 0
+    total_canceled: int = 0
     by_type: list[ServiceTypeSummary]
+    by_status: dict[str, int] = Field(default_factory=dict)
 

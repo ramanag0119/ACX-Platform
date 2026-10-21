@@ -108,8 +108,8 @@ const Tickets = () => {
     serviceType: request.service_type_name ?? "-",
     serviceCategory: request.category_name ?? "-",
     serviceRequest: request.ref_number ?? "-",
-    // Quantity is per ITEM and only the detail endpoint returns items.
-    quantity: "-" as string | number,
+    // Quantity comes directly from the request items aggregation in the backend
+    quantity: request.quantity != null ? request.quantity : "-",
     roomNo: request.amenity_name ?? "-",
     department: request.department_name ?? "-",
     assignTo: request.assignee?.name ?? "-",

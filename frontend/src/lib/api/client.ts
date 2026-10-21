@@ -250,6 +250,36 @@ export function saveBlob(blob: Blob, filename: string): void {
   window.setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
+async function requestForm<T>(path: string, formData: FormData): Promise<T> {
+  const headers: Record<string, string> = { Accept: "application/json" };
+  const token = getToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      method: "POST",
+      headers,
+      body: formData,
+    });
+  } catch {
+    throw new ApiError(0, {
+      code: "network_error",
+      message: "The HMS API could not be reached.",
+    });
+  }
+
+  if (!response.ok) {
+    const error = await toApiError(response);
+    if (error.isUnauthorized) {
+      window.dispatchEvent(new CustomEvent(UNAUTHORIZED_EVENT));
+    }
+    throw error;
+  }
+
+  return (await response.json()) as T;
+}
+
 export const apiClient = {
   get: <T>(path: string, params?: QueryParams, signal?: AbortSignal) =>
     request<T>(path, { params, signal }),
@@ -257,6 +287,8 @@ export const apiClient = {
   download,
   post: <T>(path: string, body?: unknown, options?: Omit<RequestOptions, "method" | "body">) =>
     request<T>(path, { ...options, method: "POST", body }),
+  /** Multipart/form-data upload. */
+  postForm: requestForm,
   /** Partial update: only the fields sent are written. */
   patch: <T>(path: string, body?: unknown) => request<T>(path, { method: "PATCH", body }),
   /** Full replacement of a collection (a permission matrix, item lines). */

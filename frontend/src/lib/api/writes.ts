@@ -10,8 +10,10 @@
  * refetch (see `mutations.ts`).
  */
 
-import { apiClient, type QueryParams } from "./client";
+import { apiClient, saveBlob, type QueryParams } from "./client";
 import type {
+  BulkUploadResult,
+  ImportJobRead,
   OccupancyDetail,
   Page,
   RoleRead,
@@ -103,12 +105,14 @@ export interface RoleWrite {
   description?: string | null;
   role_type?: "admin" | "system_user" | "manager" | "guest" | "staff";
   status?: number | null;
+  notification_preferences?: string[];
   permissions?: PermissionEntry[];
 }
 
 export const createRole = (body: RoleWrite) => apiClient.post<RoleRead>("/roles", body);
 export const updateRole = (id: string, body: Partial<RoleWrite>) =>
   apiClient.patch<RoleRead>(`/roles/${id}`, body);
+export const deleteRole = (id: string) => apiClient.delete<RoleRead>(`/roles/${id}`);
 export const replaceRolePermissions = (id: string, permissions: PermissionEntry[]) =>
   apiClient.put<RolePermissionRead[]>(`/roles/${id}/permissions`, { permissions });
 
@@ -234,8 +238,21 @@ export const setStayStatus = (id: string, status: StayStatus) =>
 export const setStayDocumentApproval = (id: string, approved: boolean) =>
   apiClient.post<StayRead>(`/stays/${id}/documents/approval`, {
     document_approval_status: approved ? "approved" : "pending",
-  });
 export const cancelStay = (id: string) => apiClient.post<StayRead>(`/stays/${id}/cancel`, {});
+
+export const uploadBulkReservations = (file: File) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  return apiClient.postForm<BulkUploadResult>("/stays/bulk-upload", formData);
+};
+
+export const downloadBulkReservationsTemplate = async () => {
+  const { blob, filename } = await apiClient.download("/stays/bulk-upload/template");
+  saveBlob(blob, filename || "reservations_template.csv");
+};
+
+export const getLastBulkUploadReport = () =>
+  apiClient.get<ImportJobRead | null>("/stays/bulk-upload/last-report");
 
 export const allocateRoom = (stayId: string, room_id: string, package_id?: string) =>
   apiClient.post<RoomAllocationRead[]>(`/stays/${stayId}/room-allocations`, {
@@ -321,6 +338,8 @@ export const createLimitConfig = (body: LimitConfigWrite) =>
   apiClient.post<LimitConfigRead>("/limit-configs", body);
 export const updateLimitConfig = (id: string, body: Partial<LimitConfigWrite>) =>
   apiClient.patch<LimitConfigRead>(`/limit-configs/${id}`, body);
+export const deleteLimitConfig = (id: string) =>
+  apiClient.delete<void>(`/limit-configs/${id}`);
 
 // ---------------------------------------------------------------------------
 // Facility, rooms and the room catalogue

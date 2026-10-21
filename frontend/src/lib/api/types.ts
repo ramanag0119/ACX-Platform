@@ -239,6 +239,7 @@ export interface RoleRead {
   role_type: RoleType;
   status: number | null;
   facility_id: string;
+  notification_preferences?: string[] | null;
   created_on: string;
   updated_on: string;
 }
@@ -503,6 +504,7 @@ export interface ServiceRequestRead {
   total_amount: string | null;
   expected_date: string | null;
   completed_on: string | null;
+  quantity?: number | null;
   created_on: string;
   updated_on: string;
 }
@@ -761,6 +763,7 @@ export interface OccupancyRead {
   status: number | null;
   status_name: string | null;
   occupancy_status?: string | null;
+  occupancy_status_id?: number | null;
   conditions: AmenityConditionRead[];
   facility_id: string | null;
   building_id: string | null;
@@ -784,6 +787,7 @@ export interface OccupancyDetail extends OccupancyRead {
 }
 
 export interface OccupancyStatusSummary {
+  status_id?: number | null;
   status: string;
   count: number;
   percent: number;
@@ -1053,4 +1057,39 @@ export interface DailyDataPointRead {
   facility_id: string;
   created_on: string;
   updated_on: string;
+}
+
+export interface BulkUploadRowError {
+  row: number;
+  error: string;
+}
+
+export interface BulkUploadResult {
+  import_job_id: string;
+  total_records: number;
+  success_count: number;
+  error_count: number;
+  status: string;
+  errors: BulkUploadRowError[];
+}
+
+export interface ImportJobRead {
+  id: string;
+  import_job_name: string | null;
+  entity_type: string;
+  import_status: string;
+  total_records: number | null;
+  success_count: number | null;
+  error_count: number | null;
+  import_file_name: string | null;
+  completed_on: string | null;
+  created_on: string;
+}
+
+export interface KeySettingsRead {
+  facility_id: string;
+  default_key_user: string | null;
+  manager_name: string | null;
+  manager_email: string | null;
+  active_keys_count: number;
 }

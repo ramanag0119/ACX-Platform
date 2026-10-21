@@ -98,6 +98,11 @@ class OccupancyRead(ORMModel):
         examples=["Available"],
         description="Authoritative derived occupancy category: Available | Occupied | Allotted | Unavailable",
     )
+    occupancy_status_id: int | None = Field(
+        default=None,
+        examples=[0],
+        description="Authoritative derived occupancy status ID: 0 Available | 1 Occupied | 2 Unavailable | 3 Allotted",
+    )
     room_status: str | None = Field(
         default=None,
         examples=["Ready to Occupy"],
@@ -140,6 +145,7 @@ class OccupancyDetail(OccupancyRead):
 
 
 class OccupancyStatusSummary(BaseModel):
+    status_id: int | None = None
     status: str
     count: int
     percent: float

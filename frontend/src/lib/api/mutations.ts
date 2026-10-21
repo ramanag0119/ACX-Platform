@@ -128,6 +128,11 @@ export const useUpdateRole = () =>
     { success: "Role updated" },
   );
 
+export const useDeleteRole = () =>
+  useApiMutation((id: string) => writes.deleteRole(id), INVALIDATE.roles, {
+    success: "Role deleted successfully",
+  });
+
 export const useReplaceRolePermissions = () =>
   useApiMutation(
     ({ id, permissions }: { id: string; permissions: writes.PermissionEntry[] }) =>
@@ -348,6 +353,11 @@ export const useUpdateLimitConfig = () =>
     INVALIDATE.limitConfigs,
     { success: "Limit configuration updated" },
   );
+
+export const useDeleteLimitConfig = () =>
+  useApiMutation((id: string) => writes.deleteLimitConfig(id), INVALIDATE.limitConfigs, {
+    success: "Limit configuration deleted",
+  });
 
 // ---------------------------------------------------------------------------
 // Facility, rooms, catalogue

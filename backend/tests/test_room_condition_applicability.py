@@ -135,37 +135,148 @@ def test_reject_ready_condition_on_occupied_room(client, db):
     assert res.status_code in (409, 422)
 
 
-def test_condition_update_does_not_mutate_room_status(client, db, cleanup):
-    """Setting a condition on an Available room must NOT alter room.status."""
-    room = _get_room_by_name(db, "105")
-    orig_status = room.status
+def _get_condition_by_name(db, name: str):
+    return db.execute(
+        text("SELECT id, name, display_name FROM amenity_condition WHERE lower(name) = lower(:n)"),
+        {"n": name},
+    ).one()
 
-    # Record cleanup
+
+def _get_status_id(db, name: str) -> int:
+    return db.execute(
+        text("SELECT id FROM amenity_status WHERE lower(amenity_status_name) = lower(:n)"),
+        {"n": name},
+    ).scalar_one()
+
+
+def test_condition_update_synchronizes_room_status(client, db):
+    """Updating condition on an unallocated room synchronizes room status according to business rules.
+    - Setting a blocking condition (Dirty, Under maintenance) transitions status to Unavailable.
+    - Setting a readiness condition (Ready for occupant) transitions status to Available.
+    - Setting a non-blocking device condition (Low battery) preserves status.
+    """
+    room = _get_room_by_name(db, "105")
+    avail_id = _get_status_id(db, "Available")
+    unavail_id = _get_status_id(db, "Unavailable")
+
+    dirty_cond = _get_condition_by_name(db, "Dirty")
+    ready_cond = _get_condition_by_name(db, "Ready for occupant")
+    battery_cond = _get_condition_by_name(db, "Low battery")
+
+    orig_status = room.status
     orig_conds = db.execute(
         text("SELECT amenity_condition_id, status FROM amenity_condition_status WHERE amenity_id = :i"),
         {"i": room.id},
     ).all()
-    cleanup.sql("DELETE FROM amenity_condition_status WHERE amenity_id = :i", {"i": room.id})
-    for cid, st in orig_conds:
-        cleanup.sql(
-            "INSERT INTO amenity_condition_status (amenity_id, amenity_condition_id, status) "
-            "VALUES (:i, :c, :s) ON CONFLICT (amenity_id, amenity_condition_id) DO UPDATE SET status = EXCLUDED.status",
-            {"i": room.id, "c": cid, "s": st},
-        )
 
-    # Set condition 1 (Dirty) - applicable to Available
-    res = client.put(
-        f"{V1}/occupancy/{room.id}/conditions",
-        json={"condition_ids": [1]},
-    )
-    assert res.status_code == 200
+    try:
+        # Step 1: Ensure room is Available, set Low Battery (non-blocking) -> status stays Available
+        db.execute(text("UPDATE amenity SET status = :s WHERE id = :i"), {"s": avail_id, "i": room.id})
+        db.commit()
 
-    # Verify room status in DB remains exactly orig_status (0)
-    current_status = db.execute(
-        text("SELECT status FROM amenity WHERE id = :i"),
+        res = client.put(f"{V1}/occupancy/{room.id}/conditions", json={"condition_ids": [battery_cond.id]})
+        assert res.status_code == 200
+        status_after_battery = db.execute(text("SELECT status FROM amenity WHERE id = :i"), {"i": room.id}).scalar_one()
+        assert status_after_battery == avail_id
+
+        # Step 2: Set Dirty (blocking condition) -> status transitions to Unavailable
+        res = client.put(f"{V1}/occupancy/{room.id}/conditions", json={"condition_ids": [dirty_cond.id]})
+        assert res.status_code == 200
+        status_after_dirty = db.execute(text("SELECT status FROM amenity WHERE id = :i"), {"i": room.id}).scalar_one()
+        assert status_after_dirty == unavail_id
+
+        # Step 3: Set Ready for occupant (resolving blocking condition) -> status transitions to Available
+        res = client.put(f"{V1}/occupancy/{room.id}/conditions", json={"condition_ids": [ready_cond.id]})
+        assert res.status_code == 200
+        status_after_ready = db.execute(text("SELECT status FROM amenity WHERE id = :i"), {"i": room.id}).scalar_one()
+        assert status_after_ready == avail_id
+    finally:
+        db.execute(text("DELETE FROM amenity_condition_status WHERE amenity_id = :i"), {"i": room.id})
+        for cid, st in orig_conds:
+            db.execute(
+                text("INSERT INTO amenity_condition_status (amenity_id, amenity_condition_id, status) VALUES (:i, :c, :s)"),
+                {"i": room.id, "c": cid, "s": st},
+            )
+        db.execute(text("UPDATE amenity SET status = :s WHERE id = :i"), {"s": orig_status, "i": room.id})
+        db.commit()
+
+
+def test_occupied_room_condition_update_preserves_occupied_status(client, db):
+    """Updating condition on an Occupied room preserves Occupied status (does not make it Available or Unavailable)."""
+    room = _get_room_by_name(db, "101")
+    occupied_id = _get_status_id(db, "Occupied")
+    dirty_cond = _get_condition_by_name(db, "Dirty")
+
+    orig_conds = db.execute(
+        text("SELECT amenity_condition_id, status FROM amenity_condition_status WHERE amenity_id = :i"),
         {"i": room.id},
-    ).scalar_one()
-    assert current_status == orig_status
+    ).all()
+
+    try:
+        res = client.put(f"{V1}/occupancy/{room.id}/conditions", json={"condition_ids": [dirty_cond.id]})
+        assert res.status_code == 200
+
+        current_status = db.execute(text("SELECT status FROM amenity WHERE id = :i"), {"i": room.id}).scalar_one()
+        assert current_status == occupied_id
+    finally:
+        db.execute(text("DELETE FROM amenity_condition_status WHERE amenity_id = :i"), {"i": room.id})
+        for cid, st in orig_conds:
+            db.execute(
+                text("INSERT INTO amenity_condition_status (amenity_id, amenity_condition_id, status) VALUES (:i, :c, :s)"),
+                {"i": room.id, "c": cid, "s": st},
+            )
+        db.commit()
+
+
+def test_arbitrary_room_status_synchronization(client, db):
+    """Verify condition-status synchronization on arbitrary rooms (not hardcoded to 204 or 105)."""
+    avail_id = _get_status_id(db, "Available")
+    unavail_id = _get_status_id(db, "Unavailable")
+    maint_cond = _get_condition_by_name(db, "Under maintenance")
+    ready_cond = _get_condition_by_name(db, "Ready for occupant")
+
+    candidate = db.execute(
+        text("""
+            SELECT id, name, status FROM amenity
+            WHERE status = :av
+              AND name != '202'
+              AND id NOT IN (SELECT room_id FROM room_allocation)
+            LIMIT 1
+        """),
+        {"av": avail_id},
+    ).first()
+
+    if candidate is None:
+        pytest.skip("No unallocated available room found for arbitrary room test")
+
+    rid = candidate.id
+    orig_status = candidate.status
+    orig_conds = db.execute(
+        text("SELECT amenity_condition_id, status FROM amenity_condition_status WHERE amenity_id = :i"),
+        {"i": rid},
+    ).all()
+
+    try:
+        # Put Under Maintenance -> must transition to Unavailable
+        res = client.put(f"{V1}/occupancy/{rid}/conditions", json={"condition_ids": [maint_cond.id]})
+        assert res.status_code == 200
+        st1 = db.execute(text("SELECT status FROM amenity WHERE id = :i"), {"i": rid}).scalar_one()
+        assert st1 == unavail_id
+
+        # Resolve with Ready for occupant -> must transition to Available
+        res = client.put(f"{V1}/occupancy/{rid}/conditions", json={"condition_ids": [ready_cond.id]})
+        assert res.status_code == 200
+        st2 = db.execute(text("SELECT status FROM amenity WHERE id = :i"), {"i": rid}).scalar_one()
+        assert st2 == avail_id
+    finally:
+        db.execute(text("DELETE FROM amenity_condition_status WHERE amenity_id = :i"), {"i": rid})
+        for cid, st in orig_conds:
+            db.execute(
+                text("INSERT INTO amenity_condition_status (amenity_id, amenity_condition_id, status) VALUES (:i, :c, :s)"),
+                {"i": rid, "c": cid, "s": st},
+            )
+        db.execute(text("UPDATE amenity SET status = :s WHERE id = :i"), {"s": orig_status, "i": rid})
+        db.commit()
 
 
 def test_reject_invalid_condition_id(client, db):
@@ -189,3 +300,40 @@ def test_status_specific_database_driven(db):
     assert "Available" in statuses
     assert "Allocated" in statuses
     assert "Ready to Occupy" in statuses
+
+
+def test_occupancy_summary_counts_match_database_state(client, db):
+    """Verify that GET /occupancy/summary counts match persisted room counts in the database."""
+    res = client.get(f"{V1}/occupancy/summary")
+    assert res.status_code == 200
+    summary = res.json()
+
+    total_amenities = db.execute(text("SELECT count(*) FROM amenity")).scalar_one()
+    assert summary["total_rooms"] == total_amenities
+    assert summary["available"] >= 0
+    assert summary["occupied"] >= 0
+    assert summary["unavailable"] >= 0
+    assert summary["allotted"] >= 0
+    assert summary["total_rooms"] == (
+        summary["available"] + summary["occupied"] + summary["unavailable"] + summary["allotted"]
+    )
+
+
+def test_need_maintenance_display_label_is_database_driven(client, db):
+    """Verify that condition 1 (Dirty) exposes display_name 'Need Maintenance' from DB in master data and occupancy."""
+    # 1. Master data check
+    res_conds = client.get(f"{V1}/amenity-conditions")
+    assert res_conds.status_code == 200
+    dirty_cond = next((c for c in res_conds.json()["items"] if c["id"] == 1 or c["name"] == "Dirty"), None)
+    assert dirty_cond is not None
+    assert dirty_cond["display_name"] == "Need Maintenance"
+
+    # 2. Occupancy room check for room with Dirty condition (e.g. 102 or 208)
+    res_occ = client.get(f"{V1}/occupancy?amenity_category=room&page_size=100")
+    assert res_occ.status_code == 200
+    room_102 = next((r for r in res_occ.json()["items"] if r["room_name"] == "102"), None)
+    if room_102:
+        cond_102 = next((c for c in room_102["conditions"] if c["id"] == 1 or c["name"] == "Dirty"), None)
+        assert cond_102 is not None
+        assert cond_102["display_name"] == "Need Maintenance"
+        assert room_102["room_status"] == "Need Maintenance"

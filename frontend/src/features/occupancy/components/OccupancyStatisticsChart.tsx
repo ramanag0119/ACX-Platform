@@ -32,9 +32,10 @@ export const OccupancyStatisticsChart = () => {
     () =>
       (summary?.by_status ?? [])
         .map((entry) => ({
+          statusId: entry.status_id,
           name: entry.status,
           value: entry.count,
-          color: roomStatusColor(entry.status),
+          color: roomStatusColor(entry.status, entry.status_id),
         }))
         .filter((slice) => slice.value > 0),
     [summary?.by_status],

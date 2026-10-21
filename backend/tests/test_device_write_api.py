@@ -367,6 +367,67 @@ def test_update_limit_config(api, db, unique, cleanup):
     ).scalar_one() == 15
 
 
+def test_delete_limit_config_persists(api, db, unique):
+    device_name = db.execute(
+        text("SELECT device_name FROM device WHERE device_name IS NOT NULL LIMIT 1")
+    ).scalar_one()
+    created = api.post(
+        f"{V1}/limit-configs",
+        json={"parameter": f"del_param_{unique}", "device_name": device_name,
+              "is_percentage_value": False, "limit_low_value": "2",
+              "limit_high_value": "8", "remarks": f"Del {unique}"},
+    ).json()
+
+    del_r = api.delete(f"{V1}/limit-configs/{created['id']}")
+    assert del_r.status_code == 204
+
+    # Verify database persistence (row is physically removed)
+    assert db.execute(
+        text("SELECT count(*) FROM value_alert_limit_config WHERE id = :i"),
+        {"i": created["id"]},
+    ).scalar_one() == 0
+
+
+def test_delete_limit_config_blocked_when_referenced_by_alert(api, db, unique, cleanup):
+    device_row = db.execute(
+        text("SELECT id, device_type, device_name, amenity_id, facility_id FROM device WHERE device_name IS NOT NULL LIMIT 1")
+    ).one()
+    device_id, device_type_id, device_name, amenity_id, facility_id = device_row
+
+    created = api.post(
+        f"{V1}/limit-configs",
+        json={"parameter": f"alert_param_{unique}", "device_name": device_name,
+              "device_id": str(device_id),
+              "is_percentage_value": False, "limit_low_value": "5",
+              "limit_high_value": "15", "remarks": f"Alert ref {unique}"},
+    ).json()
+    cleanup.add("value_alert_limit_config", created["id"])
+
+    # Insert a referencing ValueAlert
+    alert_id = uuid.uuid4()
+    db.execute(
+        text(
+            """INSERT INTO value_alert (id, device_id, device_type_id, device_name, amenity_id, limit_config_id, device_status_id, timestamp, limit_value, limit_type, description, facility_id)
+               VALUES (:aid, :did, :dtid, :dname, :amid, :cid, 1, now(), '20.0', 'high', 'Test Alert', :fid)"""
+        ),
+        {
+            "aid": str(alert_id),
+            "did": str(device_id),
+            "dtid": device_type_id,
+            "dname": device_name,
+            "amid": str(amenity_id),
+            "cid": created["id"],
+            "fid": str(facility_id),
+        },
+    )
+    db.commit()
+    cleanup.add("value_alert", str(alert_id))
+
+    del_r = api.delete(f"{V1}/limit-configs/{created['id']}")
+    assert del_r.status_code == 409
+    assert "referenced by existing alerts" in del_r.json()["error"]["message"]
+
+
 # ---------------------------------------------------------------------------
 # RBAC
 # ---------------------------------------------------------------------------

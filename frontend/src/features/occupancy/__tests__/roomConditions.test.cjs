@@ -209,15 +209,16 @@ describe("Single-Active-Condition Room Dialog UI & State Management", () => {
     isPending = false;
   });
 
-  // Test 9: Display labels match operator conventions
-  test("9. Display labels map stored names to operator wording accurately", () => {
-    assert.equal(conditionLabel("Dirty"), "Need Maintenance");
-    assert.equal(conditionLabel("dirty"), "Need Maintenance");
-    assert.equal(conditionLabel("Ready for occupant"), "Ready to occupy");
-    assert.equal(conditionLabel("ready for occupant"), "Ready to occupy");
-    assert.equal(conditionLabel("Under maintenance"), "Under maintenance");
-    assert.equal(conditionLabel("Sanitation"), "Sanitation");
-    assert.equal(conditionLabel("Low battery"), "Low battery");
+  // Test 9: Display labels prioritize authoritative database display_name
+  test("9. Display labels prioritize authoritative database display_name from API", () => {
+    assert.equal(conditionLabel({ name: "Dirty", display_name: "Need Maintenance" }), "Need Maintenance");
+    assert.equal(conditionLabel({ name: "Ready for occupant", display_name: "Ready to Occupy" }), "Ready to Occupy");
+    assert.equal(conditionLabel({ name: "Under maintenance", display_name: "Under Maintenance" }), "Under Maintenance");
+    assert.equal(conditionLabel({ name: "Sanitation", display_name: "Sanitation Required" }), "Sanitation Required");
+    assert.equal(conditionLabel({ name: "Low battery", display_name: "Low Battery" }), "Low Battery");
+    // Fallback when display_name is missing: falls through to name
+    assert.equal(conditionLabel({ name: "Custom Condition", display_name: null }), "Custom Condition");
+    assert.equal(conditionLabel("Direct Name"), "Direct Name");
   });
 
   // Test 10: Step-by-step selection sequence: Ready -> Need Maintenance -> Under Maintenance -> Save
@@ -307,13 +308,13 @@ describe("Single-Active-Condition Room Dialog UI & State Management", () => {
     assert.equal(canSave, false);
   });
 
-  // Test 14: Display name formatting prioritizes display_name or conditionLabel
-  test("14. Condition display name prioritizes display_name or conditionLabel", () => {
+  // Test 14: Condition display name prioritizes display_name over internal name
+  test("14. Condition display name prioritizes display_name over internal name", () => {
     const cond1 = { name: "Dirty", display_name: "Need Maintenance" };
-    const cond2 = { name: "Dirty", display_name: null };
+    const cond2 = { name: "Custom Alert", display_name: null };
 
-    assert.equal(cond1.display_name || conditionLabel(cond1.name), "Need Maintenance");
-    assert.equal(cond2.display_name || conditionLabel(cond2.name), "Need Maintenance");
+    assert.equal(conditionLabel(cond1), "Need Maintenance");
+    assert.equal(conditionLabel(cond2), "Custom Alert");
   });
 });
 

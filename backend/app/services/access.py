@@ -167,7 +167,7 @@ def list_roles(
     facility_id: uuid.UUID | None = None,
     role_type: str | None = None,
 ):
-    stmt = select(Role).order_by(Role.name)
+    stmt = select(Role).where((Role.status == 1) | (Role.status.is_(None))).order_by(Role.name)
     if facility_id:
         stmt = stmt.where(Role.facility_id == facility_id)
     if role_type:

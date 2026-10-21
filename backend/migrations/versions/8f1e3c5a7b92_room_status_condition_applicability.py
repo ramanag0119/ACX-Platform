@@ -37,7 +37,7 @@ def upgrade() -> None:
     op.execute(sa.text("""
         INSERT INTO amenity_condition (id, name, display_name, applicable_to_occupied, applicable_to_vacant, is_active)
         VALUES 
-            (1, 'Dirty', 'Maintenance Required', true, true, true),
+            (1, 'Dirty', 'Need Maintenance', true, true, true),
             (2, 'Low battery', 'Low Battery', true, true, true),
             (3, 'Under maintenance', 'Under Maintenance', false, true, true),
             (4, 'Sanitation', 'Sanitation Required', true, true, true),

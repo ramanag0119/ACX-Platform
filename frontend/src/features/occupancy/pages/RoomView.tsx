@@ -3,9 +3,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useTheme } from "@/core/contexts/ThemeContext";
 import { DataState } from "@/core/components/DataState";
-import { useFloors, useOccupancySummary } from "@/lib/api/hooks";
+import { useAmenityConditions, useFloors, useOccupancySummary } from "@/lib/api/hooks";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
-import { roomStatusColor } from "../lib/roomStatus";
+import { conditionLabel, roomStatusColor } from "../lib/roomStatus";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useSurfaceTokens } from "@/core/styles/surfaceTokens";
 
@@ -22,6 +22,7 @@ const RoomView = () => {
   const { isDark } = useTheme();
 
   const floorsQuery = useFloors({ page: 1, page_size: MAX_PAGE_SIZE });
+  const conditionsQuery = useAmenityConditions();
   const floorFilter = selectedFloor === "select-all" ? {} : { floor_id: selectedFloor };
 
   const summaryQuery = useOccupancySummary({
@@ -275,24 +276,34 @@ const RoomView = () => {
           {/* Status Bar */}
           <div className="py-2">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              {/* Condition legend -- the real `amenity_condition` rows. */}
+              {/* Condition legend -- the real `amenity_condition` rows with database-driven labels. */}
               <div className="flex items-center gap-6">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                  <span className="text-sm" style={{ color: mutedColor }}>Dirty</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-amber-500 rounded-full"></div>
-                  <span className="text-sm" style={{ color: mutedColor }}>Under maintenance</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-emerald-500 rounded-full"></div>
-                  <span className="text-sm" style={{ color: mutedColor }}>Sanitation</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-rose-500 rounded-full"></div>
-                  <span className="text-sm" style={{ color: mutedColor }}>Low battery</span>
-                </div>
+                {(conditionsQuery.data?.items?.length
+                  ? conditionsQuery.data.items.filter((c) => c.name.toLowerCase() !== "ready for occupant").slice(0, 4)
+                  : [
+                      { id: 1, name: "Dirty", display_name: "Need Maintenance" },
+                      { id: 3, name: "Under maintenance", display_name: "Under Maintenance" },
+                      { id: 4, name: "Sanitation", display_name: "Sanitation Required" },
+                      { id: 2, name: "Low battery", display_name: "Low Battery" },
+                    ]
+                ).map((cond) => {
+                  const dotColor =
+                    cond.id === 1
+                      ? "bg-red-500"
+                      : cond.id === 3
+                      ? "bg-amber-500"
+                      : cond.id === 4
+                      ? "bg-emerald-500"
+                      : "bg-rose-500";
+                  return (
+                    <div key={cond.id} className="flex items-center gap-2">
+                      <div className={`w-3 h-3 ${dotColor} rounded-full`}></div>
+                      <span className="text-sm" style={{ color: mutedColor }}>
+                        {conditionLabel(cond)}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
 
               {/* Floor filter -- real floors, mapped to the API's floor_id. */}
