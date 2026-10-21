@@ -552,7 +552,7 @@ DEFAULT_KEY_READ = [Depends(require_permission("default_key", "read"))]
 DEFAULT_KEY_WRITE = [Depends(require_permission("default_key", "write"))]
 
 key_settings_router = APIRouter(
-    prefix="/key-settings", tags=["key-settings"], responses=WRITE_RESPONSES
+    prefix="/key-settings", tags=["key-settings"], responses=RESPONSES
 )
 
 

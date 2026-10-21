@@ -294,4 +294,5 @@ export const apiClient = {
   /** Full replacement of a collection (a permission matrix, item lines). */
   put: <T>(path: string, body?: unknown) => request<T>(path, { method: "PUT", body }),
   del: <T>(path: string) => request<T>(path, { method: "DELETE" }),
+  delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
 };

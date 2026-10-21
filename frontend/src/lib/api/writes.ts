@@ -14,6 +14,7 @@ import { apiClient, saveBlob, type QueryParams } from "./client";
 import type {
   BulkUploadResult,
   ImportJobRead,
+  KeySettingsRead,
   OccupancyDetail,
   Page,
   RoleRead,
@@ -112,7 +113,7 @@ export interface RoleWrite {
 export const createRole = (body: RoleWrite) => apiClient.post<RoleRead>("/roles", body);
 export const updateRole = (id: string, body: Partial<RoleWrite>) =>
   apiClient.patch<RoleRead>(`/roles/${id}`, body);
-export const deleteRole = (id: string) => apiClient.delete<RoleRead>(`/roles/${id}`);
+export const deleteRole = (id: string) => apiClient.del<RoleRead>(`/roles/${id}`);
 export const replaceRolePermissions = (id: string, permissions: PermissionEntry[]) =>
   apiClient.put<RolePermissionRead[]>(`/roles/${id}/permissions`, { permissions });
 
@@ -238,6 +239,7 @@ export const setStayStatus = (id: string, status: StayStatus) =>
 export const setStayDocumentApproval = (id: string, approved: boolean) =>
   apiClient.post<StayRead>(`/stays/${id}/documents/approval`, {
     document_approval_status: approved ? "approved" : "pending",
+  });
 export const cancelStay = (id: string) => apiClient.post<StayRead>(`/stays/${id}/cancel`, {});
 
 export const uploadBulkReservations = (file: File) => {
@@ -253,6 +255,11 @@ export const downloadBulkReservationsTemplate = async () => {
 
 export const getLastBulkUploadReport = () =>
   apiClient.get<ImportJobRead | null>("/stays/bulk-upload/last-report");
+
+export const getKeySettings = () => apiClient.get<KeySettingsRead>("/key-settings");
+export const updateKeySettings = (body: { default_key_user: string | null }) =>
+  apiClient.put<KeySettingsRead>("/key-settings", body);
+export const resetKeySettings = () => apiClient.post<KeySettingsRead>("/key-settings/reset", {});
 
 export const allocateRoom = (stayId: string, room_id: string, package_id?: string) =>
   apiClient.post<RoomAllocationRead[]>(`/stays/${stayId}/room-allocations`, {
@@ -339,7 +346,7 @@ export const createLimitConfig = (body: LimitConfigWrite) =>
 export const updateLimitConfig = (id: string, body: Partial<LimitConfigWrite>) =>
   apiClient.patch<LimitConfigRead>(`/limit-configs/${id}`, body);
 export const deleteLimitConfig = (id: string) =>
-  apiClient.delete<void>(`/limit-configs/${id}`);
+  apiClient.del<void>(`/limit-configs/${id}`);
 
 // ---------------------------------------------------------------------------
 // Facility, rooms and the room catalogue

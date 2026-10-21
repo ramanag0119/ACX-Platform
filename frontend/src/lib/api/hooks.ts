@@ -402,3 +402,6 @@ export const useReport = (
     () => reportApi.runReport(key as string, params),
     { enabled: Boolean(key) && enabled },
   );
+
+export const useKeySettings = (options?: { enabled?: boolean }) =>
+  useApiQuery(["key-settings"], () => writeApi.getKeySettings(), options);

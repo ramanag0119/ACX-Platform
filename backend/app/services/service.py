@@ -449,7 +449,7 @@ def get_service_tracking_summary(
                 "name": r.name,
                 "total_count": total,
                 "completed_count": completed,
-                "pending_count": pending if (pending > 0 or total == 0) else (total - completed),
+                "pending_count": total - completed,
                 "in_progress_count": in_progress,
                 "assigned_count": assigned,
                 "canceled_count": canceled,
@@ -467,7 +467,7 @@ def get_service_tracking_summary(
     return {
         "total_services": total_services,
         "total_completed": total_completed,
-        "total_pending": total_pending if (total_pending > 0 or total_services == 0) else (total_services - total_completed),
+        "total_pending": total_services - total_completed,
         "total_in_progress": total_in_progress,
         "total_assigned": total_assigned,
         "total_canceled": total_canceled,

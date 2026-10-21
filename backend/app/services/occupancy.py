@@ -124,15 +124,28 @@ def _in_house_exists():
 
 
 # Fallback condition constants for backward compatibility
-CONDITION_UNDER_MAINTENANCE = 3
-CONDITION_READY_TO_OCCUPY = 5
+CONDITION_NEED_MAINTENANCE = 1  # "Dirty"
+CONDITION_LOW_BATTERY = 2       # "Low battery"
+CONDITION_UNDER_MAINTENANCE = 3 # "Under maintenance"
+CONDITION_SANITATION = 4        # "Sanitation"
+CONDITION_READY_TO_OCCUPY = 5   # "Ready for occupant"
 
 CONDITION_DISPLAY_NAMES = {
-    1: "Need Maintenance",
-    2: "Low Battery",
-    3: "Under Maintenance",
-    4: "Sanitation",
-    5: "Ready to Occupy",
+    CONDITION_NEED_MAINTENANCE: "Need Maintenance",
+    CONDITION_LOW_BATTERY: "Low Battery",
+    CONDITION_UNDER_MAINTENANCE: "Under Maintenance",
+    CONDITION_SANITATION: "Sanitation",
+    CONDITION_READY_TO_OCCUPY: "Ready to Occupy",
+}
+
+CONDITION_NAME_TO_ID = {
+    "need maintenance": CONDITION_NEED_MAINTENANCE,
+    "dirty": CONDITION_NEED_MAINTENANCE,
+    "low battery": CONDITION_LOW_BATTERY,
+    "under maintenance": CONDITION_UNDER_MAINTENANCE,
+    "sanitation": CONDITION_SANITATION,
+    "ready to occupy": CONDITION_READY_TO_OCCUPY,
+    "ready for occupant": CONDITION_READY_TO_OCCUPY,
 }
 
 
