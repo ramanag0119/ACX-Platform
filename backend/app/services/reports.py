@@ -25,8 +25,10 @@ from dataclasses import dataclass, field
 from datetime import date, datetime
 from typing import Any, Callable, Iterable, Sequence
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.models import Role, UserRole
 from app.services import access, alert, energy, maintenance, occupancy, service, stay
 
 # --- column value shaping ---------------------------------------------------
@@ -102,6 +104,8 @@ def _join(values: Iterable[Any], key: str | None = None) -> str:
 # `page`/`page_size` are always passed through so exports and the on-screen
 # table share one pagination contract.
 
+STATUS_LOOKUP = {0: "Available", 1: "Occupied", 2: "Unavailable", 3: "Allotted"}
+
 
 def _occupancy_rows(db: Session, *, page: int, page_size: int, **f) -> tuple[list[dict], int]:
     rows, total = occupancy.list_occupancy(
@@ -115,8 +119,14 @@ def _occupancy_rows(db: Session, *, page: int, page_size: int, **f) -> tuple[lis
     for r in rows:
         d = dict(r)
         current = d.get("current_stay") or {}
+        # Ensure status_name is always a human-readable business status name, not a raw integer (0, 1, 2)
+        raw_status = d.get("status")
+        status_val = d.get("occupancy_status") or d.get("status_name") or STATUS_LOOKUP.get(raw_status) or "Available"
+        if isinstance(status_val, int) or (isinstance(status_val, str) and status_val.isdigit()):
+            status_val = STATUS_LOOKUP.get(int(status_val), str(status_val))
         out.append({
             **d,
+            "status_name": status_val,
             "conditions_text": _join(d.get("conditions") or [], "name"),
             # `current_stay` is present only while a stay holds the room.
             "stay_ref": current.get("internal_stay_ref_number") if current else None,
@@ -140,13 +150,28 @@ def _employee_rows(db: Session, *, page: int, page_size: int, **f) -> tuple[list
         # An employee report is staff only; guests are not employees.
         is_staff=1,
     )
+    user_ids = [dict(r)["id"] for r in rows if dict(r).get("id")]
+    roles_by_user: dict[uuid.UUID, list[str]] = {}
+    if user_ids:
+        role_rows = db.execute(
+            select(UserRole.app_user_id, Role.name)
+            .join(Role, Role.id == UserRole.role_id)
+            .where(UserRole.app_user_id.in_(user_ids))
+            .order_by(Role.name)
+        ).all()
+        for uid, rname in role_rows:
+            roles_by_user.setdefault(uid, []).append(rname)
+
     out = []
     for r in rows:
         d = dict(r)
         full = " ".join(x for x in (d.get("first_name"), d.get("last_name")) if x)
+        assigned_roles = roles_by_user.get(d["id"], [])
+        role_label = ", ".join(assigned_roles) if assigned_roles else (d.get("role_name") or None)
         out.append({
             **d,
             "full_name": full or d.get("user_name"),
+            "role_name": role_label,
             # `date_of_termination` set = no longer serving.
             "employment_status": "Terminated" if d.get("date_of_termination") else "Active",
         })
@@ -163,7 +188,18 @@ def _booking_rows(db: Session, *, page: int, page_size: int, **f) -> tuple[list[
         is_checked_in=f.get("is_checked_in"), is_in_house=f.get("is_in_house"),
         expected_checkin_from=f.get("date_from"), expected_checkin_to=f.get("date_to"),
     )
-    return [{**dict(r), "booker_name": _name(dict(r).get("booker"))} for r in rows], total
+    out = []
+    for r in rows:
+        d = dict(r)
+        # Authoritative business display_status from stay service:
+        # 'In-Room' for active in-house stays, 'Checked Out', 'Pending', etc.
+        status_label = d.get("display_status") or (d.get("status") or "").title()
+        out.append({
+            **d,
+            "status": status_label,
+            "booker_name": _name(d.get("booker")),
+        })
+    return out, total
 
 
 def _ticket_rows(db: Session, *, page: int, page_size: int, **f) -> tuple[list[dict], int]:
@@ -269,11 +305,7 @@ REPORTS: dict[str, ReportDef] = {
         key="occupancy",
         title="Occupancy Report",
         source="amenity, amenity_status, amenity_condition, stay",
-        description=(
-            "Room-by-room occupancy state. `amenity_status` is the stored state "
-            "(Available, Occupied, Allotted, Unavailable); there is no "
-            "occupancy date column, so this is a point-in-time position."
-        ),
+        description="Real-time room occupancy and availability status across property rooms and bookable spaces.",
         columns=[
             ReportColumn("room_name", "Room No", width=12),
             ReportColumn("amenity_type_name", "Room Type"),
@@ -287,7 +319,7 @@ REPORTS: dict[str, ReportDef] = {
             ReportColumn("conditions_text", "Conditions", width=28),
         ],
         filters=[FACILITY, BUILDING, FLOOR,
-                 ReportFilter("amenity_type_id", "Room Type", "select", "/amenity-types", "uuid"),
+                 ReportFilter("amenity_type_id", "Room Type", "select", "/amenity-types?amenity_category=room", "uuid"),
                  ReportFilter("status", "Status", "select", "/amenity-statuses", "int"),
                  ReportFilter("is_occupied", "Occupied only", "boolean", None, "bool")],
         fetch=_occupancy_rows,
@@ -296,15 +328,12 @@ REPORTS: dict[str, ReportDef] = {
         key="employee",
         title="Employee Report",
         source="app_user, department, job_function, user_role",
-        description=(
-            "Staff roster (`is_staff = 1`). `app_user` carries no per-day "
-            "history, so this report has no date range -- it is the roster as "
-            "it stands, with joining and termination dates per row."
-        ),
+        description="Staff member roster with assigned roles, departments, contact details, and employment history.",
         columns=[
             ReportColumn("emp_id", "Employee ID", width=14),
             ReportColumn("full_name", "Name", width=24),
             ReportColumn("user_name", "Username", width=18),
+            ReportColumn("role_name", "Role", width=18),
             ReportColumn("email", "Email", width=30),
             ReportColumn("phone_number", "Phone", width=18),
             ReportColumn("department_name", "Department", width=20),
@@ -322,12 +351,7 @@ REPORTS: dict[str, ReportDef] = {
         key="room-status",
         title="Room Status Report",
         source="amenity, amenity_status, amenity_condition",
-        description=(
-            "Serviceability of every room: stored status, reported conditions "
-            "and the DND / power-save flags. Same tables as the Occupancy "
-            "report -- room state lives in one place -- reported on condition "
-            "rather than on who holds the room."
-        ),
+        description="Current room serviceability, condition indicators, privacy flags, and maintenance status.",
         columns=[
             ReportColumn("room_name", "Room No", width=12),
             ReportColumn("amenity_type_name", "Room Type"),
@@ -340,7 +364,7 @@ REPORTS: dict[str, ReportDef] = {
             ReportColumn("power_save_mode", "Power Save", "boolean", 12),
         ],
         filters=[FACILITY, BUILDING, FLOOR,
-                 ReportFilter("amenity_type_id", "Room Type", "select", "/amenity-types", "uuid"),
+                 ReportFilter("amenity_type_id", "Room Type", "select", "/amenity-types?amenity_category=room", "uuid"),
                  ReportFilter("status", "Status", "select", "/amenity-statuses", "int"),
                  ReportFilter("condition_id", "Condition", "select", "/amenity-conditions", "int")],
         fetch=_room_status_rows,
@@ -349,10 +373,7 @@ REPORTS: dict[str, ReportDef] = {
         key="booking",
         title="Booking Report",
         source="stay, room_allocation, stay_occupant",
-        description=(
-            "Stays and their lifecycle. The date range filters EXPECTED "
-            "check-in, which is the column `stay` orders on."
-        ),
+        description="Guest reservation and stay lifecycle records filtered by expected check-in period.",
         columns=[
             ReportColumn("internal_stay_ref_number", "Booking Ref", width=18),
             ReportColumn("external_stay_ref_number", "External Ref", width=18),
@@ -371,14 +392,14 @@ REPORTS: dict[str, ReportDef] = {
                  ReportFilter("status", "Stay Status", "text"),
                  ReportFilter("request_source", "Source", "text"),
                  ReportFilter("document_approval_status", "Document Status", "text"),
-                 ReportFilter("is_in_house", "In house only", "boolean", None, "bool")],
+                 ReportFilter("is_in_house", "In-Room only", "boolean", None, "bool")],
         fetch=_booking_rows,
     ),
     "ticket": ReportDef(
         key="ticket",
         title="Ticket Report",
         source="service_request, service_type, service_status, service_category",
-        description="Guest and internal service requests, filtered on `created_on`.",
+        description="Guest and internal service requests with priority tracking, assignments, and resolution timelines.",
         columns=[
             ReportColumn("ref_number", "Ticket Ref", width=18),
             ReportColumn("service_type_name", "Service Type", width=22),
@@ -404,11 +425,7 @@ REPORTS: dict[str, ReportDef] = {
         key="housekeeping",
         title="Housekeeping Report",
         source="maintenance_request (scheduled, planned) + amenity / assignee links",
-        description=(
-            "Planned housekeeping work -- the `scheduled` and `planned` "
-            "`maintenance_request_type` values. Sanitization is the third "
-            "value and has its own report. Filtered on the start date."
-        ),
+        description="Scheduled and planned housekeeping work orders, room assignments, and completion tracking.",
         columns=[
             ReportColumn("maintenance_request_type", "Type", width=14),
             ReportColumn("category_name", "Service", width=22),
@@ -435,11 +452,7 @@ REPORTS: dict[str, ReportDef] = {
         key="sanitization",
         title="Sanitization Report",
         source="maintenance_request (disinfection) + amenity / assignee links",
-        description=(
-            "Disinfection schedules -- `maintenance_request_type = "
-            "'disinfection'`, the Disinfection Schedule tab of Services "
-            "Planning. Filtered on the start date."
-        ),
+        description="Disinfection schedules, sanitization compliance, and room turnover readiness records.",
         columns=[
             ReportColumn("category_name", "Sanitizer Service", width=24),
             ReportColumn("item_name", "Service Item", width=24),
@@ -464,11 +477,7 @@ REPORTS: dict[str, ReportDef] = {
         key="alert",
         title="Alert Report",
         source="device_alert, alert_type, device, amenity",
-        description=(
-            "Alerts devices reported, filtered on `created_on`. An alert is a "
-            "recorded fact and has no status of its own -- the lifecycle lives "
-            "on the incident."
-        ),
+        description="Device operational alerts, severity levels, room locations, and telemetry notifications.",
         columns=[
             ReportColumn("id", "Alert ID", "number", 10),
             ReportColumn("alert_type_name", "Alert Type", width=24),
@@ -492,11 +501,7 @@ REPORTS: dict[str, ReportDef] = {
         key="energy",
         title="Energy Report",
         source="energy_stat, device, amenity",
-        description=(
-            "Hourly energy per device per room. NO UNIT is shown: `energy_stat` "
-            "stores none, and nothing here is costed or carbon-weighted. The "
-            "date range is converted to the stored hours-since-2000 `hour`."
-        ),
+        description="Hourly energy consumption tracking by connected device, room, and floor.",
         columns=[
             ReportColumn("hour_timestamp", "Hour", "datetime", 22),
             ReportColumn("device_name", "Device", width=16),
