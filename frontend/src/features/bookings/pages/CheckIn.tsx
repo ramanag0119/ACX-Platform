@@ -39,7 +39,7 @@ import {
 } from "lucide-react";
 import { DataState, TableLoading } from "@/core/components/DataState";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
-import { useCount, useStays } from "@/lib/api/hooks";
+import { useCount, useOccupancyKpis, useStays } from "@/lib/api/hooks";
 import {
   useCheckInStay,
   useCheckOutStay,
@@ -87,13 +87,18 @@ const renderTabCount = (query: { total: number | null; isError: boolean }) => {
 };
 
 export const CheckIn = () => {
-  // Active Tab: In-Room, All Check-ins, or Pending Arrivals
+  // Active Tab: In-House, All Check-ins, or Pending Arrivals
   const [activeTab, setActiveTab] = useState<CheckInTab>("in-room");
   const [entriesPerPage, setEntriesPerPage] = useState("10");
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = parseInt(entriesPerPage) || 10;
   useScrollToTop(currentPage);
+
+  const kpisQuery = useOccupancyKpis();
+  const staysInRoomKpi = kpisQuery.data?.find((k) => k.key === "stays_in_room");
+  const inHouseShortLabel = staysInRoomKpi?.label ? staysInRoomKpi.label.replace(/Stays in\s*|Stay in\s*/i, "In-") : "In-House";
+  const inHouseStaysHeader = `${inHouseShortLabel} Stays:`;
 
   const stayFilters = {
     page: currentPage,
@@ -138,7 +143,7 @@ export const CheckIn = () => {
       isCheckedIn,
       isCheckedOut,
       isInHouse,
-      displayStatus: stay.display_status ?? (isInHouse ? "In-Room" : isCheckedOut ? "Checked Out" : "Pending"),
+      displayStatus: stay.display_status ?? (isInHouse ? "In-House" : isCheckedOut ? "Checked Out" : "Pending"),
       stayRef: stay.internal_stay_ref_number,
     };
   });
@@ -192,18 +197,18 @@ export const CheckIn = () => {
         actions={
           <div className="flex items-center gap-2">
             <span className="text-xs font-medium text-muted-foreground mr-1">
-              In-Room Stays:
+              {inHouseStaysHeader}
             </span>
             <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-semibold px-3 py-1 text-xs border border-emerald-500/30 inline-flex items-center min-w-[5.5rem] justify-center">
               <UserCheck className="w-3.5 h-3.5 mr-1 shrink-0" />
               {inRoomCountQuery.total !== null ? (
-                <span>{inRoomCountQuery.total} In-Room</span>
+                <span>{inRoomCountQuery.total} {inHouseShortLabel}</span>
               ) : inRoomCountQuery.isError ? (
-                <span title="Count unavailable">- In-Room</span>
+                <span title="Count unavailable">- {inHouseShortLabel}</span>
               ) : (
                 <span className="inline-flex items-center gap-1">
                   <Skeleton className="h-3 w-4 rounded bg-emerald-600/30 dark:bg-emerald-400/30 animate-pulse" />
-                  <span>In-Room</span>
+                  <span>{inHouseShortLabel}</span>
                 </span>
               )}
             </Badge>
@@ -224,7 +229,7 @@ export const CheckIn = () => {
           )}
         >
           <UserCheck className="w-4 h-4" />
-          <span>In-Room</span>
+          <span>{inHouseShortLabel}</span>
           <span className={cn(
             "text-[11px] px-1.5 py-0.5 rounded-full font-bold min-w-[1.25rem] inline-flex items-center justify-center",
             activeTab === "in-room" ? "bg-white/20 text-white" : "bg-muted text-muted-foreground"
@@ -378,7 +383,7 @@ export const CheckIn = () => {
                       <Badge
                         className={cn(
                           "text-[11px] font-semibold border",
-                          record.displayStatus === "In-Room"
+                          record.displayStatus.toLowerCase() === "in-house"
                             ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
                             : record.displayStatus === "Checked Out"
                               ? "bg-slate-500/15 text-slate-600 dark:text-slate-400 border-slate-500/30"
@@ -387,7 +392,7 @@ export const CheckIn = () => {
                                 : "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30"
                         )}
                       >
-                        {record.displayStatus}
+                        {record.displayStatus.toLowerCase() === "in-house" ? "IN-HOUSE" : record.displayStatus}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-center">
@@ -591,7 +596,7 @@ export const CheckIn = () => {
             <div className="p-3 bg-muted/40 rounded-lg text-xs text-muted-foreground">
               {selectedRecord?.isCheckedIn
                 ? "Checking out will update the guest stay to 'checked out' and release the assigned room back to available status."
-                : "Checking in will register the guest stay as in-room and record the actual arrival timestamp."}
+                : "Checking in will register the guest stay as in-house and record the actual arrival timestamp."}
             </div>
           </div>
           <div className="flex justify-end gap-3 pt-4 border-t border-border">

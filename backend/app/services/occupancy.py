@@ -25,6 +25,7 @@ from app.models import (
     AmenityType,
     AppUser,
     Device,
+    Facility,
     Package,
     Property,
     PropertyChain,
@@ -894,3 +895,47 @@ def get_occupancy_daily_series(
             "has_data": has_data,
         })
     return series
+
+
+DEFAULT_OCCUPANCY_KPIS = [
+    {
+        "key": "stays_in_room",
+        "label": "Stays in House",
+        "target_route": "/check-in",
+        "count_source": "stays",
+        "query_params": {"is_in_house": True},
+        "description": "Active in-house stays",
+    },
+    {
+        "key": "room_in_house",
+        "label": "Room in House",
+        "target_route": "/occupancy?is_occupied=true",
+        "count_source": "occupancy",
+        "query_params": {"is_occupied": True},
+        "description": "Rooms with active guest occupancy",
+    },
+]
+
+
+def get_occupancy_kpi_metadata(
+    db: Session, *, facility_id: uuid.UUID | None = None
+) -> list[dict]:
+    """Retrieve database-backed KPI metadata for occupancy, supporting facility custom configuration."""
+    stmt = select(Facility.cloud_details)
+    if facility_id:
+        stmt = stmt.where(Facility.id == facility_id)
+    facility_details = db.execute(stmt).scalars().first()
+
+    if (
+        facility_details
+        and isinstance(facility_details, dict)
+        and "occupancy_kpi_metadata" in facility_details
+    ):
+        custom = facility_details["occupancy_kpi_metadata"]
+        if isinstance(custom, dict):
+            return list(custom.values())
+        if isinstance(custom, list):
+            return custom
+
+    return DEFAULT_OCCUPANCY_KPIS
+

@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import date, datetime
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -196,3 +197,15 @@ class OccupancySummaryRead(BaseModel):
     unclassified_percent: float = 0.0
     by_status: list[OccupancyStatusSummary]
     daily_metrics: DailyOccupancyMetrics
+
+
+class OccupancyKPIMetadata(BaseModel):
+    """Database-backed metadata and routing configuration for occupancy dashboard KPIs."""
+
+    key: str = Field(examples=["stays_in_room"])
+    label: str = Field(examples=["Stays in House"])
+    target_route: str = Field(examples=["/check-in"])
+    count_source: str = Field(examples=["stays"])
+    query_params: dict[str, Any] = Field(default_factory=dict)
+    description: str | None = Field(default=None, examples=["Active in-house stays"])
+

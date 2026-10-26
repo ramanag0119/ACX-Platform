@@ -154,7 +154,7 @@ class StayRead(ORMModel):
     )
     display_status: str = Field(
         description=(
-            "Derived presentation label for UI display (e.g. 'In-Room', 'Checked Out', 'Pending'). "
+            "Derived presentation label for UI display (e.g. 'In-House', 'Checked Out', 'Pending'). "
             "Authoritatively computed by the backend from stay status, check-in, and check-out state."
         )
     )

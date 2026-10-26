@@ -152,7 +152,7 @@ def _display_status(status: str | None, is_in_house: bool, is_checked_in: bool) 
       - 'cancelled'
 
     Business presentation rules:
-      - Active stay checked into a room -> 'In-Room'
+      - Active stay checked into a room -> 'In-House'
       - Completed stay or checked out -> 'Checked Out'
       - Not yet checked in / pending arrival -> 'Pending'
       - Intermediate checkout workflow states -> 'Checkout Pending', 'Checkout Accepted', 'Checkout Rejected'
@@ -166,7 +166,7 @@ def _display_status(status: str | None, is_in_house: bool, is_checked_in: bool) 
     if status == "checked out" or (status == "active" and is_checked_in and not is_in_house):
         return "Checked Out"
     if status == "active":
-        return "In-Room" if is_in_house else ("Checked Out" if (is_checked_in and not is_in_house) else "Pending")
+        return "In-House" if is_in_house else ("Checked Out" if (is_checked_in and not is_in_house) else "Pending")
     if status == "checkout pending":
         return "Checkout Pending"
     if status == "checkout accepted":

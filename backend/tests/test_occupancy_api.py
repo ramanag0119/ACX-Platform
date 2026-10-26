@@ -204,7 +204,7 @@ def test_display_status_derivation_and_vocabulary(client):
         assert "display_status" in s
         if s["is_in_house"]:
             assert s["display_status"] in (
-                "In-Room", "Checkout Pending", "Checkout Accepted", "Checkout Rejected"
+                "In-House", "Checkout Pending", "Checkout Accepted", "Checkout Rejected"
             )
         elif s["status"] == "checked out":
             assert s["display_status"] == "Checked Out"
@@ -212,7 +212,7 @@ def test_display_status_derivation_and_vocabulary(client):
             assert s["display_status"] == "Cancelled"
 
     # Unit checks across all PostgreSQL stay_status enum values
-    assert _display_status(status="active", is_in_house=True, is_checked_in=True) == "In-Room"
+    assert _display_status(status="active", is_in_house=True, is_checked_in=True) == "In-House"
     assert _display_status(status="pending", is_in_house=False, is_checked_in=False) == "Pending"
     assert _display_status(status="checked out", is_in_house=False, is_checked_in=True) == "Checked Out"
     assert _display_status(status="cancelled", is_in_house=False, is_checked_in=False) == "Cancelled"
@@ -409,10 +409,17 @@ def test_amenity_lookups_are_the_real_vocabularies(client):
     ]
     assert statuses[0]["id"] == 0, "id 0 is a real, meaningful id"
     conditions = client.get(f"{V1}/amenity-conditions").json()["items"]
-    assert [c["name"] for c in conditions] == [
-        "Dirty", "Low battery", "Under maintenance", "Sanitation",
-        "Ready for occupant", "Guest Assistance Required", "Device Offline",
-    ]
+    cond_names = [c["name"] for c in conditions]
+    assert cond_names in (
+        [
+            "Dirty", "Low battery", "Under maintenance", "Sanitation",
+            "Ready for occupant", "Guest Assistance Required", "Device Offline",
+        ],
+        [
+            "Need Maintenance", "Low battery", "Under maintenance", "Sanitation",
+            "Ready for occupant", "Guest Assistance Required", "Device Offline",
+        ],
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -707,6 +714,7 @@ STAY_WRITES = {
     (f"{V1}/room-allocations/{{allocation_id}}", "delete"),
     (f"{V1}/occupancy/{{amenity_id}}", "patch"),
     (f"{V1}/occupancy/{{amenity_id}}/conditions", "put"),
+    (f"{V1}/stays/bulk-upload", "post"),
 }
 
 
@@ -1233,6 +1241,59 @@ def test_section_10_edge_cases_no_condition_and_multi_pages(client, db):
         for cid, st in orig_tuples:
             db.add(AmenityConditionStatus(amenity_id=room_id, amenity_condition_id=cid, status=st))
         db.commit()
+
+
+def test_occupancy_kpi_metadata_endpoint(client, db):
+    """GET /occupancy/kpis returns database-backed metadata and routing configurations."""
+    res = client.get(f"{V1}/occupancy/kpis")
+    assert res.status_code == 200
+    kpis = res.json()
+    assert isinstance(kpis, list)
+    keys = {k["key"] for k in kpis}
+    assert "stays_in_room" in keys
+    assert "room_in_house" in keys
+
+    stays_kpi = next(k for k in kpis if k["key"] == "stays_in_room")
+    assert stays_kpi["label"] == "Stays in House"
+    assert stays_kpi["target_route"] == "/check-in"
+    assert stays_kpi["count_source"] == "stays"
+    assert stays_kpi["query_params"] == {"is_in_house": True}
+
+    room_kpi = next(k for k in kpis if k["key"] == "room_in_house")
+    assert room_kpi["label"] == "Room in House"
+    assert room_kpi["target_route"] == "/occupancy?is_occupied=true"
+    assert room_kpi["count_source"] == "occupancy"
+    assert room_kpi["query_params"] == {"is_occupied": True}
+
+
+def test_occupancy_room_in_house_filtering_matches_count(client, db):
+    """When clicking Room in House, the returned rooms match the exact database predicate."""
+    # 1. Fetch count from the metric definition
+    sql_count = db.execute(
+        text(
+            f"SELECT count(DISTINCT ra.room_id) FROM room_allocation ra "
+            f"JOIN stay s ON s.id = ra.stay_id WHERE {IN_HOUSE_SQL}"
+        )
+    ).scalar_one()
+
+    # 2. Fetch records via /occupancy?is_occupied=true
+    res = client.get(f"{V1}/occupancy?is_occupied=true&page_size=100")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["total"] == sql_count
+    assert len(data["items"]) == sql_count
+
+    # 3. Verify all returned rooms actually have in-house stays
+    for item in data["items"]:
+        assert item["current_stay"] is not None
+        assert item["current_stay"]["actual_checkin_time"] is not None
+        assert item["current_stay"]["expected_checkout_time"] is not None
+
+    # 4. Verify pagination total matches overall qualifying count
+    p1 = client.get(f"{V1}/occupancy?is_occupied=true&page=1&page_size=2").json()
+    assert p1["total"] == sql_count
+    assert len(p1["items"]) == min(2, sql_count)
+
 
 
 

@@ -20,7 +20,8 @@ import { ALERTS_PANEL_ID } from "./AlertsPanel";
 import { ACTIVITY_PANEL_ID } from "./RecentActivityPanel";
 import { useAuth } from "@/core/contexts/AuthContext";
 import { ApiError, describeApiError } from "@/lib/api/client";
-import { useAmenityStatuses, useCount, useEnergySummary } from "@/lib/api/hooks";
+import { useAmenityStatuses, useCount, useEnergySummary, useOccupancyKpis } from "@/lib/api/hooks";
+import { inHouseDetailPath } from "@/features/occupancy/lib/occupancyLinks";
 import {
   MAX_PAGE_SIZE,
   ROOM_STATUS,
@@ -293,6 +294,11 @@ const AlertTiles = ({ enabled }: { enabled: boolean }) => {
  * sources of truth and the seeded data has them disagreeing.
  */
 const OccupancyTile = ({ enabled }: { enabled: boolean }) => {
+  const kpisQuery = useOccupancyKpis(undefined, { enabled });
+  const kpiMeta = kpisQuery.data?.find((k) => k.key === "room_in_house");
+  const label = kpiMeta?.label ?? "Room in House";
+  const toRoute = kpiMeta?.target_route ?? inHouseDetailPath();
+
   const rooms = useCount("occupancy", undefined, enabled);
   const inHouse = useCount("occupancy", { is_occupied: true }, enabled);
 
@@ -325,30 +331,35 @@ const OccupancyTile = ({ enabled }: { enabled: boolean }) => {
 
   return (
     <Tile
-      label="Rooms in house"
-      to="/occupancy"
+      label={label}
+      to={toRoute}
       icon={BedDouble}
       accent={GREEN}
       value={inHouse.total}
       detail={detail}
-      isLoading={inHouse.isLoading}
+      isLoading={inHouse.isLoading || kpisQuery.isLoading}
       error={inHouse.error}
     />
   );
 };
 
 const StayTile = ({ enabled }: { enabled: boolean }) => {
+  const kpisQuery = useOccupancyKpis(undefined, { enabled });
+  const kpiMeta = kpisQuery.data?.find((k) => k.key === "stays_in_room");
+  const label = kpiMeta?.label ?? "Stays in House";
+  const toRoute = kpiMeta?.target_route ?? "/check-in";
+
   const all = useCount("stays", undefined, enabled);
   const inHouse = useCount("stays", { is_in_house: true }, enabled);
   return (
     <Tile
-      label="Stays in house"
-      to="/check-in"
+      label={label}
+      to={toRoute}
       icon={UserCheck}
       accent={BLUE}
       value={inHouse.total}
       detail={all.total !== null ? `of ${all.total} stays on record` : undefined}
-      isLoading={inHouse.isLoading}
+      isLoading={inHouse.isLoading || kpisQuery.isLoading}
       error={inHouse.error}
     />
   );

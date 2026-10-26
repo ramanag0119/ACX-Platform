@@ -851,6 +851,16 @@ export interface OccupancyDailyPoint {
   has_data: boolean;
 }
 
+export interface OccupancyKPIMetadata {
+  key: string;
+  label: string;
+  target_route: string;
+  count_source: string;
+  query_params: Record<string, unknown>;
+  description?: string | null;
+}
+
+
 export interface StayRead {
   id: string;
   internal_stay_ref_number: string;

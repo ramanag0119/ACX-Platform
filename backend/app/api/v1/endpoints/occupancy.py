@@ -36,6 +36,7 @@ from app.schemas.occupancy import (
     AmenityStatusRead,
     OccupancyDailyPoint,
     OccupancyDetail,
+    OccupancyKPIMetadata,
     OccupancyRead,
     OccupancySummaryRead,
 )
@@ -177,6 +178,22 @@ def get_occupancy_daily_series(
     except ValueError as e:
         raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail=str(e))
     return [OccupancyDailyPoint.model_validate(pt) for pt in series]
+
+
+@occupancy_router.get(
+    "/kpis",
+    response_model=list[OccupancyKPIMetadata],
+    summary="Occupancy KPI metadata",
+    description="Database-backed configuration and metadata for occupancy dashboard KPIs.",
+)
+def get_occupancy_kpi_metadata(
+    db: DbSession,
+    facility_id: uuid.UUID | None = Query(None),
+) -> list[OccupancyKPIMetadata]:
+    return [
+        OccupancyKPIMetadata.model_validate(kpi)
+        for kpi in svc.get_occupancy_kpi_metadata(db, facility_id=facility_id)
+    ]
 
 
 @occupancy_router.get(

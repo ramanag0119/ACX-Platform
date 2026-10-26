@@ -46,6 +46,7 @@ import type {
   NotificationTemplateRead,
   OccupancyDailyPoint,
   OccupancyDetail,
+  OccupancyKPIMetadata,
   OccupancyRead,
   OccupancySummaryRead,
   OtherDeviceReadingRead,
@@ -176,6 +177,8 @@ export const getOccupancySummary = (params?: QueryParams) =>
   apiClient.get<OccupancySummaryRead>("/occupancy/summary", params);
 export const listOccupancyDaily = (params: QueryParams) =>
   apiClient.get<OccupancyDailyPoint[]>("/occupancy/daily", params);
+export const listOccupancyKpis = (params?: QueryParams) =>
+  apiClient.get<OccupancyKPIMetadata[]>("/occupancy/kpis", params);
 export const getOccupancy = (amenityId: string) =>
   apiClient.get<OccupancyDetail>(`/occupancy/${amenityId}`);
 export const listAmenityStatuses = (params?: QueryParams) =>

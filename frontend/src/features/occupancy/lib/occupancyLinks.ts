@@ -20,6 +20,9 @@ export const OCCUPANCY_PATH = "/occupancy";
 /** The query key carrying a status name into that route's filter. */
 export const STATUS_QUERY_PARAM = "status";
 
+/** The query key carrying in-house occupancy filtering into that route. */
+export const IS_OCCUPIED_QUERY_PARAM = "is_occupied";
+
 /**
  * Link to the room list filtered to one status.
  *
@@ -29,3 +32,10 @@ export const STATUS_QUERY_PARAM = "status";
  */
 export const statusDetailPath = (statusName: string) =>
     `${OCCUPANCY_PATH}?${STATUS_QUERY_PARAM}=${encodeURIComponent(statusName)}`;
+
+/**
+ * Link to the room list filtered to active in-house occupancy (Room in House).
+ */
+export const inHouseDetailPath = () =>
+    `${OCCUPANCY_PATH}?${IS_OCCUPIED_QUERY_PARAM}=true`;
+

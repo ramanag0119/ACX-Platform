@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useTheme } from "@/core/contexts/ThemeContext";
 import { DataState } from "@/core/components/DataState";
-import { useAmenityConditions, useFloors, useOccupancySummary } from "@/lib/api/hooks";
+import { useAmenityConditions, useFloors, useOccupancyKpis, useOccupancySummary } from "@/lib/api/hooks";
 import { MAX_PAGE_SIZE } from "@/lib/api/types";
 import { conditionLabel, roomStatusColor } from "../lib/roomStatus";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -23,6 +23,9 @@ const RoomView = () => {
 
   const floorsQuery = useFloors({ page: 1, page_size: MAX_PAGE_SIZE });
   const conditionsQuery = useAmenityConditions();
+  const kpisQuery = useOccupancyKpis();
+  const staysInRoomKpi = kpisQuery.data?.find((k) => k.key === "stays_in_room");
+  const staysInRoomLabel = staysInRoomKpi?.label ?? "Stays in House";
   const floorFilter = selectedFloor === "select-all" ? {} : { floor_id: selectedFloor };
 
   const summaryQuery = useOccupancySummary({
@@ -57,7 +60,7 @@ const RoomView = () => {
 
   const statsData = [
     {
-      label: "Current in House",
+      label: staysInRoomLabel,
       value: daily?.current_status ?? counts.occupied,
       unit: "Stays",
       borderColor: "border-cyan-500",
@@ -167,7 +170,7 @@ const RoomView = () => {
 
           {/* Formula Legend */}
           <div className="text-right text-sm" style={{ color: mutedColor }}>
-            <span className="font-medium" style={{ color: titleColor }}>Current in House</span> = Stays flagged in-house |
+            <span className="font-medium" style={{ color: titleColor }}>{staysInRoomLabel}</span> = Stays flagged in-house |
             <span className="font-medium" style={{ color: titleColor }}> End of Day</span> = Rooms with status Available
           </div>
 
@@ -281,20 +284,20 @@ const RoomView = () => {
                 {(conditionsQuery.data?.items?.length
                   ? conditionsQuery.data.items.filter((c) => c.name.toLowerCase() !== "ready for occupant").slice(0, 4)
                   : [
-                      { id: 1, name: "Dirty", display_name: "Need Maintenance" },
-                      { id: 3, name: "Under maintenance", display_name: "Under Maintenance" },
-                      { id: 4, name: "Sanitation", display_name: "Sanitation Required" },
-                      { id: 2, name: "Low battery", display_name: "Low Battery" },
-                    ]
+                    { id: 1, name: "Dirty", display_name: "Need Maintenance" },
+                    { id: 3, name: "Under maintenance", display_name: "Under Maintenance" },
+                    { id: 4, name: "Sanitation", display_name: "Sanitation Required" },
+                    { id: 2, name: "Low battery", display_name: "Low Battery" },
+                  ]
                 ).map((cond) => {
                   const dotColor =
                     cond.id === 1
                       ? "bg-red-500"
                       : cond.id === 3
-                      ? "bg-amber-500"
-                      : cond.id === 4
-                      ? "bg-emerald-500"
-                      : "bg-rose-500";
+                        ? "bg-amber-500"
+                        : cond.id === 4
+                          ? "bg-emerald-500"
+                          : "bg-rose-500";
                   return (
                     <div key={cond.id} className="flex items-center gap-2">
                       <div className={`w-3 h-3 ${dotColor} rounded-full`}></div>

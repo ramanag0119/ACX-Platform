@@ -287,6 +287,8 @@ export const useOccupancySummary = (params?: QueryParams, options?: EnabledOptio
   useApiQuery(["occupancy", "summary", params], () => api.getOccupancySummary(params), options);
 export const useOccupancyDaily = (params: QueryParams, options?: EnabledOption) =>
   useApiQuery(["occupancy", "daily", params], () => api.listOccupancyDaily(params), options);
+export const useOccupancyKpis = (params?: QueryParams, options?: EnabledOption) =>
+  useApiQuery(["occupancy", "kpis", params], () => api.listOccupancyKpis(params), options);
 export const useAmenityStatuses = (params?: QueryParams, options?: EnabledOption) =>
   useApiQuery(["amenity-statuses", params], () => api.listAmenityStatuses(params), options);
 export const useAmenityConditions = (params?: QueryParams) =>

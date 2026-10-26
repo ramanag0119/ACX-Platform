@@ -26,9 +26,9 @@
  */
 
 import {
-    KNOWN_AMENITY_STATUSES,
-    ROOM_STATUS,
-    type AmenityStatusName,
+  KNOWN_AMENITY_STATUSES,
+  ROOM_STATUS,
+  type AmenityStatusName,
 } from "@/lib/api/types";
 
 /**
@@ -40,96 +40,96 @@ export { KNOWN_AMENITY_STATUSES, ROOM_STATUS };
 export type RoomStatusName = AmenityStatusName;
 
 interface RoomStatusStyle {
-    /** Outline `<Badge>` classes, light and dark. */
-    badgeClass: string;
-    /** Text-only rendering, light and dark. */
-    textClass: string;
-    /** Raw colour for chart fills, SVG strokes and legend swatches. */
-    color: string;
-    /** Filled tile: background per theme, plus its border and text colour. */
-    tint: { light: string; dark: string; border: string; text: string };
+  /** Outline `<Badge>` classes, light and dark. */
+  badgeClass: string;
+  /** Text-only rendering, light and dark. */
+  textClass: string;
+  /** Raw colour for chart fills, SVG strokes and legend swatches. */
+  color: string;
+  /** Filled tile: background per theme, plus its border and text colour. */
+  tint: { light: string; dark: string; border: string; text: string };
 }
 
 const STATUS_STYLE: Record<AmenityStatusName, RoomStatusStyle> = {
-    [ROOM_STATUS.AVAILABLE]: {
-        badgeClass:
-            "border-green-500 text-green-600 dark:text-green-400 dark:border-green-500/60 dark:bg-green-950/30",
-        textClass: "text-green-600 dark:text-green-400",
-        color: "#22C55E",
-        tint: { light: "#DCFCE7", dark: "#12341f", border: "#22C55E", text: "#065F46" },
-    },
-    [ROOM_STATUS.OCCUPIED]: {
-        badgeClass:
-            "border-red-500 text-red-600 dark:text-red-400 dark:border-red-500/60 dark:bg-red-950/30",
-        textClass: "text-red-600 dark:text-red-400",
-        color: "#EF4444",
-        tint: { light: "#FEE2E2", dark: "#3d1f1f", border: "#EF4444", text: "#7F1D1D" },
-    },
-    [ROOM_STATUS.ALLOTTED]: {
-        badgeClass:
-            "border-yellow-500 text-yellow-600 dark:text-yellow-400 dark:border-yellow-500/60 dark:bg-yellow-950/30",
-        textClass: "text-yellow-600 dark:text-yellow-400",
-        color: "#EAB308",
-        tint: { light: "#FEF9C3", dark: "#3a3512", border: "#EAB308", text: "#713F12" },
-    },
-    [ROOM_STATUS.UNAVAILABLE]: {
-        badgeClass:
-            "border-blue-500 text-blue-600 dark:text-blue-400 dark:border-blue-500/60 dark:bg-blue-950/30",
-        textClass: "text-blue-600 dark:text-blue-400",
-        color: "#3B82F6",
-        tint: { light: "#DBEAFE", dark: "#12294a", border: "#3B82F6", text: "#1E3A8A" },
-    },
+  [ROOM_STATUS.AVAILABLE]: {
+    badgeClass:
+      "border-green-500 text-green-600 dark:text-green-400 dark:border-green-500/60 dark:bg-green-950/30",
+    textClass: "text-green-600 dark:text-green-400",
+    color: "#22C55E",
+    tint: { light: "#DCFCE7", dark: "#12341f", border: "#22C55E", text: "#065F46" },
+  },
+  [ROOM_STATUS.OCCUPIED]: {
+    badgeClass:
+      "border-red-500 text-red-600 dark:text-red-400 dark:border-red-500/60 dark:bg-red-950/30",
+    textClass: "text-red-600 dark:text-red-400",
+    color: "#EF4444",
+    tint: { light: "#FEE2E2", dark: "#3d1f1f", border: "#EF4444", text: "#7F1D1D" },
+  },
+  [ROOM_STATUS.ALLOTTED]: {
+    badgeClass:
+      "border-yellow-500 text-yellow-600 dark:text-yellow-400 dark:border-yellow-500/60 dark:bg-yellow-950/30",
+    textClass: "text-yellow-600 dark:text-yellow-400",
+    color: "#EAB308",
+    tint: { light: "#FEF9C3", dark: "#3a3512", border: "#EAB308", text: "#713F12" },
+  },
+  [ROOM_STATUS.UNAVAILABLE]: {
+    badgeClass:
+      "border-blue-500 text-blue-600 dark:text-blue-400 dark:border-blue-500/60 dark:bg-blue-950/30",
+    textClass: "text-blue-600 dark:text-blue-400",
+    color: "#3B82F6",
+    tint: { light: "#DBEAFE", dark: "#12294a", border: "#3B82F6", text: "#1E3A8A" },
+  },
 };
 
 /** Used for an unrecognised status name and for a room carrying none. */
 const NEUTRAL: RoomStatusStyle = {
-    badgeClass:
-        "border-gray-400 text-gray-500 dark:text-gray-400 dark:border-gray-600 dark:bg-slate-800/40",
-    textClass: "text-muted-foreground",
-    color: "#94A3B8",
-    tint: { light: "#F1F5F9", dark: "#1e293b", border: "#94A3B8", text: "#334155" },
+  badgeClass:
+    "border-gray-400 text-gray-500 dark:text-gray-400 dark:border-gray-600 dark:bg-slate-800/40",
+  textClass: "text-muted-foreground",
+  color: "#94A3B8",
+  tint: { light: "#F1F5F9", dark: "#1e293b", border: "#94A3B8", text: "#334155" },
 };
 
 export const STATUS_ID_TO_NAME: Record<number, AmenityStatusName> = {
-    0: ROOM_STATUS.AVAILABLE,
-    1: ROOM_STATUS.OCCUPIED,
-    2: ROOM_STATUS.UNAVAILABLE,
-    3: ROOM_STATUS.ALLOTTED,
+  0: ROOM_STATUS.AVAILABLE,
+  1: ROOM_STATUS.OCCUPIED,
+  2: ROOM_STATUS.UNAVAILABLE,
+  3: ROOM_STATUS.ALLOTTED,
 };
 
 export const normalizeAmenityStatusName = (
-    statusName: string | null | undefined,
-    statusId?: number | null,
+  statusName: string | null | undefined,
+  statusId?: number | null,
 ): AmenityStatusName | null => {
-    if (typeof statusId === "number" && statusId in STATUS_ID_TO_NAME) {
-        return STATUS_ID_TO_NAME[statusId];
+  if (typeof statusId === "number" && statusId in STATUS_ID_TO_NAME) {
+    return STATUS_ID_TO_NAME[statusId];
+  }
+  if (!statusName) return null;
+  const trimmed = statusName.trim().toLowerCase();
+  for (const name of KNOWN_AMENITY_STATUSES) {
+    if (name.toLowerCase() === trimmed) {
+      return name;
     }
-    if (!statusName) return null;
-    const trimmed = statusName.trim().toLowerCase();
-    for (const name of KNOWN_AMENITY_STATUSES) {
-        if (name.toLowerCase() === trimmed) {
-            return name;
-        }
-    }
-    return null;
+  }
+  return null;
 };
 
 const styleOf = (statusName: string | null | undefined, statusId?: number | null) => {
-    const normalized = normalizeAmenityStatusName(statusName, statusId);
-    return (normalized && STATUS_STYLE[normalized]) || NEUTRAL;
+  const normalized = normalizeAmenityStatusName(statusName, statusId);
+  return (normalized && STATUS_STYLE[normalized]) || NEUTRAL;
 };
 
 export const roomStatusBadgeClass = (statusName: string | null | undefined, statusId?: number | null) =>
-    styleOf(statusName, statusId).badgeClass;
+  styleOf(statusName, statusId).badgeClass;
 
 export const roomStatusTextClass = (statusName: string | null | undefined, statusId?: number | null) =>
-    styleOf(statusName, statusId).textClass;
+  styleOf(statusName, statusId).textClass;
 
 export const roomStatusColor = (statusName: string | null | undefined, statusId?: number | null) =>
-    styleOf(statusName, statusId).color;
+  styleOf(statusName, statusId).color;
 
 export const roomStatusTint = (statusName: string | null | undefined, statusId?: number | null) =>
-    styleOf(statusName, statusId).tint;
+  styleOf(statusName, statusId).tint;
 
 /**
  * Display label for an `amenity_condition` name.

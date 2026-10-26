@@ -192,7 +192,7 @@ def _booking_rows(db: Session, *, page: int, page_size: int, **f) -> tuple[list[
     for r in rows:
         d = dict(r)
         # Authoritative business display_status from stay service:
-        # 'In-Room' for active in-house stays, 'Checked Out', 'Pending', etc.
+        # 'In-House' for active in-house stays, 'Checked Out', 'Pending', etc.
         status_label = d.get("display_status") or (d.get("status") or "").title()
         out.append({
             **d,
@@ -392,7 +392,7 @@ REPORTS: dict[str, ReportDef] = {
                  ReportFilter("status", "Stay Status", "text"),
                  ReportFilter("request_source", "Source", "text"),
                  ReportFilter("document_approval_status", "Document Status", "text"),
-                 ReportFilter("is_in_house", "In-Room only", "boolean", None, "bool")],
+                 ReportFilter("is_in_house", "In-House only", "boolean", None, "bool")],
         fetch=_booking_rows,
     ),
     "ticket": ReportDef(
