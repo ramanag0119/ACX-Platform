@@ -143,7 +143,7 @@ def get_occupancy_summary(
         building_id=building_id,
         floor_id=floor_id,
         amenity_type_id=amenity_type_id,
-        amenity_category=amenity_category,
+        amenity_category=amenity_category or "room",
     )
     return OccupancySummaryRead.model_validate(data)
 
@@ -173,7 +173,7 @@ def get_occupancy_daily_series(
             facility_id=facility_id,
             building_id=building_id,
             floor_id=floor_id,
-            amenity_category=amenity_category,
+            amenity_category=amenity_category or "room",
         )
     except ValueError as e:
         raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail=str(e))

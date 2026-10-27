@@ -53,7 +53,11 @@ from app.models import (
     Stay,
     StayUser,
 )
-from app.services.occupancy import determine_room_status_for_applicability
+from app.services.occupancy import (
+    determine_room_status_for_applicability,
+    ensure_available_room_default_condition,
+    get_ready_to_occupy_condition,
+)
 from app.services.writes import (
     Conflict,
     Invalid,
@@ -418,6 +422,7 @@ def check_out(
                 _set_room_status(db, allocation.room_id, ROOM_UNAVAILABLE)
             else:
                 _set_room_status(db, allocation.room_id, ROOM_AVAILABLE)
+                ensure_available_room_default_condition(db, allocation.room_id)
 
     db.refresh(stay)
     return stay
@@ -452,11 +457,15 @@ def set_stay_status(
     Reaching a terminal state uses check_out()/cancel_stay() so the room state
     is always updated with it.
     """
-    terminal = {STAY_CHECKED_OUT: "check_out", STAY_CANCELLED: "cancel_stay"}
+    terminal = {
+        STAY_CHECKED_OUT: "check_out",
+        STAY_CANCELLED: "cancel_stay",
+        STAY_ACTIVE: "check_in",
+    }
     if status in terminal:
         raise Invalid(
             f"Use the {terminal[status]} action to move a stay to '{status}', "
-            "so room state is released with it."
+            "so room state is released or synchronized with it."
         )
     with transaction(db):
         stay = require_row(db, Stay, stay_id, "Stay")
@@ -499,6 +508,7 @@ def cancel_stay(
                 _set_room_status(db, allocation.room_id, ROOM_UNAVAILABLE)
             else:
                 _set_room_status(db, allocation.room_id, ROOM_AVAILABLE)
+                ensure_available_room_default_condition(db, allocation.room_id)
     db.refresh(stay)
     return stay
 
@@ -614,6 +624,7 @@ def reallocate_room(
             _set_room_status(db, old_room_id, ROOM_UNAVAILABLE)
         else:
             _set_room_status(db, old_room_id, ROOM_AVAILABLE)
+            ensure_available_room_default_condition(db, old_room_id)
 
         _set_room_status(
             db, room_id, ROOM_OCCUPIED if stay.actual_checkin_time else ROOM_ALLOTTED
@@ -657,6 +668,7 @@ def release_allocation(
             _set_room_status(db, room_id, ROOM_UNAVAILABLE)
         else:
             _set_room_status(db, room_id, ROOM_AVAILABLE)
+            ensure_available_room_default_condition(db, room_id)
         _refresh_room_count(db, stay)
         stay.modified_by = actor_id
 
@@ -781,6 +793,8 @@ def update_room_state(
                     )
 
         apply_changes(room, changes)
+        if "status" in changes and new_status_name == ROOM_AVAILABLE:
+            ensure_available_room_default_condition(db, room)
     db.refresh(room)
     return room
 

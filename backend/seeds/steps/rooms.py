@@ -27,8 +27,8 @@ from seeds.helpers import did, upsert
 # amenity_status ids from IKANOS: 0 Available, 1 Occupied, 2 Unavailable, 3 Allotted
 AVAILABLE, OCCUPIED, UNAVAILABLE, ALLOTTED = 0, 1, 2, 3
 
-# amenity_condition ids: 1 Dirty, 2 Low battery, 3 Under maintenance, 4 Sanitation
-DIRTY, LOW_BATTERY, UNDER_MAINTENANCE, SANITATION = 1, 2, 3, 4
+# amenity_condition ids: 1 Dirty, 2 Low battery, 3 Under maintenance, 4 Sanitation, 5 Ready for occupant
+DIRTY, LOW_BATTERY, UNDER_MAINTENANCE, SANITATION, READY_TO_OCCUPY = 1, 2, 3, 4, 5
 
 AMENITY_TYPES = [
     ("guest-room", "Guest Room", "room"),
@@ -234,6 +234,8 @@ def seed(session: Session, ctx: dict) -> dict[str, int]:
     ctx["rooms"] = rooms
     counts["amenity"] = len(rooms)
 
+    seeded_condition_count = 0
+    assigned_numbers = set()
     for number, condition_id in ROOM_CONDITIONS:
         upsert(
             session,
@@ -241,6 +243,21 @@ def seed(session: Session, ctx: dict) -> dict[str, int]:
             {"amenity_id": rooms[number].id, "amenity_condition_id": condition_id},
             status=1,
         )
-    counts["amenity_condition_status"] = len(ROOM_CONDITIONS)
+        assigned_numbers.add(number)
+        seeded_condition_count += 1
+
+    # Default Ready to Occupy for eligible Available rooms without an active condition
+    for floor, plan in ROOM_PLAN.items():
+        for number, package_key, status in plan:
+            if status == AVAILABLE and number not in assigned_numbers:
+                upsert(
+                    session,
+                    AmenityConditionStatus,
+                    {"amenity_id": rooms[number].id, "amenity_condition_id": READY_TO_OCCUPY},
+                    status=1,
+                )
+                seeded_condition_count += 1
+
+    counts["amenity_condition_status"] = seeded_condition_count
 
     return counts

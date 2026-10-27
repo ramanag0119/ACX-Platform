@@ -12,7 +12,7 @@ import sys
 import uuid
 from typing import Any
 
-from sqlalchemy import select, text
+from sqlalchemy import func, or_, select, text
 from sqlalchemy.orm import Session
 
 from app.db.session import SessionLocal
@@ -26,10 +26,15 @@ from app.models import (
     RoomStatusConditionApplicability,
     Stay,
 )
-from app.services.occupancy import determine_room_status_for_applicability
+from app.services.occupancy import (
+    determine_room_status_for_applicability,
+    ensure_available_room_default_condition,
+)
 
 
-def audit_and_reconcile(db: Session, apply_changes: bool = False) -> dict[str, Any]:
+def audit_and_reconcile(
+    db: Session, apply_changes: bool = False, scope: str = "stays"
+) -> dict[str, Any]:
     statuses = {s.id: s.amenity_status_name for s in db.execute(select(AmenityStatus)).scalars().all()}
     status_by_name = {v.lower(): k for k, v in statuses.items()}
 
@@ -101,36 +106,62 @@ def audit_and_reconcile(db: Session, apply_changes: bool = False) -> dict[str, A
                 break
 
         # Derive target status
-        target_status_name = None
+        target_status_name = stored_status_name
         action_type = "CONSISTENT"
         reason = ""
 
+        # Stay lifecycle check
         if in_house_stay:
             target_status_name = "Occupied"
             if stored_status_name != "Occupied":
                 action_type = "RECONCILE"
                 reason = f"Room has in-house stay ({in_house_stay.internal_stay_ref_number}) but status is {stored_status_name}"
-        elif pending_stay:
-            target_status_name = "Allotted"
-            if stored_status_name not in ("Allotted", "Allocated"):
+        elif stored_status_name == "Occupied":
+            # Room stored as Occupied without active in-house stay
+            # Inspect complete stay history for the room
+            last_stay = db.execute(
+                select(Stay)
+                .join(RoomAllocation, RoomAllocation.stay_id == Stay.id)
+                .where(RoomAllocation.room_id == room.id)
+                .order_by(
+                    Stay.actual_checkout_time.desc().nullslast(),
+                    Stay.actual_checkin_time.desc().nullslast(),
+                )
+            ).scalars().first()
+
+            if (
+                last_stay is not None
+                and last_stay.actual_checkout_time is not None
+                and last_stay.status == "checked out"
+                and not pending_stay
+                and not has_blocking
+            ):
+                target_status_name = "Available"
                 action_type = "RECONCILE"
-                reason = f"Room has pending allocation ({pending_stay.internal_stay_ref_number}) but status is {stored_status_name}"
-        elif has_blocking:
-            target_status_name = "Unavailable"
-            if stored_status_name != "Unavailable":
-                action_type = "RECONCILE"
-                reason = f"Room has active blocking condition ({', '.join(cond_names)}) but status is {stored_status_name}"
-        else:
-            # Vacant, unallocated, unblocked
-            target_status_name = "Available"
-            if stored_status_name == "Occupied":
-                # Stored as Occupied without active stay (e.g. Room 201)
+                reason = (
+                    f"Stay {last_stay.internal_stay_ref_number} completed checkout "
+                    f"on {last_stay.actual_checkout_time.isoformat()} but room operational status "
+                    "remained Occupied"
+                )
+            else:
                 action_type = "MANUAL_CONFIRMATION"
-                reason = "Stored status is Occupied but no active stay exists; requires business confirmation before clearing"
+                reason = "Stored status is Occupied but no active stay exists; requires explicit business reconciliation"
+        elif scope == "all":
+            if pending_stay:
+                target_status_name = "Allotted"
+                if stored_status_name not in ("Allotted", "Allocated"):
+                    action_type = "RECONCILE"
+                    reason = f"Room has pending allocation ({pending_stay.internal_stay_ref_number}) but status is {stored_status_name}"
+            elif has_blocking:
+                target_status_name = "Unavailable"
+                if stored_status_name != "Unavailable":
+                    action_type = "RECONCILE"
+                    reason = f"Room has active blocking condition ({', '.join(cond_names)}) but status is {stored_status_name}"
             elif stored_status_name == "Unavailable" and not active_conds:
                 action_type = "MANUAL_CONFIRMATION"
                 reason = "Stored status is Unavailable with no active condition; verify whether room is blocked by administrative hold"
             elif stored_status_name != "Available":
+                target_status_name = "Available"
                 action_type = "RECONCILE"
                 reason = f"Vacant unblocked room stored with status {stored_status_name}"
 
@@ -153,6 +184,23 @@ def audit_and_reconcile(db: Session, apply_changes: bool = False) -> dict[str, A
             reconciled_count += 1
             if apply_changes and target_status_id is not None:
                 room.status = target_status_id
+                if target_status_name == "Available":
+                    ensure_available_room_default_condition(db, room.id)
+                elif target_status_name == "Occupied":
+                    # Clear conditions not applicable to occupied rooms
+                    inapplicable_cond_ids = select(AmenityCondition.id).where(
+                        or_(
+                            AmenityCondition.applicable_to_occupied == False,
+                            func.lower(AmenityCondition.name).in_(["ready for occupant", "ready to occupy"]),
+                        )
+                    )
+                    for r_row in db.execute(
+                        select(AmenityConditionStatus).where(
+                            AmenityConditionStatus.amenity_id == room.id,
+                            AmenityConditionStatus.amenity_condition_id.in_(inapplicable_cond_ids),
+                        )
+                    ).scalars().all():
+                        db.delete(r_row)
         elif action_type == "MANUAL_CONFIRMATION":
             manual_review_count += 1
 
@@ -165,23 +213,25 @@ def audit_and_reconcile(db: Session, apply_changes: bool = False) -> dict[str, A
         "reconciled_count": reconciled_count,
         "manual_review_count": manual_review_count,
         "applied": apply_changes,
+        "scope": scope,
         "items": report,
     }
 
 
 def main():
     parser = argparse.ArgumentParser(description="Reconcile Room Statuses with Conditions and Lifecycle")
-    parser.add_argument("--dry-run", action="store_true", default=True, help="Diagnostic dry run (default)")
+    parser.add_argument("--dry-run", action="store_true", default=False, help="Diagnostic dry run")
     parser.add_argument("--apply", action="store_true", help="Apply safe reconciliations to the database")
+    parser.add_argument("--scope", choices=["stays", "all"], default="stays", help="Reconciliation scope: 'stays' (default) or 'all'")
     args = parser.parse_args()
 
-    apply = args.apply
+    apply = args.apply and not args.dry_run
     db = SessionLocal()
     try:
-        results = audit_and_reconcile(db, apply_changes=apply)
+        results = audit_and_reconcile(db, apply_changes=apply, scope=args.scope)
         print("=" * 80)
         mode = "APPLY" if results["applied"] else "DRY-RUN (READ-ONLY)"
-        print(f"ROOM STATUS RECONCILIATION REPORT — Mode: {mode}")
+        print(f"ROOM STATUS RECONCILIATION REPORT — Mode: {mode} (Scope: {results['scope']})")
         print("=" * 80)
         print(f"Total rooms evaluated    : {results['total_rooms']}")
         print(f"Consistent rooms         : {results['consistent_count']}")

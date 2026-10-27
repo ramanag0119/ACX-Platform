@@ -25,6 +25,7 @@ from sqlalchemy.orm import Session
 
 from app.models import (
     Amenity,
+    AmenityStatus,
     AmenityType,
     AppUser,
     Currency,
@@ -40,6 +41,7 @@ from app.models import (
     PromoCodeAmenity,
     PropertyChain,
 )
+from app.services.occupancy import ensure_available_room_default_condition
 from app.services.writes import (
     Conflict,
     Invalid,
@@ -107,6 +109,13 @@ def create_room(
             **data,
         )
         db.add(room)
+        db.flush()
+
+        available_status_id = db.execute(
+            select(AmenityStatus.id).where(AmenityStatus.amenity_status_name == "Available")
+        ).scalars().first()
+        if room.status == available_status_id or room.status == 0:
+            ensure_available_room_default_condition(db, room)
     db.refresh(room)
     return room
 

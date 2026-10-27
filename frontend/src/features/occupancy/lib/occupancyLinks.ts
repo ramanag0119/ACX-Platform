@@ -31,11 +31,11 @@ export const IS_OCCUPIED_QUERY_PARAM = "is_occupied";
  * survive the round trip.
  */
 export const statusDetailPath = (statusName: string) =>
-    `${OCCUPANCY_PATH}?${STATUS_QUERY_PARAM}=${encodeURIComponent(statusName)}`;
+    `${OCCUPANCY_PATH}?${STATUS_QUERY_PARAM}=${encodeURIComponent(statusName)}&amenity_category=room`;
 
 /**
  * Link to the room list filtered to active in-house occupancy (Room in House).
  */
 export const inHouseDetailPath = () =>
-    `${OCCUPANCY_PATH}?${IS_OCCUPIED_QUERY_PARAM}=true`;
+    `${OCCUPANCY_PATH}?${IS_OCCUPIED_QUERY_PARAM}=true&amenity_category=room`;
 

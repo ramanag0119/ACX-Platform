@@ -222,6 +222,151 @@ def determine_room_status_for_applicability(db: Session, amenity_id: uuid.UUID) 
     return "Available"
 
 
+def get_ready_to_occupy_condition(db: Session) -> AmenityCondition | None:
+    """Resolve the authoritative master-data record for 'Ready to Occupy'.
+
+    Finds the active amenity_condition record where display_name or name
+    corresponds to 'Ready to Occupy' or 'Ready for occupant'.
+    Does not hardcode any database IDs.
+    """
+    return db.execute(
+        select(AmenityCondition).where(
+            AmenityCondition.is_active == True,
+            or_(
+                func.lower(AmenityCondition.display_name) == "ready to occupy",
+                func.lower(AmenityCondition.name).in_(["ready for occupant", "ready to occupy"]),
+            ),
+        ).order_by(
+            case((func.lower(AmenityCondition.display_name) == "ready to occupy", 1), else_=2),
+            AmenityCondition.id,
+        )
+    ).scalars().first()
+
+
+def ensure_available_room_default_condition(
+    db: Session,
+    room_or_id: Amenity | uuid.UUID | str,
+) -> AmenityConditionStatus | None:
+    """Ensure an eligible Available room defaults to 'Ready to Occupy' condition.
+
+    Business Rules:
+    1. Room must exist and be eligible for guest occupancy (amenity_category == 'room').
+    2. Room status must be Available (amenity.status == 0 or name == 'Available').
+    3. Room must NOT have an active in-house stay (Stay.actual_checkin_time IS NOT NULL AND actual_checkout_time IS NULL).
+    4. Room must NOT have a pending allocation (Stay.status == 'pending').
+    5. Room must NOT have an active blocking condition (blocks_readiness=True or blocks_checkin=True).
+    6. If the room already has an active condition (blocking or non-blocking, e.g. Low Battery), preserve it.
+    7. If no active condition exists, resolve 'Ready to Occupy' from master data and persist with status=1.
+    """
+    if isinstance(room_or_id, (uuid.UUID, str)):
+        room = db.get(Amenity, uuid.UUID(str(room_or_id)))
+    else:
+        room = room_or_id
+
+    if room is None:
+        return None
+
+    # 1. Eligibility: amenity_type must exist and category must be 'room'
+    atype = db.get(AmenityType, room.amenity_type_id)
+    if not atype or atype.amenity_category != "room":
+        return None
+
+    # 2. Room status must be Available
+    available_status_id = db.execute(
+        select(AmenityStatus.id).where(AmenityStatus.amenity_status_name == "Available")
+    ).scalars().first()
+    if available_status_id is None:
+        available_status_id = 0
+
+    if room.status != available_status_id:
+        return None
+
+    # 3. Active in-house stay check
+    in_house = db.execute(
+        select(Stay.id)
+        .join(RoomAllocation, RoomAllocation.stay_id == Stay.id)
+        .where(
+            RoomAllocation.room_id == room.id,
+            Stay.actual_checkin_time.is_not(None),
+            Stay.actual_checkout_time.is_(None),
+        )
+    ).first() is not None
+    if in_house:
+        return None
+
+    # 4. Pending stay allocation check
+    pending_alloc = db.execute(
+        select(Stay.id)
+        .join(RoomAllocation, RoomAllocation.stay_id == Stay.id)
+        .where(
+            RoomAllocation.room_id == room.id,
+            Stay.status == "pending",
+            Stay.actual_checkin_time.is_(None),
+            Stay.actual_checkout_time.is_(None),
+        )
+    ).first() is not None
+    if pending_alloc:
+        return None
+
+    # 5 & 6. Active conditions check
+    active_conditions = db.execute(
+        select(AmenityConditionStatus).where(
+            AmenityConditionStatus.amenity_id == room.id,
+            AmenityConditionStatus.status == 1,
+        )
+    ).scalars().all()
+
+    if active_conditions:
+        # Preserve existing active condition (e.g. Need Maintenance, Low Battery, etc.)
+        return active_conditions[0]
+
+    # Check if any active blocking condition is recorded
+    blocking = db.execute(
+        select(AmenityConditionStatus.amenity_id)
+        .join(
+            RoomStatusConditionApplicability,
+            RoomStatusConditionApplicability.condition_id == AmenityConditionStatus.amenity_condition_id,
+        )
+        .where(
+            AmenityConditionStatus.amenity_id == room.id,
+            AmenityConditionStatus.status == 1,
+            RoomStatusConditionApplicability.is_active == True,
+            or_(
+                RoomStatusConditionApplicability.blocks_readiness == True,
+                RoomStatusConditionApplicability.blocks_checkin == True,
+            ),
+        )
+    ).first() is not None
+    if blocking:
+        return None
+
+    # 7. Resolve Ready to Occupy master-data record
+    ready_cond = get_ready_to_occupy_condition(db)
+    if ready_cond is None:
+        return None
+
+    existing_row = db.execute(
+        select(AmenityConditionStatus).where(
+            AmenityConditionStatus.amenity_id == room.id,
+            AmenityConditionStatus.amenity_condition_id == ready_cond.id,
+        )
+    ).scalars().first()
+
+    if existing_row is not None:
+        existing_row.status = 1
+        cond_status = existing_row
+    else:
+        cond_status = AmenityConditionStatus(
+            amenity_id=room.id,
+            amenity_condition_id=ready_cond.id,
+            status=1,
+        )
+        db.add(cond_status)
+
+    return cond_status
+
+
+
 def list_applicable_conditions_by_status(db: Session, status_name: str) -> list[dict]:
     """Retrieve only active condition options applicable to the specified status."""
     status_clean = status_name.strip()
@@ -471,16 +616,41 @@ def _enrich(db: Session, rows: list[dict]) -> list[dict]:
     conditions = _conditions_for(db, ids)
     current = _current_stays(db, ids)
 
+    ready_cond = get_ready_to_occupy_condition(db)
+    ready_cond_dict = None
+    if ready_cond:
+        ready_cond_dict = {
+            "id": ready_cond.id,
+            "name": ready_cond.name,
+            "display_name": ready_cond.display_name or ready_cond.name,
+            "created_on": ready_cond.created_on,
+            "updated_on": ready_cond.updated_on,
+        }
+
     # Master data fallback for rooms without active conditions
     cond_master = {
         c.id: c.display_name or c.name
         for c in db.execute(select(AmenityCondition)).scalars().all()
     }
 
+    needs_commit = False
     for row in rows:
         room_conds = conditions.get(row["amenity_id"], [])
-        row["conditions"] = room_conds
         row["current_stay"] = current.get(row["amenity_id"])
+
+        is_eligible = (
+            row.get("amenity_category") == "room"
+            and row.get("occupancy_status") == "Available"
+            and not row.get("current_stay")
+        )
+
+        if not room_conds and is_eligible and ready_cond_dict:
+            ensure_available_room_default_condition(db, row["amenity_id"])
+            needs_commit = True
+            room_conds = [ready_cond_dict]
+            conditions[row["amenity_id"]] = room_conds
+
+        row["conditions"] = room_conds
         if room_conds:
             prim = room_conds[0]
             row["room_status_id"] = prim["id"]
@@ -494,8 +664,19 @@ def _enrich(db: Session, rows: list[dict]) -> list[dict]:
                 row["room_status_id"] = CONDITION_UNDER_MAINTENANCE
                 row["room_status"] = cond_master.get(CONDITION_UNDER_MAINTENANCE, "Under Maintenance")
             else:
-                row["room_status_id"] = CONDITION_READY_TO_OCCUPY
-                row["room_status"] = cond_master.get(CONDITION_READY_TO_OCCUPY, "Ready to Occupy")
+                row["room_status_id"] = ready_cond.id if ready_cond else CONDITION_READY_TO_OCCUPY
+                row["room_status"] = (
+                    ready_cond.display_name or ready_cond.name
+                    if ready_cond
+                    else cond_master.get(CONDITION_READY_TO_OCCUPY, "Ready to Occupy")
+                )
+
+    if needs_commit:
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
+
     return rows
 
 
@@ -909,9 +1090,9 @@ DEFAULT_OCCUPANCY_KPIS = [
     {
         "key": "room_in_house",
         "label": "Room in House",
-        "target_route": "/occupancy?is_occupied=true",
+        "target_route": "/occupancy?is_occupied=true&amenity_category=room",
         "count_source": "occupancy",
-        "query_params": {"is_occupied": True},
+        "query_params": {"is_occupied": True, "amenity_category": "room"},
         "description": "Rooms with active guest occupancy",
     },
 ]

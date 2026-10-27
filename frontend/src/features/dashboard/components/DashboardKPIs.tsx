@@ -126,7 +126,7 @@ const Tile = ({
     "rounded-[16px] p-4 h-full min-w-0 min-h-[136px] flex flex-col transition-all duration-250 hover:-translate-y-0.5",
     // Only a tile that actually goes somewhere advertises itself as clickable.
     interactive &&
-      "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+    "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
   );
   const body = (
     <>
@@ -299,8 +299,12 @@ const OccupancyTile = ({ enabled }: { enabled: boolean }) => {
   const label = kpiMeta?.label ?? "Room in House";
   const toRoute = kpiMeta?.target_route ?? inHouseDetailPath();
 
-  const rooms = useCount("occupancy", undefined, enabled);
-  const inHouse = useCount("occupancy", { is_occupied: true }, enabled);
+  const rooms = useCount("occupancy", { amenity_category: "room" }, enabled);
+  const inHouse = useCount(
+    "occupancy",
+    { is_occupied: true, amenity_category: "room" },
+    enabled,
+  );
 
   // The "Occupied" id is READ FROM `amenity_status`, not assumed to be 1. The
   // ids are seeded values, so a re-seed or reorder would have silently counted
@@ -317,16 +321,18 @@ const OccupancyTile = ({ enabled }: { enabled: boolean }) => {
   )?.id;
   const flaggedOccupied = useCount(
     "occupancy",
-    occupiedStatusId === undefined ? undefined : { status: occupiedStatusId },
+    occupiedStatusId === undefined
+      ? undefined
+      : { status: occupiedStatusId, amenity_category: "room" },
     enabled && occupiedStatusId !== undefined,
   );
 
   const detail =
     rooms.total !== null
       ? `of ${rooms.total} rooms` +
-        (flaggedOccupied.total !== null
-          ? ` · amenity flag says ${flaggedOccupied.total} Occupied`
-          : "")
+      (flaggedOccupied.total !== null
+        ? ` · amenity flag says ${flaggedOccupied.total} Occupied`
+        : "")
       : undefined;
 
   return (

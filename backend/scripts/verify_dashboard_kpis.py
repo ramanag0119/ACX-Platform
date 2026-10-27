@@ -59,13 +59,16 @@ CHECKS: list[tuple[str, str, dict, str]] = [
     ("KPI Incidents unassigned", "/incidents", {"unassigned": "true"},
      "select count(*) from device_incident where assigned_to is null"),
     # In-house occupancy is the Phase 2.8 definition, NOT amenity.status.
-    ("KPI Rooms in house", "/occupancy", {"is_occupied": "true"},
+    ("KPI Rooms in house", "/occupancy", {"is_occupied": "true", "amenity_category": "room"},
      "select count(distinct ra.room_id) from room_allocation ra "
      "join stay st on st.id = ra.stay_id "
+     "join amenity a on a.id = ra.room_id "
+     "join amenity_type at on at.id = a.amenity_type_id "
      "where st.actual_checkin_time is not null "
-     "and st.actual_checkout_time is null"),
-    ("KPI Rooms total", "/occupancy", {},
-     "select count(*) from amenity"),
+     "and st.actual_checkout_time is null "
+     "and at.amenity_category = 'room'"),
+    ("KPI Rooms total", "/occupancy", {"amenity_category": "room"},
+     "select count(*) from amenity a join amenity_type at on at.id = a.amenity_type_id where at.amenity_category = 'room'"),
     ("KPI Stays in house", "/stays", {"is_in_house": "true"},
      "select count(*) from stay where actual_checkin_time is not null "
      "and actual_checkout_time is null"),
