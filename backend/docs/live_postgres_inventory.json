@@ -1,0 +1,4526 @@
+[
+  {
+    "name": "access_key",
+    "col_count": 13,
+    "columns": [
+      "user_device_acl_id",
+      "app_key",
+      "keypad_key",
+      "key_type",
+      "device_id",
+      "stay_id",
+      "maintenance_request_id",
+      "status",
+      "created_by",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 6,
+    "fk_details": [
+      [
+        [
+          "created_by"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "device_id"
+        ],
+        "device",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "key_type"
+        ],
+        "key_type",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "maintenance_request_id"
+        ],
+        "maintenance_request",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "stay_id"
+        ],
+        "stay",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "user_device_acl_id"
+        ],
+        "user_device_acl",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 1,
+    "indexes": 5,
+    "rows": 5
+  },
+  {
+    "name": "activity",
+    "col_count": 13,
+    "columns": [
+      "activity_type_id",
+      "entity_type_id",
+      "entity_id",
+      "facility_id",
+      "actor_id",
+      "stay_id",
+      "activity_response_ids",
+      "data_version",
+      "data",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 5,
+    "fk_details": [
+      [
+        [
+          "activity_type_id"
+        ],
+        "activity_type",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "actor_id"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "entity_type_id"
+        ],
+        "entity_type",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "facility_id"
+        ],
+        "facility",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "stay_id"
+        ],
+        "stay",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 1,
+    "indexes": 5,
+    "rows": 10
+  },
+  {
+    "name": "activity_notifier",
+    "col_count": 7,
+    "columns": [
+      "activity_id",
+      "app_user_id",
+      "status",
+      "user_type",
+      "notification_type",
+      "created_on",
+      "updated_on"
+    ],
+    "pk": [
+      "activity_id",
+      "app_user_id"
+    ],
+    "fks": 2,
+    "fk_details": [
+      [
+        [
+          "activity_id"
+        ],
+        "activity",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "app_user_id"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 0,
+    "indexes": 4,
+    "rows": 15
+  },
+  {
+    "name": "activity_role_association",
+    "col_count": 4,
+    "columns": [
+      "activity_type_id",
+      "role_id",
+      "created_on",
+      "updated_on"
+    ],
+    "pk": [
+      "activity_type_id",
+      "role_id"
+    ],
+    "fks": 2,
+    "fk_details": [
+      [
+        [
+          "activity_type_id"
+        ],
+        "activity_type",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "role_id"
+        ],
+        "role",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 0,
+    "indexes": 1,
+    "rows": 34
+  },
+  {
+    "name": "activity_type",
+    "col_count": 7,
+    "columns": [
+      "activity_type",
+      "entity_type_id",
+      "notification_type",
+      "is_subscribable",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 1,
+    "fk_details": [
+      [
+        [
+          "entity_type_id"
+        ],
+        "entity_type",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 0,
+    "indexes": 1,
+    "rows": 22
+  },
+  {
+    "name": "alembic_version",
+    "col_count": 1,
+    "columns": [
+      "version_num"
+    ],
+    "pk": [
+      "version_num"
+    ],
+    "fks": 0,
+    "fk_details": [],
+    "uqs": 0,
+    "indexes": 0,
+    "rows": 1
+  },
+  {
+    "name": "alert_type",
+    "col_count": 4,
+    "columns": [
+      "name",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 0,
+    "fk_details": [],
+    "uqs": 0,
+    "indexes": 0,
+    "rows": 16
+  },
+  {
+    "name": "amenity",
+    "col_count": 15,
+    "columns": [
+      "name",
+      "parent_amenity_id",
+      "amenity_type_id",
+      "facility_id",
+      "property_chain_id",
+      "package_id",
+      "status",
+      "is_dnd",
+      "power_save_mode",
+      "metadata",
+      "created_by",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 7,
+    "fk_details": [
+      [
+        [
+          "amenity_type_id"
+        ],
+        "amenity_type",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "created_by"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "facility_id"
+        ],
+        "facility",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "package_id"
+        ],
+        "package",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "parent_amenity_id"
+        ],
+        "amenity",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "property_chain_id"
+        ],
+        "property_chain",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "status"
+        ],
+        "amenity_status",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 1,
+    "indexes": 6,
+    "rows": 27
+  },
+  {
+    "name": "amenity_condition",
+    "col_count": 8,
+    "columns": [
+      "name",
+      "created_on",
+      "updated_on",
+      "id",
+      "display_name",
+      "applicable_to_occupied",
+      "applicable_to_vacant",
+      "is_active"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 0,
+    "fk_details": [],
+    "uqs": 0,
+    "indexes": 0,
+    "rows": 7
+  },
+  {
+    "name": "amenity_condition_status",
+    "col_count": 5,
+    "columns": [
+      "amenity_id",
+      "amenity_condition_id",
+      "status",
+      "created_on",
+      "updated_on"
+    ],
+    "pk": [
+      "amenity_id",
+      "amenity_condition_id"
+    ],
+    "fks": 2,
+    "fk_details": [
+      [
+        [
+          "amenity_condition_id"
+        ],
+        "amenity_condition",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "amenity_id"
+        ],
+        "amenity",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 0,
+    "indexes": 1,
+    "rows": 6
+  },
+  {
+    "name": "amenity_status",
+    "col_count": 4,
+    "columns": [
+      "amenity_status_name",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 0,
+    "fk_details": [],
+    "uqs": 0,
+    "indexes": 0,
+    "rows": 4
+  },
+  {
+    "name": "amenity_type",
+    "col_count": 10,
+    "columns": [
+      "name",
+      "facility_id",
+      "status",
+      "amenity_category",
+      "image_id",
+      "created_by",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 3,
+    "fk_details": [
+      [
+        [
+          "created_by"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "facility_id"
+        ],
+        "facility",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "image_id"
+        ],
+        "attachment",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 1,
+    "indexes": 2,
+    "rows": 5
+  },
+  {
+    "name": "app_user",
+    "col_count": 29,
+    "columns": [
+      "user_uid",
+      "first_name",
+      "last_name",
+      "email",
+      "country",
+      "phone_number",
+      "alternate_phone_number",
+      "gender",
+      "dob",
+      "is_child",
+      "age",
+      "is_staff",
+      "date_of_joining",
+      "date_of_termination",
+      "supervisor",
+      "address",
+      "nationality",
+      "marital_status",
+      "job_function_id",
+      "department_id",
+      "emp_id",
+      "user_name",
+      "password_hash",
+      "metadata",
+      "created_by",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 6,
+    "fk_details": [
+      [
+        [
+          "country"
+        ],
+        "country",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "created_by"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "department_id"
+        ],
+        "department",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "job_function_id"
+        ],
+        "job_function",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "nationality"
+        ],
+        "country",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "supervisor"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 3,
+    "indexes": 9,
+    "rows": 13
+  },
+  {
+    "name": "attachment",
+    "col_count": 8,
+    "columns": [
+      "facility_id",
+      "file_name",
+      "file_path",
+      "created_by",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 2,
+    "fk_details": [
+      [
+        [
+          "created_by"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "facility_id"
+        ],
+        "facility",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 1,
+    "indexes": 3,
+    "rows": 8
+  },
+  {
+    "name": "battery_life_stat",
+    "col_count": 9,
+    "columns": [
+      "device_id",
+      "cycle_number",
+      "initial_battery_percentage",
+      "latest_battery_percentage",
+      "battery_life",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 1,
+    "fk_details": [
+      [
+        [
+          "device_id"
+        ],
+        "device",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 1,
+    "indexes": 2,
+    "rows": 12
+  },
+  {
+    "name": "command_type",
+    "col_count": 5,
+    "columns": [
+      "name",
+      "device_type_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 1,
+    "fk_details": [
+      [
+        [
+          "device_type_id"
+        ],
+        "device_type",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 0,
+    "indexes": 1,
+    "rows": 10
+  },
+  {
+    "name": "country",
+    "col_count": 9,
+    "columns": [
+      "name",
+      "phone_code",
+      "iso_code",
+      "nice_name",
+      "iso3",
+      "num_code",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 0,
+    "fk_details": [],
+    "uqs": 0,
+    "indexes": 1,
+    "rows": 239
+  },
+  {
+    "name": "daily_dual_data_point",
+    "col_count": 7,
+    "columns": [
+      "metric_date",
+      "metric_type",
+      "dp_1",
+      "dp_2",
+      "facility_id",
+      "created_on",
+      "updated_on"
+    ],
+    "pk": [
+      "metric_date",
+      "metric_type"
+    ],
+    "fks": 1,
+    "fk_details": [
+      [
+        [
+          "facility_id"
+        ],
+        "facility",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 0,
+    "indexes": 1,
+    "rows": 35
+  },
+  {
+    "name": "department",
+    "col_count": 9,
+    "columns": [
+      "department_name",
+      "facility_id",
+      "status",
+      "department_key",
+      "created_by",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 2,
+    "fk_details": [
+      [
+        [
+          "created_by"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "facility_id"
+        ],
+        "facility",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 1,
+    "indexes": 2,
+    "rows": 5
+  },
+  {
+    "name": "device",
+    "col_count": 28,
+    "columns": [
+      "device_uid",
+      "part_number",
+      "model",
+      "manufacturer_name",
+      "mfg_date",
+      "parent_device_id",
+      "device_type",
+      "device_name",
+      "appliance_name",
+      "facility_id",
+      "amenity_id",
+      "authentication_code",
+      "health_status",
+      "device_temperature",
+      "current_firmware_version",
+      "expected_firmware_version",
+      "device_config_status",
+      "is_power_off",
+      "installed_on",
+      "operational_mode",
+      "is_other_device",
+      "status",
+      "metadata",
+      "created_by",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 7,
+    "fk_details": [
+      [
+        [
+          "amenity_id"
+        ],
+        "amenity",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "created_by"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "current_firmware_version"
+        ],
+        "firmware",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "device_type"
+        ],
+        "device_type",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "expected_firmware_version"
+        ],
+        "firmware",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "facility_id"
+        ],
+        "facility",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "parent_device_id"
+        ],
+        "device",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 2,
+    "indexes": 8,
+    "rows": 14
+  },
+  {
+    "name": "device_alert",
+    "col_count": 10,
+    "columns": [
+      "device_id",
+      "amenity_id",
+      "alert_type",
+      "alert_severity",
+      "alert_data",
+      "created_by",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 4,
+    "fk_details": [
+      [
+        [
+          "alert_type"
+        ],
+        "alert_type",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "amenity_id"
+        ],
+        "amenity",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "created_by"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "device_id"
+        ],
+        "device",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 1,
+    "indexes": 5,
+    "rows": 9
+  },
+  {
+    "name": "device_command",
+    "col_count": 9,
+    "columns": [
+      "device_id",
+      "command_type",
+      "command_data",
+      "processing_status",
+      "created_by",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 3,
+    "fk_details": [
+      [
+        [
+          "command_type"
+        ],
+        "command_type",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "created_by"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "device_id"
+        ],
+        "device",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 1,
+    "indexes": 3,
+    "rows": 7
+  },
+  {
+    "name": "device_current_stat",
+    "col_count": 7,
+    "columns": [
+      "device_id",
+      "device_stats",
+      "is_other_device",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 1,
+    "fk_details": [
+      [
+        [
+          "device_id"
+        ],
+        "device",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 1,
+    "indexes": 2,
+    "rows": 14
+  },
+  {
+    "name": "device_health_stat",
+    "col_count": 7,
+    "columns": [
+      "device_id",
+      "device_health_status",
+      "device_temperature",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 1,
+    "fk_details": [
+      [
+        [
+          "device_id"
+        ],
+        "device",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 1,
+    "indexes": 3,
+    "rows": 168
+  },
+  {
+    "name": "device_incident",
+    "col_count": 14,
+    "columns": [
+      "facility_id",
+      "amenity_id",
+      "device_id",
+      "alert_type",
+      "subject",
+      "description",
+      "assigned_to",
+      "latest_alert_id",
+      "current_incident_status",
+      "updated_by",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 8,
+    "fk_details": [
+      [
+        [
+          "alert_type"
+        ],
+        "alert_type",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "amenity_id"
+        ],
+        "amenity",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "assigned_to"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "current_incident_status"
+        ],
+        "incident_status",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "device_id"
+        ],
+        "device",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "facility_id"
+        ],
+        "facility",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "latest_alert_id"
+        ],
+        "device_alert",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "updated_by"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 1,
+    "indexes": 9,
+    "rows": 5
+  },
+  {
+    "name": "device_param",
+    "col_count": 7,
+    "columns": [
+      "device_type",
+      "param_name",
+      "data_type",
+      "unit",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 1,
+    "fk_details": [
+      [
+        [
+          "device_type"
+        ],
+        "device_type",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 0,
+    "indexes": 1,
+    "rows": 35
+  },
+  {
+    "name": "device_stat",
+    "col_count": 9,
+    "columns": [
+      "device_id",
+      "timestamp",
+      "device_param_id",
+      "device_param_value",
+      "is_other_device",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 2,
+    "fk_details": [
+      [
+        [
+          "device_id"
+        ],
+        "device",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "device_param_id"
+        ],
+        "device_param",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 1,
+    "indexes": 4,
+    "rows": 504
+  },
+  {
+    "name": "device_type",
+    "col_count": 5,
+    "columns": [
+      "name",
+      "device_short_code",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 0,
+    "fk_details": [],
+    "uqs": 0,
+    "indexes": 0,
+    "rows": 4
+  },
+  {
+    "name": "energy_stat",
+    "col_count": 7,
+    "columns": [
+      "device_name",
+      "facility_id",
+      "amenity_id",
+      "hour",
+      "energy_consumed",
+      "created_on",
+      "updated_on"
+    ],
+    "pk": [
+      "device_name",
+      "facility_id",
+      "amenity_id",
+      "hour"
+    ],
+    "fks": 2,
+    "fk_details": [
+      [
+        [
+          "amenity_id"
+        ],
+        "amenity",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "facility_id"
+        ],
+        "facility",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 0,
+    "indexes": 2,
+    "rows": 72
+  },
+  {
+    "name": "entity_type",
+    "col_count": 4,
+    "columns": [
+      "entity_type",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 0,
+    "fk_details": [],
+    "uqs": 0,
+    "indexes": 0,
+    "rows": 5
+  },
+  {
+    "name": "facility",
+    "col_count": 19,
+    "columns": [
+      "org_id",
+      "facility_uid",
+      "name",
+      "currency_id",
+      "city",
+      "state",
+      "pin_code",
+      "guest_rooms",
+      "email",
+      "additional_email",
+      "google_map_link",
+      "cloud_details",
+      "facility_image_id",
+      "default_key_user",
+      "created_by",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 4,
+    "fk_details": [
+      [
+        [
+          "created_by"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "default_key_user"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "facility_image_id"
+        ],
+        "attachment",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "org_id"
+        ],
+        "organisation",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 2,
+    "indexes": 3,
+    "rows": 1
+  },
+  {
+    "name": "facility_event",
+    "col_count": 17,
+    "columns": [
+      "facility_id",
+      "name",
+      "venue",
+      "chief_guests",
+      "description",
+      "expected_attendees",
+      "interested_attendees",
+      "start_date_time",
+      "end_date_time",
+      "image_id",
+      "cancellation_reason",
+      "status",
+      "created_by",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 3,
+    "fk_details": [
+      [
+        [
+          "created_by"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "facility_id"
+        ],
+        "facility",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "image_id"
+        ],
+        "attachment",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 1,
+    "indexes": 3,
+    "rows": 3
+  },
+  {
+    "name": "facility_user",
+    "col_count": 6,
+    "columns": [
+      "facility_id",
+      "app_user_id",
+      "status",
+      "created_by",
+      "created_on",
+      "updated_on"
+    ],
+    "pk": [
+      "facility_id",
+      "app_user_id"
+    ],
+    "fks": 3,
+    "fk_details": [
+      [
+        [
+          "app_user_id"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "created_by"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "facility_id"
+        ],
+        "facility",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 0,
+    "indexes": 1,
+    "rows": 13
+  },
+  {
+    "name": "feature",
+    "col_count": 10,
+    "columns": [
+      "facility_id",
+      "feature_name",
+      "is_smart_feature",
+      "device_type",
+      "status",
+      "created_by",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 3,
+    "fk_details": [
+      [
+        [
+          "created_by"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "device_type"
+        ],
+        "device_type",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "facility_id"
+        ],
+        "facility",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 1,
+    "indexes": 2,
+    "rows": 6
+  },
+  {
+    "name": "firmware",
+    "col_count": 17,
+    "columns": [
+      "device_type_id",
+      "firmware_version",
+      "firmware_filename",
+      "firmware_url",
+      "firmware_size",
+      "crc",
+      "release_date",
+      "release_notes",
+      "decommission_reason",
+      "status",
+      "uploaded_by",
+      "created_by",
+      "updated_by",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 4,
+    "fk_details": [
+      [
+        [
+          "created_by"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "device_type_id"
+        ],
+        "device_type",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "updated_by"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "uploaded_by"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 1,
+    "indexes": 2,
+    "rows": 6
+  },
+  {
+    "name": "import_job",
+    "col_count": 14,
+    "columns": [
+      "import_job_name",
+      "entity_type",
+      "import_status",
+      "total_records",
+      "success_count",
+      "error_count",
+      "import_file_name",
+      "error_file_name",
+      "completed_on",
+      "created_by",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 1,
+    "fk_details": [
+      [
+        [
+          "created_by"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 1,
+    "indexes": 2,
+    "rows": 3
+  },
+  {
+    "name": "incident_event",
+    "col_count": 4,
+    "columns": [
+      "name",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 0,
+    "fk_details": [],
+    "uqs": 0,
+    "indexes": 0,
+    "rows": 5
+  },
+  {
+    "name": "incident_history",
+    "col_count": 8,
+    "columns": [
+      "incident_id",
+      "incident_event_id",
+      "incident_event_data",
+      "created_by",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 3,
+    "fk_details": [
+      [
+        [
+          "created_by"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "incident_event_id"
+        ],
+        "incident_event",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "incident_id"
+        ],
+        "device_incident",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 1,
+    "indexes": 3,
+    "rows": 14
+  },
+  {
+    "name": "incident_status",
+    "col_count": 4,
+    "columns": [
+      "name",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 0,
+    "fk_details": [],
+    "uqs": 0,
+    "indexes": 0,
+    "rows": 4
+  },
+  {
+    "name": "invoice",
+    "col_count": 19,
+    "columns": [
+      "invoice_number",
+      "invoice_date",
+      "invoice_due_date",
+      "billing_user_id",
+      "billing_user_name",
+      "billing_address",
+      "facility_id",
+      "facility_name",
+      "facility_address",
+      "facility_image_id",
+      "stay_id",
+      "net_amount",
+      "total_tax",
+      "total_amount",
+      "created_by",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 5,
+    "fk_details": [
+      [
+        [
+          "billing_user_id"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "created_by"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "facility_id"
+        ],
+        "facility",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "facility_image_id"
+        ],
+        "attachment",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "stay_id"
+        ],
+        "stay",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 2,
+    "indexes": 4,
+    "rows": 2
+  },
+  {
+    "name": "job_function",
+    "col_count": 9,
+    "columns": [
+      "function_name",
+      "facility_id",
+      "status",
+      "function_key",
+      "created_by",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 2,
+    "fk_details": [
+      [
+        [
+          "created_by"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "facility_id"
+        ],
+        "facility",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 1,
+    "indexes": 2,
+    "rows": 5
+  },
+  {
+    "name": "job_order",
+    "col_count": 15,
+    "columns": [
+      "order_reference",
+      "description",
+      "type_of_work",
+      "work_commence",
+      "estimated_completion_date",
+      "authentication_code",
+      "assigned_to",
+      "job_order_status",
+      "completed_on",
+      "status",
+      "created_by",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 2,
+    "fk_details": [
+      [
+        [
+          "assigned_to"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "created_by"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 2,
+    "indexes": 4,
+    "rows": 3
+  },
+  {
+    "name": "job_order_amenity",
+    "col_count": 4,
+    "columns": [
+      "job_order_id",
+      "amenity_id",
+      "created_on",
+      "updated_on"
+    ],
+    "pk": [
+      "job_order_id",
+      "amenity_id"
+    ],
+    "fks": 2,
+    "fk_details": [
+      [
+        [
+          "amenity_id"
+        ],
+        "amenity",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "job_order_id"
+        ],
+        "job_order",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 0,
+    "indexes": 1,
+    "rows": 4
+  },
+  {
+    "name": "job_order_device",
+    "col_count": 4,
+    "columns": [
+      "job_order_id",
+      "device_id",
+      "created_on",
+      "updated_on"
+    ],
+    "pk": [
+      "job_order_id",
+      "device_id"
+    ],
+    "fks": 2,
+    "fk_details": [
+      [
+        [
+          "device_id"
+        ],
+        "device",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "job_order_id"
+        ],
+        "job_order",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 0,
+    "indexes": 1,
+    "rows": 2
+  },
+  {
+    "name": "key_type",
+    "col_count": 4,
+    "columns": [
+      "name",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 0,
+    "fk_details": [],
+    "uqs": 0,
+    "indexes": 0,
+    "rows": 4
+  },
+  {
+    "name": "lock_activity_log",
+    "col_count": 13,
+    "columns": [
+      "timestamp",
+      "app_user_id",
+      "event",
+      "unlock_mode",
+      "lock_id",
+      "amenity_id",
+      "stay_id",
+      "facility_id",
+      "key_type",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 6,
+    "fk_details": [
+      [
+        [
+          "amenity_id"
+        ],
+        "amenity",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "app_user_id"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "facility_id"
+        ],
+        "facility",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "key_type"
+        ],
+        "key_type",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "lock_id"
+        ],
+        "device",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "stay_id"
+        ],
+        "stay",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 1,
+    "indexes": 5,
+    "rows": 5
+  },
+  {
+    "name": "maintenance_request",
+    "col_count": 25,
+    "columns": [
+      "maintenance_request_type",
+      "maintenance_start_date",
+      "maintenance_end_date",
+      "maintenance_start_time",
+      "maintenance_end_time",
+      "is_recurring",
+      "department_id",
+      "category_id",
+      "item_id",
+      "facility_id",
+      "completed_on",
+      "is_room",
+      "non_room_comments",
+      "parent_id",
+      "maintenance_request_status",
+      "status_reason",
+      "delete_comments",
+      "under_maintenance",
+      "status",
+      "created_by",
+      "updated_by",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 8,
+    "fk_details": [
+      [
+        [
+          "category_id"
+        ],
+        "service_category",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "created_by"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "department_id"
+        ],
+        "department",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "facility_id"
+        ],
+        "facility",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "item_id"
+        ],
+        "service_category_item",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "maintenance_request_status"
+        ],
+        "service_status",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "parent_id"
+        ],
+        "maintenance_request",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "updated_by"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 1,
+    "indexes": 7,
+    "rows": 4
+  },
+  {
+    "name": "maintenance_request_amenity",
+    "col_count": 8,
+    "columns": [
+      "maintenance_request_id",
+      "amenity_id",
+      "status",
+      "created_by",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 3,
+    "fk_details": [
+      [
+        [
+          "amenity_id"
+        ],
+        "amenity",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "created_by"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "maintenance_request_id"
+        ],
+        "maintenance_request",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 1,
+    "indexes": 3,
+    "rows": 7
+  },
+  {
+    "name": "maintenance_request_assignee",
+    "col_count": 8,
+    "columns": [
+      "maintenance_request_id",
+      "app_user_id",
+      "status",
+      "created_by",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 3,
+    "fk_details": [
+      [
+        [
+          "app_user_id"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "created_by"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "maintenance_request_id"
+        ],
+        "maintenance_request",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 1,
+    "indexes": 3,
+    "rows": 5
+  },
+  {
+    "name": "maintenance_request_recurrence",
+    "col_count": 6,
+    "columns": [
+      "maintenance_request_id",
+      "recurrence_type",
+      "days_of_week",
+      "max_no_of_occurrences",
+      "created_on",
+      "updated_on"
+    ],
+    "pk": [
+      "maintenance_request_id"
+    ],
+    "fks": 1,
+    "fk_details": [
+      [
+        [
+          "maintenance_request_id"
+        ],
+        "maintenance_request",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 0,
+    "indexes": 0,
+    "rows": 1
+  },
+  {
+    "name": "mqtt_broker",
+    "col_count": 11,
+    "columns": [
+      "facility_id",
+      "broker_name",
+      "broker_ip",
+      "broker_vpn_ip",
+      "broker_port",
+      "broker_user_name",
+      "broker_password",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 1,
+    "fk_details": [
+      [
+        [
+          "facility_id"
+        ],
+        "facility",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 1,
+    "indexes": 2,
+    "rows": 1
+  },
+  {
+    "name": "mqtt_topic",
+    "col_count": 8,
+    "columns": [
+      "mqtt_broker_id",
+      "device_id",
+      "topic_name",
+      "topic_type",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 2,
+    "fk_details": [
+      [
+        [
+          "device_id"
+        ],
+        "device",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "mqtt_broker_id"
+        ],
+        "mqtt_broker",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 1,
+    "indexes": 3,
+    "rows": 12
+  },
+  {
+    "name": "notification",
+    "col_count": 9,
+    "columns": [
+      "created_by",
+      "status",
+      "reference_id",
+      "template_id",
+      "params",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 1,
+    "fk_details": [
+      [
+        [
+          "template_id"
+        ],
+        "notification_template",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 1,
+    "indexes": 4,
+    "rows": 6
+  },
+  {
+    "name": "notification_receiver",
+    "col_count": 11,
+    "columns": [
+      "app_user_id",
+      "notification_id",
+      "name",
+      "email",
+      "phone",
+      "device_token",
+      "data",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 2,
+    "fk_details": [
+      [
+        [
+          "app_user_id"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "notification_id"
+        ],
+        "notification",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 1,
+    "indexes": 3,
+    "rows": 6
+  },
+  {
+    "name": "notification_result",
+    "col_count": 9,
+    "columns": [
+      "receiver_id",
+      "type",
+      "status",
+      "log",
+      "body",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 1,
+    "fk_details": [
+      [
+        [
+          "receiver_id"
+        ],
+        "notification_receiver",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 1,
+    "indexes": 4,
+    "rows": 6
+  },
+  {
+    "name": "notification_template",
+    "col_count": 7,
+    "columns": [
+      "name",
+      "type",
+      "path",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 0,
+    "fk_details": [],
+    "uqs": 2,
+    "indexes": 2,
+    "rows": 16
+  },
+  {
+    "name": "occasion",
+    "col_count": 17,
+    "columns": [
+      "occasion_name",
+      "occasion_type",
+      "is_repeatable",
+      "notification_template",
+      "facility_id",
+      "month",
+      "day_of_month",
+      "app_user_id",
+      "notify_to_hub",
+      "occasion_start_date",
+      "occasion_end_date",
+      "status",
+      "created_by",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 4,
+    "fk_details": [
+      [
+        [
+          "app_user_id"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "created_by"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "facility_id"
+        ],
+        "facility",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "occasion_type"
+        ],
+        "occasion_type",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 1,
+    "indexes": 4,
+    "rows": 4
+  },
+  {
+    "name": "occasion_type",
+    "col_count": 5,
+    "columns": [
+      "occasion_type",
+      "notification_template",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 0,
+    "fk_details": [],
+    "uqs": 0,
+    "indexes": 0,
+    "rows": 4
+  },
+  {
+    "name": "organisation",
+    "col_count": 7,
+    "columns": [
+      "name",
+      "org_uid",
+      "created_by",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 1,
+    "fk_details": [
+      [
+        [
+          "created_by"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 2,
+    "indexes": 2,
+    "rows": 1
+  },
+  {
+    "name": "other_device",
+    "col_count": 17,
+    "columns": [
+      "msg_id",
+      "device_name",
+      "voltage",
+      "current",
+      "power",
+      "power_factor",
+      "all_energy",
+      "thirty_day_energy",
+      "today_energy",
+      "current_hour_energy",
+      "ec",
+      "msg_string",
+      "timestamp",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 0,
+    "fk_details": [],
+    "uqs": 1,
+    "indexes": 2,
+    "rows": 12
+  },
+  {
+    "name": "package",
+    "col_count": 12,
+    "columns": [
+      "facility_id",
+      "name",
+      "description",
+      "status",
+      "amenity_type",
+      "is_sub_package",
+      "image_id",
+      "created_by",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 4,
+    "fk_details": [
+      [
+        [
+          "amenity_type"
+        ],
+        "amenity_type",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "created_by"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "facility_id"
+        ],
+        "facility",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "image_id"
+        ],
+        "attachment",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 1,
+    "indexes": 2,
+    "rows": 8
+  },
+  {
+    "name": "package_feature",
+    "col_count": 8,
+    "columns": [
+      "package_id",
+      "feature_id",
+      "status",
+      "created_by",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 3,
+    "fk_details": [
+      [
+        [
+          "created_by"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "feature_id"
+        ],
+        "feature",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "package_id"
+        ],
+        "package",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 1,
+    "indexes": 3,
+    "rows": 17
+  },
+  {
+    "name": "promo_code",
+    "col_count": 16,
+    "columns": [
+      "offer_name",
+      "promo_code",
+      "start_time",
+      "expiry_time",
+      "discount_percentage",
+      "max_discount_value",
+      "min_order_value",
+      "promo_code_icon",
+      "promo_code_description",
+      "offered_by",
+      "status",
+      "created_by",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 2,
+    "fk_details": [
+      [
+        [
+          "created_by"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "promo_code_icon"
+        ],
+        "attachment",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 2,
+    "indexes": 4,
+    "rows": 3
+  },
+  {
+    "name": "promo_code_amenity",
+    "col_count": 6,
+    "columns": [
+      "promo_code_id",
+      "amenity_id",
+      "status",
+      "created_by",
+      "created_on",
+      "updated_on"
+    ],
+    "pk": [
+      "promo_code_id",
+      "amenity_id"
+    ],
+    "fks": 3,
+    "fk_details": [
+      [
+        [
+          "amenity_id"
+        ],
+        "amenity",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "created_by"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "promo_code_id"
+        ],
+        "promo_code",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 0,
+    "indexes": 1,
+    "rows": 8
+  },
+  {
+    "name": "property",
+    "col_count": 9,
+    "columns": [
+      "property_name",
+      "property_type_id",
+      "facility_id",
+      "status",
+      "created_by",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 3,
+    "fk_details": [
+      [
+        [
+          "created_by"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "facility_id"
+        ],
+        "facility",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "property_type_id"
+        ],
+        "property_type",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 1,
+    "indexes": 3,
+    "rows": 4
+  },
+  {
+    "name": "property_chain",
+    "col_count": 10,
+    "columns": [
+      "level_one_id",
+      "level_two_id",
+      "level_three_id",
+      "facility_id",
+      "status",
+      "created_by",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 5,
+    "fk_details": [
+      [
+        [
+          "created_by"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "facility_id"
+        ],
+        "facility",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "level_one_id"
+        ],
+        "property",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "level_three_id"
+        ],
+        "property",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "level_two_id"
+        ],
+        "property",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 1,
+    "indexes": 5,
+    "rows": 3
+  },
+  {
+    "name": "property_type",
+    "col_count": 9,
+    "columns": [
+      "property_type_name",
+      "property_type_image_id",
+      "levels",
+      "facility_id",
+      "status",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 2,
+    "fk_details": [
+      [
+        [
+          "facility_id"
+        ],
+        "facility",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "property_type_image_id"
+        ],
+        "attachment",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 1,
+    "indexes": 2,
+    "rows": 1
+  },
+  {
+    "name": "role",
+    "col_count": 11,
+    "columns": [
+      "facility_id",
+      "name",
+      "description",
+      "role_type",
+      "status",
+      "created_by",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id",
+      "notification_preferences"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 2,
+    "fk_details": [
+      [
+        [
+          "created_by"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "facility_id"
+        ],
+        "facility",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 1,
+    "indexes": 2,
+    "rows": 7
+  },
+  {
+    "name": "role_module",
+    "col_count": 6,
+    "columns": [
+      "module_name",
+      "read_applicable",
+      "write_applicable",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 0,
+    "fk_details": [],
+    "uqs": 0,
+    "indexes": 0,
+    "rows": 18
+  },
+  {
+    "name": "role_module_permission",
+    "col_count": 6,
+    "columns": [
+      "role_id",
+      "module_id",
+      "read_access",
+      "write_access",
+      "created_on",
+      "updated_on"
+    ],
+    "pk": [
+      "role_id",
+      "module_id"
+    ],
+    "fks": 2,
+    "fk_details": [
+      [
+        [
+          "module_id"
+        ],
+        "role_module",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "role_id"
+        ],
+        "role",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 0,
+    "indexes": 1,
+    "rows": 65
+  },
+  {
+    "name": "room_allocation",
+    "col_count": 9,
+    "columns": [
+      "stay_id",
+      "room_id",
+      "package_id",
+      "status",
+      "created_by",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 4,
+    "fk_details": [
+      [
+        [
+          "created_by"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "package_id"
+        ],
+        "package",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "room_id"
+        ],
+        "amenity",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "stay_id"
+        ],
+        "stay",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 1,
+    "indexes": 4,
+    "rows": 5
+  },
+  {
+    "name": "room_service_request",
+    "col_count": 11,
+    "columns": [
+      "guest_room_id",
+      "stay_id",
+      "service_request_status",
+      "assigned_to",
+      "comments",
+      "completed_on",
+      "created_by",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 4,
+    "fk_details": [
+      [
+        [
+          "assigned_to"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "created_by"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "guest_room_id"
+        ],
+        "amenity",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "stay_id"
+        ],
+        "stay",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 1,
+    "indexes": 3,
+    "rows": 3
+  },
+  {
+    "name": "room_service_request_item",
+    "col_count": 7,
+    "columns": [
+      "room_service_request_id",
+      "service_category_item_id",
+      "is_processed",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 2,
+    "fk_details": [
+      [
+        [
+          "room_service_request_id"
+        ],
+        "room_service_request",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "service_category_item_id"
+        ],
+        "service_category_item",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 1,
+    "indexes": 3,
+    "rows": 4
+  },
+  {
+    "name": "room_status_condition_applicability",
+    "col_count": 10,
+    "columns": [
+      "id",
+      "room_status",
+      "amenity_status_id",
+      "condition_id",
+      "is_applicable",
+      "is_active",
+      "blocks_checkin",
+      "blocks_readiness",
+      "created_on",
+      "updated_on"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 2,
+    "fk_details": [
+      [
+        [
+          "amenity_status_id"
+        ],
+        "amenity_status",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "condition_id"
+        ],
+        "amenity_condition",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 1,
+    "indexes": 1,
+    "rows": 42
+  },
+  {
+    "name": "scheduler_job",
+    "col_count": 9,
+    "columns": [
+      "job_key",
+      "job_name",
+      "job_data",
+      "status",
+      "is_dynamic_job",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 0,
+    "fk_details": [],
+    "uqs": 2,
+    "indexes": 2,
+    "rows": 5
+  },
+  {
+    "name": "scheduler_job_execution",
+    "col_count": 9,
+    "columns": [
+      "scheduler_job_id",
+      "job_execution_date",
+      "job_response",
+      "status",
+      "job_run_duration",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 1,
+    "fk_details": [
+      [
+        [
+          "scheduler_job_id"
+        ],
+        "scheduler_job",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 1,
+    "indexes": 3,
+    "rows": 6
+  },
+  {
+    "name": "sensor_operation_stat",
+    "col_count": 6,
+    "columns": [
+      "device_id",
+      "stats_date",
+      "amenity_id",
+      "operation_percentage",
+      "created_on",
+      "updated_on"
+    ],
+    "pk": [
+      "device_id",
+      "stats_date"
+    ],
+    "fks": 2,
+    "fk_details": [
+      [
+        [
+          "amenity_id"
+        ],
+        "amenity",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "device_id"
+        ],
+        "device",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 0,
+    "indexes": 2,
+    "rows": 42
+  },
+  {
+    "name": "service_category",
+    "col_count": 12,
+    "columns": [
+      "service_type",
+      "category_name",
+      "description",
+      "category_icon",
+      "facility_id",
+      "service_category_key",
+      "status",
+      "created_by",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 4,
+    "fk_details": [
+      [
+        [
+          "category_icon"
+        ],
+        "attachment",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "created_by"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "facility_id"
+        ],
+        "facility",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "service_type"
+        ],
+        "service_type",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 1,
+    "indexes": 3,
+    "rows": 13
+  },
+  {
+    "name": "service_category_item",
+    "col_count": 14,
+    "columns": [
+      "item_name",
+      "item_icon",
+      "category_id",
+      "description",
+      "price_per_unit",
+      "amenity_id",
+      "facility_id",
+      "status",
+      "metadata",
+      "created_by",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 5,
+    "fk_details": [
+      [
+        [
+          "amenity_id"
+        ],
+        "amenity",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "category_id"
+        ],
+        "service_category",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "created_by"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "facility_id"
+        ],
+        "facility",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "item_icon"
+        ],
+        "attachment",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 1,
+    "indexes": 5,
+    "rows": 22
+  },
+  {
+    "name": "service_request",
+    "col_count": 25,
+    "columns": [
+      "service_type",
+      "ref_number",
+      "description",
+      "assigned_to",
+      "department_id",
+      "category_id",
+      "promo_code_id",
+      "amenity_id",
+      "stay_id",
+      "app_user_id",
+      "request_source",
+      "facility_id",
+      "net_amount",
+      "total_tax",
+      "total_amount",
+      "expected_date",
+      "completed_on",
+      "status",
+      "status_reason",
+      "created_by",
+      "updated_by",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 12,
+    "fk_details": [
+      [
+        [
+          "amenity_id"
+        ],
+        "amenity",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "app_user_id"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "assigned_to"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "category_id"
+        ],
+        "service_category",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "created_by"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "department_id"
+        ],
+        "department",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "facility_id"
+        ],
+        "facility",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "promo_code_id"
+        ],
+        "promo_code",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "service_type"
+        ],
+        "service_type",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "status"
+        ],
+        "service_status",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "stay_id"
+        ],
+        "stay",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "updated_by"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 2,
+    "indexes": 10,
+    "rows": 7
+  },
+  {
+    "name": "service_request_item",
+    "col_count": 11,
+    "columns": [
+      "service_request_id",
+      "item_id",
+      "category_id",
+      "quantity",
+      "price_per_unit",
+      "assigned_to",
+      "status",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 5,
+    "fk_details": [
+      [
+        [
+          "assigned_to"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "category_id"
+        ],
+        "service_category",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "item_id"
+        ],
+        "service_category_item",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "service_request_id"
+        ],
+        "service_request",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "status"
+        ],
+        "service_status",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 1,
+    "indexes": 4,
+    "rows": 8
+  },
+  {
+    "name": "service_status",
+    "col_count": 4,
+    "columns": [
+      "name",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 0,
+    "fk_details": [],
+    "uqs": 0,
+    "indexes": 0,
+    "rows": 5
+  },
+  {
+    "name": "service_type",
+    "col_count": 4,
+    "columns": [
+      "name",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 0,
+    "fk_details": [],
+    "uqs": 0,
+    "indexes": 0,
+    "rows": 7
+  },
+  {
+    "name": "stay",
+    "col_count": 21,
+    "columns": [
+      "internal_stay_ref_number",
+      "external_stay_ref_number",
+      "booking_user_id",
+      "no_of_rooms",
+      "no_of_guests",
+      "expected_checkin_time",
+      "expected_checkout_time",
+      "actual_checkin_time",
+      "actual_checkout_time",
+      "comments",
+      "gst",
+      "checkout_initiated_by",
+      "document_approval_status",
+      "status",
+      "request_source",
+      "created_by",
+      "modified_by",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 4,
+    "fk_details": [
+      [
+        [
+          "booking_user_id"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "checkout_initiated_by"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "created_by"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "modified_by"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 2,
+    "indexes": 6,
+    "rows": 6
+  },
+  {
+    "name": "stay_package",
+    "col_count": 7,
+    "columns": [
+      "stay_id",
+      "package_id",
+      "status",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 2,
+    "fk_details": [
+      [
+        [
+          "package_id"
+        ],
+        "package",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "stay_id"
+        ],
+        "stay",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 1,
+    "indexes": 3,
+    "rows": 6
+  },
+  {
+    "name": "stay_user",
+    "col_count": 10,
+    "columns": [
+      "app_user_id",
+      "room_id",
+      "stay_id",
+      "is_key_required",
+      "status",
+      "created_by",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 4,
+    "fk_details": [
+      [
+        [
+          "app_user_id"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "created_by"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "room_id"
+        ],
+        "amenity",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "stay_id"
+        ],
+        "stay",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 1,
+    "indexes": 4,
+    "rows": 8
+  },
+  {
+    "name": "sub_package",
+    "col_count": 5,
+    "columns": [
+      "parent_package_id",
+      "sub_package_id",
+      "created_by",
+      "created_on",
+      "updated_on"
+    ],
+    "pk": [
+      "parent_package_id",
+      "sub_package_id"
+    ],
+    "fks": 3,
+    "fk_details": [
+      [
+        [
+          "created_by"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "parent_package_id"
+        ],
+        "package",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "sub_package_id"
+        ],
+        "package",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 0,
+    "indexes": 1,
+    "rows": 7
+  },
+  {
+    "name": "user_device",
+    "col_count": 12,
+    "columns": [
+      "app_user_id",
+      "mobile_model",
+      "mobile_os",
+      "device_token",
+      "is_mobile_token",
+      "user_token_id",
+      "stay_id",
+      "status",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 3,
+    "fk_details": [
+      [
+        [
+          "app_user_id"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "stay_id"
+        ],
+        "stay",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "user_token_id"
+        ],
+        "user_token",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 1,
+    "indexes": 3,
+    "rows": 4
+  },
+  {
+    "name": "user_device_acl",
+    "col_count": 14,
+    "columns": [
+      "app_user_id",
+      "device_type_id",
+      "device_id",
+      "amenity_type_id",
+      "amenity_id",
+      "stay_id",
+      "start_time",
+      "end_time",
+      "status_id",
+      "created_by",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 7,
+    "fk_details": [
+      [
+        [
+          "amenity_id"
+        ],
+        "amenity",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "amenity_type_id"
+        ],
+        "amenity_type",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "app_user_id"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "created_by"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "device_id"
+        ],
+        "device",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "device_type_id"
+        ],
+        "device_type",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "stay_id"
+        ],
+        "stay",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 1,
+    "indexes": 8,
+    "rows": 5
+  },
+  {
+    "name": "user_document",
+    "col_count": 9,
+    "columns": [
+      "app_user_id",
+      "attachment_id",
+      "stay_id",
+      "document_approval_status",
+      "status",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 3,
+    "fk_details": [
+      [
+        [
+          "app_user_id"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "attachment_id"
+        ],
+        "attachment",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "stay_id"
+        ],
+        "stay",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 1,
+    "indexes": 3,
+    "rows": 3
+  },
+  {
+    "name": "user_role",
+    "col_count": 6,
+    "columns": [
+      "facility_id",
+      "app_user_id",
+      "role_id",
+      "created_by",
+      "created_on",
+      "updated_on"
+    ],
+    "pk": [
+      "facility_id",
+      "app_user_id",
+      "role_id"
+    ],
+    "fks": 4,
+    "fk_details": [
+      [
+        [
+          "app_user_id"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "created_by"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "facility_id"
+        ],
+        "facility",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "role_id"
+        ],
+        "role",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 0,
+    "indexes": 2,
+    "rows": 13
+  },
+  {
+    "name": "user_token",
+    "col_count": 8,
+    "columns": [
+      "token",
+      "app_user_id",
+      "is_expired",
+      "expired_on",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 1,
+    "fk_details": [
+      [
+        [
+          "app_user_id"
+        ],
+        "app_user",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 2,
+    "indexes": 3,
+    "rows": 3
+  },
+  {
+    "name": "value_alert",
+    "col_count": 16,
+    "columns": [
+      "device_id",
+      "device_type_id",
+      "device_name",
+      "amenity_id",
+      "limit_config_id",
+      "device_status_id",
+      "timestamp",
+      "limit_value",
+      "limit_type",
+      "description",
+      "status",
+      "facility_id",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 5,
+    "fk_details": [
+      [
+        [
+          "amenity_id"
+        ],
+        "amenity",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "device_id"
+        ],
+        "device",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "device_type_id"
+        ],
+        "device_type",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "facility_id"
+        ],
+        "facility",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "limit_config_id"
+        ],
+        "value_alert_limit_config",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 1,
+    "indexes": 7,
+    "rows": 3
+  },
+  {
+    "name": "value_alert_limit_config",
+    "col_count": 16,
+    "columns": [
+      "parameter",
+      "device_name",
+      "device_id",
+      "limit_check",
+      "is_percentage_value",
+      "nominal",
+      "limit_low_percentage",
+      "limit_high_percentage",
+      "limit_low_value",
+      "limit_high_value",
+      "remarks",
+      "facility_id",
+      "legacy_id",
+      "created_on",
+      "updated_on",
+      "id"
+    ],
+    "pk": [
+      "id"
+    ],
+    "fks": 2,
+    "fk_details": [
+      [
+        [
+          "device_id"
+        ],
+        "device",
+        [
+          "id"
+        ]
+      ],
+      [
+        [
+          "facility_id"
+        ],
+        "facility",
+        [
+          "id"
+        ]
+      ]
+    ],
+    "uqs": 2,
+    "indexes": 4,
+    "rows": 4
+  }
+]
