@@ -1,0 +1,178 @@
+
+HMS v3 Architecture Summary
+OSS (PostgreSQL) + BSS (MySQL) Integration
+Architecture, Ownership, Integration Rules & v3 Improvements
+
+Executive / Team Briefing Document
+
+1. Executive Summary
+Core principle: Two databases, one platform. OSS (PostgreSQL) owns the building and its devices, while BSS (MySQL) owns the hotel business. HMS is the business layer/module sitting on top of FleetExplorer, not a separate parallel platform.
+2. Architecture at a Glance
+Layer 3 — HMS Dashboard / Staff UI
+Reads required business and platform information through APIs.
+OSS — PostgreSQL 16 + TimescaleDB
+Owns the physical building, users, permissions, devices, telemetry, MQTT and access events.
+BSS — MySQL 8.0
+Owns hotel business operations such as rooms, bookings, stays, guests, revenue, services, channels, loyalty and marketing.
+The OSS and BSS systems communicate through application/API-level references. The database boundary is intentionally preserved.
+3. OSS — Everything the Building Knows
+OSS is the platform-side system built on PostgreSQL 16 with TimescaleDB. It owns physical and platform information.
+Group
+Key Tables
+Purpose
+Organisation
+oss_organisation, oss_facility
+Company and hotel/building identity
+Space
+oss_property, oss_property_chain, oss_amenity
+Physical building → floor → room layout
+People
+oss_app_user, oss_role, oss_department
+Platform users, including staff and guests
+Permissions
+platform_modules, platform_permissions, platform_role_permissions
+Role capabilities scoped to HMS or FleetExplorer
+Devices
+oss_device, oss_device_type, oss_device_command, oss_device_alert
+IoT devices, commands and alerts
+Telemetry
+oss_device_stat
+Timestamped sensor readings with units
+MQTT
+oss_mqtt_broker, oss_mqtt_topic
+Device communication configuration
+Access
+oss_access_key, oss_lock_activity_log
+Door lock events and credentials
+Key rule: If it involves a physical sensor, device, or hardware event, OSS owns it.
+4. BSS — Everything the Hotel Business Knows
+BSS is the hotel business system built on MySQL 8.0. It owns business transactions, guest relationships and operational workflows.
+Group
+Key Tables
+Purpose
+Property
+bss_brands, bss_properties, bss_floors, bss_room_types, bss_rooms
+Hotel structure and room inventory
+Rates
+bss_rate_plans, bss_rate_plan_room_types, bss_seasonal_rates, bss_cancellation_policies
+Room pricing and seasonal overrides
+Guests
+bss_guests, bss_guest_pii, bss_corporate_accounts
+Guest identity and protected PII
+Bookings
+bss_reservations, bss_reservation_rooms, bss_reservation_guests, bss_group_blocks, bss_availability_calendar
+Reservations and availability
+Stays
+bss_stays, bss_digital_keys, bss_housekeeping_tasks, bss_automation_events
+Current guest stays and operational automation
+Revenue
+bss_folios, bss_folio_charges, bss_payments, bss_invoices, bss_revenue_categories
+Charges, payments and invoices
+Services
+bss_orders, bss_service_requests, bss_events, bss_maintenance_work_orders
+Guest services, events and repairs
+Channels
+bss_ota_channels, bss_property_channel_configs, bss_channel_inbound_reservations
+External booking channels
+Loyalty
+bss_loyalty_programs, bss_loyalty_tiers, bss_loyalty_accounts, bss_loyalty_transactions
+Points, tiers and rewards
+Marketing
+bss_promotions, bss_promo_redemptions, bss_campaigns, bss_campaign_enrollments
+Promotions and campaigns
+Sustainability
+measurement_units, emission_factors, carbon_calculations, cm_points_ledger
+Energy, carbon and sustainability calculations
+Key rule: If it involves money, bookings, guest relationships, or a business report, BSS owns it.
+5. OSS ↔ BSS Integration Bridge
+There are no database foreign keys crossing the OSS/BSS boundary. Cross-system relationships are maintained through reference columns and enforced by the application/API layer.
+Bridge Column
+In Table
+Points To
+Direction
+oss_facility_id
+bss_properties
+oss_facility.id
+BSS → OSS
+oss_asset_id
+bss_rooms
+oss_amenity.id
+BSS → OSS
+oss_device_id
+bss_room_device_registry
+oss_device.id
+BSS → OSS
+oss_alert_id
+bss_maintenance_work_orders
+oss_device_alert.id
+BSS → OSS
+bss_stay_id
+oss_stay
+bss_stays.stay_id
+OSS → BSS
+Simple analogy: OSS and BSS are like two departments sharing an employee ID badge. One system issues/owns the identity; the other references the identifier. The application layer enforces the relationship.
+6. Five Critical Architecture Rules
+Rule 1 — One user identity, one platform
+oss_app_user is the single user record for hotel staff, guests and admins. bss_users is deprecated and will be removed after migration. is_hms_staff = 1 identifies HMS staff.
+Rule 2 — OSS owns telemetry, BSS never duplicates it
+All sensor readings remain in oss_device_stat as a TimescaleDB hypertable. BSS keeps only a health snapshot in bss_room_device_registry.last_known_health_status.
+Rule 3 — BSS owns the stay, OSS provides IoT context
+bss_stays is the authoritative check-in record with planned_check_in, planned_check_out, actual_check_in and actual_check_out. oss_stay is a lightweight IoT context record.
+Rule 4 — RBAC is module-aware
+Every oss_role carries a module_id. HMS roles cannot automatically access FleetExplorer pages. platform_modules provides module-level separation.
+Rule 5 — Device alerts are clickable links, not data copies
+HMS dashboard alert counts should link to the corresponding FleetExplorer alert. bss_room_conditions.oss_device_alert_id acts as the reference.
+7. Key v3 Improvements Compared with v2
+Area
+v3 Change
+Business/Technical Benefit
+Audit and PII logs
+bss_audit_trail and bss_pii_access_log now point to oss_app_user
+Removes dependency on deprecated bss_users.
+Housekeeping assignment
+bss_housekeeping_tasks.assigned_to is varchar(36)
+Allows assignment to any OSS user instead of only legacy BSS users.
+Device health snapshot
+bss_room_device_registry stores health snapshot columns
+HMS can show active/inactive device counts without querying PostgreSQL for every dashboard request.
+Automation auditability
+bss_automation_events added
+Checkout → housekeeping automation is now traceable.
+Hotel events
+bss_events added
+Supports banquet/conference bookings with cancel-only lifecycle.
+Marketing
+bss_campaigns and bss_campaign_enrollments restored
+Enables promotions/campaigns end-to-end.
+Promotion rules
+bss_promotions enhanced with 8 fields
+Supports eligibility, stackability and per-guest limits.
+Seasonal pricing
+bss_seasonal_rates added
+Supports peak/Christmas rate overrides.
+Room status history
+bss_room_status_history added
+Provides historical reason/context for room status.
+Holiday calendar
+bss_public_holidays added
+Supports hotel holiday calendar and future API ingestion.
+Group blocks
+bss_group_blocks added
+Supports corporate group room blocks and cutoff dates.
+Operational views
+v_occupancy_dashboard, v_smart_rooms_summary, v_overdue_checkouts added
+Each view addresses a specific dashboard/operations requirement.
+8. Recommended Team / Kumar Briefing Flow
+Stage
+Message
+Opening — 30 seconds
+The v3 schema enforces the core principle: OSS is the platform and HMS is a module on top of it. Users, devices and telemetry remain in FleetExplorer/PostgreSQL; MySQL stores hotel-specific business data.
+Boundary — 1 minute
+Cross-system references are application-level references, not database foreign keys. HMS should use APIs when it needs device/platform information and should not directly read PostgreSQL.
+Fixes — 2 minutes
+Highlight the v2 fixes: deprecated bss_users references were replaced by oss_app_user; housekeeping assignment now supports the unified user; device health snapshots provide a reliable dashboard source.
+Close — 1 minute
+Emphasize bss_automation_events for auditable checkout-to-housekeeping automation and bss_events for banquet/conference bookings with cancel-only lifecycle.
+9. Final Takeaway
+HMS v3 is designed around clear ownership: OSS owns the platform, physical building, identity, permissions, devices and telemetry; BSS owns the hotel business, including rooms, bookings, stays, guests, revenue and services. The API/application layer is the controlled bridge between the two systems. This separation prevents duplicate ownership while allowing HMS to deliver a unified business dashboard.
+Source basis: Prepared directly from the provided HMS/OSS/BSS architecture summary and its v3 briefing guidance. fileciteturn0file0L1-L8
