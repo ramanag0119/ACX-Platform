@@ -45,6 +45,7 @@ from app.models import (
     AmenityStatus,
     AppUser,
     Facility,
+    FacilityUser,
     ImportJob,
     Package,
     RoomAllocation,
@@ -979,8 +980,9 @@ def process_bulk_reservations_csv(
         import_file_name=filename[:100],
         created_by=actor_id,
     )
+    job_id = job.id
     db.add(job)
-    db.flush()
+    db.commit()
 
     total_records = 0
     success_count = 0
@@ -1091,11 +1093,17 @@ def process_bulk_reservations_csv(
                     email=guest_email.lower(),
                     phone_number=phone_str or None,
                     is_staff=0,
-                    facility_id=facility_id,
                     created_by=actor_id,
                 )
                 db.add(user)
                 db.flush()
+                db.add(
+                    FacilityUser(
+                        facility_id=facility_id,
+                        app_user_id=user.id,
+                        created_by=actor_id,
+                    )
+                )
 
             stay = create_stay(
                 db,
@@ -1106,7 +1114,6 @@ def process_bulk_reservations_csv(
                     "no_of_guests": no_of_guests,
                     "comments": comments_str or None,
                     "room_ids": [room_match.id],
-                    "facility_id": facility_id,
                 },
                 actor_id=actor_id,
             )
@@ -1115,20 +1122,22 @@ def process_bulk_reservations_csv(
         except Exception as err:
             errors.append({"row": row_idx, "error": str(err)})
 
-    job.total_records = total_records
-    job.success_count = success_count
-    job.error_count = len(errors)
-    job.completed_on = datetime.now(UTC)
-    if success_count > 0:
-        job.import_status = "success"
-    else:
-        job.import_status = "error" if total_records > 0 else "success"
+    job = db.get(ImportJob, job_id)
+    if job is not None:
+        job.total_records = total_records
+        job.success_count = success_count
+        job.error_count = len(errors)
+        job.completed_on = datetime.now(UTC)
+        if success_count > 0:
+            job.import_status = "success"
+        else:
+            job.import_status = "error" if total_records > 0 else "success"
 
-    if errors:
-        job.error_file_name = f"{len(errors)} row(s) failed validation"
+        if errors:
+            job.error_file_name = f"{len(errors)} row(s) failed validation"
 
-    db.commit()
-    db.refresh(job)
+        db.commit()
+        db.refresh(job)
 
     return {
         "import_job_id": job.id,
