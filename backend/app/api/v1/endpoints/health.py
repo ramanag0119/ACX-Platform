@@ -69,3 +69,32 @@ def database_health(db: DbSession) -> DatabaseHealthResponse:
         alembic_revision=revision,
         latency_ms=latency_ms,
     )
+
+
+@router.get("/bss-db", summary="BSS MySQL database readiness")
+def bss_database_health() -> dict:
+    """Probe MySQL 8.0 (BSS commercial database) and report connectivity."""
+    from app.db.session import get_bss_engine
+    started = perf_counter()
+    try:
+        bss_engine = get_bss_engine()
+        with bss_engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+            latency_ms = round((perf_counter() - started) * 1000, 2)
+            version = conn.execute(text("SELECT version()")).scalar()
+            db_name = conn.execute(text("SELECT DATABASE()")).scalar()
+            return {
+                "status": "ok",
+                "database": db_name,
+                "engine": "MySQL 8.0",
+                "server_version": str(version),
+                "latency_ms": latency_ms,
+            }
+    except Exception as exc:
+        return {
+            "status": "pending_provision",
+            "engine": "MySQL 8.0",
+            "detail": f"BSS database is not yet provisioned: {exc}",
+            "latency_ms": round((perf_counter() - started) * 1000, 2),
+        }
+
