@@ -16,8 +16,8 @@ export default defineConfig(({ mode }) => {
 
   return {
     server: {
-      host: "::",
-      port: 8080,
+      host: env.VITE_HOST || "localhost",
+      port: Number(env.PORT || env.VITE_PORT || 8081),
       // Lets the app call the relative /api/v1 default without CORS.
       proxy: {
         "/api/v1": { target: apiTarget, changeOrigin: true },
