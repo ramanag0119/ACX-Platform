@@ -69,6 +69,18 @@ def upgrade() -> None:
             sa.UniqueConstraint("room_status", "condition_id", name="uq_room_status_condition"),
         )
 
+    # Seed amenity_status if not present (required by foreign key)
+    op.execute(sa.text("""
+        INSERT INTO amenity_status (id, amenity_status_name)
+        VALUES 
+            (0, 'Available'),
+            (1, 'Occupied'),
+            (2, 'Unavailable'),
+            (3, 'Allotted')
+        ON CONFLICT (id) DO UPDATE SET
+            amenity_status_name = EXCLUDED.amenity_status_name;
+    """))
+
     # Seed room_status_condition_applicability
     op.execute(sa.text("""
         INSERT INTO room_status_condition_applicability 
