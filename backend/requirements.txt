@@ -19,3 +19,7 @@ bcrypt==5.0.0
 # --- Reporting exports ---
 openpyxl==3.1.5  # .xlsx writer for GET /reports/{key}/export.xlsx
 python-multipart>=0.0.32
+
+# --- BSS Database (MySQL 8.0) ---
+pymysql==1.2.3
+
