@@ -41,9 +41,11 @@ class Settings(BaseSettings):
     # own default. Comma-separated so it can be overridden from .env.
     CORS_ORIGINS: str = (
         "http://localhost:8080,http://127.0.0.1:8080,"
+        "http://localhost:8081,http://127.0.0.1:8081,"
         "http://localhost:5173,http://127.0.0.1:5173"
     )
 
+    # --- PostgreSQL (OSS Domain) ---
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = "postgres"
     POSTGRES_HOST: str = "localhost"
@@ -52,6 +54,14 @@ class Settings(BaseSettings):
     POSTGRES_SCHEMA: str = "public"
 
     DATABASE_URL: str | None = None
+
+    # --- MySQL 8.0 (BSS Domain) ---
+    MYSQL_USER: str = "root"
+    MYSQL_PASSWORD: str = "root"
+    MYSQL_HOST: str = "127.0.0.1"
+    MYSQL_PORT: int = 3307
+    MYSQL_DB: str = "hms_bss"
+    BSS_DATABASE_URL: str | None = None
 
     @property
     def cors_origins(self) -> list[str]:
@@ -66,6 +76,22 @@ class Settings(BaseSettings):
             f"postgresql+psycopg2://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
             f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
         )
+
+    @property
+    def oss_sqlalchemy_url(self) -> str:
+        """Alias for the primary PostgreSQL (OSS) database connection URL."""
+        return self.sqlalchemy_url
+
+    @property
+    def bss_sqlalchemy_url(self) -> str:
+        """Connection URL for the MySQL 8.0 (BSS) commercial database."""
+        if self.BSS_DATABASE_URL:
+            return self.BSS_DATABASE_URL
+        return (
+            f"mysql+pymysql://{self.MYSQL_USER}:{self.MYSQL_PASSWORD}"
+            f"@{self.MYSQL_HOST}:{self.MYSQL_PORT}/{self.MYSQL_DB}?charset=utf8mb4"
+        )
+
 
 
 @lru_cache
