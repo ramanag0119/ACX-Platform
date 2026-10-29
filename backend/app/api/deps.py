@@ -18,12 +18,17 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from app.core.security import TokenError, decode_access_token
-from app.db.session import get_db
+from app.db.session import get_db, get_bss_db, get_oss_db
 from app.services import auth as auth_service
 from app.services.auth import AuthenticatedUser
 
-#: Request-scoped SQLAlchemy session. Use as `db: DbSession` in any endpoint.
+#: Request-scoped SQLAlchemy session for PostgreSQL (OSS platform data).
 DbSession = Annotated[Session, Depends(get_db)]
+OssDbSession = Annotated[Session, Depends(get_oss_db)]
+
+#: Request-scoped SQLAlchemy session for MySQL 8.0 (BSS commercial data).
+BssDbSession = Annotated[Session, Depends(get_bss_db)]
+
 
 # auto_error=False so a missing header produces OUR 401 envelope rather than
 # Starlette's bare 403.
