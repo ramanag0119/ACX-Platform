@@ -527,3 +527,15 @@ export const useRemoveJobOrder = () =>
   useApiMutation((id: string) => writes.removeJobOrder(id), INVALIDATE.jobOrders, {
     success: "Job order removed",
   });
+
+export const useUpdateKeySettings = (opts?: Options<Parameters<typeof writes.updateKeySettings>[0], unknown>) =>
+  useApiMutation(writes.updateKeySettings, ["key-settings", "facilities"], {
+    success: "Default key manager settings saved",
+    ...opts,
+  });
+
+export const useResetKeySettings = (opts?: Options<void, unknown>) =>
+  useApiMutation(writes.resetKeySettings, ["key-settings", "facilities"], {
+    success: "Default key configuration reset successfully",
+    ...opts,
+  });
