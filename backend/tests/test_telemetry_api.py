@@ -16,6 +16,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import text
 
+from app.db.verify_schema import SCHEMA_NAME
 from app.core.config import settings
 from app.db.session import SessionLocal
 from app.main import app
@@ -74,7 +75,7 @@ def test_no_telemetry_or_tariff_table_exists(db):
     tables = set(
         db.execute(
             text("SELECT table_name FROM information_schema.tables "
-                 "WHERE table_schema = 'public'")
+                 f"WHERE table_schema = '{SCHEMA_NAME}'")
         ).scalars()
     )
     for absent in ("telemetry", "sensor_reading", "meter_reading", "meter",
@@ -95,17 +96,17 @@ def test_device_stat_value_column_is_text(db):
     """Which is why no numeric aggregation is offered over device_stat."""
     data_type = db.execute(
         text("SELECT data_type FROM information_schema.columns "
-             "WHERE table_schema='public' AND table_name='device_stat' "
+             f"WHERE table_schema='{SCHEMA_NAME}' AND table_name='device_stat' "
              "AND column_name='device_param_value'")
     ).scalar_one()
-    assert data_type == "character varying"
+    assert data_type in {"character varying", "varchar"}  # PostgreSQL, MySQL
 
 
 def test_energy_stat_has_composite_pk_and_no_unit_or_device_fk(db, client):
     cols = set(
         db.execute(
             text("SELECT column_name FROM information_schema.columns "
-                 "WHERE table_schema='public' AND table_name='energy_stat'")
+                 f"WHERE table_schema='{SCHEMA_NAME}' AND table_name='energy_stat'")
         ).scalars()
     )
     assert "unit" not in cols and "device_id" not in cols
@@ -347,12 +348,14 @@ def test_energy_hour_is_not_a_timestamp_and_the_derivation_is_correct(client, db
         assert row["hour"] > 200000, "hours since 2000, not a year or a unix time"
         expected = hour_to_timestamp(row["hour"])
         assert datetime.fromisoformat(row["hour_timestamp"]) == expected
-    # Cross-check the epoch against PostgreSQL itself.
-    hour, pg_ts = db.execute(
-        text("""SELECT hour, timestamp '2000-01-01 00:00:00+00' + (hour || ' hours')::interval
-                FROM energy_stat ORDER BY hour LIMIT 1""")
-    ).one()
-    assert hour_to_timestamp(hour).replace(tzinfo=None) == pg_ts
+    # Cross-check the epoch against the database itself.
+    sql = (
+        "SELECT hour, TIMESTAMPADD(HOUR, hour, TIMESTAMP '2000-01-01 00:00:00') "
+        if db.bind.dialect.name == "mysql"
+        else "SELECT hour, timestamp '2000-01-01 00:00:00+00' + (hour || ' hours')::interval "
+    )
+    hour, db_ts = db.execute(text(sql + "FROM energy_stat ORDER BY hour LIMIT 1")).one()
+    assert hour_to_timestamp(hour).replace(tzinfo=None) == db_ts
 
 
 def test_energy_unit_is_always_null(client):

@@ -4,13 +4,20 @@ uvicorn[standard]==0.34.0
 sqlalchemy==2.0.52
 alembic==1.19.1
 psycopg2-binary==2.9.11
+# MySQL 8 driver; cryptography is needed for caching_sha2_password auth.
+PyMySQL==1.2.3
+cryptography==50.0.2
 pydantic==2.12.5
 pydantic-settings==2.7.1
 python-dotenv==1.0.1
 
 # --- Testing ---
 pytest==9.1.1
-httpx==0.28.1  # required by fastapi.testclient
+
+# --- HTTP client ---
+# Used by fastapi.testclient AND at runtime by app/services/oss_client.py to
+# reach the OSS microservice when OSS_ENABLED.
+httpx==0.28.1
 
 # --- Authentication (Phase 2.4) ---
 python-jose[cryptography]==3.5.0

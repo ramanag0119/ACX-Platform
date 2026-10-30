@@ -15,6 +15,16 @@ tests/test_auth_api.py.
 
 from __future__ import annotations
 
+import os
+
+# The suites exercise HMS's own read routers, which `app.api.v1.router` mounts
+# only when OSS dispatch is off -- and it decides once, at import. A developer
+# .env with OSS_ENABLED=true would otherwise swap them for the proxy and fail
+# every read with a 503 when no OSS service is running. The proxy has its own
+# tests (test_oss_dispatch.py) that build their app directly. An OSS_ENABLED
+# set in the real environment still wins.
+os.environ.setdefault("OSS_ENABLED", "false")
+
 import pytest
 from sqlalchemy import text
 

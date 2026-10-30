@@ -9,10 +9,10 @@ check-in, check-out and cancellation are all states of one `stay` row.
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, Numeric, SmallInteger, String, Text
-from sqlalchemy.dialects.postgresql import UUID as PGUUID
+from sqlalchemy import ForeignKey, Integer, Numeric, SmallInteger, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.db.types import GUID, UTCDateTime
 from app.db.base import HMSBase, UUIDPk
 from app.models import enums
 from app.models.facility import attachment_fk, user_fk
@@ -34,7 +34,7 @@ class Stay(HMSBase, UUIDPk):
         String(100), nullable=True
     )
     booking_user_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=False, index=True
+        GUID(), user_fk(ondelete="RESTRICT"), nullable=False, index=True
     )
     no_of_rooms: Mapped[int | None] = mapped_column(
         SmallInteger, nullable=True, server_default="0"
@@ -43,21 +43,21 @@ class Stay(HMSBase, UUIDPk):
         SmallInteger, nullable=False, server_default="0"
     )
     expected_checkin_time: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, index=True
+        UTCDateTime(), nullable=False, index=True
     )
     expected_checkout_time: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, index=True
+        UTCDateTime(), nullable=False, index=True
     )
     actual_checkin_time: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
+        UTCDateTime(), nullable=True
     )
     actual_checkout_time: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
+        UTCDateTime(), nullable=True
     )
     comments: Mapped[str | None] = mapped_column(Text, nullable=True)
     gst: Mapped[str | None] = mapped_column(String(20), nullable=True)
     checkout_initiated_by: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=True
+        GUID(), user_fk(ondelete="RESTRICT"), nullable=True
     )
     document_approval_status: Mapped[str] = mapped_column(
         enums.document_approval_status, nullable=False, server_default="pending"
@@ -69,11 +69,11 @@ class Stay(HMSBase, UUIDPk):
         enums.request_source, nullable=True
     )
     created_by: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=False
+        GUID(), user_fk(ondelete="RESTRICT"), nullable=False
     )
     # IKANOS column name `modified_by` is kept verbatim (it is not `updated_by`).
     modified_by: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=False
+        GUID(), user_fk(ondelete="RESTRICT"), nullable=False
     )
 
 
@@ -84,16 +84,16 @@ class StayUser(HMSBase, UUIDPk):
     __tablename__ = "stay_user"
 
     app_user_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="CASCADE"), nullable=False, index=True
+        GUID(), user_fk(ondelete="CASCADE"), nullable=False, index=True
     )
     room_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("amenity.id", ondelete="CASCADE"),
         nullable=True,
         index=True,
     )
     stay_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("stay.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
@@ -101,7 +101,7 @@ class StayUser(HMSBase, UUIDPk):
     is_key_required: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
     status: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
     created_by: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=False
+        GUID(), user_fk(ondelete="RESTRICT"), nullable=False
     )
 
 
@@ -111,13 +111,13 @@ class StayPackage(HMSBase, UUIDPk):
     __tablename__ = "stay_package"
 
     stay_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("stay.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
     package_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("package.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
@@ -134,26 +134,26 @@ class RoomAllocation(HMSBase, UUIDPk):
     __tablename__ = "room_allocation"
 
     stay_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("stay.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
     room_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("amenity.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
     package_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("package.id", ondelete="CASCADE"),
         nullable=True,
         index=True,
     )
     status: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
     created_by: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=False
+        GUID(), user_fk(ondelete="RESTRICT"), nullable=False
     )
 
 
@@ -167,13 +167,13 @@ class UserDocument(HMSBase, UUIDPk):
     __tablename__ = "user_document"
 
     app_user_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="CASCADE"), nullable=False, index=True
+        GUID(), user_fk(ondelete="CASCADE"), nullable=False, index=True
     )
     attachment_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), attachment_fk(ondelete="CASCADE"), nullable=False
+        GUID(), attachment_fk(ondelete="CASCADE"), nullable=False
     )
     stay_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("stay.id", ondelete="RESTRICT"),
         nullable=True,
         index=True,
@@ -200,18 +200,18 @@ class Invoice(HMSBase, UUIDPk):
 
     invoice_number: Mapped[str] = mapped_column(String(20), nullable=False, unique=True)
     invoice_date: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
+        UTCDateTime(), nullable=False
     )
     invoice_due_date: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
+        UTCDateTime(), nullable=True
     )
     billing_user_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=False
+        GUID(), user_fk(ondelete="RESTRICT"), nullable=False
     )
     billing_user_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     billing_address: Mapped[str | None] = mapped_column(String(500), nullable=True)
     facility_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("facility.id", ondelete="CASCADE"),
         nullable=True,
         index=True,
@@ -219,10 +219,10 @@ class Invoice(HMSBase, UUIDPk):
     facility_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     facility_address: Mapped[str | None] = mapped_column(String(500), nullable=True)
     facility_image_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), attachment_fk(ondelete="RESTRICT"), nullable=True
+        GUID(), attachment_fk(ondelete="RESTRICT"), nullable=True
     )
     stay_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("stay.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
@@ -231,7 +231,7 @@ class Invoice(HMSBase, UUIDPk):
     total_tax: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
     total_amount: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
     created_by: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=False
+        GUID(), user_fk(ondelete="RESTRICT"), nullable=False
     )
 
 
@@ -252,8 +252,8 @@ class ImportJob(HMSBase, UUIDPk):
     import_file_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     error_file_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     completed_on: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
+        UTCDateTime(), nullable=True
     )
     created_by: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=False
+        GUID(), user_fk(ondelete="RESTRICT"), nullable=False
     )

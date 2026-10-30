@@ -4,6 +4,7 @@ from functools import lru_cache
 from typing import ClassVar
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlalchemy.engine import URL
 
 
 class Settings(BaseSettings):
@@ -44,6 +45,17 @@ class Settings(BaseSettings):
         "http://localhost:5173,http://127.0.0.1:5173"
     )
 
+    # --- BSS database ---
+    # "mysql" (the HMS database of record) or "postgresql" (the original
+    # Phase 1.7 target, still supported by the same models and migrations).
+    DB_ENGINE: str = "mysql"
+
+    MYSQL_USER: str = "inspironics_app"
+    MYSQL_PASSWORD: str = ""
+    MYSQL_HOST: str = "localhost"
+    MYSQL_PORT: int = 3306
+    MYSQL_DB: str = "inspironics_app"
+
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = "postgres"
     POSTGRES_HOST: str = "localhost"
@@ -53,18 +65,69 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str | None = None
 
+    # --- OSS (device/operations) microservice dispatch ---
+    # When OSS_ENABLED is true, the OSS-surfaced routes forward to the OSS
+    # microservice instead of reading hms_db locally, and rooms get their
+    # devices from `room_device_map`. Default false so HMS runs
+    # exactly as before until the OSS service is wired and reachable.
+    OSS_ENABLED: bool = False
+    OSS_SERVICE_URL: str = "http://127.0.0.1:8001"
+    # Per-domain OSS service URLs, for when each domain runs as its own
+    # process (ecosystem.config.js sets these). Unset -> OSS_SERVICE_URL.
+    OSS_DEVICE_SERVICE_URL: str | None = None
+    OSS_TELEMETRY_SERVICE_URL: str | None = None
+    OSS_ALERT_SERVICE_URL: str | None = None
+    OSS_ENERGY_SERVICE_URL: str | None = None
+    OSS_TIMEOUT_SECONDS: float = 5.0
+    # Optional inter-service token. Unset by default (trusted-LAN PoC). When set,
+    # it is sent as `X-OSS-Service-Token` and the OSS service must be configured
+    # with the same value. Never logged.
+    OSS_SERVICE_TOKEN: str | None = None
+
     @property
     def cors_origins(self) -> list[str]:
         """CORS_ORIGINS parsed into the list CORSMiddleware expects."""
         return [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
 
+    def oss_url_for(self, domain: str | None) -> str:
+        """Base URL of the OSS service for `domain`, falling back to OSS_SERVICE_URL."""
+        url = getattr(self, f"OSS_{domain.upper()}_SERVICE_URL", None) if domain else None
+        return url or self.OSS_SERVICE_URL
+
     @property
-    def sqlalchemy_url(self) -> str:
+    def is_mysql(self) -> bool:
+        return self.DB_ENGINE == "mysql"
+
+    @property
+    def db_schema(self) -> str | None:
+        """The schema tables live in. MySQL has none beyond the database itself;
+        on PostgreSQL `public` is the default and is left unqualified."""
+        if self.is_mysql or self.POSTGRES_SCHEMA == "public":
+            return None
+        return self.POSTGRES_SCHEMA
+
+    @property
+    def sqlalchemy_url(self) -> str | URL:
         if self.DATABASE_URL:
             return self.DATABASE_URL
-        return (
-            f"postgresql+psycopg2://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
-            f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+        # URL.create escapes the password, so `@`, `!`, `*`, `#` are safe.
+        if self.is_mysql:
+            return URL.create(
+                "mysql+pymysql",
+                username=self.MYSQL_USER,
+                password=self.MYSQL_PASSWORD,
+                host=self.MYSQL_HOST,
+                port=self.MYSQL_PORT,
+                database=self.MYSQL_DB,
+                query={"charset": "utf8mb4"},
+            )
+        return URL.create(
+            "postgresql+psycopg2",
+            username=self.POSTGRES_USER,
+            password=self.POSTGRES_PASSWORD,
+            host=self.POSTGRES_HOST,
+            port=self.POSTGRES_PORT,
+            database=self.POSTGRES_DB,
         )
 
 

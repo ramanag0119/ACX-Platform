@@ -13,9 +13,10 @@ still passes on a bare foundation.
 from __future__ import annotations
 
 import pytest
-from sqlalchemy import func, select, text
+from sqlalchemy import Enum, and_, func, inspect, select, text
 
 from app.db.session import SessionLocal
+from app.db.verify_schema import SCHEMA_NAME
 from app.models import (
     AccessKey,
     Activity,
@@ -24,6 +25,7 @@ from app.models import (
     AmenityStatus,
     AppUser,
     APPROVED_TABLES,
+    Base,
     Device,
     DeviceAlert,
     DeviceHealthStat,
@@ -77,11 +79,19 @@ def require_seeded(session):
 # ---------------------------------------------------------------------------
 
 
+#: Tables the demo seed deliberately leaves empty. `room_device_map` holds real
+#: OSS device ids, assigned by an operator; seeding one would invent a device.
+UNSEEDED_TABLES = {"room_device_map"}
+
+
 def test_every_approved_table_has_rows(session):
     empty = [
         t
         for t in APPROVED_TABLES
-        if session.execute(text(f'SELECT count(*) FROM public."{t}"')).scalar_one() == 0
+        if t not in UNSEEDED_TABLES
+        and session.execute(
+            select(func.count()).select_from(Base.metadata.tables[t])
+        ).scalar_one() == 0
     ]
     assert not empty, f"tables left unseeded: {empty}"
 
@@ -123,48 +133,49 @@ def test_no_duplicate_natural_keys(session, model, column):
 
 
 def test_no_orphaned_foreign_keys(session):
-    """Every FK value resolves. Re-validating the constraints proves the seed
-    ran with them fully enabled -- nothing was bypassed."""
-    rows = session.execute(
-        text(
-            """
-            SELECT conrelid::regclass::text AS child, conname
-            FROM pg_constraint
-            WHERE contype = 'f'
-              AND connamespace = 'public'::regnamespace
-            ORDER BY 1, 2
-            """
-        )
-    ).all()
-    assert len(rows) == 240
-    for child, conname in rows:
-        # Raises if any row violates the constraint.
-        session.execute(text(f'ALTER TABLE {child} VALIDATE CONSTRAINT "{conname}"'))
+    """Every FK value resolves: for each live foreign key, no child row points
+    at a parent that does not exist. Checked by join on every database, so it
+    proves the data, not just that the constraint was declared."""
+    insp = inspect(session.bind)
+    fks = [
+        (table, fk)
+        for table in Base.metadata.tables
+        for fk in insp.get_foreign_keys(table)
+    ]
+    assert len(fks) == 242
+    for table, fk in fks:
+        child = Base.metadata.tables[table]
+        parent = Base.metadata.tables[fk["referred_table"]].alias("parent")
+        on = and_(*(
+            parent.c[p] == child.c[c]
+            for c, p in zip(fk["constrained_columns"], fk["referred_columns"])
+        ))
+        orphans = session.execute(
+            select(func.count())
+            .select_from(child.outerjoin(parent, on))
+            .where(and_(*(child.c[c].is_not(None) for c in fk["constrained_columns"])))
+            .where(parent.c[fk["referred_columns"][0]].is_(None))
+        ).scalar_one()
+        assert orphans == 0, f"{table}.{fk['constrained_columns']}: {orphans} orphans"
 
 
 def test_enum_columns_hold_only_declared_labels(session):
     """A value outside the enum cannot physically exist, but this also proves
     the seed did not silently normalise capitalisation."""
     by_name = {e.name: list(e.enums) for e in ALL_ENUMS}
-    cols = session.execute(
-        text(
-            """
-            SELECT c.table_name, c.column_name, c.udt_name
-            FROM information_schema.columns c
-            JOIN pg_type t ON t.typname = c.udt_name
-            WHERE c.table_schema = 'public' AND t.typtype = 'e'
-            ORDER BY 1, 2
-            """
-        )
-    ).all()
+    cols = [
+        (table, col)
+        for table in Base.metadata.tables.values()
+        for col in table.columns
+        if isinstance(col.type, Enum)
+    ]
     assert cols, "expected enum-typed columns"
-    for table, column, udt in cols:
+    for table, col in cols:
         used = session.execute(
-            text(f'SELECT DISTINCT "{column}"::text FROM public."{table}" '
-                 f'WHERE "{column}" IS NOT NULL')
+            select(col).distinct().where(col.is_not(None))
         ).scalars().all()
-        unknown = set(used) - set(by_name[udt])
-        assert not unknown, f"{table}.{column} holds undeclared values: {unknown}"
+        unknown = set(used) - set(by_name[col.type.name])
+        assert not unknown, f"{table.name}.{col.name} holds undeclared values: {unknown}"
 
 
 def test_reference_tables_match_the_ikanos_dump(session):
@@ -182,9 +193,8 @@ def test_reference_tables_match_the_ikanos_dump(session):
         ("occasion_type", "occasion_type", ref.OCCASION_TYPES),
     ]
     for table, name_col, expected in checks:
-        rows = session.execute(
-            text(f'SELECT id, "{name_col}" FROM public."{table}" ORDER BY id')
-        ).all()
+        t = Base.metadata.tables[table]
+        rows = session.execute(select(t.c.id, t.c[name_col]).order_by(t.c.id)).all()
         assert [(r[0], r[1]) for r in rows] == [(i, n) for i, n in expected], table
 
 
@@ -437,7 +447,7 @@ def test_no_price_was_smuggled_onto_package(session):
     OPEN DECISION #10 is still unresolved."""
     cols = session.execute(
         text("SELECT column_name FROM information_schema.columns "
-             "WHERE table_schema='public' AND table_name='package'")
+             f"WHERE table_schema='{SCHEMA_NAME}' AND table_name='package'")
     ).scalars().all()
     assert "price" not in cols
     assert not any("price" in c or "rate" in c or "tariff" in c for c in cols)
@@ -447,7 +457,7 @@ def test_only_service_items_carry_a_price(session):
     """`service_category_item.price_per_unit` is the only price in the schema."""
     priced = session.execute(
         text("SELECT table_name, column_name FROM information_schema.columns "
-             "WHERE table_schema='public' AND column_name LIKE '%%price%%'")
+             f"WHERE table_schema='{SCHEMA_NAME}' AND column_name LIKE '%%price%%'")
     ).all()
     assert {(t, c) for t, c in priced} == {
         ("service_category_item", "price_per_unit"),
@@ -463,7 +473,7 @@ def test_only_service_items_carry_a_price(session):
 def test_invoice_has_no_payment_status(session):
     cols = session.execute(
         text("SELECT column_name FROM information_schema.columns "
-             "WHERE table_schema='public' AND table_name='invoice'")
+             f"WHERE table_schema='{SCHEMA_NAME}' AND table_name='invoice'")
     ).scalars().all()
     assert "status" not in cols
     # Amounts are still internally consistent: total = net + tax.

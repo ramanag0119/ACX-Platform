@@ -331,33 +331,39 @@ def caleido_at_work(
 
     The business rule is unchanged and is NOT reinvented here: these are daily
     snapshots, so the ring shows the MOST RECENT snapshot inside the selected
-    window, never an average or a sum across days. `DISTINCT ON (metric_type)`
-    with a descending date order is that rule expressed once, in SQL, so the
-    database returns one row per metric instead of a page to sift through.
+    window, never an average or a sum across days. ROW_NUMBER() per metric_type
+    over a descending date order is that rule expressed once, in SQL (on MySQL
+    and PostgreSQL alike), so the database returns one row per metric instead
+    of a page to sift through.
 
     dp_1 is the numerator ("online", "resolved", ...) and dp_2 the denominator,
     exactly as the table stores them. The percentage is computed from those two
     stored values and nothing else -- no constant, no fallback, no default.
     """
-    stmt = (
-        select(
-            DailyDualDataPoint.metric_type,
-            DailyDualDataPoint.metric_date,
-            DailyDualDataPoint.dp_1,
-            DailyDualDataPoint.dp_2,
+    ranked = select(
+        DailyDualDataPoint.metric_type,
+        DailyDualDataPoint.metric_date,
+        DailyDualDataPoint.dp_1,
+        DailyDualDataPoint.dp_2,
+        func.row_number()
+        .over(
+            partition_by=DailyDualDataPoint.metric_type,
+            order_by=DailyDualDataPoint.metric_date.desc(),
         )
-        .distinct(DailyDualDataPoint.metric_type)
-        .order_by(
-            DailyDualDataPoint.metric_type,
-            DailyDualDataPoint.metric_date.desc(),
-        )
+        .label("rn"),
     )
     if facility_id:
-        stmt = stmt.where(DailyDualDataPoint.facility_id == facility_id)
+        ranked = ranked.where(DailyDualDataPoint.facility_id == facility_id)
     if date_from:
-        stmt = stmt.where(DailyDualDataPoint.metric_date >= date_from)
+        ranked = ranked.where(DailyDualDataPoint.metric_date >= date_from)
     if date_to:
-        stmt = stmt.where(DailyDualDataPoint.metric_date <= date_to)
+        ranked = ranked.where(DailyDualDataPoint.metric_date <= date_to)
+    latest = ranked.subquery()
+    stmt = (
+        select(latest.c.metric_type, latest.c.metric_date, latest.c.dp_1, latest.c.dp_2)
+        .where(latest.c.rn == 1)
+        .order_by(latest.c.metric_type)
+    )
 
     metrics = []
     for row in db.execute(stmt).mappings().all():

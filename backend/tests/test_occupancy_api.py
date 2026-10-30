@@ -12,8 +12,9 @@ import uuid
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import text
+from sqlalchemy import Boolean, String, text
 
+from app.db.verify_schema import SCHEMA_NAME
 from app.core.config import settings
 from app.db.session import SessionLocal
 from app.main import app
@@ -85,7 +86,7 @@ def test_no_booking_guest_or_occupancy_table_exists(db):
     tables = set(
         db.execute(
             text("SELECT table_name FROM information_schema.tables "
-                 "WHERE table_schema = 'public'")
+                 f"WHERE table_schema = '{SCHEMA_NAME}'")
         ).scalars()
     )
     for absent in ("booking", "bookings", "reservation", "guest", "guests",
@@ -107,7 +108,7 @@ def test_stay_has_no_facility_column(db):
     cols = set(
         db.execute(
             text("SELECT column_name FROM information_schema.columns "
-                 "WHERE table_schema='public' AND table_name='stay'")
+                 f"WHERE table_schema='{SCHEMA_NAME}' AND table_name='stay'")
         ).scalars()
     )
     assert "facility_id" not in cols
@@ -278,7 +279,7 @@ def test_stay_documents_expose_only_a_pointer(client, db, active_stay_id):
     cols = set(
         db.execute(
             text("SELECT column_name FROM information_schema.columns "
-                 "WHERE table_schema='public' AND table_name='user_document'")
+                 f"WHERE table_schema='{SCHEMA_NAME}' AND table_name='user_document'")
         ).scalars()
     )
     assert "document_type" not in cols and "document_number" not in cols
@@ -429,7 +430,7 @@ def test_invoice_has_no_payment_status(client, db):
     cols = set(
         db.execute(
             text("SELECT column_name FROM information_schema.columns "
-                 "WHERE table_schema='public' AND table_name='invoice'")
+                 f"WHERE table_schema='{SCHEMA_NAME}' AND table_name='invoice'")
         ).scalars()
     )
     assert "status" not in cols
@@ -672,6 +673,7 @@ def test_occupancy_and_bookings_are_separately_gated(db):
                     JOIN role_module_permission p ON p.role_id = r.id
                     JOIN role_module m ON m.id = p.module_id
                     WHERE r.name = 'Housekeeping'""")
+            .columns(module_name=String, read_access=Boolean)
         ).all()
     )
     assert housekeeping.get("occupancy") is True

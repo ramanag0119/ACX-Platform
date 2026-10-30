@@ -25,6 +25,7 @@ import {
   CalendarRange,
   Info,
   UserCheck,
+  Cpu,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/core/contexts/AuthContext";
@@ -357,6 +358,7 @@ export const AppSidebar = ({ collapsed }: AppSidebarProps) => {
         { to: "/config/employees", label: "Employees", icon: User },
         { to: "/config/job-order", label: "Job Order", icon: Target },
         { to: "/config/limit-alert", label: "Limit Config Alert", icon: ShieldAlert },
+        { to: "/config/room-devices", label: "Room Devices", icon: Cpu },
       ],
     },
     // Manage groups the management screens: Holidays, Events, and Tickets.

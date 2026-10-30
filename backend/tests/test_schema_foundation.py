@@ -2,7 +2,7 @@
 
 Run:  python -m pytest tests -q
 
-These assert that the live PostgreSQL schema is exactly the approved 92-table
+These assert that the live MySQL / PostgreSQL schema is exactly the approved 93-table
 blueprint (``backend/docs/FINAL_HMS_DATABASE_BLUEPRINT.md``). The models are
 the executable expression of that blueprint, so most checks compare the live
 database against ``Base.metadata`` -- which also proves the migration and the
@@ -12,14 +12,16 @@ models cannot drift apart.
 from __future__ import annotations
 
 import pytest
-from sqlalchemy import inspect, text
+from sqlalchemy import func, inspect, select, text
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 
+from app.core.config import settings
 from app.db.session import engine
 from app.db.verify_schema import (
     RETIRED_PHASE1_ENUMS,
     RETIRED_PHASE1_TABLES,
     SCHEMA,
+    SCHEMA_NAME,
     detect_cycles,
     live_enums,
 )
@@ -32,7 +34,11 @@ from app.models import (
 )
 from app.models.enums import ALL_ENUMS
 
-EXPECTED_TABLE_COUNT = 92
+EXPECTED_TABLE_COUNT = 93
+
+#: Native PostgreSQL features (GIN/BRIN, TIMESTAMPTZ, named enums, identity)
+#: have MySQL equivalents that are checked differently; see each test.
+MYSQL = engine.dialect.name == "mysql"
 
 
 @pytest.fixture(scope="module")
@@ -57,7 +63,10 @@ def tables(insp):
 
 
 def test_database_is_hms_db(conn):
-    assert conn.execute(text("SELECT current_database()")).scalar() == "hms_db"
+    if MYSQL:
+        assert conn.execute(text("SELECT database()")).scalar() == settings.MYSQL_DB
+    else:
+        assert conn.execute(text("SELECT current_database()")).scalar() == "hms_db"
 
 
 def test_blueprint_declares_92_tables():
@@ -142,12 +151,23 @@ def test_t3_high_volume_tables_use_bigint_identity(insp, conn, table_name):
         c for c in insp.get_columns(table_name, schema=SCHEMA) if c["name"] == "id"
     )
     assert str(col["type"]) == "BIGINT", str(col["type"])
+    if MYSQL:
+        # MySQL's identity column is AUTO_INCREMENT; there is no ALWAYS mode.
+        extra = conn.execute(
+            text(
+                "SELECT extra FROM information_schema.columns "
+                "WHERE table_schema = :s AND table_name = :t AND column_name = 'id'"
+            ),
+            {"s": SCHEMA_NAME, "t": table_name},
+        ).scalar_one()
+        assert "auto_increment" in extra, f"{table_name}.id is not AUTO_INCREMENT"
+        return
     identity = conn.execute(
         text(
             "SELECT is_identity, identity_generation FROM information_schema.columns "
             "WHERE table_schema = :s AND table_name = :t AND column_name = 'id'"
         ),
-        {"s": SCHEMA, "t": table_name},
+        {"s": SCHEMA_NAME, "t": table_name},
     ).one()
     assert identity.is_identity == "YES", f"{table_name}.id is not an identity column"
     assert identity.identity_generation == "ALWAYS"
@@ -156,14 +176,15 @@ def test_t3_high_volume_tables_use_bigint_identity(insp, conn, table_name):
 def test_t2_entity_tables_use_uuid_pk(insp):
     tiered = LOOKUP_TABLES | HIGH_VOLUME_TABLES | COMPOSITE_PK_TABLES
     entity_tables = sorted(set(APPROVED_TABLES) - tiered)
-    # 92 - 16 lookup - 12 high-volume - 14 composite
-    assert len(entity_tables) == 50
+    # 93 - 16 lookup - 12 high-volume - 14 composite
+    assert len(entity_tables) == 51
     wrong = {}
     for t in entity_tables:
         col = next(
             c for c in insp.get_columns(t, schema=SCHEMA) if c["name"] == "id"
         )
-        if str(col["type"]) != "UUID":
+        # GUID: native UUID on PostgreSQL, CHAR(36) on MySQL.
+        if str(col["type"]) != ("CHAR(36)" if MYSQL else "UUID"):
             wrong[t] = str(col["type"])
     assert not wrong, f"entity tables without a UUID pk: {wrong}"
 
@@ -401,7 +422,11 @@ def test_documented_unique_keys(insp, table_name, columns):
 def test_indexes_match_the_models(insp):
     mismatched = {}
     for name, table in Base.metadata.tables.items():
-        expected = {ix.name for ix in table.indexes}
+        # An index declared `.ddl_if(dialect=...)` exists only on that dialect.
+        expected = {
+            ix.name for ix in table.indexes
+            if ix._ddl_if is None or ix._ddl_if.dialect in (None, engine.dialect.name)
+        }
         actual = {ix["name"] for ix in insp.get_indexes(name, schema=SCHEMA)}
         missing = expected - actual
         if missing:
@@ -409,6 +434,7 @@ def test_indexes_match_the_models(insp):
     assert not mismatched, f"indexes missing from the database: {mismatched}"
 
 
+@pytest.mark.skipif(MYSQL, reason="GIN is PostgreSQL only; MySQL cannot index JSON directly")
 def test_gin_indexes_exist_on_merged_metadata_columns(insp):
     """The four *_metadata EAV tables were merged into JSONB columns
     (blueprint §3.3); each needs a GIN index to keep key lookup cheap."""
@@ -422,13 +448,21 @@ def test_gin_indexes_exist_on_merged_metadata_columns(insp):
         assert index in names, f"{table} is missing {index}"
 
 
-def test_brin_indexes_exist_on_high_volume_timestamps(conn):
+def test_brin_indexes_exist_on_high_volume_timestamps(insp, conn):
+    if MYSQL:
+        # No BRIN on MySQL: the same indexes exist as ordinary B-trees.
+        for table, index in (
+            ("device_stat", "ix_device_stat_timestamp_brin"),
+            ("device_health_stat", "ix_device_health_stat_created_on_brin"),
+        ):
+            assert index in {ix["name"] for ix in insp.get_indexes(table, schema=SCHEMA)}
+        return
     rows = conn.execute(
         text(
             "SELECT indexname FROM pg_indexes "
             "WHERE schemaname = :s AND indexdef LIKE '%USING brin%'"
         ),
-        {"s": SCHEMA},
+        {"s": SCHEMA_NAME},
     ).scalars().all()
     assert "ix_device_stat_timestamp_brin" in rows
     assert "ix_device_health_stat_created_on_brin" in rows
@@ -505,31 +539,54 @@ def test_column_sets_match_the_models(insp):
 
 
 def test_column_types_match_the_models(insp):
-    """Compare the compiled PostgreSQL type of every column.
+    """Compare the compiled type of every column.
 
-    Both sides are compiled with the postgresql dialect: `str()` on a
+    Both sides are compiled with the live database's dialect: `str()` on a
     reflected type loses `timezone=True` and renders an enum as VARCHAR(n),
-    which would make this check meaningless.
+    which would make this check meaningless. MySQL reports two types under
+    their canonical names (BOOL is TINYINT(1), NUMERIC is DECIMAL).
     """
-    from sqlalchemy.dialects import postgresql
+    dialect = engine.dialect
+    canonical = {"BOOL": "TINYINT(1)", "NUMERIC(": "DECIMAL("} if MYSQL else {}
 
-    dialect = postgresql.dialect()
+    def norm(compiled: str) -> str:
+        compiled = compiled.upper().replace(" ", "")
+        for alias, name in canonical.items():
+            compiled = compiled.replace(alias, name)
+        return compiled
+
     mismatched = {}
     for name, table in Base.metadata.tables.items():
         actual = {c["name"]: c["type"] for c in insp.get_columns(name, schema=SCHEMA)}
         for col in table.columns:
             if col.name not in actual:
                 continue
-            want = col.type.compile(dialect).upper()
-            got = actual[col.name].compile(dialect).upper()
-            if want.replace(" ", "") != got.replace(" ", ""):
+            want = norm(col.type.compile(dialect))
+            got = norm(actual[col.name].compile(dialect))
+            if want != got:
                 mismatched[f"{name}.{col.name}"] = (want, got)
     assert not mismatched, f"type mismatch (model, db): {mismatched}"
 
 
 def test_timestamps_are_timezone_aware(insp):
     """Every TIMESTAMP column must be TIMESTAMPTZ -- a naive timestamp would
-    make checkout scheduling wrong across DST."""
+    make checkout scheduling wrong across DST. MySQL's DATETIME has no zone, so
+    there every one must be the UTC-normalised DATETIME(6) of `UTCDateTime`."""
+    if MYSQL:
+        from app.db.types import UTCDateTime
+
+        wrong = [
+            f"{name}.{col.name}"
+            for name, table in Base.metadata.tables.items()
+            for col in table.columns
+            if col.type.__class__.__name__ == "DateTime" or (
+                isinstance(col.type, UTCDateTime)
+                and next(c for c in insp.get_columns(name, schema=SCHEMA)
+                         if c["name"] == col.name)["type"].fsp != 6
+            )
+        ]
+        assert not wrong, f"timestamps not stored as UTC DATETIME(6): {wrong}"
+        return
     naive = []
     for name in Base.metadata.tables:
         for c in insp.get_columns(name, schema=SCHEMA):
@@ -614,8 +671,8 @@ def test_uninvented_columns_are_absent(insp, table_name, column, reason):
 def test_schema_suite_is_independent_of_seeded_data(conn):
     """Row counts may be zero or non-zero; the schema is identical either way."""
     total = sum(
-        conn.execute(text(f'SELECT count(*) FROM public."{name}"')).scalar()
-        for name in sorted(Base.metadata.tables)
+        conn.execute(select(func.count()).select_from(table)).scalar()
+        for _, table in sorted(Base.metadata.tables.items())
     )
     assert total >= 0  # always true; the real assertion is that nothing above cares
 

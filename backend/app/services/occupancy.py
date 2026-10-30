@@ -17,6 +17,7 @@ from datetime import date, datetime, time, timedelta
 from sqlalchemy import Select, and_, case, func, or_, select
 from sqlalchemy.orm import Session, aliased
 
+from app.core.config import settings
 from app.models import (
     Amenity,
     AmenityCondition,
@@ -32,6 +33,22 @@ from app.models import (
     Stay,
     StayUser,
 )
+from app.services import room_devices
+
+
+def _resolve_device_count(db: Session, amenity_id: uuid.UUID) -> int | None:
+    """Devices installed in a room.
+
+    With OSS dispatch on, devices live in OSS, which has no rooms; the room's
+    devices are the ones mapped to it in `room_device_map` (hms_db), so the
+    count needs no call to OSS. With OSS off, it is the local count from
+    hms_db, exactly as before.
+    """
+    if settings.OSS_ENABLED:
+        return room_devices.count_in_room(db, amenity_id)
+    return db.execute(
+        select(func.count()).select_from(Device).where(Device.amenity_id == amenity_id)
+    ).scalar_one()
 
 BuildingProp = aliased(Property, name="building_property")
 FloorProp = aliased(Property, name="floor_property")
@@ -351,9 +368,7 @@ def get_occupancy(db: Session, amenity_id: uuid.UUID):
         ]
 
     enriched["occupants"] = occupants
-    enriched["device_count"] = db.execute(
-        select(func.count()).select_from(Device).where(Device.amenity_id == amenity_id)
-    ).scalar_one()
+    enriched["device_count"] = _resolve_device_count(db, amenity_id)
     return enriched
 
 
@@ -391,15 +406,19 @@ def get_occupancy_summary(
     room_ids_subquery = room_base.scalar_subquery()
     status_expr = _authoritative_occupancy_status_expr()
 
-    # Query room counts in one aggregation
+    # Query room counts in one aggregation. COUNT(CASE WHEN .. THEN 1 END)
+    # counts only matching rows; `count(*) FILTER (...)` is PostgreSQL only.
+    def count_where(condition):
+        return func.count(case((condition, 1)))
+
     agg_stmt = (
         select(
             func.count().label("total"),
-            func.count().filter(status_expr == "Occupied").label("occupied"),
-            func.count().filter(status_expr == "Available").label("available"),
-            func.count().filter(status_expr == "Allotted").label("allotted"),
-            func.count().filter(status_expr == "Unavailable").label("unavailable"),
-            func.count().filter(status_expr.is_(None)).label("unknown"),
+            count_where(status_expr == "Occupied").label("occupied"),
+            count_where(status_expr == "Available").label("available"),
+            count_where(status_expr == "Allotted").label("allotted"),
+            count_where(status_expr == "Unavailable").label("unavailable"),
+            count_where(status_expr.is_(None)).label("unknown"),
         )
         .select_from(Amenity)
         .join(AmenityType, AmenityType.id == Amenity.amenity_type_id)

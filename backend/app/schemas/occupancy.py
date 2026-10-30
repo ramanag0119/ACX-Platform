@@ -121,7 +121,14 @@ class OccupancyDetail(OccupancyRead):
     occupants: list[OccupantRef] = Field(
         description="stay_user rows for the current in-house stay"
     )
-    device_count: int = Field(description="Devices installed in this room")
+    device_count: int | None = Field(
+        default=None,
+        description=(
+            "Devices installed in this room. NULL means UNKNOWN -- the OSS "
+            "device service was unreachable -- and is distinct from 0, which "
+            "means the room genuinely has no devices."
+        ),
+    )
 
 
 class OccupancyStatusSummary(BaseModel):

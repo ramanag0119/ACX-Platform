@@ -353,6 +353,8 @@ export const useOccasionTypes = () =>
   useApiQuery(["holidays", "types"], () => writeApi.listOccasionTypes());
 export const useLimitConfigs = (params?: QueryParams) =>
   useApiQuery(["limit-configs", params], () => writeApi.listLimitConfigs(params as never));
+export const useRoomDevices = (params?: QueryParams) =>
+  useApiQuery(["room-devices", params], () => writeApi.listRoomDevices(params));
 
 /** Services Planning. One endpoint per tab, filtered by `request_type`. */
 export const useMaintenanceRequests = (params?: QueryParams) =>
