@@ -1,4 +1,4 @@
-"""OSS -> contract adapters for alerts, incidents and value alerts.
+"""OSS -> contract adapters for alerts and alert types.
 
 Verified OSS reality (see docs/DESIGN_AND_READINESS.md):
   * `insp_device_alert` exists (device event stream) -> alerts + alert-types.
@@ -7,19 +7,15 @@ Verified OSS reality (see docs/DESIGN_AND_READINESS.md):
     detail-by-id is unsupported.
   * There is NO `device_incident` table. OSS has `insp_service_request`
     (support tickets) + status/issue/priority lookups, which is a DIFFERENT
-    concept. Mapping incident<-service_request is a business-semantics decision
-    (and would have to null the alert linkage HMS incidents carry), so incidents
-    are returned as explicit UNSUPPORTED pending confirmation -- not fabricated.
+    concept. Incidents are therefore HMS (BSS) data and not served here.
   * There is NO value-alert (threshold-breach) table. `insp_limit_config` is
-    threshold CONFIG only, not breach events -> value-alerts UNSUPPORTED.
+    threshold CONFIG only, not breach events -> value alerts are HMS data too.
 
 All queries are read-only. `insp_device_alert` is currently empty (0 rows), so
 the supported list endpoints return empty pages, which is correct (not an error).
 """
 
 from __future__ import annotations
-
-import uuid
 
 from sqlalchemy import distinct, func, select
 from sqlalchemy.orm import Session
@@ -121,28 +117,3 @@ def get_alert(db: Session, alert_id: int):
 def list_alert_incidents(db: Session, alert_id: int):
     # OSS has no device_incident table and no alert<->incident linkage.
     raise AdapterNotMapped("alert incidents (no device_incident linkage in OSS)")
-
-
-# --------------------------------------------------------------------------
-# incidents / value-alerts (no OSS source -> explicit unsupported)
-# --------------------------------------------------------------------------
-
-def list_incidents(db: Session, *, page: int, page_size: int, **filters):
-    raise AdapterNotMapped(
-        "incidents (no device_incident table; service_request is a distinct "
-        "ticket concept pending business confirmation)"
-    )
-
-
-def get_incident(db: Session, incident_id: uuid.UUID):
-    raise AdapterNotMapped("incidents (no device_incident table in OSS)")
-
-
-def list_value_alerts(db: Session, *, page: int, page_size: int, **filters):
-    raise AdapterNotMapped(
-        "value-alerts (no value-alert/breach table; insp_limit_config is threshold config only)"
-    )
-
-
-def get_value_alert(db: Session, value_alert_id: uuid.UUID):
-    raise AdapterNotMapped("value-alerts (no value-alert table in OSS)")

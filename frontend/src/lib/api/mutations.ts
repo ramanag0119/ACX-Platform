@@ -27,6 +27,9 @@ const INVALIDATE = {
   stays: ["stays", "occupancy", "rooms", "invoices", "daily-data-points", "count"],
   occupancy: ["occupancy", "rooms", "amenity-conditions", "amenity-statuses"],
   limitConfigs: ["limit-configs", "value-alerts"],
+  // A device's room is filled in from the mapping on every /devices read, and
+  // occupancy counts a room's devices from it.
+  roomDevices: ["room-devices", "devices", "occupancy"],
   facility: ["facilities", "rooms", "buildings", "floors", "properties"],
   catalogue: ["amenity-types", "packages", "features", "rooms"],
   offers: ["offers"],
@@ -344,6 +347,17 @@ export const useUpdateLimitConfig = () =>
     INVALIDATE.limitConfigs,
     { success: "Limit configuration updated" },
   );
+
+export const useAssignRoomDevice = (opts?: Options<writes.RoomDeviceWrite, unknown>) =>
+  useApiMutation(writes.assignRoomDevice, INVALIDATE.roomDevices, {
+    success: "Device installed in room",
+    ...opts,
+  });
+
+export const useUnassignRoomDevice = () =>
+  useApiMutation(writes.unassignRoomDevice, INVALIDATE.roomDevices, {
+    success: "Device removed from room",
+  });
 
 // ---------------------------------------------------------------------------
 // Facility, rooms, catalogue

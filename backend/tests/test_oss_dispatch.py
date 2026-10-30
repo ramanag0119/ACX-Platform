@@ -16,6 +16,7 @@ from fastapi.testclient import TestClient
 from app.api.deps import get_current_user
 from app.api.v1.endpoints import oss_proxy
 from app.core import oss_routes
+from app.core.config import settings
 from app.db.session import get_db
 from app.services import occupancy as occ
 from app.services import oss_client
@@ -35,9 +36,41 @@ def test_oss_read_paths_match_the_prefixes():
     assert not oss_routes.is_oss_read_path("/api/v1/daily-data-points")
 
 
+def test_incidents_and_value_alerts_stay_in_hms():
+    # OSS has no table for either; HMS owns them with the writes that drive them.
+    for path in ("/api/v1/incidents", "/api/v1/incidents/abc", "/api/v1/value-alerts"):
+        assert not oss_routes.is_oss_read_path(path)
+    proxied = {r.prefix for r in oss_proxy.oss_proxy_routers}
+    assert not proxied & {"/incidents", "/value-alerts"}
+
+
+def test_every_oss_prefix_has_a_proxy_router():
+    # The registry and the dispatch layer must not drift apart.
+    proxied = {r.prefix for r in oss_proxy.oss_proxy_routers}
+    assert proxied == set(oss_routes.OSS_READ_PREFIXES)
+
+
 def test_oss_subpath_strips_the_v1_prefix():
     assert oss_routes.oss_subpath("/api/v1/devices/1") == "/devices/1"
     assert oss_routes.oss_subpath("/devices") == "/devices"
+
+
+def test_oss_domain_for_picks_the_serving_microservice():
+    assert oss_routes.oss_domain_for("/api/v1/devices/abc/health") == "device"
+    assert oss_routes.oss_domain_for("/device-stats") == "telemetry"
+    assert oss_routes.oss_domain_for("/alerts/1") == "alert"
+    assert oss_routes.oss_domain_for("/incidents/1") is None
+    assert oss_routes.oss_domain_for("/energy-stats") == "energy"
+    assert oss_routes.oss_domain_for("/api/v1/occupancy") is None
+
+
+def test_oss_url_for_falls_back_to_the_single_service(monkeypatch):
+    monkeypatch.setattr(oss_client.settings, "OSS_SERVICE_URL", "http://oss:8001")
+    monkeypatch.setattr(oss_client.settings, "OSS_ALERT_SERVICE_URL", "http://oss:8003")
+    monkeypatch.setattr(oss_client.settings, "OSS_ENERGY_SERVICE_URL", None)
+    assert oss_client.settings.oss_url_for("alert") == "http://oss:8003"
+    assert oss_client.settings.oss_url_for("energy") == "http://oss:8001"
+    assert oss_client.settings.oss_url_for(None) == "http://oss:8001"
 
 
 # --------------------------------------------------------------------------
@@ -188,3 +221,45 @@ def test_device_detail_gets_its_room(monkeypatch):
     body = client.get(f"/devices/{MAPPED}").json()
     assert sent["subpath"] == f"/devices/{MAPPED}"
     assert body["amenity_name"] == "211"
+
+
+# --------------------------------------------------------------------------
+# /health/oss: which OSS domain services are reachable
+# --------------------------------------------------------------------------
+
+def _health_client() -> TestClient:
+    from app.api.v1.endpoints import health
+    app = FastAPI()
+    app.include_router(health.router)
+    return TestClient(app)
+
+
+def test_oss_health_is_disabled_when_dispatch_is_off(monkeypatch):
+    monkeypatch.setattr(settings, "OSS_ENABLED", False)
+    r = _health_client().get("/health/oss")
+    assert r.status_code == 200
+    assert r.json() == {"enabled": False, "status": "disabled", "domains": []}
+
+
+def test_oss_health_reports_each_domain(monkeypatch):
+    monkeypatch.setattr(settings, "OSS_ENABLED", True)
+    monkeypatch.setattr(oss_client, "probe", lambda d: (f"http://oss/{d}", 1.5))
+    r = _health_client().get("/health/oss")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["status"] == "ok"
+    assert [d["domain"] for d in body["domains"]] == list(oss_routes.OSS_DOMAIN_PREFIXES)
+
+
+def test_oss_health_is_503_and_names_the_unreachable_domain(monkeypatch):
+    monkeypatch.setattr(settings, "OSS_ENABLED", True)
+    monkeypatch.setattr(
+        oss_client, "probe",
+        lambda d: (f"http://oss/{d}", None if d == "telemetry" else 1.5),
+    )
+    r = _health_client().get("/health/oss")
+    assert r.status_code == 503
+    body = r.json()
+    assert body["status"] == "degraded"
+    down = [d["domain"] for d in body["domains"] if d["status"] == "unreachable"]
+    assert down == ["telemetry"]

@@ -72,6 +72,12 @@ class Settings(BaseSettings):
     # exactly as before until the OSS service is wired and reachable.
     OSS_ENABLED: bool = False
     OSS_SERVICE_URL: str = "http://127.0.0.1:8001"
+    # Per-domain OSS service URLs, for when each domain runs as its own
+    # process (ecosystem.config.js sets these). Unset -> OSS_SERVICE_URL.
+    OSS_DEVICE_SERVICE_URL: str | None = None
+    OSS_TELEMETRY_SERVICE_URL: str | None = None
+    OSS_ALERT_SERVICE_URL: str | None = None
+    OSS_ENERGY_SERVICE_URL: str | None = None
     OSS_TIMEOUT_SECONDS: float = 5.0
     # Optional inter-service token. Unset by default (trusted-LAN PoC). When set,
     # it is sent as `X-OSS-Service-Token` and the OSS service must be configured
@@ -82,6 +88,11 @@ class Settings(BaseSettings):
     def cors_origins(self) -> list[str]:
         """CORS_ORIGINS parsed into the list CORSMiddleware expects."""
         return [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
+
+    def oss_url_for(self, domain: str | None) -> str:
+        """Base URL of the OSS service for `domain`, falling back to OSS_SERVICE_URL."""
+        url = getattr(self, f"OSS_{domain.upper()}_SERVICE_URL", None) if domain else None
+        return url or self.OSS_SERVICE_URL
 
     @property
     def is_mysql(self) -> bool:

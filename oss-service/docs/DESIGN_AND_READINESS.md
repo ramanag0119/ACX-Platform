@@ -28,13 +28,16 @@ an optional shared **service token** is already wired and off by default:
    with compensating controls and explicit sign-off.
 
 **Hard rule:** trusted-LAN-no-auth must not leave the PoC environment without a
-formally approved equivalent control from the list above.
+formally approved equivalent control from the list above. This is enforced: with
+any `APP_ENV` other than `development`, the service refuses to start unless
+`OSS_SERVICE_TOKEN` is set.
 
 ## 2. Write-path design (authorization, validation, audit) — built after read review
 
-Writes (`POST/PATCH /devices`, `/devices/{id}/commission|decommission|maintenance`,
-`PATCH /incidents/{id}`, `/limit-configs`) currently stay in HMS and are **not**
-proxied yet. When implemented they follow this contract:
+Writes (`POST/PATCH /devices`, `/devices/{id}/commission|decommission|maintenance`)
+currently stay in HMS and are **not** proxied yet. `PATCH /incidents/{id}` and
+`/limit-configs` are not on this path at all: incidents and limit configs are
+HMS (BSS) data with no OSS table, so they are written in HMS for good. When implemented they follow this contract:
 
 - **Authorization:** unchanged HMS gate `require_permission("caleido_network",
   "write")` runs in HMS before any forward. OSS performs no authorization of its

@@ -1,11 +1,11 @@
-"""OSS alert, incident and value-alert read routes.
+"""OSS alert read routes.
 
 Paths mirror the HMS contract (minus `/api/v1`). No gate here (HMS authorises).
+Incidents and value alerts are HMS (BSS) data -- OSS has no table for either --
+so they are not served here.
 """
 
 from __future__ import annotations
-
-import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
@@ -17,11 +17,7 @@ from app.schemas.alert import (
     AlertRead,
     AlertTypeDetail,
     AlertTypeRead,
-    IncidentDetail,
-    IncidentRead,
     IncidentRef,
-    ValueAlertDetail,
-    ValueAlertRead,
 )
 from app.schemas.common import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, Page, paginate
 from app.schemas.health import ErrorResponse
@@ -34,8 +30,6 @@ SizeParam = Query(DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE, description="Rows p
 
 alert_types_router = APIRouter(prefix="/alert-types", tags=["alerts"], responses=OSS_RESPONSES)
 alerts_router = APIRouter(prefix="/alerts", tags=["alerts"], responses=OSS_RESPONSES)
-incidents_router = APIRouter(prefix="/incidents", tags=["incidents"], responses=OSS_RESPONSES)
-value_alerts_router = APIRouter(prefix="/value-alerts", tags=["alerts"], responses=OSS_RESPONSES)
 
 
 def _filters(request: Request) -> dict:
@@ -73,25 +67,3 @@ def get_alert(alert_id: int, db: Session = Depends(get_db)):
 @alerts_router.get("/{alert_id}/incidents", response_model=list[IncidentRef], responses=NOT_FOUND)
 def list_alert_incidents(alert_id: int, db: Session = Depends(get_db)):
     return svc.list_alert_incidents(db, alert_id)
-
-
-@incidents_router.get("", response_model=Page[IncidentRead])
-def list_incidents(request: Request, db: Session = Depends(get_db), page: int = PageParam, page_size: int = SizeParam):
-    rows, total = svc.list_incidents(db, page=page, page_size=page_size, **_filters(request))
-    return paginate(rows, page=page, page_size=page_size, total=total)
-
-
-@incidents_router.get("/{incident_id}", response_model=IncidentDetail, responses=NOT_FOUND)
-def get_incident(incident_id: uuid.UUID, db: Session = Depends(get_db)):
-    return svc.get_incident(db, incident_id)
-
-
-@value_alerts_router.get("", response_model=Page[ValueAlertRead])
-def list_value_alerts(request: Request, db: Session = Depends(get_db), page: int = PageParam, page_size: int = SizeParam):
-    rows, total = svc.list_value_alerts(db, page=page, page_size=page_size, **_filters(request))
-    return paginate(rows, page=page, page_size=page_size, total=total)
-
-
-@value_alerts_router.get("/{value_alert_id}", response_model=ValueAlertDetail, responses=NOT_FOUND)
-def get_value_alert(value_alert_id: uuid.UUID, db: Session = Depends(get_db)):
-    return svc.get_value_alert(db, value_alert_id)

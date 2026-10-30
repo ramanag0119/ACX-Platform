@@ -45,6 +45,16 @@ class Settings(BaseSettings):
     # authenticated inter-service calls.
     OSS_SERVICE_TOKEN: str | None = None
  
+    # Which domains this process serves: any of device, telemetry, alert,
+    # energy (comma-separated). PM2 runs one process per domain; the default
+    # serves all of them from a single process.
+    OSS_DOMAINS: str = "device,telemetry,alert,energy"
+ 
+    @property
+    def oss_domains(self) -> list[str]:
+        """OSS_DOMAINS parsed into a list of domain names."""
+        return [d.strip() for d in self.OSS_DOMAINS.split(",") if d.strip()]
+ 
     @property
     def oss_database_url(self) -> str | URL | None:
         """Return a SQLAlchemy URL, or None when the OSS DB is unconfigured."""

@@ -1,4 +1,4 @@
-"""Health endpoints: database readiness and the running API version.
+"""Health endpoints: database and OSS readiness, and the running API version.
 
 Every value `/health/db` returns is read live from PostgreSQL on each request. There
 is no cached or hardcoded status: if the database is unreachable, the endpoint
@@ -10,13 +10,22 @@ from __future__ import annotations
 from time import perf_counter
 
 from fastapi import APIRouter, HTTPException, status
+from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.deps import DbSession
 from app.core.config import settings
+from app.core.oss_routes import OSS_DOMAIN_PREFIXES
 from app.core.version import API_VERSION
-from app.schemas.health import DatabaseHealthResponse, ErrorResponse, VersionResponse
+from app.schemas.health import (
+    DatabaseHealthResponse,
+    ErrorResponse,
+    OssDomainHealth,
+    OssHealthResponse,
+    VersionResponse,
+)
+from app.services import oss_client
 
 router = APIRouter(prefix="/health", tags=["health"])
 
@@ -74,3 +83,35 @@ def database_health(db: DbSession) -> DatabaseHealthResponse:
         alembic_revision=revision,
         latency_ms=latency_ms,
     )
+
+
+@router.get(
+    "/oss",
+    response_model=OssHealthResponse,
+    summary="OSS service reachability",
+    responses={503: {"model": OssHealthResponse, "description": "An OSS domain is unreachable"}},
+)
+def oss_health():
+    """Probe the OSS service behind each domain (device, telemetry, alert, energy).
+
+    With OSS dispatch off nothing is forwarded, so nothing is probed. With it
+    on, any unreachable domain makes the whole answer 503 -- the screens that
+    read that domain are failing -- and the body still says which one it is.
+    """
+    if not settings.OSS_ENABLED:
+        return OssHealthResponse(enabled=False, status="disabled", domains=[])
+
+    domains = []
+    for domain in OSS_DOMAIN_PREFIXES:
+        url, latency_ms = oss_client.probe(domain)
+        domains.append(OssDomainHealth(
+            domain=domain, url=url, latency_ms=latency_ms,
+            status="ok" if latency_ms is not None else "unreachable",
+        ))
+    healthy = all(d.status == "ok" for d in domains)
+    body = OssHealthResponse(
+        enabled=True, status="ok" if healthy else "degraded", domains=domains
+    )
+    if healthy:
+        return body
+    return JSONResponse(status_code=503, content=body.model_dump())

@@ -323,6 +323,36 @@ export const updateLimitConfig = (id: string, body: Partial<LimitConfigWrite>) =
   apiClient.patch<LimitConfigRead>(`/limit-configs/${id}`, body);
 
 // ---------------------------------------------------------------------------
+// Room device mapping -- which OSS device is installed in which HMS room.
+// The mapping is HMS data; the device itself is only read from OSS.
+// ---------------------------------------------------------------------------
+
+export interface RoomDeviceRead {
+  id: string;
+  oss_device_id: string;
+  amenity_id: string;
+  amenity_name: string;
+  facility_id: string | null;
+  building_id: string | null;
+  building_name: string | null;
+  floor_id: string | null;
+  floor_name: string | null;
+  created_on: string;
+}
+
+export interface RoomDeviceWrite {
+  amenity_id: string;
+  oss_device_id: string;
+}
+
+export const listRoomDevices = (params?: QueryParams) =>
+  apiClient.get<Page<RoomDeviceRead>>("/room-devices", params);
+export const assignRoomDevice = (body: RoomDeviceWrite) =>
+  apiClient.post<RoomDeviceRead>("/room-devices", body);
+export const unassignRoomDevice = (mapId: string) =>
+  apiClient.del<void>(`/room-devices/${mapId}`);
+
+// ---------------------------------------------------------------------------
 // Facility, rooms and the room catalogue
 // ---------------------------------------------------------------------------
 

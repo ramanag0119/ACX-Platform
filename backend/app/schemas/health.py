@@ -50,3 +50,18 @@ class ErrorResponse(BaseModel):
     """The single error envelope used by every endpoint."""
 
     error: ErrorBody
+
+
+class OssDomainHealth(BaseModel):
+    domain: str = Field(examples=["device"])
+    url: str = Field(examples=["http://127.0.0.1:8001"])
+    status: str = Field(examples=["ok"], description="ok | unreachable")
+    latency_ms: float | None = Field(default=None, examples=[3.2])
+
+
+class OssHealthResponse(BaseModel):
+    """`GET /api/v1/health/oss` — reachability of each OSS domain service."""
+
+    enabled: bool = Field(description="OSS_ENABLED; when false no route is forwarded")
+    status: str = Field(examples=["ok"], description="ok | degraded | disabled")
+    domains: list[OssDomainHealth]

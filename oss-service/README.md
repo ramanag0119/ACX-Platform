@@ -17,8 +17,11 @@ production-readiness criteria.
 ## Boundary
 - **This service (OSS):** `/device-types`, `/devices`, `/device-params`,
   `/device-stats`, `/device-current-stats`, `/other-device-readings`,
-  `/alert-types`, `/alerts`, `/incidents`, `/value-alerts`, `/energy-stats`.
-- **Stays in HMS (BSS):** everything else, incl. `/daily-data-points` (mixed KPIs).
+  `/alert-types`, `/alerts`, `/energy-stats`.
+- **Stays in HMS (BSS):** everything else, incl. `/daily-data-points` (mixed KPIs),
+  `/incidents` and `/value-alerts` (OSS has no table for either; incidents are
+  worked by HMS staff and value alerts are breaches of HMS `/limit-configs`),
+  and `/room-devices` (which OSS device is in which HMS room).
 
 ## Run (local)
 ```bash

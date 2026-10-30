@@ -259,6 +259,8 @@ DELIVERED_PATHS = {
     f"{V1}/health/db",
     # About screen -- the running API version
     f"{V1}/health/version",
+    # OSS dispatch -- reachability of each OSS domain service
+    f"{V1}/health/oss",
     # Phase 2.2 -- facility and property hierarchy
     f"{V1}/facilities",
     f"{V1}/facilities/{{facility_id}}",
@@ -374,6 +376,9 @@ DELIVERED_PATHS = {
     f"{V1}/devices/{{device_id}}/maintenance",
     f"{V1}/limit-configs",
     f"{V1}/limit-configs/{{config_id}}",
+    # OSS dispatch -- which OSS device is installed in which room
+    f"{V1}/room-devices",
+    f"{V1}/room-devices/{{map_id}}",
     # Room catalogue
     f"{V1}/amenity-types",
     f"{V1}/amenity-types/{{amenity_type_id}}",

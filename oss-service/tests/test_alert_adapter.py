@@ -1,4 +1,4 @@
-"""Phase C alert/incident adapter tests (read-only integration)."""
+"""Phase C alert adapter tests (read-only integration)."""
 
 from __future__ import annotations
 
@@ -24,11 +24,15 @@ def test_alert_types_and_alerts_lists():
 
 @requires_db
 def test_unsupported_resources_return_503_not_fake_data():
-    # No device_incident / value-alert tables, no stable alert id -> explicit 503.
+    # No stable alert id, no alert<->incident linkage -> explicit 503.
     assert client.get("/alerts/1").status_code == 503
     assert client.get("/alerts/1/incidents").status_code == 503
-    assert client.get("/incidents").status_code == 503
-    assert client.get("/value-alerts").status_code == 503
+
+
+def test_incidents_and_value_alerts_are_not_served():
+    # HMS (BSS) data: OSS has no table for either, so the routes do not exist.
+    assert client.get("/incidents").status_code == 404
+    assert client.get("/value-alerts").status_code == 404
 
 
 @requires_db

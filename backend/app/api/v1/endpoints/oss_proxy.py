@@ -141,8 +141,6 @@ oss_proxy_routers: list[APIRouter] = [
     _build("/other-device-readings", _NETWORK),
     _build("/alert-types", _NETWORK),
     _build("/alerts", _NETWORK),
-    _build("/incidents", _NETWORK),
-    _build("/value-alerts", _NETWORK),
     # energy-stats is reports-gated, matching the local energy router.
     _build("/energy-stats", "reports"),
 ]

@@ -101,12 +101,13 @@ api_router.include_router(facility_write.events_router)
 api_router.include_router(facility_write.holidays_router)
 
 # Phase 2.7 -- alerts, incidents and value alerts (read-only).
-# OSS dispatch: forwarded to the OSS microservice when OSS_ENABLED.
+# OSS dispatch: alerts and alert types are forwarded to the OSS microservice
+# when OSS_ENABLED. Incidents and value alerts are always HMS (see oss_routes).
 if not settings.OSS_ENABLED:
     api_router.include_router(alerts.alert_types_router)
     api_router.include_router(alerts.alerts_router)
-    api_router.include_router(alerts.incidents_router)
-    api_router.include_router(alerts.value_alerts_router)
+api_router.include_router(alerts.incidents_router)
+api_router.include_router(alerts.value_alerts_router)
 
 # Phase 2.7 -- notification dispatch and the in-app activity feed (read-only).
 api_router.include_router(notifications.notification_templates_router)

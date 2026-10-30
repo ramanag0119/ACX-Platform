@@ -4,8 +4,9 @@
 
 Serves the device / telemetry / alert / energy read surface from the existing
 OSS database, mapping its (differently-shaped) rows into the exact API contract
-the HMS frontend already consumes. No inter-service auth (trusted LAN); bind to
-a private interface via settings.HOST.
+the HMS frontend already consumes. Inter-service auth is the shared
+OSS_SERVICE_TOKEN, optional in development and required in every other APP_ENV;
+bind to a private interface via settings.HOST.
 
 Run locally:  uvicorn app.main:app --host 127.0.0.1 --port 8001
 """
@@ -16,12 +17,19 @@ from fastapi import Depends, FastAPI
 
 from app.api.errors import install_exception_handlers
 from app.api.health import router as health_router
-from app.api.router import api_router
+from app.api.router import build_api_router
 from app.api.security import require_service_token
 from app.core.config import settings
 
 
 def create_app() -> FastAPI:
+    # The open, token-less mode is for a developer's trusted LAN only. Anywhere
+    # else the data routes would be readable by anything that can reach the port.
+    if settings.APP_ENV != "development" and not settings.OSS_SERVICE_TOKEN:
+        raise RuntimeError(
+            "OSS_SERVICE_TOKEN is not set. Set the same token in oss-service and "
+            "backend before running outside development."
+        )
     app = FastAPI(
         title=settings.APP_NAME,
         version="0.1.0",
@@ -36,8 +44,11 @@ def create_app() -> FastAPI:
     install_exception_handlers(app)
     app.include_router(health_router)  # ungated: liveness/readiness probes
     # Data routes carry the optional service-token guard (no-op unless
-    # OSS_SERVICE_TOKEN is set).
-    app.include_router(api_router, dependencies=[Depends(require_service_token)])
+    # OSS_SERVICE_TOKEN is set). Only this process's OSS_DOMAINS are mounted.
+    app.include_router(
+        build_api_router(settings.oss_domains),
+        dependencies=[Depends(require_service_token)],
+    )
     return app
 
 

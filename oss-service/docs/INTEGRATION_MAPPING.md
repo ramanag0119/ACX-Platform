@@ -28,15 +28,16 @@ served as `null` (documented) and resources without a source return an explicit
 | `GET /alerts` | `insp_device_alert` | **Implemented** | real mapping; empty now (0 rows); derived ordinal id |
 | `GET /alerts/{id}` | — | **Unsupported (503)** | no stable integer id (PK is uuid+time) |
 | `GET /alerts/{id}/incidents` | — | **Unsupported (503)** | no device_incident / alert linkage |
-| `GET /incidents`, `/incidents/{id}` | — | **Unsupported (503)** | no `device_incident`; `insp_service_request` is a distinct ticket concept — **needs confirmation** |
-| `GET /value-alerts`, `/value-alerts/{id}` | — | **Unsupported (503)** | no breach table; `insp_limit_config` is threshold config only |
+| `GET /incidents`, `/incidents/{id}` | — | **HMS (not served here)** | no `device_incident` in OSS (`insp_service_request` is a distinct ticket concept); HMS owns incidents with their `PATCH` |
+| `GET /value-alerts`, `/value-alerts/{id}` | — | **HMS (not served here)** | no breach table in OSS; value alerts are breaches of HMS `/limit-configs` |
 | `GET /energy-stats`, `/energy-stats/summary` | `param_data.active_energy` (cumulative) | **Unsupported (503)** | hourly consumption needs a business-confirmed delta/bucketing rule — **needs confirmation** |
 
 ## Implemented / partial / unsupported
 
 - **Implemented (real data):** device-types, devices, device detail, device health, device-current-stats, device-params, device-stats, alert-types, alerts.
 - **Partial / empty-but-correct:** alert-types & alerts are implemented but currently return 0 rows (tables empty).
-- **Unsupported (explicit 503, documented):** device-stats detail-by-id, other-device-readings, alert detail-by-id, alert incidents, incidents, value-alerts, energy-stats + summary.
+- **Unsupported (explicit 503, documented):** device-stats detail-by-id, other-device-readings, alert detail-by-id, alert incidents, energy-stats + summary.
+- **Moved to HMS (BSS):** incidents and value-alerts -- OSS has no source for either, so HMS serves them whether or not OSS dispatch is on.
 
 ## Compatibility decisions applied (approved)
 
