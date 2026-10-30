@@ -176,10 +176,6 @@ export const RoomConditionsDialog = ({
                 </RadioGroup>
               )}
             </div>
-
-            <p className="text-xs text-muted-foreground pt-1">
-              Selecting an applicable option updates the room's operational condition and synchronizes room workflow status according to configured business rules.
-            </p>
           </div>
         </DataState>
 
