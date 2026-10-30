@@ -5,11 +5,10 @@ Blueprint §5, tables 9-17.
 
 import uuid
 
-from sqlalchemy import Boolean, ForeignKey, Index, SmallInteger, String, Text
-from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.dialects.postgresql import UUID as PGUUID
+from sqlalchemy import Boolean, ForeignKey, Index, SmallInteger, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.db.types import GUID, JSONB
 from app.db.base import Base, HMSBase, SmallIntLookupPk, TimestampMixin, UUIDPk
 from app.models import enums
 from app.models.facility import attachment_fk, user_fk
@@ -22,7 +21,7 @@ class AmenityType(HMSBase, UUIDPk):
 
     name: Mapped[str] = mapped_column(String(50), nullable=False)
     facility_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("facility.id", ondelete="CASCADE"),
         nullable=True,
         index=True,
@@ -32,10 +31,10 @@ class AmenityType(HMSBase, UUIDPk):
         enums.amenity_category, nullable=False, server_default="others"
     )
     image_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), attachment_fk(ondelete="RESTRICT"), nullable=True
+        GUID(), attachment_fk(ondelete="RESTRICT"), nullable=True
     )
     created_by: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=False
+        GUID(), user_fk(ondelete="RESTRICT"), nullable=False
     )
 
 
@@ -70,29 +69,29 @@ class Amenity(HMSBase, UUIDPk):
 
     name: Mapped[str] = mapped_column(String(6), nullable=False)
     parent_amenity_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("amenity.id", ondelete="CASCADE"), nullable=True
+        GUID(), ForeignKey("amenity.id", ondelete="CASCADE"), nullable=True
     )
     amenity_type_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("amenity_type.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
     facility_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("facility.id", ondelete="CASCADE"),
         nullable=True,
         index=True,
     )
     # Replaces the Phase 1 `floor VARCHAR` + `property_type_id`.
     property_chain_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("property_chain.id", ondelete="RESTRICT"),
         nullable=True,
         index=True,
     )
     package_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("package.id", ondelete="RESTRICT"),
         nullable=False,
     )
@@ -112,11 +111,11 @@ class Amenity(HMSBase, UUIDPk):
         "metadata", JSONB, nullable=True
     )
     created_by: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=False
+        GUID(), user_fk(ondelete="RESTRICT"), nullable=False
     )
 
     __table_args__ = (
-        Index("ix_amenity_metadata_gin", "metadata", postgresql_using="gin"),
+        Index("ix_amenity_metadata_gin", "metadata", postgresql_using="gin").ddl_if(dialect="postgresql"),
     )
 
 
@@ -127,7 +126,7 @@ class AmenityConditionStatus(Base, TimestampMixin):
     __tablename__ = "amenity_condition_status"
 
     amenity_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("amenity.id", ondelete="CASCADE"),
         primary_key=True,
     )
@@ -153,7 +152,7 @@ class Package(HMSBase, UUIDPk):
     __tablename__ = "package"
 
     facility_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("facility.id", ondelete="CASCADE"),
         nullable=True,
         index=True,
@@ -163,18 +162,18 @@ class Package(HMSBase, UUIDPk):
     status: Mapped[int] = mapped_column(SmallInteger, nullable=False)
     # [INFER] `packages.amenity_type smallint` carries no FK in IKANOS.
     amenity_type: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("amenity_type.id", ondelete="RESTRICT"),
         nullable=False,
     )
     is_sub_package: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, server_default="false"
+        Boolean, nullable=False, server_default=text("false")
     )
     image_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), attachment_fk(ondelete="RESTRICT"), nullable=True
+        GUID(), attachment_fk(ondelete="RESTRICT"), nullable=True
     )
     created_by: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=False
+        GUID(), user_fk(ondelete="RESTRICT"), nullable=False
     )
 
 
@@ -184,18 +183,18 @@ class SubPackage(Base, TimestampMixin):
     __tablename__ = "sub_package"
 
     parent_package_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("package.id", ondelete="RESTRICT"),
         primary_key=True,
     )
     sub_package_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("package.id", ondelete="RESTRICT"),
         primary_key=True,
         index=True,
     )
     created_by: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=False
+        GUID(), user_fk(ondelete="RESTRICT"), nullable=False
     )
 
 
@@ -206,7 +205,7 @@ class Feature(HMSBase, UUIDPk):
     __tablename__ = "feature"
 
     facility_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("facility.id", ondelete="CASCADE"),
         nullable=True,
         index=True,
@@ -220,7 +219,7 @@ class Feature(HMSBase, UUIDPk):
     )
     status: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
     created_by: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=False
+        GUID(), user_fk(ondelete="RESTRICT"), nullable=False
     )
 
 
@@ -233,13 +232,13 @@ class PackageFeature(HMSBase, UUIDPk):
     __tablename__ = "package_feature"
 
     package_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("package.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
     feature_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("feature.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
@@ -248,5 +247,5 @@ class PackageFeature(HMSBase, UUIDPk):
         SmallInteger, nullable=True, server_default="1"
     )
     created_by: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=False
+        GUID(), user_fk(ondelete="RESTRICT"), nullable=False
     )

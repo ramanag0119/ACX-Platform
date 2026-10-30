@@ -1,6 +1,6 @@
 """Phase 1.7 - schema verification and inventory report.
 
-Compares the live PostgreSQL schema against the approved 92-table blueprint
+Compares the live MySQL / PostgreSQL schema against the approved 93-table blueprint
 (``backend/docs/FINAL_HMS_DATABASE_BLUEPRINT.md``) as expressed by the models.
 
 Run:  python -m app.db.verify_schema
@@ -11,8 +11,11 @@ from __future__ import annotations
 
 import sys
 
-from sqlalchemy import inspect, text
+import re
 
+from sqlalchemy import Enum, inspect, text
+
+from app.core.config import settings
 from app.db.session import engine
 from app.models import (
     APPROVED_TABLES,
@@ -23,7 +26,11 @@ from app.models import (
 )
 from app.models.enums import ALL_ENUMS
 
-SCHEMA = "public"
+#: Schema for the SQLAlchemy inspector: None is the connection's default
+#: (the MySQL database itself, or `public` on PostgreSQL).
+SCHEMA = settings.db_schema
+#: What `information_schema.*.table_schema` holds for HMS tables.
+SCHEMA_NAME = settings.MYSQL_DB if settings.is_mysql else settings.POSTGRES_SCHEMA
 
 #: Tables from the superseded Phase 1 39-table foundation. None may survive.
 RETIRED_PHASE1_TABLES = frozenset(
@@ -74,6 +81,9 @@ def live_tables(insp) -> set[str]:
 
 
 def live_enums(conn) -> dict[str, list[str]]:
+    """Every enum the live schema holds, as {type name: labels in order}."""
+    if conn.dialect.name == "mysql":
+        return _live_mysql_enums(conn)
     rows = conn.execute(
         text(
             """
@@ -85,11 +95,36 @@ def live_enums(conn) -> dict[str, list[str]]:
             ORDER BY t.typname, e.enumsortorder
             """
         ),
-        {"schema": SCHEMA},
+        {"schema": SCHEMA_NAME},
     )
     out: dict[str, list[str]] = {}
     for name, label in rows:
         out.setdefault(name, []).append(label)
+    return out
+
+
+def _live_mysql_enums(conn) -> dict[str, list[str]]:
+    """MySQL has no named enum types, only `enum('a','b')` column types. Each
+    enum column is named after the type the models give it; columns sharing a
+    type must agree, or the type is reported with the first column's labels
+    and the mismatch surfaces as a values check failure."""
+    column_type = {
+        (t, c): ct
+        for t, c, ct in conn.execute(
+            text(
+                "SELECT table_name, column_name, column_type FROM information_schema.columns "
+                "WHERE table_schema = database() AND data_type = 'enum'"
+            )
+        )
+    }
+    out: dict[str, list[str]] = {}
+    for table in Base.metadata.tables.values():
+        for col in table.columns:
+            live = column_type.get((table.name, col.name))
+            if live is None or not isinstance(col.type, Enum):
+                continue
+            labels = [v.replace("''", "'") for v in re.findall(r"'((?:[^']|'')*)'", live)]
+            out.setdefault(col.type.name, labels)
     return out
 
 
@@ -131,7 +166,10 @@ def main() -> int:
     insp = inspect(engine)
 
     with engine.connect() as conn:
-        db = conn.execute(text("SELECT current_database()")).scalar()
+        mysql = conn.dialect.name == "mysql"
+        db = conn.execute(
+            text("SELECT database()" if mysql else "SELECT current_database()")
+        ).scalar()
         tables = live_tables(insp)
         enums = live_enums(conn)
 
@@ -140,18 +178,23 @@ def main() -> int:
                 "SELECT count(*) FROM information_schema.table_constraints "
                 "WHERE table_schema = :s AND constraint_type = 'FOREIGN KEY'"
             ),
-            {"s": SCHEMA},
+            {"s": SCHEMA_NAME},
         ).scalar()
         n_uq = conn.execute(
             text(
                 "SELECT count(*) FROM information_schema.table_constraints "
                 "WHERE table_schema = :s AND constraint_type = 'UNIQUE'"
             ),
-            {"s": SCHEMA},
+            {"s": SCHEMA_NAME},
         ).scalar()
         n_ix = conn.execute(
-            text("SELECT count(*) FROM pg_indexes WHERE schemaname = :s"),
-            {"s": SCHEMA},
+            text(
+                "SELECT count(DISTINCT table_name, index_name) "
+                "FROM information_schema.statistics WHERE table_schema = :s"
+                if mysql
+                else "SELECT count(*) FROM pg_indexes WHERE schemaname = :s"
+            ),
+            {"s": SCHEMA_NAME},
         ).scalar()
         rev = conn.execute(text("SELECT version_num FROM alembic_version")).scalar()
 
@@ -159,7 +202,7 @@ def main() -> int:
 
     print(f"database            : {db}")
     print(f"alembic revision    : {rev}")
-    print(f"tables              : {len(tables)} (expected 92)")
+    print(f"tables              : {len(tables)} (expected 93)")
     print(f"enum types          : {len(enums)} (expected {len(ALL_ENUMS)})")
     print(f"foreign keys        : {n_fk}")
     print(f"unique constraints  : {n_uq}")
@@ -167,7 +210,7 @@ def main() -> int:
     print()
     print(f"PK tiers            : lookup {len(LOOKUP_TABLES)} · composite "
           f"{len(COMPOSITE_PK_TABLES)} · high-volume {len(HIGH_VOLUME_TABLES)} · "
-          f"uuid {92 - len(LOOKUP_TABLES) - len(COMPOSITE_PK_TABLES) - len(HIGH_VOLUME_TABLES)}")
+          f"uuid {93 - len(LOOKUP_TABLES) - len(COMPOSITE_PK_TABLES) - len(HIGH_VOLUME_TABLES)}")
     print()
 
     missing = sorted(approved - tables)

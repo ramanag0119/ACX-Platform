@@ -13,8 +13,9 @@ import uuid
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import text
+from sqlalchemy import Boolean, text
 
+from app.db.verify_schema import SCHEMA_NAME
 from app.core.config import settings
 from app.db.session import SessionLocal
 from app.main import app
@@ -199,7 +200,7 @@ def test_firmware_up_to_date_is_derived_not_stored(client, db):
     """There is no is_latest column; currency is current vs expected."""
     cols = db.execute(
         text("SELECT column_name FROM information_schema.columns "
-             "WHERE table_schema='public' AND table_name='firmware'")
+             f"WHERE table_schema='{SCHEMA_NAME}' AND table_name='firmware'")
     ).scalars().all()
     assert "is_latest" not in cols
 
@@ -357,10 +358,14 @@ def test_filter_firmware_outdated(client, db):
     and `=false`. The filter is NULL-aware, so the oracle has to be too.
     """
     body = client.get(f"{V1}/devices?firmware_outdated=true&page_size=100").json()
+    # MySQL spells IS DISTINCT FROM as NOT (a <=> b), its NULL-safe equality.
+    distinct = (
+        "NOT (current_firmware_version <=> expected_firmware_version)"
+        if db.bind.dialect.name == "mysql"
+        else "current_firmware_version IS DISTINCT FROM expected_firmware_version"
+    )
     assert body["total"] == db.execute(
-        text("""SELECT count(*) FROM device
-                WHERE current_firmware_version
-                      IS DISTINCT FROM expected_firmware_version""")
+        text(f"SELECT count(*) FROM device WHERE {distinct}")
     ).scalar_one()
     assert all(d["firmware_up_to_date"] is False for d in body["items"])
 
@@ -418,7 +423,7 @@ def test_last_reported_on_is_derived_from_health_stats(client, db, hub_id):
     """There is no last_seen column; this value must equal MAX(created_on)."""
     cols = db.execute(
         text("SELECT column_name FROM information_schema.columns "
-             "WHERE table_schema='public' AND table_name='device'")
+             f"WHERE table_schema='{SCHEMA_NAME}' AND table_name='device'")
     ).scalars().all()
     assert "last_seen" not in cols
 
@@ -576,6 +581,7 @@ def test_manager_can_view_the_network(anon, manager_headers, db):
                 JOIN role_module_permission p ON p.role_id = r.id
                 JOIN role_module m ON m.id = p.module_id
                 WHERE r.role_type = 'manager' AND m.module_name = 'caleido_network'""")
+        .columns(read_access=Boolean, write_access=Boolean)
     ).one()
     assert row.read_access is True and row.write_access is False
     assert db.execute(
@@ -619,6 +625,9 @@ DEVICE_WRITES = {
     (f"{V1}/devices/{{device_id}}/commission", "post"),
     (f"{V1}/devices/{{device_id}}/decommission", "post"),
     (f"{V1}/devices/{{device_id}}/maintenance", "post"),
+    # Placing an OSS device in a room: hms_db only, never the OSS database.
+    (f"{V1}/room-devices", "post"),
+    (f"{V1}/room-devices/{{map_id}}", "delete"),
 }
 
 

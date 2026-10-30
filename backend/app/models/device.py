@@ -1,4 +1,4 @@
-"""Group G - devices, telemetry and IoT (14 tables).
+"""Group G - devices, telemetry and IoT (15 tables).
 
 Blueprint §5, tables 46-59.
 
@@ -13,7 +13,6 @@ from datetime import date, datetime
 from sqlalchemy import (
     Boolean,
     Date,
-    DateTime,
     ForeignKey,
     Index,
     Integer,
@@ -22,10 +21,9 @@ from sqlalchemy import (
     String,
     Text,
 )
-from sqlalchemy.dialects.postgresql import DOUBLE_PRECISION, JSONB
-from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.db.types import DOUBLE, GUID, JSONB, UTCDateTime
 from app.db.base import (
     Base,
     BigIntPk,
@@ -76,7 +74,7 @@ class Firmware(HMSBase, UUIDPk):
     firmware_size: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
     crc: Mapped[str] = mapped_column(Text, nullable=False)
     release_date: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
+        UTCDateTime(), nullable=True
     )
     release_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     decommission_reason: Mapped[str | None] = mapped_column(String(200), nullable=True)
@@ -84,13 +82,13 @@ class Firmware(HMSBase, UUIDPk):
         enums.firmware_status, nullable=False, server_default="active"
     )
     uploaded_by: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="CASCADE"), nullable=False
+        GUID(), user_fk(ondelete="CASCADE"), nullable=False
     )
     created_by: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="CASCADE"), nullable=True
+        GUID(), user_fk(ondelete="CASCADE"), nullable=True
     )
     updated_by: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="CASCADE"), nullable=True
+        GUID(), user_fk(ondelete="CASCADE"), nullable=True
     )
 
 
@@ -111,10 +109,10 @@ class Device(HMSBase, UUIDPk):
     part_number: Mapped[str | None] = mapped_column(String(50), nullable=True)
     model: Mapped[str | None] = mapped_column(String(20), nullable=True)
     manufacturer_name: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    mfg_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    mfg_date: Mapped[datetime] = mapped_column(UTCDateTime(), nullable=False)
     # Sensors carry their hub id here.
     parent_device_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("device.id", ondelete="CASCADE"),
         nullable=True,
         index=True,
@@ -128,13 +126,13 @@ class Device(HMSBase, UUIDPk):
     device_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     appliance_name: Mapped[str | None] = mapped_column(String(50), nullable=True)
     facility_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("facility.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
     amenity_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("amenity.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
@@ -147,17 +145,17 @@ class Device(HMSBase, UUIDPk):
         Numeric(10, 2), nullable=True
     )
     current_firmware_version: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("firmware.id", ondelete="CASCADE"), nullable=True
+        GUID(), ForeignKey("firmware.id", ondelete="CASCADE"), nullable=True
     )
     expected_firmware_version: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("firmware.id", ondelete="CASCADE"), nullable=True
+        GUID(), ForeignKey("firmware.id", ondelete="CASCADE"), nullable=True
     )
     device_config_status: Mapped[str | None] = mapped_column(
         enums.device_config_status, nullable=True
     )
     is_power_off: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     installed_on: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
+        UTCDateTime(), nullable=True
     )
     # Hubless architecture flag.
     operational_mode: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
@@ -170,11 +168,11 @@ class Device(HMSBase, UUIDPk):
         "metadata", JSONB, nullable=True
     )
     created_by: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=False
+        GUID(), user_fk(ondelete="RESTRICT"), nullable=False
     )
 
     __table_args__ = (
-        Index("ix_device_metadata_gin", "metadata", postgresql_using="gin"),
+        Index("ix_device_metadata_gin", "metadata", postgresql_using="gin").ddl_if(dialect="postgresql"),
     )
 
 
@@ -208,9 +206,9 @@ class DeviceStat(HMSBase, BigIntPk):
     __tablename__ = "device_stat"
 
     device_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("device.id", ondelete="CASCADE"), nullable=False
+        GUID(), ForeignKey("device.id", ondelete="CASCADE"), nullable=False
     )
-    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    timestamp: Mapped[datetime] = mapped_column(UTCDateTime(), nullable=False)
     device_param_id: Mapped[int] = mapped_column(
         Integer,
         ForeignKey("device_param.id", ondelete="CASCADE"),
@@ -234,7 +232,7 @@ class DeviceCurrentStat(HMSBase, UUIDPk):
     __tablename__ = "device_current_stat"
 
     device_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("device.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
@@ -252,7 +250,7 @@ class DeviceHealthStat(HMSBase, BigIntPk):
     __tablename__ = "device_health_stat"
 
     device_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("device.id", ondelete="CASCADE"), nullable=False
+        GUID(), ForeignKey("device.id", ondelete="CASCADE"), nullable=False
     )
     device_health_status: Mapped[str] = mapped_column(
         enums.device_health_status, nullable=False
@@ -291,7 +289,7 @@ class DeviceCommand(HMSBase, UUIDPk):
     __tablename__ = "device_command"
 
     device_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("device.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
@@ -307,7 +305,7 @@ class DeviceCommand(HMSBase, UUIDPk):
         index=True,
     )
     created_by: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=False
+        GUID(), user_fk(ondelete="RESTRICT"), nullable=False
     )
 
 
@@ -322,7 +320,7 @@ class MqttBroker(HMSBase, UUIDPk):
     __tablename__ = "mqtt_broker"
 
     facility_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("facility.id", ondelete="CASCADE"),
         nullable=True,
         index=True,
@@ -341,13 +339,13 @@ class MqttTopic(HMSBase, UUIDPk):
     __tablename__ = "mqtt_topic"
 
     mqtt_broker_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("mqtt_broker.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
     device_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("device.id", ondelete="CASCADE"),
         nullable=True,
         index=True,
@@ -369,21 +367,21 @@ class OtherDevice(HMSBase, BigIntPk):
 
     msg_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     device_name: Mapped[str | None] = mapped_column(String(225), nullable=True)
-    voltage: Mapped[float | None] = mapped_column(DOUBLE_PRECISION, nullable=True)
-    current: Mapped[float | None] = mapped_column(DOUBLE_PRECISION, nullable=True)
-    power: Mapped[float | None] = mapped_column(DOUBLE_PRECISION, nullable=True)
-    power_factor: Mapped[float | None] = mapped_column(DOUBLE_PRECISION, nullable=True)
-    all_energy: Mapped[float | None] = mapped_column(DOUBLE_PRECISION, nullable=True)
+    voltage: Mapped[float | None] = mapped_column(DOUBLE, nullable=True)
+    current: Mapped[float | None] = mapped_column(DOUBLE, nullable=True)
+    power: Mapped[float | None] = mapped_column(DOUBLE, nullable=True)
+    power_factor: Mapped[float | None] = mapped_column(DOUBLE, nullable=True)
+    all_energy: Mapped[float | None] = mapped_column(DOUBLE, nullable=True)
     thirty_day_energy: Mapped[float | None] = mapped_column(
-        DOUBLE_PRECISION, nullable=True
+        DOUBLE, nullable=True
     )
-    today_energy: Mapped[float | None] = mapped_column(DOUBLE_PRECISION, nullable=True)
+    today_energy: Mapped[float | None] = mapped_column(DOUBLE, nullable=True)
     current_hour_energy: Mapped[float | None] = mapped_column(
-        DOUBLE_PRECISION, nullable=True
+        DOUBLE, nullable=True
     )
-    ec: Mapped[float | None] = mapped_column(DOUBLE_PRECISION, nullable=True)
+    ec: Mapped[float | None] = mapped_column(DOUBLE, nullable=True)
     msg_string: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    timestamp: Mapped[datetime] = mapped_column(UTCDateTime(), nullable=False)
 
     __table_args__ = (
         Index("ix_other_device_device_name_timestamp", "device_name", "timestamp"),
@@ -400,7 +398,7 @@ class BatteryLifeStat(HMSBase, BigIntPk):
     __tablename__ = "battery_life_stat"
 
     device_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("device.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
@@ -426,15 +424,41 @@ class SensorOperationStat(Base, TimestampMixin):
     __tablename__ = "sensor_operation_stat"
 
     device_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("device.id", ondelete="CASCADE"),
         primary_key=True,
     )
     stats_date: Mapped[date] = mapped_column(Date, primary_key=True, index=True)
     amenity_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("amenity.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
     operation_percentage: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
+
+
+class RoomDeviceMap(HMSBase, UUIDPk):
+    """Which OSS device is installed in which room. HMS-owned (BSS).
+
+    Device data lives in the externally owned OSS database, which has no notion
+    of a room, and HMS may only READ it. Rooms live here. This table is the
+    join between the two: a room's devices are the OSS device ids mapped to it.
+    `oss_device_id` is `insp_device.device_id` in OSS -- not a foreign key,
+    since it points into another database. A device sits in one room at a time.
+    """
+
+    __tablename__ = "room_device_map"
+
+    amenity_id: Mapped[uuid.UUID] = mapped_column(
+        GUID(),
+        ForeignKey("amenity.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    oss_device_id: Mapped[uuid.UUID] = mapped_column(
+        GUID(), nullable=False, unique=True
+    )
+    created_by: Mapped[uuid.UUID | None] = mapped_column(
+        GUID(), user_fk(ondelete="SET NULL"), nullable=True
+    )

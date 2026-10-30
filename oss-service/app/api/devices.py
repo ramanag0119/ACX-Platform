@@ -37,7 +37,21 @@ devices_router = APIRouter(prefix="/devices", tags=["devices"], responses=OSS_RE
 
 def _filters(request: Request) -> dict:
     """Pass-through query filters (everything except pagination)."""
-    return {k: v for k, v in request.query_params.items() if k not in {"page", "page_size"}}
+    filters = {
+        k: v for k, v in request.query_params.items() if k not in {"page", "page_size"}
+    }
+    if "device_ids" in filters:
+        # Comma-separated OSS device ids, sent by HMS from its room mapping.
+        try:
+            filters["device_ids"] = [
+                uuid.UUID(v) for v in filters["device_ids"].split(",") if v.strip()
+            ]
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="device_ids must be comma-separated UUIDs.",
+            ) from None
+    return filters
 
 
 def _require(obj, what: str = "Resource"):

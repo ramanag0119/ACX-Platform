@@ -1,4 +1,4 @@
-"""PostgreSQL ENUM types, transcribed verbatim from the IKANOS DDL.
+"""ENUM types, transcribed verbatim from the IKANOS DDL.
 
 Source of truth: FINAL_HMS_DATABASE_BLUEPRINT.md, which was itself built by
 reading the 108 `CREATE TABLE` blocks in `Dump20230928 (1).sql`.
@@ -11,18 +11,24 @@ Rules enforced here (blueprint §2.7):
   * no value is invented, and no value is dropped;
   * all 13 Phase 1 enums are gone -- zero of them matched IKANOS.
 
-Every type is built with ``create_type=False``. Type creation and dropping is
-performed explicitly and exactly once by the Alembic migration, which keeps a
-type shared by several tables (``device_health_status``, ``request_source``,
-``notification_channel``) from being emitted more than once.
+On PostgreSQL every type is a named native enum built with
+``create_type=False``: creation and dropping is performed explicitly and exactly
+once by the Alembic migration, which keeps a type shared by several tables
+(``device_health_status``, ``request_source``, ``notification_channel``) from
+being emitted more than once. On MySQL an enum is a column type, declared
+inline on each column, so there is no shared type to manage.
 """
 
+from sqlalchemy import Enum
 from sqlalchemy.dialects.postgresql import ENUM
+from sqlalchemy.types import TypeEngine
 
 
-def _enum(name: str, *values: str) -> ENUM:
-    """Declare a native PG enum whose lifecycle the migration owns."""
-    return ENUM(*values, name=name, create_type=False)
+def _enum(name: str, *values: str) -> TypeEngine:
+    """Inline ENUM on MySQL; a native PG enum whose lifecycle the migration owns."""
+    return Enum(*values, name=name).with_variant(
+        ENUM(*values, name=name, create_type=False), "postgresql"
+    )
 
 
 # --- Rooms and packages ----------------------------------------------------

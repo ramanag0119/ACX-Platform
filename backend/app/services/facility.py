@@ -22,6 +22,7 @@ from collections import defaultdict
 from sqlalchemy import Select, func, select
 from sqlalchemy.orm import Session, aliased
 
+from app.models import enums
 from app.models import (
     Amenity,
     AmenityCondition,
@@ -367,22 +368,11 @@ def list_countries(
     return rows, total
 
 
-def get_gender_options(db: Session) -> list[dict[str, str]]:
-    """Return gender options authoritatively defined in PostgreSQL's `gender` enum."""
-    from sqlalchemy import text
+def get_gender_options(db: Session) -> list[dict[str, str]]:  # noqa: ARG001
+    """Gender options, from the `gender` enum the schema is built from.
 
-    result = db.execute(
-        text(
-            "SELECT e.enumlabel FROM pg_type t JOIN pg_enum e ON t.oid = e.enumtypid "
-            "JOIN pg_namespace n ON n.oid = t.typnamespace "
-            "WHERE n.nspname = 'public' AND t.typname = 'gender' ORDER BY e.enumsortorder"
-        )
-    ).fetchall()
-    if not result:
-        return [
-            {"value": "male", "label": "Male"},
-            {"value": "female", "label": "Female"},
-            {"value": "other", "label": "Other"},
-        ]
-    return [{"value": r[0], "label": r[0].title()} for r in result]
+    The column's allowed values are exactly these on MySQL and PostgreSQL
+    alike (both migrations take them from the same list), so the model enum is
+    the authority -- no catalog query, which differs per database."""
+    return [{"value": v, "label": v.title()} for v in enums.gender.enums]
 

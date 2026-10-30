@@ -108,3 +108,17 @@ def test_amenity_filter_unsupported_503():
 @requires_db
 def test_missing_device_404():
     assert client.get("/devices/11111111-1111-1111-1111-111111111111").status_code == 404
+
+
+@requires_db
+def test_devices_filtered_by_device_ids():
+    # HMS resolves a room to OSS device ids and asks for exactly those.
+    everything = client.get("/devices", params={"page_size": 100}).json()["items"]
+    picked = [d["id"] for d in everything[:2]]
+    b = client.get("/devices", params={"device_ids": ",".join(picked)}).json()
+    assert b["total"] == len(picked)
+    assert sorted(d["id"] for d in b["items"]) == sorted(picked)
+
+
+def test_devices_rejects_malformed_device_ids():
+    assert client.get("/devices", params={"device_ids": "not-a-uuid"}).status_code == 422

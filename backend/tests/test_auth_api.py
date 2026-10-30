@@ -33,6 +33,7 @@ from app.core.security import (
     verify_password,
 )
 from app.db.session import SessionLocal
+from app.db.verify_schema import live_enums
 from app.main import app
 from app.services import auth as auth_service
 
@@ -422,10 +423,7 @@ def test_platform_boundary_matches_the_kt_handbook():
 
 def test_technician_is_not_a_role_type_in_the_database(db):
     """KT handbook vs database mismatch, asserted so it cannot be forgotten."""
-    enum_values = db.execute(
-        text("""SELECT e.enumlabel FROM pg_type t JOIN pg_enum e
-                ON e.enumtypid = t.oid WHERE t.typname = 'role_type'""")
-    ).scalars().all()
+    enum_values = live_enums(db.connection())["role_type"]
     assert "technician" not in enum_values
     assert db.execute(
         text("SELECT role_type FROM role WHERE name = 'Technician'")

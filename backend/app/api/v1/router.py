@@ -11,8 +11,8 @@ from fastapi import APIRouter
 from app.api.v1.endpoints import (
     access, access_write, alerts, auth, devices, devices_write, energy,
     facilities, facility_write, health, job_orders, maintenance, notifications,
-    occupancy, oss_proxy, reports, services, services_write, stays, stays_write,
-    telemetry,
+    occupancy, oss_proxy, reports, room_devices, services, services_write, stays,
+    stays_write, telemetry,
 )
 from app.core.config import settings
 
@@ -79,9 +79,16 @@ if not settings.OSS_ENABLED:
     api_router.include_router(devices.devices_router)
 
 # Phase 3.0 -- device, incident and limit-config writes.
-api_router.include_router(devices_write.devices_write_router)
+# With OSS on, device data is read from the OSS database, which HMS never
+# writes; a device row edited here would be one no screen reads. Devices are
+# placed in rooms through /room-devices instead.
+if not settings.OSS_ENABLED:
+    api_router.include_router(devices_write.devices_write_router)
 api_router.include_router(devices_write.incidents_write_router)
 api_router.include_router(devices_write.limit_configs_router)
+
+# Which OSS device is installed in which room (HMS data; OSS is only read).
+api_router.include_router(room_devices.room_devices_router)
 
 # Phase 3.0 -- facility, room catalogue and marketing (reads + writes).
 api_router.include_router(facility_write.facilities_write_router)

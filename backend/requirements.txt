@@ -4,6 +4,9 @@ uvicorn[standard]==0.34.0
 sqlalchemy==2.0.52
 alembic==1.19.1
 psycopg2-binary==2.9.11
+# MySQL 8 driver; cryptography is needed for caching_sha2_password auth.
+PyMySQL==1.2.3
+cryptography==50.0.2
 pydantic==2.12.5
 pydantic-settings==2.7.1
 python-dotenv==1.0.1

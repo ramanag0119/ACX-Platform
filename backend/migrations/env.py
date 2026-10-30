@@ -7,24 +7,26 @@ alembic.ini, so there is a single source of truth.
 from logging.config import fileConfig
 
 from alembic import context
-from sqlalchemy import engine_from_config, pool
+from sqlalchemy import create_engine, pool
 
 from app.core.config import settings
+from app.db.session import CONNECT_ARGS
 
 # Importing the models package registers every table on Base.metadata.
 from app.models import Base
 
 config = context.config
-config.set_main_option("sqlalchemy.url", settings.sqlalchemy_url)
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 target_metadata = Base.metadata
 
-VERSION_TABLE_SCHEMA = settings.POSTGRES_SCHEMA
+# MySQL has no schemas inside the database; on PostgreSQL the version table
+# lives in the configured schema.
+VERSION_TABLE_SCHEMA = None if settings.is_mysql else settings.POSTGRES_SCHEMA
 # Only walk multiple schemas when we are not simply using the default one.
-INCLUDE_SCHEMAS = settings.POSTGRES_SCHEMA != "public"
+INCLUDE_SCHEMAS = settings.db_schema is not None
 
 
 def include_object(obj, name, type_, reflected, compare_to):
@@ -43,7 +45,7 @@ def include_object(obj, name, type_, reflected, compare_to):
 
 def run_migrations_offline() -> None:
     context.configure(
-        url=config.get_main_option("sqlalchemy.url"),
+        url=settings.sqlalchemy_url,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
@@ -58,10 +60,10 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
+    # Built from settings directly: a URL object keeps the password escaped,
+    # which a round trip through alembic.ini's interpolation would not.
+    connectable = create_engine(
+        settings.sqlalchemy_url, connect_args=CONNECT_ARGS, poolclass=pool.NullPool
     )
 
     with connectable.connect() as connection:

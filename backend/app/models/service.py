@@ -10,7 +10,6 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import (
-    DateTime,
     ForeignKey,
     Index,
     Numeric,
@@ -18,10 +17,9 @@ from sqlalchemy import (
     String,
     Text,
 )
-from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.db.types import GUID, JSONB, UTCDateTime
 from app.db.base import Base, HMSBase, SmallIntLookupPk, TimestampMixin, UUIDPk
 from app.models import enums
 from app.models.facility import attachment_fk, user_fk
@@ -67,10 +65,10 @@ class ServiceCategory(HMSBase, UUIDPk):
     category_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     category_icon: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), attachment_fk(ondelete="RESTRICT"), nullable=True
+        GUID(), attachment_fk(ondelete="RESTRICT"), nullable=True
     )
     facility_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("facility.id", ondelete="RESTRICT"),
         nullable=True,
         index=True,
@@ -80,7 +78,7 @@ class ServiceCategory(HMSBase, UUIDPk):
         SmallInteger, nullable=True, server_default="1"
     )
     created_by: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=False
+        GUID(), user_fk(ondelete="RESTRICT"), nullable=False
     )
 
 
@@ -97,10 +95,10 @@ class ServiceCategoryItem(HMSBase, UUIDPk):
 
     item_name: Mapped[str] = mapped_column(String(100), nullable=False)
     item_icon: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), attachment_fk(ondelete="RESTRICT"), nullable=True
+        GUID(), attachment_fk(ondelete="RESTRICT"), nullable=True
     )
     category_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("service_category.id", ondelete="RESTRICT"),
         nullable=False,
         index=True,
@@ -108,13 +106,13 @@ class ServiceCategoryItem(HMSBase, UUIDPk):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     price_per_unit: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
     amenity_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("amenity.id", ondelete="RESTRICT"),
         nullable=True,
         index=True,
     )
     facility_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("facility.id", ondelete="CASCADE"),
         nullable=True,
         index=True,
@@ -125,13 +123,14 @@ class ServiceCategoryItem(HMSBase, UUIDPk):
     # MERGE: absorbed `service_item_metadata`.
     item_metadata: Mapped[dict | None] = mapped_column("metadata", JSONB, nullable=True)
     created_by: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=False
+        GUID(), user_fk(ondelete="RESTRICT"), nullable=False
     )
 
     __table_args__ = (
+        # JSON cannot be indexed directly on MySQL; GIN is PostgreSQL only.
         Index(
             "ix_service_category_item_metadata_gin", "metadata", postgresql_using="gin"
-        ),
+        ).ddl_if(dialect="postgresql"),
     )
 
 
@@ -156,45 +155,45 @@ class ServiceRequest(HMSBase, UUIDPk):
     )
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     assigned_to: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=True, index=True
+        GUID(), user_fk(ondelete="RESTRICT"), nullable=True, index=True
     )
     department_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("department.id", ondelete="RESTRICT"),
         nullable=True,
     )
     category_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("service_category.id", ondelete="RESTRICT"),
         nullable=True,
         index=True,
     )
     promo_code_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("promo_code.id", ondelete="RESTRICT"),
         nullable=True,
     )
     amenity_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("amenity.id", ondelete="RESTRICT"),
         nullable=True,
         index=True,
     )
     stay_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("stay.id", ondelete="RESTRICT"),
         nullable=True,
         index=True,
     )
     # IKANOS `user_id` -- the requesting guest.
     app_user_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=True
+        GUID(), user_fk(ondelete="RESTRICT"), nullable=True
     )
     request_source: Mapped[str | None] = mapped_column(
         enums.request_source, nullable=True
     )
     facility_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("facility.id", ondelete="RESTRICT"),
         nullable=True,
         index=True,
@@ -203,10 +202,10 @@ class ServiceRequest(HMSBase, UUIDPk):
     total_tax: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
     total_amount: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
     expected_date: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
+        UTCDateTime(), nullable=True
     )
     completed_on: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
+        UTCDateTime(), nullable=True
     )
     status: Mapped[int | None] = mapped_column(
         SmallInteger,
@@ -216,10 +215,10 @@ class ServiceRequest(HMSBase, UUIDPk):
     )
     status_reason: Mapped[str | None] = mapped_column(String(100), nullable=True)
     created_by: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=False
+        GUID(), user_fk(ondelete="RESTRICT"), nullable=False
     )
     updated_by: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=False
+        GUID(), user_fk(ondelete="RESTRICT"), nullable=False
     )
 
     __table_args__ = (Index("ix_service_request_created_on", "created_on"),)
@@ -235,19 +234,19 @@ class ServiceRequestItem(HMSBase, UUIDPk):
     __tablename__ = "service_request_item"
 
     service_request_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("service_request.id", ondelete="RESTRICT"),
         nullable=False,
         index=True,
     )
     item_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("service_category_item.id", ondelete="RESTRICT"),
         nullable=True,
         index=True,
     )
     category_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("service_category.id", ondelete="RESTRICT"),
         nullable=True,
         index=True,
@@ -255,7 +254,7 @@ class ServiceRequestItem(HMSBase, UUIDPk):
     quantity: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
     price_per_unit: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
     assigned_to: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=True
+        GUID(), user_fk(ondelete="RESTRICT"), nullable=True
     )
     status: Mapped[int | None] = mapped_column(
         SmallInteger,
@@ -276,13 +275,13 @@ class RoomServiceRequest(HMSBase, UUIDPk):
     __tablename__ = "room_service_request"
 
     guest_room_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("amenity.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
     stay_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("stay.id", ondelete="CASCADE"),
         nullable=True,
         index=True,
@@ -291,14 +290,14 @@ class RoomServiceRequest(HMSBase, UUIDPk):
         enums.room_service_request_status, nullable=True, server_default="unassigned"
     )
     assigned_to: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=True
+        GUID(), user_fk(ondelete="RESTRICT"), nullable=True
     )
     comments: Mapped[str | None] = mapped_column(Text, nullable=True)
     completed_on: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
+        UTCDateTime(), nullable=True
     )
     created_by: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=False
+        GUID(), user_fk(ondelete="RESTRICT"), nullable=False
     )
 
 
@@ -314,13 +313,13 @@ class RoomServiceRequestItem(HMSBase, UUIDPk):
     __tablename__ = "room_service_request_item"
 
     room_service_request_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("room_service_request.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
     service_category_item_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("service_category_item.id", ondelete="RESTRICT"),
         nullable=False,
         index=True,

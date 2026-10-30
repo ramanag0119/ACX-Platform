@@ -12,16 +12,15 @@ from datetime import date, datetime
 from sqlalchemy import (
     Boolean,
     Date,
-    DateTime,
     ForeignKey,
     Index,
     SmallInteger,
     String,
+    text,
 )
-from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.db.types import GUID, JSONB, UTCDateTime
 from app.db.base import Base, HMSBase, SmallIntLookupPk, TimestampMixin, UUIDPk
 from app.models import enums
 from app.models.facility import user_fk
@@ -59,13 +58,13 @@ class AppUser(HMSBase, UUIDPk):
         SmallInteger, nullable=True, server_default="1", index=True
     )
     date_of_joining: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
+        UTCDateTime(), nullable=True
     )
     date_of_termination: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
+        UTCDateTime(), nullable=True
     )
     supervisor: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=True
+        GUID(), user_fk(ondelete="RESTRICT"), nullable=True
     )
     address: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     nationality: Mapped[int | None] = mapped_column(
@@ -76,13 +75,13 @@ class AppUser(HMSBase, UUIDPk):
     )
     # IKANOS `function_id`; renamed for the `job_function` table rename.
     job_function_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("job_function.id", ondelete="RESTRICT", use_alter=True),
         nullable=True,
         index=True,
     )
     department_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("department.id", ondelete="RESTRICT", use_alter=True),
         nullable=True,
         index=True,
@@ -96,11 +95,11 @@ class AppUser(HMSBase, UUIDPk):
     # MERGE: absorbed `user_metadata`.
     user_metadata: Mapped[dict | None] = mapped_column("metadata", JSONB, nullable=True)
     created_by: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=False
+        GUID(), user_fk(ondelete="RESTRICT"), nullable=False
     )
 
     __table_args__ = (
-        Index("ix_app_user_metadata_gin", "metadata", postgresql_using="gin"),
+        Index("ix_app_user_metadata_gin", "metadata", postgresql_using="gin").ddl_if(dialect="postgresql"),
     )
 
 
@@ -111,13 +110,13 @@ class UserToken(HMSBase, UUIDPk):
 
     token: Mapped[str] = mapped_column(String(36), nullable=False, unique=True)
     app_user_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="CASCADE"), nullable=False, index=True
+        GUID(), user_fk(ondelete="CASCADE"), nullable=False, index=True
     )
     is_expired: Mapped[bool | None] = mapped_column(
-        Boolean, nullable=True, server_default="false"
+        Boolean, nullable=True, server_default=text("false")
     )
     expired_on: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
+        UTCDateTime(), nullable=True
     )
 
 
@@ -128,20 +127,20 @@ class UserDevice(HMSBase, UUIDPk):
     __tablename__ = "user_device"
 
     app_user_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="CASCADE"), nullable=False, index=True
+        GUID(), user_fk(ondelete="CASCADE"), nullable=False, index=True
     )
     mobile_model: Mapped[str | None] = mapped_column(String(100), nullable=True)
     mobile_os: Mapped[str | None] = mapped_column(String(50), nullable=True)
     device_token: Mapped[str | None] = mapped_column(String(200), nullable=True)
     is_mobile_token: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     user_token_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("user_token.id", ondelete="CASCADE"),
         nullable=True,
         index=True,
     )
     stay_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("stay.id", ondelete="CASCADE"), nullable=True
+        GUID(), ForeignKey("stay.id", ondelete="CASCADE"), nullable=True
     )
     status: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
 
@@ -156,7 +155,7 @@ class Role(HMSBase, UUIDPk):
     __tablename__ = "role"
 
     facility_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("facility.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
@@ -170,7 +169,7 @@ class Role(HMSBase, UUIDPk):
         SmallInteger, nullable=True, server_default="1"
     )
     created_by: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=False
+        GUID(), user_fk(ondelete="RESTRICT"), nullable=False
     )
 
 
@@ -185,24 +184,24 @@ class UserRole(Base, TimestampMixin):
     __tablename__ = "user_role"
 
     facility_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("facility.id", ondelete="CASCADE"),
         primary_key=True,
     )
     app_user_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         user_fk(ondelete="CASCADE"),
         primary_key=True,
         index=True,
     )
     role_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("role.id", ondelete="CASCADE"),
         primary_key=True,
         index=True,
     )
     created_by: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="CASCADE"), nullable=True
+        GUID(), user_fk(ondelete="CASCADE"), nullable=True
     )
 
 
@@ -230,7 +229,7 @@ class RoleModulePermission(Base, TimestampMixin):
     __tablename__ = "role_module_permission"
 
     role_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("role.id", ondelete="RESTRICT"),
         primary_key=True,
     )
@@ -241,7 +240,7 @@ class RoleModulePermission(Base, TimestampMixin):
         index=True,
     )
     read_access: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, server_default="false"
+        Boolean, nullable=False, server_default=text("false")
     )
     write_access: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
 
@@ -253,7 +252,7 @@ class Department(HMSBase, UUIDPk):
 
     department_name: Mapped[str] = mapped_column(String(255), nullable=False)
     facility_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("facility.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
@@ -263,7 +262,7 @@ class Department(HMSBase, UUIDPk):
         enums.department_key, nullable=True
     )
     created_by: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=True
+        GUID(), user_fk(ondelete="RESTRICT"), nullable=True
     )
 
 
@@ -280,7 +279,7 @@ class JobFunction(HMSBase, UUIDPk):
 
     function_name: Mapped[str] = mapped_column(String(100), nullable=False)
     facility_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("facility.id", ondelete="CASCADE"),
         nullable=True,
         index=True,
@@ -288,5 +287,5 @@ class JobFunction(HMSBase, UUIDPk):
     status: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
     function_key: Mapped[str | None] = mapped_column(enums.function_key, nullable=True)
     created_by: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=True
+        GUID(), user_fk(ondelete="RESTRICT"), nullable=True
     )

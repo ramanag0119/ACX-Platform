@@ -9,16 +9,16 @@ from datetime import date, datetime
 from sqlalchemy import (
     Boolean,
     Date,
-    DateTime,
     ForeignKey,
     Numeric,
     SmallInteger,
     String,
     Text,
+    text,
 )
-from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.db.types import GUID, UTCDateTime
 from app.db.base import Base, HMSBase, SmallIntLookupPk, TimestampMixin, UUIDPk
 from app.models.facility import attachment_fk, user_fk
 
@@ -37,10 +37,10 @@ class PromoCode(HMSBase, UUIDPk):
     offer_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     promo_code: Mapped[str] = mapped_column(String(20), nullable=False, unique=True)
     start_time: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
+        UTCDateTime(), nullable=True
     )
     expiry_time: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True, index=True
+        UTCDateTime(), nullable=True, index=True
     )
     discount_percentage: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
     max_discount_value: Mapped[float | None] = mapped_column(
@@ -48,7 +48,7 @@ class PromoCode(HMSBase, UUIDPk):
     )
     min_order_value: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
     promo_code_icon: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), attachment_fk(ondelete="RESTRICT"), nullable=True
+        GUID(), attachment_fk(ondelete="RESTRICT"), nullable=True
     )
     promo_code_description: Mapped[str | None] = mapped_column(
         String(250), nullable=True
@@ -59,7 +59,7 @@ class PromoCode(HMSBase, UUIDPk):
         SmallInteger, nullable=True, server_default="1", index=True
     )
     created_by: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=False
+        GUID(), user_fk(ondelete="RESTRICT"), nullable=False
     )
 
 
@@ -69,12 +69,12 @@ class PromoCodeAmenity(Base, TimestampMixin):
     __tablename__ = "promo_code_amenity"
 
     promo_code_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("promo_code.id", ondelete="RESTRICT"),
         primary_key=True,
     )
     amenity_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("amenity.id", ondelete="RESTRICT"),
         primary_key=True,
         index=True,
@@ -83,7 +83,7 @@ class PromoCodeAmenity(Base, TimestampMixin):
         SmallInteger, nullable=True, server_default="1"
     )
     created_by: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=False
+        GUID(), user_fk(ondelete="RESTRICT"), nullable=False
     )
 
 
@@ -96,7 +96,7 @@ class FacilityEvent(HMSBase, UUIDPk):
     __tablename__ = "facility_event"
 
     facility_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("facility.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
@@ -110,19 +110,19 @@ class FacilityEvent(HMSBase, UUIDPk):
         SmallInteger, nullable=True, server_default="0"
     )
     start_date_time: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True, index=True
+        UTCDateTime(), nullable=True, index=True
     )
     end_date_time: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
+        UTCDateTime(), nullable=True
     )
     image_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), attachment_fk(ondelete="RESTRICT"), nullable=True
+        GUID(), attachment_fk(ondelete="RESTRICT"), nullable=True
     )
     # Backs PUT /events/{ID}/cancel.
     cancellation_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
     created_by: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=False
+        GUID(), user_fk(ondelete="RESTRICT"), nullable=False
     )
 
 
@@ -159,11 +159,11 @@ class Occasion(HMSBase, UUIDPk):
         index=True,
     )
     is_repeatable: Mapped[bool | None] = mapped_column(
-        Boolean, nullable=True, server_default="false"
+        Boolean, nullable=True, server_default=text("false")
     )
     notification_template: Mapped[str | None] = mapped_column(Text, nullable=True)
     facility_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("facility.id", ondelete="CASCADE"),
         nullable=True,
         index=True,
@@ -172,15 +172,15 @@ class Occasion(HMSBase, UUIDPk):
     day_of_month: Mapped[int] = mapped_column(SmallInteger, nullable=False)
     # For personal occasions (birthday, anniversary).
     app_user_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="CASCADE"), nullable=True
+        GUID(), user_fk(ondelete="CASCADE"), nullable=True
     )
     # Pushes the occasion to in-room hubs.
     notify_to_hub: Mapped[bool | None] = mapped_column(
-        Boolean, nullable=True, server_default="true"
+        Boolean, nullable=True, server_default=text("true")
     )
     occasion_start_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
     occasion_end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     status: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
     created_by: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="CASCADE"), nullable=True
+        GUID(), user_fk(ondelete="CASCADE"), nullable=True
     )

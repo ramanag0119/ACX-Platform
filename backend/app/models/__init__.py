@@ -1,8 +1,8 @@
-"""The approved 92-table HMS schema.
+"""The approved 93-table HMS schema.
 
 Source of truth: ``backend/docs/FINAL_HMS_DATABASE_BLUEPRINT.md``.
 
-Importing this package registers all 92 tables on ``Base.metadata``, which is
+Importing this package registers all 93 tables on ``Base.metadata``, which is
 what ``migrations/env.py`` hands to Alembic as ``target_metadata``.
 
 Module layout follows the blueprint's own grouping (§12.1):
@@ -13,7 +13,7 @@ Module layout follows the blueprint's own grouping (§12.1):
     people.py       D  people, authentication, RBAC                  9
     service.py      E  services, tickets, catalogue                  8
     maintenance.py  F  maintenance / Services Planning               4
-    device.py       G  devices, telemetry, IoT                      14
+    device.py       G  devices, telemetry, IoT                      15
     job_order.py    H  job orders                                    3
     access.py       I  access control and digital keys               4
     alert.py        J  alerts, incidents, value limits               8
@@ -22,7 +22,7 @@ Module layout follows the blueprint's own grouping (§12.1):
     marketing.py    M  marketing, events, occasions                  5
     reporting.py    N  energy and reporting                          2
                                                                    ---
-                                                                    92
+                                                                    93
 """
 
 from app.db.base import Base
@@ -74,6 +74,7 @@ from app.models.device import (
     MqttBroker,
     MqttTopic,
     OtherDevice,
+    RoomDeviceMap,
     SensorOperationStat,
 )
 from app.models.facility import (
@@ -188,7 +189,7 @@ APPROVED_TABLES: tuple[str, ...] = (
     "maintenance_request_recurrence",
     "maintenance_request_amenity",
     "maintenance_request_assignee",
-    # G -- devices, telemetry, IoT (14)
+    # G -- devices, telemetry, IoT (15)
     "device_type",
     "device",
     "firmware",
@@ -203,6 +204,7 @@ APPROVED_TABLES: tuple[str, ...] = (
     "other_device",
     "battery_life_stat",
     "sensor_operation_stat",
+    "room_device_map",
     # H -- job orders (3)
     "job_order",
     "job_order_device",
@@ -376,6 +378,7 @@ __all__ = [
     "MqttBroker",
     "MqttTopic",
     "OtherDevice",
+    "RoomDeviceMap",
     "BatteryLifeStat",
     "SensorOperationStat",
     # H

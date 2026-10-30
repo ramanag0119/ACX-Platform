@@ -39,6 +39,9 @@ def _ensure_engine() -> sessionmaker:
         )
     _engine = create_engine(
         url,
+        # The OSS DB is externally owned and strictly read-only for HMS: every
+        # session starts read-only, so PostgreSQL itself rejects any write.
+        connect_args={"options": "-c default_transaction_read_only=on"},
         pool_pre_ping=True,
         echo=settings.DEBUG and settings.APP_ENV == "development",
     )

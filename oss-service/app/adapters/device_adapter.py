@@ -186,6 +186,10 @@ def _apply_filters(stmt, registry: list[dict], filters: dict):
         if filters.get(key):
             # OSS has no room/facility linkage; refuse rather than mislead.
             raise AdapterNotMapped("devices filtered by amenity/facility (no OSS linkage)")
+    if filters.get("device_ids"):
+        # HMS owns the room<->device mapping; it resolves a room (or floor,
+        # building, facility) to OSS device ids and asks for exactly those.
+        stmt = stmt.where(D.c.device_id.in_(filters["device_ids"]))
     if filters.get("device_type"):
         val = filters["device_type"]
         # Accept either the type name or the derived ordinal id.

@@ -18,11 +18,11 @@ the Phase 1 `created_at` / `updated_at` naming is retired (blueprint §2.2).
 import uuid
 from datetime import datetime
 
-from sqlalchemy import BigInteger, DateTime, Identity, Integer, MetaData, SmallInteger, func
-from sqlalchemy.dialects.postgresql import UUID as PGUUID
+from sqlalchemy import BigInteger, Identity, Integer, MetaData, SmallInteger
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from app.core.config import settings
+from app.db.types import GUID, NOW, UTCDateTime
 
 # Deterministic constraint naming so Alembic autogenerate produces stable names.
 NAMING_CONVENTION = {
@@ -34,11 +34,11 @@ NAMING_CONVENTION = {
 }
 
 
-# `public` is PostgreSQL's default schema and is already on the search_path.
-# Setting it explicitly makes SQLAlchemy schema-qualify every ForeignKey while
-# reflection reports them unqualified, which shows up as permanent phantom
-# drift in `alembic check`. Only pin the schema when it is NOT the default.
-_SCHEMA = None if settings.POSTGRES_SCHEMA == "public" else settings.POSTGRES_SCHEMA
+# MySQL has no schema beyond the database, and PostgreSQL's `public` is already
+# on the search_path. Setting it explicitly makes SQLAlchemy schema-qualify
+# every ForeignKey while reflection reports them unqualified, which shows up as
+# permanent phantom drift in `alembic check`. Only pin a non-default PG schema.
+_SCHEMA = settings.db_schema
 
 
 class Base(DeclarativeBase):
@@ -57,7 +57,7 @@ class UUIDPk:
     """T2 — business / transactional entity."""
 
     id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+        GUID(), primary_key=True, default=uuid.uuid4
     )
 
 
@@ -99,12 +99,12 @@ class TimestampMixin:
     Blueprint §5.0 declares them on all 92."""
 
     created_on: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
+        UTCDateTime(), server_default=NOW, nullable=False
     )
     updated_on: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        onupdate=func.now(),
+        UTCDateTime(),
+        server_default=NOW,
+        onupdate=NOW,
         nullable=False,
     )
 

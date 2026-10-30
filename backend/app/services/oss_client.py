@@ -1,14 +1,11 @@
 """Client for the OSS (device/operations) microservice.
 
-HMS forwards OSS-surfaced reads here and composes the few BSS views that need a
-device figure (occupancy's per-room device_count). This is the ONLY place that
-knows how to reach the OSS service, so timeouts, the optional service token and
-the failure policy live in one spot.
+HMS forwards OSS-surfaced reads here. This is the ONLY place that knows how to
+reach the OSS service, so timeouts, the optional service token and the failure
+policy live in one spot.
 
-FAILURE POLICY (deliberate):
-  * Forwarded routes -- raise `OssUnavailable`; the caller returns a clear 503.
-  * Composition (device_count) -- return None, meaning "unknown". It is NEVER
-    coerced to 0: an unreachable OSS must not look like a room with no devices.
+FAILURE POLICY: a transport error or timeout raises `OssUnavailable`; the
+caller returns a clear 503. A 4xx/5xx from OSS itself is passed through.
 
 SECURITY: no inter-service auth by default (trusted-LAN PoC). If
 `settings.OSS_SERVICE_TOKEN` is set, it is sent as `X-OSS-Service-Token` so an
@@ -63,23 +60,3 @@ def forward(
         body = None
     return resp.status_code, body
 
-
-def device_count(amenity_id) -> int | None:
-    """Devices installed in a room, read from OSS. None = UNKNOWN (never 0).
-
-    Uses the OSS devices list `total` for the amenity. Any failure -- transport
-    error, OSS 5xx, adapter-not-mapped, or a missing `total` -- yields None so
-    the occupancy view can render "unknown" rather than a fabricated zero.
-    """
-    try:
-        status, body = forward(
-            "GET",
-            "/devices",
-            params={"amenity_id": str(amenity_id), "page": 1, "page_size": 1},
-        )
-    except OssUnavailable:
-        return None
-    if status != 200 or not isinstance(body, dict):
-        return None
-    total = body.get("total")
-    return total if isinstance(total, int) else None

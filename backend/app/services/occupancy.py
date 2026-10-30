@@ -33,19 +33,19 @@ from app.models import (
     Stay,
     StayUser,
 )
-from app.services import oss_client
+from app.services import room_devices
 
 
 def _resolve_device_count(db: Session, amenity_id: uuid.UUID) -> int | None:
     """Devices installed in a room.
 
-    With OSS dispatch on, the figure comes from the OSS microservice, and
-    `None` means UNKNOWN (OSS unreachable) -- it is deliberately NOT coerced to
-    0, so an outage never looks like a room with no devices. With OSS off, it is
-    the local count from hms_db, exactly as before.
+    With OSS dispatch on, devices live in OSS, which has no rooms; the room's
+    devices are the ones mapped to it in `room_device_map` (hms_db), so the
+    count needs no call to OSS. With OSS off, it is the local count from
+    hms_db, exactly as before.
     """
     if settings.OSS_ENABLED:
-        return oss_client.device_count(amenity_id)
+        return room_devices.count_in_room(db, amenity_id)
     return db.execute(
         select(func.count()).select_from(Device).where(Device.amenity_id == amenity_id)
     ).scalar_one()
@@ -406,15 +406,19 @@ def get_occupancy_summary(
     room_ids_subquery = room_base.scalar_subquery()
     status_expr = _authoritative_occupancy_status_expr()
 
-    # Query room counts in one aggregation
+    # Query room counts in one aggregation. COUNT(CASE WHEN .. THEN 1 END)
+    # counts only matching rows; `count(*) FILTER (...)` is PostgreSQL only.
+    def count_where(condition):
+        return func.count(case((condition, 1)))
+
     agg_stmt = (
         select(
             func.count().label("total"),
-            func.count().filter(status_expr == "Occupied").label("occupied"),
-            func.count().filter(status_expr == "Available").label("available"),
-            func.count().filter(status_expr == "Allotted").label("allotted"),
-            func.count().filter(status_expr == "Unavailable").label("unavailable"),
-            func.count().filter(status_expr.is_(None)).label("unknown"),
+            count_where(status_expr == "Occupied").label("occupied"),
+            count_where(status_expr == "Available").label("available"),
+            count_where(status_expr == "Allotted").label("allotted"),
+            count_where(status_expr == "Unavailable").label("unavailable"),
+            count_where(status_expr.is_(None)).label("unknown"),
         )
         .select_from(Amenity)
         .join(AmenityType, AmenityType.id == Amenity.amenity_type_id)
