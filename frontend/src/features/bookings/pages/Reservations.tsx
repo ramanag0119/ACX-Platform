@@ -45,10 +45,11 @@ import {
 import { DataState, TableLoading } from "@/core/components/DataState";
 import { toast } from "@/hooks/use-toast";
 import { MAX_PAGE_SIZE, ROOM_STATUS } from "@/lib/api/types";
-import { useRooms, useStays } from "@/lib/api/hooks";
+import { useCountries, useGenders, useRooms, useStays, useUsers } from "@/lib/api/hooks";
 import {
   useCancelStay,
   useCreateUser,
+  useUpdateUser,
   useUpdateStay,
   useCheckInStay,
   useCheckOutStay,
@@ -56,6 +57,13 @@ import {
   useExtendStay,
   useSetStayDocumentApproval,
 } from "@/lib/api/mutations";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  downloadBulkReservationsTemplate,
+  getLastBulkUploadReport,
+  uploadBulkReservations,
+} from "@/lib/api/writes";
+import type { BulkUploadResult, ImportJobRead } from "@/lib/api/types";
 import { useAuth } from "@/core/contexts/AuthContext";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useScrollToTop } from "@/hooks/use-scroll-to-top";
@@ -81,24 +89,28 @@ export type ReservationData = {
   isCheckedOut: boolean;
   expectedCheckout: string;
   stayRef: string;
+  bookingUserId?: string | null;
+  firstName?: string;
+  lastName?: string;
+  gender?: string | null;
+  nationality?: number | null;
+  nationalityName?: string | null;
+  country?: number | null;
+  city?: string | null;
+  comments?: string | null;
+  gst?: string | null;
+  externalStayRef?: string | null;
+  rawCheckin?: string;
+  rawCheckout?: string;
 };
 
 type ViewMode = "list" | "add" | "edit";
-
-const COUNTRY_CODES = [
-  { code: "+91", label: "+91 (India)" },
-  { code: "+1", label: "+1 (USA)" },
-  { code: "+44", label: "+44 (UK)" },
-  { code: "+971", label: "+971 (UAE)" },
-] as const;
-
-const DEFAULT_COUNTRY_CODE: string = COUNTRY_CODES[0].code;
 
 const EMPTY_FORM = {
   firstName: "",
   lastName: "",
   email: "",
-  countryCode: DEFAULT_COUNTRY_CODE,
+  countryCode: "+91",
   mobileNumber: "",
   gender: "",
   city: "",
@@ -109,8 +121,8 @@ const EMPTY_FORM = {
   /** An `amenity.id` (UUID) -- what POST /stays wants in `room_ids`. */
   roomId: "",
   subPackages: "",
-  noOfPersons: "",
-  numberOfRooms: "",
+  noOfPersons: "1",
+  numberOfRooms: "1",
   gst: "",
   reservationReference: "",
   comments: "",
@@ -118,33 +130,90 @@ const EMPTY_FORM = {
 };
 
 export const Reservations = () => {
-  // --- Live data -----------------------------------------------------------
-  const staysQuery = useStays({ page: 1, page_size: MAX_PAGE_SIZE });
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
+  const [entriesPerPage, setEntriesPerPage] = useState("10");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = parseInt(entriesPerPage) || 10;
+  useScrollToTop(currentPage);
 
-  const reservations: ReservationData[] = (staysQuery.data?.items ?? []).map((stay) => ({
-    id: stay.id,
-    name: stay.booker?.name ?? "-",
-    mobileNumber: "-",
-    email: "-",
-    occupants: stay.no_of_guests,
-    roomNo: "",
-    roomType: "-",
-    noOfRooms: stay.no_of_rooms ?? 0,
-    checkIn: stay.actual_checkin_time
-      ? new Date(stay.actual_checkin_time).toLocaleString()
-      : "",
-    checkOut: stay.actual_checkout_time
-      ? new Date(stay.actual_checkout_time).toLocaleString()
-      : "",
-    extendCheckOut: false,
-    reservationDate: new Date(stay.created_on).toLocaleDateString(),
-    documentsApproval: stay.document_approval_status === "approved",
-    status: stay.status ?? "-",
-    isCheckedIn: stay.is_checked_in,
-    isCheckedOut: Boolean(stay.actual_checkout_time),
-    expectedCheckout: stay.expected_checkout_time,
-    stayRef: stay.internal_stay_ref_number,
-  }));
+  // --- Live data from the BSS database via backend APIs ---------------------------
+  const staysQuery = useStays({
+    page: currentPage,
+    page_size: pageSize,
+    q: searchQuery || undefined,
+  });
+  const usersQuery = useUsers({ page: 1, page_size: MAX_PAGE_SIZE });
+  const countriesQuery = useCountries({ page: 1, page_size: 250 });
+  const gendersQuery = useGenders();
+  const roomsQuery = useRooms({ page: 1, page_size: MAX_PAGE_SIZE });
+
+  const countries = countriesQuery.data?.items ?? [];
+  const countriesById = new Map(countries.map((c) => [c.id, c]));
+  const usersById = new Map((usersQuery.data?.items ?? []).map((u) => [u.id, u]));
+
+  // Phone country codes derived dynamically from database countries
+  const phoneCountryOptions = countries
+    .filter((c) => c.phone_code)
+    .map((c) => ({
+      code: `+${c.phone_code}`,
+      countryId: c.id,
+      label: `+${c.phone_code} (${c.nice_name})`,
+      niceName: c.nice_name,
+    }));
+
+  const defaultCountry = countries.find((c) => c.phone_code === "91") ?? countries[0];
+  const defaultCountryCode = defaultCountry ? `+${defaultCountry.phone_code}` : "+91";
+
+  // Gender options derived dynamically from backend pg_enum
+  const genderOptions = gendersQuery.data ?? [];
+
+  const reservations: ReservationData[] = (staysQuery.data?.items ?? []).map((stay) => {
+    const bookerUser = stay.booker?.id ? usersById.get(stay.booker.id) : null;
+    const nationalityCountry = bookerUser?.nationality ? countriesById.get(bookerUser.nationality) : null;
+
+    const guestName = bookerUser
+      ? `${bookerUser.first_name} ${bookerUser.last_name || ""}`.trim()
+      : (stay.booker?.name ?? "-");
+
+    return {
+      id: stay.id,
+      name: guestName,
+      mobileNumber: stay.guest_phone_number ?? bookerUser?.phone_number ?? stay.booker?.phone_number ?? "-",
+      email: stay.guest_email ?? bookerUser?.email ?? stay.booker?.email ?? "-",
+      occupants: stay.no_of_guests,
+      roomNo: stay.room_number ?? "-",
+      roomType: stay.room_type_name ?? "-",
+      noOfRooms: stay.no_of_rooms ?? 0,
+      checkIn: stay.actual_checkin_time
+        ? new Date(stay.actual_checkin_time).toLocaleString()
+        : (stay.expected_checkin_time ? new Date(stay.expected_checkin_time).toLocaleDateString() : ""),
+      checkOut: stay.actual_checkout_time
+        ? new Date(stay.actual_checkout_time).toLocaleString()
+        : (stay.expected_checkout_time ? new Date(stay.expected_checkout_time).toLocaleDateString() : ""),
+      extendCheckOut: false,
+      reservationDate: new Date(stay.created_on).toLocaleDateString(),
+      documentsApproval: stay.document_approval_status === "approved",
+      status: stay.display_status || stay.status || "-",
+      isCheckedIn: stay.is_checked_in,
+      isCheckedOut: Boolean(stay.actual_checkout_time),
+      expectedCheckout: stay.expected_checkout_time,
+      stayRef: stay.internal_stay_ref_number,
+      bookingUserId: stay.booker?.id ?? null,
+      firstName: bookerUser?.first_name ?? "",
+      lastName: bookerUser?.last_name ?? "",
+      gender: bookerUser?.gender ?? null,
+      nationality: bookerUser?.nationality ?? null,
+      nationalityName: nationalityCountry?.nice_name ?? null,
+      country: bookerUser?.country ?? null,
+      city: bookerUser?.address ?? null,
+      comments: stay.comments ?? null,
+      gst: stay.gst ?? null,
+      externalStayRef: stay.external_stay_ref_number ?? null,
+      rawCheckin: stay.expected_checkin_time,
+      rawCheckout: stay.expected_checkout_time,
+    };
+  });
 
   const { canWrite } = useAuth();
   const mayWrite = canWrite("bookings");
@@ -156,20 +225,18 @@ export const Reservations = () => {
   const createStay = useCreateStay();
   const updateStay = useUpdateStay();
   const createGuest = useCreateUser({ success: "Guest record created" });
+  const updateGuest = useUpdateUser({ success: "Guest details updated" });
 
-  const roomsQuery = useRooms({ page: 1, page_size: MAX_PAGE_SIZE });
   const allocatableRooms = (roomsQuery.data?.items ?? []).filter(
     (room) => room.status_name === ROOM_STATUS.AVAILABLE,
   );
 
-  const [viewMode, setViewMode] = useState<ViewMode>("list");
-  const [entriesPerPage, setEntriesPerPage] = useState("10");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  useScrollToTop(currentPage);
-
+  const queryClient = useQueryClient();
   const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadResult, setUploadResult] = useState<BulkUploadResult | null>(null);
+  const [lastReport, setLastReport] = useState<ImportJobRead | null>(null);
   const [editingReservation, setEditingReservation] = useState<ReservationData | null>(null);
 
   // Modal states
@@ -181,23 +248,11 @@ export const Reservations = () => {
   // Form state
   const [formData, setFormData] = useState(EMPTY_FORM);
 
-  const matchesSearch = (reservation: ReservationData) => {
-    const query = searchQuery.toLowerCase();
-    return (
-      reservation.name.toLowerCase().includes(query) ||
-      reservation.mobileNumber.toLowerCase().includes(query) ||
-      reservation.email.toLowerCase().includes(query) ||
-      reservation.roomType.toLowerCase().includes(query)
-    );
-  };
-
-  const filteredReservations = reservations.filter(matchesSearch);
-  const totalEntries = filteredReservations.length;
-  const pageSize = parseInt(entriesPerPage) || 10;
+  const totalEntries = staysQuery.data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalEntries / pageSize));
-  const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = Math.min(startIndex + pageSize, totalEntries);
-  const paginatedReservations = filteredReservations.slice(startIndex, endIndex);
+  const startIndex = totalEntries === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const endIndex = Math.min(currentPage * pageSize, totalEntries);
+  const paginatedReservations = reservations;
 
   const handleFormChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -214,6 +269,12 @@ export const Reservations = () => {
     const checkout = formData.depart ? new Date(formData.depart) : null;
 
     if (viewMode === "edit" && editingReservation) {
+      const selectedPhoneCountry = countries.find(
+        (c) => `+${c.phone_code}` === formData.countryCode,
+      );
+      const countryId = selectedPhoneCountry?.id ?? (formData.nationality ? Number(formData.nationality) : null);
+      const nationalityId = formData.nationality ? Number(formData.nationality) : null;
+
       updateStay.mutate(
         {
           id: editingReservation.id,
@@ -228,7 +289,26 @@ export const Reservations = () => {
               : {}),
           },
         },
-        { onSuccess: resetForm },
+        {
+          onSuccess: () => {
+            if (editingReservation.bookingUserId) {
+              updateGuest.mutate({
+                id: editingReservation.bookingUserId,
+                body: {
+                  first_name: formData.firstName,
+                  last_name: formData.lastName || null,
+                  email: formData.email || null,
+                  phone_number: `${formData.countryCode || defaultCountryCode}${formData.mobileNumber}`,
+                  gender: (formData.gender || null) as "male" | "female" | "other" | null,
+                  country: countryId,
+                  nationality: nationalityId,
+                  address: formData.city || null,
+                },
+              });
+            }
+            resetForm();
+          },
+        },
       );
       return;
     }
@@ -242,13 +322,21 @@ export const Reservations = () => {
       return;
     }
 
+    const selectedPhoneCountry = countries.find(
+      (c) => `+${c.phone_code}` === formData.countryCode,
+    );
+    const countryId = selectedPhoneCountry?.id ?? (formData.nationality ? Number(formData.nationality) : null);
+    const nationalityId = formData.nationality ? Number(formData.nationality) : null;
+
     createGuest.mutate(
       {
         first_name: formData.firstName,
         last_name: formData.lastName || null,
         email: formData.email || null,
-        phone_number: `${formData.countryCode || DEFAULT_COUNTRY_CODE}${formData.mobileNumber}`,
+        phone_number: `${formData.countryCode || defaultCountryCode}${formData.mobileNumber}`,
         gender: (formData.gender || null) as "male" | "female" | "other" | null,
+        country: countryId,
+        nationality: nationalityId,
         address: formData.city || null,
         is_staff: 0,
       },
@@ -277,16 +365,43 @@ export const Reservations = () => {
   const handleEdit = (reservation: ReservationData) => {
     setEditingReservation(reservation);
     const nameParts = reservation.name.split(" ");
+    const firstName = reservation.firstName || nameParts[0] || "";
+    const lastName = reservation.lastName || nameParts.slice(1).join(" ") || "";
+
+    let countryCode = defaultCountryCode;
+    let mobile = reservation.mobileNumber !== "-" ? reservation.mobileNumber : "";
+    if (mobile.startsWith("+")) {
+      const match = phoneCountryOptions.find((opt) => mobile.startsWith(opt.code));
+      if (match) {
+        countryCode = match.code;
+        mobile = mobile.slice(match.code.length);
+      }
+    }
+
+    const arrivalDate = reservation.rawCheckin
+      ? new Date(reservation.rawCheckin).toISOString().slice(0, 10)
+      : "";
+    const departDate = reservation.rawCheckout
+      ? new Date(reservation.rawCheckout).toISOString().slice(0, 10)
+      : "";
+
     setFormData({
       ...EMPTY_FORM,
-      firstName: nameParts[0] || "",
-      lastName: nameParts.slice(1).join(" ") || "",
-      email: reservation.email,
-      countryCode: reservation.mobileNumber.split(" ")[0] || DEFAULT_COUNTRY_CODE,
-      mobileNumber: reservation.mobileNumber.split(" ")[1] || "",
-      arrival: reservation.checkIn,
-      noOfPersons: reservation.occupants.toString(),
-      numberOfRooms: reservation.noOfRooms.toString(),
+      firstName,
+      lastName,
+      email: reservation.email !== "-" ? reservation.email : "",
+      countryCode,
+      mobileNumber: mobile,
+      gender: reservation.gender || "",
+      city: reservation.city || "",
+      nationality: reservation.nationality ? String(reservation.nationality) : "",
+      arrival: arrivalDate,
+      depart: departDate,
+      noOfPersons: reservation.occupants ? reservation.occupants.toString() : "1",
+      numberOfRooms: reservation.noOfRooms ? reservation.noOfRooms.toString() : "1",
+      gst: reservation.gst || "",
+      reservationReference: reservation.externalStayRef || "",
+      comments: reservation.comments || "",
     });
     setViewMode("edit");
   };
@@ -295,14 +410,41 @@ export const Reservations = () => {
     cancel.mutate(reservationId);
   };
 
-  const handleBulkUpload = () => {
-    toast({
-      title: "Bulk upload is not connected yet",
-      description:
-        "Imports are tracked in `import_job`, which no API endpoint exposes, " +
-        "and the API has no file-upload route. Nothing was uploaded.",
-      variant: "destructive",
-    });
+  const handleBulkUpload = async () => {
+    if (!selectedFile) return;
+    setIsUploading(true);
+    setUploadResult(null);
+    try {
+      const res = await uploadBulkReservations(selectedFile);
+      setUploadResult(res);
+      queryClient.invalidateQueries({ queryKey: ["stays"] });
+      queryClient.invalidateQueries({ queryKey: ["occupancy"] });
+      if (res.success_count > 0 && res.error_count === 0) {
+        toast({
+          title: "Bulk Upload Successful",
+          description: `Successfully imported ${res.success_count} reservation(s).`,
+        });
+      } else if (res.success_count > 0 && res.error_count > 0) {
+        toast({
+          title: "Partial Bulk Upload",
+          description: `Imported ${res.success_count} reservation(s). ${res.error_count} row(s) had errors.`,
+        });
+      } else {
+        toast({
+          title: "Bulk Upload Failed",
+          description: `None of the ${res.total_records} record(s) could be imported. Review the errors below.`,
+          variant: "destructive",
+        });
+      }
+    } catch (err: any) {
+      toast({
+        title: "Bulk Upload Failed",
+        description: err?.message || "Failed to process bulk upload file.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleCheckInClick = (reservation: ReservationData) => {
@@ -401,16 +543,39 @@ export const Reservations = () => {
                   <Select
                     value={formData.countryCode}
                     onValueChange={(value) => handleFormChange("countryCode", value)}
+                    disabled={countriesQuery.isLoading}
                   >
                     <SelectTrigger className="h-12 bg-muted/30 border-border/50">
-                      <SelectValue placeholder="Select country code" />
+                      <SelectValue
+                        placeholder={
+                          countriesQuery.isLoading
+                            ? "Loading country codes..."
+                            : countriesQuery.isError
+                              ? "Failed to load country codes"
+                              : "Select country code"
+                        }
+                      />
                     </SelectTrigger>
-                    <SelectContent className="bg-popover">
-                      {COUNTRY_CODES.map(({ code, label }) => (
-                        <SelectItem key={code} value={code}>
-                          {label}
-                        </SelectItem>
-                      ))}
+                    <SelectContent className="bg-popover max-h-72">
+                      {countriesQuery.isLoading ? (
+                        <div className="p-4 text-center text-sm text-muted-foreground">
+                          Loading country codes from database...
+                        </div>
+                      ) : countriesQuery.isError ? (
+                        <div className="p-4 text-center text-sm text-destructive">
+                          Failed to load countries from backend.
+                        </div>
+                      ) : phoneCountryOptions.length === 0 ? (
+                        <div className="p-4 text-center text-sm text-muted-foreground">
+                          No country reference data found in database.
+                        </div>
+                      ) : (
+                        phoneCountryOptions.map((opt) => (
+                          <SelectItem key={`${opt.code}-${opt.countryId}`} value={opt.code}>
+                            {opt.label}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -434,14 +599,39 @@ export const Reservations = () => {
                   <Select
                     value={formData.gender}
                     onValueChange={(value) => handleFormChange("gender", value)}
+                    disabled={gendersQuery.isLoading}
                   >
                     <SelectTrigger className="h-12 bg-muted/30 border-border/50">
-                      <SelectValue placeholder="Select Gender" />
+                      <SelectValue
+                        placeholder={
+                          gendersQuery.isLoading
+                            ? "Loading genders..."
+                            : gendersQuery.isError
+                              ? "Failed to load genders"
+                              : "Select Gender"
+                        }
+                      />
                     </SelectTrigger>
                     <SelectContent className="bg-popover">
-                      <SelectItem value="male">Male</SelectItem>
-                      <SelectItem value="female">Female</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
+                      {gendersQuery.isLoading ? (
+                        <div className="p-4 text-center text-sm text-muted-foreground">
+                          Loading gender options from database...
+                        </div>
+                      ) : gendersQuery.isError ? (
+                        <div className="p-4 text-center text-sm text-destructive">
+                          Failed to load gender options.
+                        </div>
+                      ) : genderOptions.length === 0 ? (
+                        <div className="p-4 text-center text-sm text-muted-foreground">
+                          No gender options available.
+                        </div>
+                      ) : (
+                        genderOptions.map((g) => (
+                          <SelectItem key={g.value} value={g.value}>
+                            {g.label}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -463,15 +653,39 @@ export const Reservations = () => {
                   <Select
                     value={formData.nationality}
                     onValueChange={(value) => handleFormChange("nationality", value)}
+                    disabled={countriesQuery.isLoading}
                   >
                     <SelectTrigger className="h-12 bg-muted/30 border-border/50">
-                      <SelectValue placeholder="Select nationality" />
+                      <SelectValue
+                        placeholder={
+                          countriesQuery.isLoading
+                            ? "Loading nationalities..."
+                            : countriesQuery.isError
+                              ? "Failed to load nationalities"
+                              : "Select nationality"
+                        }
+                      />
                     </SelectTrigger>
-                    <SelectContent className="bg-popover">
-                      <SelectItem value="indian">Indian</SelectItem>
-                      <SelectItem value="american">American</SelectItem>
-                      <SelectItem value="british">British</SelectItem>
-                      <SelectItem value="australian">Australian</SelectItem>
+                    <SelectContent className="bg-popover max-h-72">
+                      {countriesQuery.isLoading ? (
+                        <div className="p-4 text-center text-sm text-muted-foreground">
+                          Loading nationalities from database...
+                        </div>
+                      ) : countriesQuery.isError ? (
+                        <div className="p-4 text-center text-sm text-destructive">
+                          Failed to load nationalities from backend.
+                        </div>
+                      ) : countries.length === 0 ? (
+                        <div className="p-4 text-center text-sm text-muted-foreground">
+                          No nationality reference data found in database.
+                        </div>
+                      ) : (
+                        countries.map((c) => (
+                          <SelectItem key={c.id} value={String(c.id)}>
+                            {c.nice_name}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -544,8 +758,8 @@ export const Reservations = () => {
                     </SelectTrigger>
                     <SelectContent className="bg-popover">
                       {allocatableRooms.map((room) => (
-                        <SelectItem key={room.amenity_id} value={room.amenity_id}>
-                          {room.room_name} ({room.amenity_type_name ?? "Room"})
+                        <SelectItem key={room.id} value={room.id}>
+                          {room.name} ({room.amenity_type_name ?? "Room"})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -659,10 +873,10 @@ export const Reservations = () => {
                 </Button>
                 <Button
                   onClick={handleSubmit}
-                  disabled={createStay.isPending || updateStay.isPending || createGuest.isPending}
+                  disabled={createStay.isPending || updateStay.isPending || createGuest.isPending || updateGuest.isPending}
                   className="h-12 px-8 min-w-[120px] rounded-2xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
                 >
-                  {createStay.isPending || updateStay.isPending || createGuest.isPending
+                  {createStay.isPending || updateStay.isPending || createGuest.isPending || updateGuest.isPending
                     ? "Saving..."
                     : "Submit"}
                 </Button>
@@ -882,7 +1096,7 @@ export const Reservations = () => {
           {/* Footer */}
           <div className="flex flex-wrap items-center justify-between gap-4 mt-5">
             <span className="text-muted-foreground text-xs">
-              Showing {totalEntries > 0 ? startIndex + 1 : 0} to {endIndex} of {totalEntries} entries
+              Showing {totalEntries > 0 ? startIndex : 0} to {endIndex} of {totalEntries} entries
             </span>
 
             <div className="flex items-center gap-1">
@@ -944,65 +1158,156 @@ export const Reservations = () => {
       </Card>
 
       {/* Bulk Upload Modal */}
-      <Dialog open={bulkUploadOpen} onOpenChange={setBulkUploadOpen}>
-        <DialogContent className="sm:max-w-md">
+      <Dialog open={bulkUploadOpen} onOpenChange={(open) => {
+        if (!isUploading) {
+          setBulkUploadOpen(open);
+          if (!open) {
+            setSelectedFile(null);
+            setUploadResult(null);
+          }
+        }
+      }}>
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="text-xl font-semibold">Bulk Upload Reservations</DialogTitle>
           </DialogHeader>
-          <div className="space-y-6 py-4">
+          <div className="space-y-5 py-3">
             <div className="flex items-center gap-4">
               <Button
-                className="bg-brand hover:bg-brand-hover text-white font-medium px-5 h-10 rounded-xl shadow-sm"
+                type="button"
+                className="bg-brand hover:bg-brand-hover text-white font-medium px-4 h-10 rounded-xl shadow-sm text-xs"
+                onClick={async () => {
+                  try {
+                    await downloadBulkReservationsTemplate();
+                    toast({
+                      title: "Template Downloaded",
+                      description: "Sample reservations template CSV has been downloaded.",
+                    });
+                  } catch (err: any) {
+                    toast({
+                      title: "Failed to download template",
+                      description: err?.message || "Could not download sample template.",
+                      variant: "destructive",
+                    });
+                  }
+                }}
               >
                 <Download className="h-4 w-4 mr-2" />
                 Sample Template
               </Button>
               <div className="flex-1">
                 <Button
+                  type="button"
                   variant="outline"
-                  className="h-10 px-4 border-dashed border-2"
+                  disabled={isUploading}
+                  className="h-10 px-3 border-dashed border-2 text-xs"
                   onClick={() => document.getElementById("bulk-file-upload")?.click()}
                 >
-                  <FileText className="h-4 w-4 mr-2" />
+                  <FileText className="h-4 w-4 mr-1.5" />
                   Choose File
                 </Button>
-                <span className="ml-3 text-sm text-muted-foreground">
+                <span className="ml-2 text-xs text-muted-foreground truncate inline-block max-w-[150px] align-middle" title={selectedFile ? selectedFile.name : "No file chosen"}>
                   {selectedFile ? selectedFile.name : "No file chosen"}
                 </span>
                 <input
                   id="bulk-file-upload"
                   type="file"
                   className="hidden"
-                  accept=".csv,.xlsx,.xls"
-                  onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                  accept=".csv,.txt"
+                  disabled={isUploading}
+                  onChange={(e) => {
+                    setSelectedFile(e.target.files?.[0] || null);
+                    setUploadResult(null);
+                  }}
                 />
               </div>
             </div>
 
-            <p className="text-sm text-muted-foreground">
-              <a href="#" className="text-primary hover:underline">
+            {uploadResult && (
+              <div className="rounded-lg border p-3 text-xs space-y-2 bg-muted/30">
+                <div className="flex justify-between font-semibold">
+                  <span>Processed: {uploadResult.total_records}</span>
+                  <span className="text-emerald-600">Imported: {uploadResult.success_count}</span>
+                  <span className={uploadResult.error_count > 0 ? "text-rose-600" : "text-muted-foreground"}>
+                    Errors: {uploadResult.error_count}
+                  </span>
+                </div>
+                {uploadResult.errors.length > 0 && (
+                  <div className="max-h-36 overflow-y-auto space-y-1 pr-1 border-t pt-2 border-border/50">
+                    {uploadResult.errors.map((err, i) => (
+                      <div key={i} className="text-rose-500 font-mono text-[11px]">
+                        Row {err.row}: {err.error}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <p className="text-xs text-muted-foreground">
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    const report = await getLastBulkUploadReport();
+                    if (report) {
+                      setLastReport(report);
+                      toast({
+                        title: "Last Import Summary",
+                        description: `Status: ${report.import_status.toUpperCase()} | Total: ${report.total_records ?? 0} | Succeeded: ${report.success_count ?? 0} | Failed: ${report.error_count ?? 0}`,
+                      });
+                    } else {
+                      toast({
+                        title: "No Previous Import",
+                        description: "No past reservation import jobs were found.",
+                      });
+                    }
+                  } catch (err: any) {
+                    toast({
+                      title: "Failed to retrieve report",
+                      description: err?.message || "Could not fetch report.",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+                className="text-primary hover:underline font-medium cursor-pointer"
+              >
                 Click here
-              </a>{" "}
-              to download the report of the last uploaded reservations.
+              </button>{" "}
+              to check the summary report of the last uploaded reservations.
             </p>
 
-            <div className="flex justify-end gap-3 pt-4">
+            {lastReport && (
+              <div className="rounded border border-border/60 p-2.5 bg-muted/20 text-[11px] space-y-1">
+                <div className="font-semibold text-foreground">Last Upload Report ({lastReport.import_file_name || "booking import"})</div>
+                <div className="text-muted-foreground">
+                  Status: <span className="font-medium text-foreground">{lastReport.import_status}</span> | Total: {lastReport.total_records ?? 0} | Success: {lastReport.success_count ?? 0} | Error: {lastReport.error_count ?? 0}
+                </div>
+                {lastReport.completed_on && (
+                  <div className="text-muted-foreground">Completed: {new Date(lastReport.completed_on).toLocaleString()}</div>
+                )}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3 pt-2">
               <Button
                 variant="outline"
+                disabled={isUploading}
                 onClick={() => {
                   setBulkUploadOpen(false);
                   setSelectedFile(null);
+                  setUploadResult(null);
                 }}
-                className="h-10 px-6"
+                className="h-9 px-5 text-xs"
               >
                 Close
               </Button>
               <Button
                 onClick={handleBulkUpload}
-                disabled={!selectedFile}
-                className="h-10 px-6 bg-brand hover:bg-brand-hover text-white font-semibold rounded-lg"
+                disabled={!selectedFile || isUploading}
+                className="h-9 px-6 bg-brand hover:bg-brand-hover text-white font-semibold rounded-lg text-xs"
               >
-                Submit
+                {isUploading ? "Uploading..." : "Submit"}
               </Button>
             </div>
           </div>

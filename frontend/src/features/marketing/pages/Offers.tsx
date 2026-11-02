@@ -46,7 +46,16 @@ import { useScrollToTop } from "@/hooks/use-scroll-to-top";
  */
 
 const Offers = () => {
-    const offersQuery = useOffers({ page: 1, page_size: MAX_PAGE_SIZE });
+    const [searchQuery, setSearchQuery] = useState("");
+    const [entriesPerPage, setEntriesPerPage] = useState("10");
+    const [currentPage, setCurrentPage] = useState(1);
+    const pageSize = parseInt(entriesPerPage) || 10;
+
+    const offersQuery = useOffers({
+        page: currentPage,
+        page_size: pageSize,
+        q: searchQuery.trim() || undefined,
+    });
     const roomsQuery = useRooms({ page: 1, page_size: MAX_PAGE_SIZE });
     const { canWrite } = useAuth();
     const mayWrite = canWrite("offers");
@@ -62,7 +71,8 @@ const Offers = () => {
         offerBy: offer.offered_by ?? "-",
         validityFrom: offer.start_time ? new Date(offer.start_time).toLocaleDateString() : "-",
         validityTo: offer.expiry_time ? new Date(offer.expiry_time).toLocaleDateString() : "-",
-        image: "-",
+        image: offer.image_url ? offer.image_url.split("/").pop() || offer.image_url : "-",
+        imageUrl: offer.image_url ?? null,
         discount: offer.discount_percentage ?? "-",
     }));
     /** One table row. Derived from the mapping above so the two cannot drift. */
@@ -82,9 +92,6 @@ const Offers = () => {
     });
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [searchQuery, setSearchQuery] = useState("");
-    const [entriesPerPage, setEntriesPerPage] = useState("10");
-    const [currentPage, setCurrentPage] = useState(1);
     // Pagination sits at the bottom of the table; without this the new
     // page kept the old scroll offset and the sticky header stayed
     // above the fold. See use-scroll-to-top.
@@ -101,13 +108,11 @@ const Offers = () => {
         validTo: "",
     });
 
-    const filteredData = offersData.filter(item =>
-        item.offerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.couponCode.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-    const totalPages = Math.ceil(filteredData.length / parseInt(entriesPerPage));
-    const startIndex = (currentPage - 1) * parseInt(entriesPerPage);
-    const paginatedData = filteredData.slice(startIndex, startIndex + parseInt(entriesPerPage));
+    const totalEntries = offersQuery.data?.total ?? 0;
+    const totalPages = Math.max(1, Math.ceil(totalEntries / pageSize));
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = Math.min(startIndex + pageSize, totalEntries);
+    const paginatedData = offersData;
 
     /** Toggles a real `amenity.id` on the offer being composed. */
     const handleRoomToggle = (roomId: string) => {
@@ -254,7 +259,7 @@ const Offers = () => {
                     </DataState>
 
                     <div className="flex flex-wrap items-center justify-between gap-4 mt-5">
-                        <span className="text-muted-foreground text-xs">Showing {filteredData.length > 0 ? startIndex + 1 : 0} to {Math.min(startIndex + parseInt(entriesPerPage), filteredData.length)} of {filteredData.length} entries</span>
+                        <span className="text-muted-foreground text-xs">Showing {totalEntries > 0 ? startIndex + 1 : 0} to {endIndex} of {totalEntries} entries</span>
                         <div className="flex items-center gap-1">
                             <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>First</Button>
                             <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1}>Previous</Button>

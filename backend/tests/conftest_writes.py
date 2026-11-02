@@ -140,7 +140,7 @@ def staff_id(db):
 
 @pytest.fixture
 def free_room(db):
-    """A room no live stay holds, so allocation tests start from a clean slate."""
+    """A room no live stay holds and without blocking conditions, so allocation tests start from a clean slate."""
     return db.execute(
         text(
             """
@@ -148,12 +148,19 @@ def free_room(db):
             FROM amenity a
             JOIN amenity_type t ON t.id = a.amenity_type_id
             WHERE t.amenity_category = 'room'
+              AND a.status = 0
               AND NOT EXISTS (
                   SELECT 1 FROM room_allocation ra
                   JOIN stay s ON s.id = ra.stay_id
                   WHERE ra.room_id = a.id
                     AND s.status IN ('pending','active','checkout pending',
                                      'checkout accepted','checkout rejected')
+              )
+              AND NOT EXISTS (
+                  SELECT 1 FROM amenity_condition_status acs
+                  WHERE acs.amenity_id = a.id
+                    AND acs.status = 1
+                    AND acs.amenity_condition_id IN (1, 3, 4)
               )
             ORDER BY a.name
             LIMIT 1
@@ -171,6 +178,7 @@ def second_free_room(db, free_room):
             FROM amenity a
             JOIN amenity_type t ON t.id = a.amenity_type_id
             WHERE t.amenity_category = 'room'
+              AND a.status = 0
               AND a.id <> :taken
               AND NOT EXISTS (
                   SELECT 1 FROM room_allocation ra
@@ -179,9 +187,16 @@ def second_free_room(db, free_room):
                     AND s.status IN ('pending','active','checkout pending',
                                      'checkout accepted','checkout rejected')
               )
+              AND NOT EXISTS (
+                  SELECT 1 FROM amenity_condition_status acs
+                  WHERE acs.amenity_id = a.id
+                    AND acs.status = 1
+                    AND acs.amenity_condition_id IN (1, 3, 4)
+              )
             ORDER BY a.name
             LIMIT 1
             """
         ),
         {"taken": free_room},
     ).scalar_one()
+

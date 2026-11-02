@@ -24,16 +24,19 @@ from sqlalchemy import Select, func, select
 from sqlalchemy.orm import Session
 
 from app.models import (
+    Amenity,
     AmenityType,
-    Feature,
+    Attachment,
+    Currency,
     FacilityEvent,
+    Feature,
     Occasion,
     OccasionType,
     Package,
     PackageFeature,
     PromoCode,
     PromoCodeAmenity,
-    Amenity,
+    SubPackage,
 )
 
 
@@ -75,8 +78,17 @@ class PackageRead(BaseModel):
     amenity_type_name: str | None
     is_sub_package: bool
     facility_id: uuid.UUID | None
+    price: Decimal | None = None
+    currency_id: int | None = None
+    currency_code: str | None = None
+    currency_symbol: str | None = None
     status: int
-    feature_names: list[str]
+    feature_ids: list[uuid.UUID] = []
+    feature_names: list[str] = []
+    sub_package_ids: list[uuid.UUID] = []
+    sub_package_names: list[str] = []
+    parent_package_ids: list[uuid.UUID] = []
+    parent_package_names: list[str] = []
     room_count: int
     created_on: datetime
     updated_on: datetime
@@ -94,6 +106,8 @@ class PromoCodeRead(BaseModel):
     max_discount_value: Decimal | None
     min_order_value: Decimal | None
     status: int | None
+    promo_code_icon: uuid.UUID | None = None
+    image_url: str | None = None
     room_names: list[str]
     created_on: datetime
     updated_on: datetime
@@ -111,6 +125,8 @@ class FacilityEventRead(BaseModel):
     interested_attendees: int | None
     start_date_time: datetime | None
     end_date_time: datetime | None
+    image_id: uuid.UUID | None = None
+    image_url: str | None = None
     cancellation_reason: str | None
     facility_id: uuid.UUID
     status: int | None
@@ -159,33 +175,83 @@ def _paged(db: Session, stmt: Select, page: int, page_size: int):
     return rows, total
 
 
-def list_amenity_types(db: Session, *, page: int, page_size: int, facility_id=None):
+def list_amenity_types(
+    db: Session,
+    *,
+    page: int,
+    page_size: int,
+    facility_id=None,
+    amenity_category: str | None = None,
+    status: int | None = None,
+):
     stmt = select(AmenityType).order_by(AmenityType.name)
+    if status is not None:
+        stmt = stmt.where(AmenityType.status == status)
     if facility_id:
         stmt = stmt.where(AmenityType.facility_id == facility_id)
+    if amenity_category:
+        stmt = stmt.where(AmenityType.amenity_category == amenity_category)
     return _paged(db, stmt, page, page_size)
 
 
-def list_features(db: Session, *, page: int, page_size: int, facility_id=None):
+def list_features(
+    db: Session,
+    *,
+    page: int,
+    page_size: int,
+    facility_id=None,
+    status: int | None = None,
+):
     stmt = select(Feature).order_by(Feature.feature_name)
+    if status is not None:
+        stmt = stmt.where(Feature.status == status)
     if facility_id:
         stmt = stmt.where(Feature.facility_id == facility_id)
     return _paged(db, stmt, page, page_size)
 
 
 def _package_extras(db: Session, package_ids: list[uuid.UUID]):
-    """Feature names and room counts for a page of packages, in two queries."""
+    """Feature IDs/names, sub-package IDs/names, parent-package IDs/names, and room counts for a page of packages."""
     if not package_ids:
-        return {}, {}
-    features: dict[uuid.UUID, list[str]] = {}
+        return {}, {}, {}, {}, {}, {}, {}
+
+    feature_ids_map: dict[uuid.UUID, list[uuid.UUID]] = {}
+    feature_names_map: dict[uuid.UUID, list[str]] = {}
     rows = db.execute(
-        select(PackageFeature.package_id, Feature.feature_name)
+        select(PackageFeature.package_id, Feature.id, Feature.feature_name)
         .join(Feature, Feature.id == PackageFeature.feature_id)
         .where(PackageFeature.package_id.in_(package_ids))
         .order_by(Feature.feature_name)
     ).all()
-    for package_id, name in rows:
-        features.setdefault(package_id, []).append(name)
+    for package_id, f_id, name in rows:
+        feature_names_map.setdefault(package_id, []).append(name)
+        feature_ids_map.setdefault(package_id, []).append(f_id)
+
+    # Sub-packages where package_id is the parent
+    sub_pkg_ids_map: dict[uuid.UUID, list[uuid.UUID]] = {}
+    sub_pkg_names_map: dict[uuid.UUID, list[str]] = {}
+    sub_rows = db.execute(
+        select(SubPackage.parent_package_id, Package.id, Package.name)
+        .join(Package, Package.id == SubPackage.sub_package_id)
+        .where(SubPackage.parent_package_id.in_(package_ids))
+        .order_by(Package.name)
+    ).all()
+    for parent_id, sp_id, sp_name in sub_rows:
+        sub_pkg_ids_map.setdefault(parent_id, []).append(sp_id)
+        sub_pkg_names_map.setdefault(parent_id, []).append(sp_name)
+
+    # Parent packages where package_id is the child sub-package
+    parent_pkg_ids_map: dict[uuid.UUID, list[uuid.UUID]] = {}
+    parent_pkg_names_map: dict[uuid.UUID, list[str]] = {}
+    parent_rows = db.execute(
+        select(SubPackage.sub_package_id, Package.id, Package.name)
+        .join(Package, Package.id == SubPackage.parent_package_id)
+        .where(SubPackage.sub_package_id.in_(package_ids))
+        .order_by(Package.name)
+    ).all()
+    for sp_id, p_id, p_name in parent_rows:
+        parent_pkg_ids_map.setdefault(sp_id, []).append(p_id)
+        parent_pkg_names_map.setdefault(sp_id, []).append(p_name)
 
     counts = dict(
         db.execute(
@@ -194,7 +260,15 @@ def _package_extras(db: Session, package_ids: list[uuid.UUID]):
             .group_by(Amenity.package_id)
         ).all()
     )
-    return features, counts
+    return (
+        feature_ids_map,
+        feature_names_map,
+        sub_pkg_ids_map,
+        sub_pkg_names_map,
+        parent_pkg_ids_map,
+        parent_pkg_names_map,
+        counts,
+    )
 
 
 def list_packages(
@@ -204,14 +278,12 @@ def list_packages(
     page_size: int,
     facility_id=None,
     is_sub_package=None,
+    parent_package_id=None,
     include_removed: bool = False,
 ):
-    """Packages plus their feature names and room count.
+    """Packages plus their feature names, linked sub-packages, and room count.
 
-    Retired packages (`status = 0`) are excluded unless `include_removed`,
-    which is the same soft-delete read rule `list_maintenance_requests` uses.
-    Without this filter a retired package stayed on the Packages tab and the
-    delete action looked like it had done nothing.
+    Retired packages (`status = 0`) are excluded unless `include_removed`.
     """
     stmt = select(Package).order_by(Package.name)
     if not include_removed:
@@ -220,10 +292,22 @@ def list_packages(
         stmt = stmt.where(Package.facility_id == facility_id)
     if is_sub_package is not None:
         stmt = stmt.where(Package.is_sub_package == is_sub_package)
+    if parent_package_id is not None:
+        stmt = stmt.join(SubPackage, SubPackage.sub_package_id == Package.id).where(
+            SubPackage.parent_package_id == parent_package_id
+        )
     rows, total = _paged(db, stmt, page, page_size)
 
     ids = [row.id for row in rows]
-    features, counts = _package_extras(db, ids)
+    (
+        feat_ids_map,
+        feat_names_map,
+        sub_pkg_ids_map,
+        sub_pkg_names_map,
+        parent_pkg_ids_map,
+        parent_pkg_names_map,
+        counts,
+    ) = _package_extras(db, ids)
     type_names = dict(
         db.execute(select(AmenityType.id, AmenityType.name)).all()
     )
@@ -236,8 +320,17 @@ def list_packages(
             amenity_type_name=type_names.get(row.amenity_type),
             is_sub_package=row.is_sub_package,
             facility_id=row.facility_id,
+            price=row.price,
+            currency_id=row.currency_id,
+            currency_code=row.currency.code if row.currency else None,
+            currency_symbol=row.currency.symbol if row.currency else None,
             status=row.status,
-            feature_names=features.get(row.id, []),
+            feature_ids=feat_ids_map.get(row.id, []),
+            feature_names=feat_names_map.get(row.id, []),
+            sub_package_ids=sub_pkg_ids_map.get(row.id, []),
+            sub_package_names=sub_pkg_names_map.get(row.id, []),
+            parent_package_ids=parent_pkg_ids_map.get(row.id, []),
+            parent_package_names=parent_pkg_names_map.get(row.id, []),
             room_count=counts.get(row.id, 0),
             created_on=row.created_on,
             updated_on=row.updated_on,
@@ -254,11 +347,23 @@ def get_package(db: Session, package_id: uuid.UUID) -> PackageRead | None:
     return next((item for item in items if item.id == package_id), None)
 
 
-def list_promo_codes(db: Session, *, page: int, page_size: int):
-    stmt = select(PromoCode).order_by(PromoCode.promo_code)
-    rows, total = _paged(db, stmt, page, page_size)
+def list_promo_codes(db: Session, *, page: int, page_size: int, q: str | None = None):
+    stmt = (
+        select(PromoCode, Attachment.file_path.label("image_url"))
+        .outerjoin(Attachment, Attachment.id == PromoCode.promo_code_icon)
+        .order_by(PromoCode.promo_code)
+    )
+    if q and q.strip():
+        term = f"%{q.strip()}%"
+        stmt = stmt.where(
+            PromoCode.promo_code.ilike(term)
+            | PromoCode.offer_name.ilike(term)
+            | PromoCode.offered_by.ilike(term)
+        )
+    total = _count(db, stmt)
+    rows = db.execute(stmt.limit(page_size).offset((page - 1) * page_size)).all()
 
-    ids = [row.id for row in rows]
+    ids = [promo.id for promo, _ in rows]
     room_names: dict[uuid.UUID, list[str]] = {}
     if ids:
         for promo_id, name in db.execute(
@@ -271,22 +376,24 @@ def list_promo_codes(db: Session, *, page: int, page_size: int):
 
     items = [
         PromoCodeRead(
-            id=row.id,
-            promo_code=row.promo_code,
-            offer_name=row.offer_name,
-            promo_code_description=row.promo_code_description,
-            offered_by=row.offered_by,
-            start_time=row.start_time,
-            expiry_time=row.expiry_time,
-            discount_percentage=row.discount_percentage,
-            max_discount_value=row.max_discount_value,
-            min_order_value=row.min_order_value,
-            status=row.status,
-            room_names=room_names.get(row.id, []),
-            created_on=row.created_on,
-            updated_on=row.updated_on,
+            id=promo.id,
+            promo_code=promo.promo_code,
+            offer_name=promo.offer_name,
+            promo_code_description=promo.promo_code_description,
+            offered_by=promo.offered_by,
+            start_time=promo.start_time,
+            expiry_time=promo.expiry_time,
+            discount_percentage=promo.discount_percentage,
+            max_discount_value=promo.max_discount_value,
+            min_order_value=promo.min_order_value,
+            status=promo.status,
+            promo_code_icon=promo.promo_code_icon,
+            image_url=img_url,
+            room_names=room_names.get(promo.id, []),
+            created_on=promo.created_on,
+            updated_on=promo.updated_on,
         )
-        for row in rows
+        for promo, img_url in rows
     ]
     return items, total
 
@@ -296,11 +403,45 @@ def get_promo_code(db: Session, promo_id: uuid.UUID) -> PromoCodeRead | None:
     return next((item for item in items if item.id == promo_id), None)
 
 
-def list_events(db: Session, *, page: int, page_size: int, facility_id=None):
-    stmt = select(FacilityEvent).order_by(FacilityEvent.start_date_time.desc())
+def list_events(db: Session, *, page: int, page_size: int, facility_id=None, q: str | None = None):
+    stmt = (
+        select(FacilityEvent, Attachment.file_path.label("image_url"))
+        .outerjoin(Attachment, Attachment.id == FacilityEvent.image_id)
+        .order_by(FacilityEvent.start_date_time.desc())
+    )
     if facility_id:
         stmt = stmt.where(FacilityEvent.facility_id == facility_id)
-    return _paged(db, stmt, page, page_size)
+    if q and q.strip():
+        term = f"%{q.strip()}%"
+        stmt = stmt.where(
+            FacilityEvent.name.ilike(term)
+            | FacilityEvent.venue.ilike(term)
+            | FacilityEvent.chief_guests.ilike(term)
+        )
+    total = _count(db, stmt)
+    rows = db.execute(stmt.limit(page_size).offset((page - 1) * page_size)).all()
+    items = [
+        FacilityEventRead(
+            id=event.id,
+            name=event.name,
+            venue=event.venue,
+            chief_guests=event.chief_guests,
+            description=event.description,
+            expected_attendees=event.expected_attendees,
+            interested_attendees=event.interested_attendees,
+            start_date_time=event.start_date_time,
+            end_date_time=event.end_date_time,
+            image_id=event.image_id,
+            image_url=img_url,
+            cancellation_reason=event.cancellation_reason,
+            facility_id=event.facility_id,
+            status=event.status,
+            created_on=event.created_on,
+            updated_on=event.updated_on,
+        )
+        for event, img_url in rows
+    ]
+    return items, total
 
 
 def list_occasions(db: Session, *, page: int, page_size: int, facility_id=None):

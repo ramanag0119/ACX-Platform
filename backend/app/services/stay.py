@@ -22,6 +22,7 @@ from app.models import (
     Amenity,
     AmenityType,
     AppUser,
+    Currency,
     Invoice,
     Package,
     Property,
@@ -85,6 +86,23 @@ def _stay_stmt() -> Select:
         .where(RoomAllocation.stay_id == Stay.id)
         .scalar_subquery()
     )
+    primary_room_name = (
+        select(Amenity.name)
+        .select_from(RoomAllocation)
+        .join(Amenity, Amenity.id == RoomAllocation.room_id)
+        .where(RoomAllocation.stay_id == Stay.id)
+        .limit(1)
+        .scalar_subquery()
+    )
+    primary_room_type = (
+        select(AmenityType.name)
+        .select_from(RoomAllocation)
+        .join(Amenity, Amenity.id == RoomAllocation.room_id)
+        .join(AmenityType, AmenityType.id == Amenity.amenity_type_id)
+        .where(RoomAllocation.stay_id == Stay.id)
+        .limit(1)
+        .scalar_subquery()
+    )
     return (
         select(
             Stay.id,
@@ -96,6 +114,10 @@ def _stay_stmt() -> Select:
             Stay.booking_user_id,
             Booker.first_name.label("booker_first_name"),
             Booker.last_name.label("booker_last_name"),
+            Booker.email.label("booker_email"),
+            Booker.phone_number.label("booker_phone_number"),
+            primary_room_name.label("room_number"),
+            primary_room_type.label("room_type_name"),
             Stay.no_of_rooms,
             Stay.no_of_guests,
             Stay.expected_checkin_time,
@@ -130,7 +152,7 @@ def _display_status(status: str | None, is_in_house: bool, is_checked_in: bool) 
       - 'cancelled'
 
     Business presentation rules:
-      - Active stay checked into a room -> 'In-Room'
+      - Active stay checked into a room -> 'In-House'
       - Completed stay or checked out -> 'Checked Out'
       - Not yet checked in / pending arrival -> 'Pending'
       - Intermediate checkout workflow states -> 'Checkout Pending', 'Checkout Accepted', 'Checkout Rejected'
@@ -144,7 +166,7 @@ def _display_status(status: str | None, is_in_house: bool, is_checked_in: bool) 
     if status == "checked out" or (status == "active" and is_checked_in and not is_in_house):
         return "Checked Out"
     if status == "active":
-        return "In-Room" if is_in_house else ("Checked Out" if (is_checked_in and not is_in_house) else "Pending")
+        return "In-House" if is_in_house else ("Checked Out" if (is_checked_in and not is_in_house) else "Pending")
     if status == "checkout pending":
         return "Checkout Pending"
     if status == "checkout accepted":
@@ -160,11 +182,21 @@ def _display_status(status: str | None, is_in_house: bool, is_checked_in: bool) 
 
 def _shape_stay(row) -> dict:
     data = dict(row)
-    data["booker"] = _user_ref(
-        data.pop("booking_user_id"),
-        data.pop("booker_first_name"),
-        data.pop("booker_last_name"),
-    )
+    booker_id = data.pop("booking_user_id", None)
+    first_name = data.pop("booker_first_name", None)
+    last_name = data.pop("booker_last_name", None)
+    email = data.pop("booker_email", None)
+    phone = data.pop("booker_phone_number", None)
+    gender = data.pop("booker_gender", None)
+    country = data.pop("booker_country", None)
+    nationality = data.pop("booker_nationality", None)
+    address = data.pop("booker_address", None)
+    nationality_name = data.pop("booker_nationality_name", None)
+
+    data["guest_email"] = email
+    data["guest_phone_number"] = phone
+    data["booker"] = _user_ref(booker_id, first_name, last_name)
+
     data["display_status"] = _display_status(
         status=data.get("status"),
         is_in_house=bool(data.get("is_in_house")),
@@ -201,12 +233,23 @@ def list_stays(
     is_checked_in: bool | None = None,
     is_in_house: bool | None = None,
     ref_number: str | None = None,
+    q: str | None = None,
     expected_checkin_from: datetime | None = None,
     expected_checkin_to: datetime | None = None,
     expected_checkout_from: datetime | None = None,
     expected_checkout_to: datetime | None = None,
 ):
     stmt = _stay_stmt().order_by(Stay.expected_checkin_time.desc())
+    if q:
+        search_pattern = f"%{q.strip()}%"
+        stmt = stmt.where(
+            Stay.internal_stay_ref_number.ilike(search_pattern)
+            | Stay.external_stay_ref_number.ilike(search_pattern)
+            | Booker.first_name.ilike(search_pattern)
+            | Booker.last_name.ilike(search_pattern)
+            | Booker.email.ilike(search_pattern)
+            | Booker.phone_number.ilike(search_pattern)
+        )
     if status:
         stmt = stmt.where(Stay.status == status)
     if request_source:
@@ -384,7 +427,15 @@ def stay_documents(db: Session, stay_id: uuid.UUID) -> list[dict]:
 
 def stay_invoice_refs(db: Session, stay_id: uuid.UUID) -> list[dict]:
     rows = db.execute(
-        select(Invoice.id, Invoice.invoice_number, Invoice.total_amount)
+        select(
+            Invoice.id,
+            Invoice.invoice_number,
+            Invoice.total_amount,
+            Invoice.currency_id,
+            Currency.code.label("currency_code"),
+            Currency.symbol.label("currency_symbol"),
+        )
+        .outerjoin(Currency, Currency.id == Invoice.currency_id)
         .where(Invoice.stay_id == stay_id)
         .order_by(Invoice.invoice_date)
     ).mappings().all()
@@ -414,11 +465,15 @@ def _invoice_stmt() -> Select:
             Invoice.net_amount,
             Invoice.total_tax,
             Invoice.total_amount,
+            Invoice.currency_id,
+            Currency.code.label("currency_code"),
+            Currency.symbol.label("currency_symbol"),
             Invoice.created_on,
             Invoice.updated_on,
         )
         .select_from(Invoice)
         .outerjoin(Stay, Stay.id == Invoice.stay_id)
+        .outerjoin(Currency, Currency.id == Invoice.currency_id)
     )
 
 

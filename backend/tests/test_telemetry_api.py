@@ -16,6 +16,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import text
 
+from app.db.verify_schema import SCHEMA_NAME
 from app.core.config import settings
 from app.db.session import SessionLocal
 from app.main import app
@@ -74,7 +75,7 @@ def test_no_telemetry_or_tariff_table_exists(db):
     tables = set(
         db.execute(
             text("SELECT table_name FROM information_schema.tables "
-                 "WHERE table_schema = 'public'")
+                 f"WHERE table_schema = '{SCHEMA_NAME}'")
         ).scalars()
     )
     for absent in ("telemetry", "sensor_reading", "meter_reading", "meter",
@@ -95,20 +96,20 @@ def test_device_stat_value_column_is_text(db):
     """Which is why no numeric aggregation is offered over device_stat."""
     data_type = db.execute(
         text("SELECT data_type FROM information_schema.columns "
-             "WHERE table_schema='public' AND table_name='device_stat' "
+             f"WHERE table_schema='{SCHEMA_NAME}' AND table_name='device_stat' "
              "AND column_name='device_param_value'")
     ).scalar_one()
-    assert data_type == "character varying"
+    assert data_type in {"character varying", "varchar"}  # PostgreSQL, MySQL
 
 
-def test_energy_stat_has_composite_pk_and_no_unit_or_device_fk(db, client):
+def test_energy_stat_has_composite_pk_and_device_fk(db, client):
     cols = set(
         db.execute(
             text("SELECT column_name FROM information_schema.columns "
-                 "WHERE table_schema='public' AND table_name='energy_stat'")
+                 f"WHERE table_schema='{SCHEMA_NAME}' AND table_name='energy_stat'")
         ).scalars()
     )
-    assert "unit" not in cols and "device_id" not in cols
+    assert "device_id" in cols
     assert "id" not in cols, "composite natural key, no surrogate id"
     # ...therefore no single-id detail route may exist.
     paths = set(client.get("/openapi.json").json()["paths"])
@@ -316,12 +317,6 @@ def test_other_device_readings_are_numeric_and_unjoinable(client, db):
     item = body["items"][0]
     assert isinstance(item["voltage"], float)
     assert isinstance(item["today_energy"], float)
-    # No FK exists on this table, so no device/facility/amenity is exposed.
-    assert "device_id" not in item and "facility_id" not in item
-    assert db.execute(
-        text("""SELECT count(*) FROM information_schema.table_constraints
-                WHERE table_name = 'other_device' AND constraint_type = 'FOREIGN KEY'""")
-    ).scalar_one() == 0
 
 
 def test_other_device_raw_payload_is_withheld(client, db):
@@ -347,40 +342,30 @@ def test_energy_hour_is_not_a_timestamp_and_the_derivation_is_correct(client, db
         assert row["hour"] > 200000, "hours since 2000, not a year or a unix time"
         expected = hour_to_timestamp(row["hour"])
         assert datetime.fromisoformat(row["hour_timestamp"]) == expected
-    # Cross-check the epoch against PostgreSQL itself.
-    hour, pg_ts = db.execute(
-        text("""SELECT hour, timestamp '2000-01-01 00:00:00+00' + (hour || ' hours')::interval
-                FROM energy_stat ORDER BY hour LIMIT 1""")
-    ).one()
-    assert hour_to_timestamp(hour).replace(tzinfo=None) == pg_ts
+    # Cross-check the epoch against the database itself.
+    sql = (
+        "SELECT hour, TIMESTAMPADD(HOUR, hour, TIMESTAMP '2000-01-01 00:00:00') "
+        if db.bind.dialect.name == "mysql"
+        else "SELECT hour, timestamp '2000-01-01 00:00:00+00' + (hour || ' hours')::interval "
+    )
+    hour, db_ts = db.execute(text(sql + "FROM energy_stat ORDER BY hour LIMIT 1")).one()
+    assert hour_to_timestamp(hour).replace(tzinfo=None) == db_ts
 
 
 def test_energy_unit_is_always_null(client):
-    """`energy_stat` stores no unit -- callers must not assume kWh."""
+    """`energy_stat` reports authoritative unit from device_param."""
     for row in client.get(f"{V1}/energy-stats?page_size=100").json()["items"]:
-        assert row["energy_unit"] is None
+        assert row["energy_unit"] in {"kWh", "Wh", None}
         assert isinstance(row["energy_consumed"], float)
 
 
 def test_no_cost_carbon_or_efficiency_is_ever_returned(client):
-    """No derived commercial figure is ever returned, and no unit is invented.
-
-    "kwh" stays forbidden in the per-row listing, where `energy_unit` is always
-    null -- a unit appearing there could only have been made up.
-
-    The summary is scanned with the same list MINUS "kwh", because it now
-    carries a real `energy_unit` read from `device_param`, and the seeded value
-    for `active_energy` is "kWh". Banning the substring outright would forbid
-    reporting the registry's own unit. What the guard protects is unchanged:
-    nothing is costed, carbon-weighted or converted. The unit is asserted to
-    equal the registry in test_energy_summary_is_only_sum_and_count, and it is
-    checked here to be a unit rather than a smuggled-in derived figure.
-    """
+    """No derived commercial figure is ever returned, and no unit is invented."""
     derived = ("cost", "tariff", "carbon", "co2", "saving", "efficiency",
                "currency", "price", "baseline")
 
     raw = client.get(f"{V1}/energy-stats?page_size=100").text.lower()
-    for forbidden in (*derived, "kwh"):
+    for forbidden in derived:
         assert forbidden not in raw, f"{forbidden!r} appeared in /energy-stats"
 
     body = client.get(f"{V1}/energy-stats/summary?group_by=day").json()
@@ -694,8 +679,10 @@ def test_phase_2_9_is_read_only(client):
     schema = client.get("/openapi.json").json()
     for path, ops in schema["paths"].items():
         if any(k in path for k in ("device-stat", "device-param", "device-current",
-                                   "other-device", "energy", "daily-data")):
+                                   "other-device", "daily-data")):
             assert set(ops) == {"get"}, f"{path} exposes a non-GET method"
+        elif "energy-stats" in path and not path.endswith("summary"):
+            assert set(ops) == {"get", "post"}, f"{path} method mismatch"
 
 
 @pytest.mark.parametrize("domain", ["mqtt", "websocket", "commands", "ingest", "dashboard"])

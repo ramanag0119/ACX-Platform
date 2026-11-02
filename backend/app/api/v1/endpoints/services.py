@@ -46,6 +46,7 @@ from app.schemas.service import (
     ServiceRequestItemRead,
     ServiceRequestRead,
     ServiceStatusRead,
+    ServiceTrackingSummary,
     ServiceTypeDetail,
     ServiceTypeRead,
 )
@@ -233,11 +234,12 @@ def list_service_items(
     amenity_id: uuid.UUID | None = Query(None, description="Venue, e.g. a restaurant"),
     status_id: int | None = Query(None, alias="status"),
     has_price: bool | None = Query(None, description="Filter on price_per_unit IS NULL"),
+    q: str | None = Query(None, description="Search item name or category"),
 ) -> Page[ServiceItemRead]:
     rows, total = svc.list_service_items(
         db, page=page, page_size=page_size, facility_id=facility_id,
         category_id=category_id, service_type=service_type, amenity_id=amenity_id,
-        status=status_id, has_price=has_price,
+        status=status_id, has_price=has_price, q=q,
     )
     return Page[ServiceItemRead](
         items=[ServiceItemRead.model_validate(r) for r in rows],
@@ -289,6 +291,7 @@ def list_service_requests(
     unassigned: bool | None = Query(None, description="assigned_to IS NULL"),
     created_from: datetime | None = Query(None, description="created_on >="),
     created_to: datetime | None = Query(None, description="created_on <="),
+    q: str | None = Query(None, description="Free-text search on reference number, description, room, or category"),
 ) -> Page[ServiceRequestRead]:
     rows, total = svc.list_service_requests(
         db, page=page, page_size=page_size, facility_id=facility_id,
@@ -296,12 +299,25 @@ def list_service_requests(
         assigned_to=assigned_to, app_user_id=app_user_id, stay_id=stay_id,
         amenity_id=amenity_id, department_id=department_id,
         request_source=request_source, unassigned=unassigned,
-        created_from=created_from, created_to=created_to,
+        created_from=created_from, created_to=created_to, q=q,
     )
     return Page[ServiceRequestRead](
         items=[ServiceRequestRead.model_validate(r) for r in rows],
         page=page, page_size=page_size, total=total,
     )
+
+
+@service_requests_router.get(
+    "/summary",
+    response_model=ServiceTrackingSummary,
+    summary="Get service tracking KPI summary and completion aggregates",
+)
+def get_service_tracking_summary(
+    db: DbSession,
+    facility_id: uuid.UUID | None = Query(None, description="Filter aggregates by facility"),
+) -> ServiceTrackingSummary:
+    summary_data = svc.get_service_tracking_summary(db, facility_id=facility_id)
+    return ServiceTrackingSummary.model_validate(summary_data)
 
 
 @service_requests_router.get(

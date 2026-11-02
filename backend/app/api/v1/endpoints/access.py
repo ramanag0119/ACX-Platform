@@ -30,8 +30,14 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel
 
-from app.api.deps import DbSession, require_permission
+from app.api.deps import CurrentUser, DbSession, require_permission
+
+
+class RoleTypeOption(BaseModel):
+    value: str
+    label: str
 from app.schemas.access import (
     ModuleDetail,
     ModuleRead,
@@ -106,6 +112,7 @@ def list_users(
     is_staff: int | None = Query(None, ge=0, le=1, description="1 staff, 0 guest"),
     department_id: uuid.UUID | None = Query(None),
     job_function_id: uuid.UUID | None = Query(None),
+    q: str | None = Query(None),
 ) -> Page[UserRead]:
     rows, total = service.list_users(
         db,
@@ -116,6 +123,7 @@ def list_users(
         is_staff=is_staff,
         department_id=department_id,
         job_function_id=job_function_id,
+        q=q,
     )
     return Page[UserRead](
         items=[UserRead.model_validate(r) for r in rows],
@@ -123,6 +131,27 @@ def list_users(
         page_size=page_size,
         total=total,
     )
+
+
+@users_router.get(
+    "/roles",
+    response_model=list[RoleRead],
+    summary="List roles assignable to employees",
+    description=(
+        "Returns roles that the current user is authorized to assign to staff members. "
+        "System internal service accounts and guest roles are excluded. "
+        "Administrative roles are only returned if the current user is an administrator."
+    ),
+)
+def list_assignable_roles(
+    db: DbSession,
+    current_user: CurrentUser,
+    facility_id: uuid.UUID | None = Query(None),
+) -> list[RoleRead]:
+    facility = facility_id or (current_user.facility_ids[0] if current_user.facility_ids else None)
+    is_admin = "admin" in current_user.role_types
+    roles = service.list_assignable_roles(db, facility_id=facility, is_admin=is_admin)
+    return [RoleRead.model_validate(r) for r in roles]
 
 
 @users_router.get(
@@ -187,6 +216,26 @@ def list_roles(
         page_size=page_size,
         total=total,
     )
+
+
+@roles_router.get(
+    "/types",
+    response_model=list[RoleTypeOption],
+    summary="List available role types for role management",
+    description="Returns available role types. Admin and guest are only returned to administrators.",
+)
+def list_role_types(
+    current_user: CurrentUser,
+) -> list[RoleTypeOption]:
+    is_admin = "admin" in current_user.role_types
+    options = [
+        RoleTypeOption(value="staff", label="Staff"),
+        RoleTypeOption(value="manager", label="Manager"),
+    ]
+    if is_admin:
+        options.append(RoleTypeOption(value="admin", label="Admin"))
+        options.append(RoleTypeOption(value="guest", label="Guest"))
+    return options
 
 
 @roles_router.get(

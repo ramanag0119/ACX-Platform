@@ -25,7 +25,7 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from app.core.security import hash_password
@@ -55,10 +55,17 @@ from app.services.writes import (
 # ---------------------------------------------------------------------------
 
 
+from app.models.facility import Country
+
+
 def _validate_user_refs(db: Session, data: dict) -> None:
     require_exists(db, Department, data.get("department_id"), "Department")
     require_exists(db, JobFunction, data.get("job_function_id"), "Job function")
     require_exists(db, AppUser, data.get("supervisor"), "Supervisor")
+    if data.get("country") is not None:
+        require_exists(db, Country, data.get("country"), "Country")
+    if data.get("nationality") is not None:
+        require_exists(db, Country, data.get("nationality"), "Nationality")
 
 
 def create_user(
@@ -97,7 +104,10 @@ def create_user(
         db.add(user)
         db.flush()
 
-        _replace_user_roles(db, user.id, role_ids, facility_id, actor_id)
+        _replace_user_roles(
+            db, user.id, role_ids, facility_id, actor_id,
+            is_staff=user.is_staff if user.is_staff is not None else 1,
+        )
 
     db.refresh(user)
     return user
@@ -130,7 +140,10 @@ def update_user(
         if password:
             user.password_hash = hash_password(password)
         if role_ids is not None:
-            _replace_user_roles(db, user_id, role_ids, facility_id, actor_id)
+            _replace_user_roles(
+                db, user_id, role_ids, facility_id, actor_id,
+                is_staff=user.is_staff if user.is_staff is not None else 1,
+            )
 
     db.refresh(user)
     return user
@@ -155,10 +168,32 @@ def _replace_user_roles(
     role_ids: list[uuid.UUID],
     facility_id: uuid.UUID,
     actor_id: uuid.UUID,
+    is_staff: int = 1,
 ) -> None:
     """Rewrite `user_role` for one user. Roles are rows, not a column."""
+    actor_is_admin = False
+    if actor_id:
+        actor_role_types = list(
+            db.execute(
+                select(Role.role_type)
+                .join(UserRole, UserRole.role_id == Role.id)
+                .where(UserRole.app_user_id == actor_id)
+            ).scalars().all()
+        )
+        actor_is_admin = "admin" in actor_role_types
+
     for role_id in role_ids:
         require_exists(db, Role, role_id, "Role")
+        role = db.get(Role, role_id)
+        if role and role.role_type == "system_user":
+            raise Invalid("System user role is reserved and cannot be assigned.")
+        if role and role.role_type == "admin" and not actor_is_admin:
+            raise Invalid("You are not authorized to assign administrative roles.")
+        if role and is_staff == 1 and role.role_type == "guest":
+            raise Invalid("Guest role cannot be assigned to staff employees.")
+        if role and is_staff == 0 and role.role_type in ("admin", "manager", "staff"):
+            raise Invalid("Staff roles cannot be assigned to guests.")
+
     db.execute(delete(UserRole).where(UserRole.app_user_id == user_id))
     for role_id in role_ids:
         db.add(
@@ -218,10 +253,33 @@ def create_role(
     return role
 
 
+def validate_role_deactivation(db: Session, role: Role) -> None:
+    if role.role_type == "admin" or role.name.strip().lower() in ("admin", "administrator", "super admin"):
+        raise Conflict("Protected administrative roles cannot be deactivated.")
+    assigned_count = db.execute(
+        select(func.count()).select_from(UserRole).where(UserRole.role_id == role.id)
+    ).scalar() or 0
+    if assigned_count > 0:
+        raise Conflict(
+            f"Cannot delete role '{role.name}' because it is assigned to {assigned_count} user(s). Please reassign them first."
+        )
+
+
+def deactivate_role(db: Session, role_id: uuid.UUID) -> Role:
+    with transaction(db):
+        role = require_row(db, Role, role_id, "Role")
+        validate_role_deactivation(db, role)
+        role.status = 0
+    db.refresh(role)
+    return role
+
+
 def update_role(db: Session, role_id: uuid.UUID, *, changes: dict) -> Role:
     permissions = changes.pop("permissions", None)
     with transaction(db):
         role = require_row(db, Role, role_id, "Role")
+        if changes.get("status") == 0 and role.status != 0:
+            validate_role_deactivation(db, role)
         if "name" in changes:
             ensure_unique(db, Role, Role.name, changes["name"], "Role", exclude_id=role_id)
         apply_changes(role, changes)

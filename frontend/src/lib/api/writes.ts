@@ -6,12 +6,15 @@
  * the schema cannot be sent from here, because it is not in the type.
  *
  * Nothing in this file writes to localStorage or keeps its own copy of state:
- * PostgreSQL is the source of truth, and every mutation is followed by a
+ * The BSS database is the source of truth, and every mutation is followed by a
  * refetch (see `mutations.ts`).
  */
 
-import { apiClient, type QueryParams } from "./client";
+import { apiClient, saveBlob, type QueryParams } from "./client";
 import type {
+  BulkUploadResult,
+  ImportJobRead,
+  KeySettingsRead,
   OccupancyDetail,
   Page,
   RoleRead,
@@ -76,6 +79,8 @@ export interface UserWrite {
   date_of_joining?: string | null;
   supervisor?: string | null;
   address?: string | null;
+  country?: number | null;
+  nationality?: number | null;
   marital_status?: "married" | "unmarried" | "divorced" | "other" | null;
   department_id?: string | null;
   job_function_id?: string | null;
@@ -101,12 +106,14 @@ export interface RoleWrite {
   description?: string | null;
   role_type?: "admin" | "system_user" | "manager" | "guest" | "staff";
   status?: number | null;
+  notification_preferences?: string[];
   permissions?: PermissionEntry[];
 }
 
 export const createRole = (body: RoleWrite) => apiClient.post<RoleRead>("/roles", body);
 export const updateRole = (id: string, body: Partial<RoleWrite>) =>
   apiClient.patch<RoleRead>(`/roles/${id}`, body);
+export const deleteRole = (id: string) => apiClient.del<RoleRead>(`/roles/${id}`);
 export const replaceRolePermissions = (id: string, permissions: PermissionEntry[]) =>
   apiClient.put<RolePermissionRead[]>(`/roles/${id}/permissions`, { permissions });
 
@@ -182,6 +189,9 @@ export interface ServiceItemWrite {
   price_per_unit?: string | null;
   amenity_id?: string | null;
   status?: number | null;
+  is_veg?: boolean | null;
+  is_spicy?: boolean | null;
+  type_of_service?: string | null;
 }
 
 export const createServiceItem = (body: ServiceItemWrite) =>
@@ -232,6 +242,25 @@ export const setStayDocumentApproval = (id: string, approved: boolean) =>
   });
 export const cancelStay = (id: string) => apiClient.post<StayRead>(`/stays/${id}/cancel`, {});
 
+export const uploadBulkReservations = (file: File) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  return apiClient.postForm<BulkUploadResult>("/stays/bulk-upload", formData);
+};
+
+export const downloadBulkReservationsTemplate = async () => {
+  const { blob, filename } = await apiClient.download("/stays/bulk-upload/template");
+  saveBlob(blob, filename || "reservations_template.csv");
+};
+
+export const getLastBulkUploadReport = () =>
+  apiClient.get<ImportJobRead | null>("/stays/bulk-upload/last-report");
+
+export const getKeySettings = () => apiClient.get<KeySettingsRead>("/key-settings");
+export const updateKeySettings = (body: { default_key_user: string | null }) =>
+  apiClient.put<KeySettingsRead>("/key-settings", body);
+export const resetKeySettings = () => apiClient.post<KeySettingsRead>("/key-settings/reset", {});
+
 export const allocateRoom = (stayId: string, room_id: string, package_id?: string) =>
   apiClient.post<RoomAllocationRead[]>(`/stays/${stayId}/room-allocations`, {
     room_id,
@@ -263,7 +292,7 @@ export interface RoomStateWrite {
 
 export const updateRoomState = (amenityId: string, body: RoomStateWrite) =>
   apiClient.patch<OccupancyDetail>(`/occupancy/${amenityId}`, body);
-/** `amenity_condition` ids: 1 Dirty, 2 Low battery, 3 Under maintenance, 4 Sanitation. */
+/** `amenity_condition` ids: 1 Dirty, 2 Low battery, 3 Under maintenance, 4 Sanitation, 5 Ready for occupant. */
 export const setRoomConditions = (amenityId: string, condition_ids: number[]) =>
   apiClient.put<RoomRead>(`/occupancy/${amenityId}/conditions`, { condition_ids });
 
@@ -281,6 +310,8 @@ export interface LimitConfigRead {
   parameter: string;
   device_name: string;
   device_id: string | null;
+  room_id?: string | null;
+  room_number?: string | null;
   limit_check: boolean;
   is_percentage_value: boolean;
   nominal: string | null;
@@ -314,6 +345,38 @@ export const createLimitConfig = (body: LimitConfigWrite) =>
   apiClient.post<LimitConfigRead>("/limit-configs", body);
 export const updateLimitConfig = (id: string, body: Partial<LimitConfigWrite>) =>
   apiClient.patch<LimitConfigRead>(`/limit-configs/${id}`, body);
+export const deleteLimitConfig = (id: string) =>
+  apiClient.del<void>(`/limit-configs/${id}`);
+
+// ---------------------------------------------------------------------------
+// Room device mapping -- which OSS device is installed in which HMS room.
+// The mapping is HMS data; the device itself is only read from OSS.
+// ---------------------------------------------------------------------------
+
+export interface RoomDeviceRead {
+  id: string;
+  oss_device_id: string;
+  amenity_id: string;
+  amenity_name: string;
+  facility_id: string | null;
+  building_id: string | null;
+  building_name: string | null;
+  floor_id: string | null;
+  floor_name: string | null;
+  created_on: string;
+}
+
+export interface RoomDeviceWrite {
+  amenity_id: string;
+  oss_device_id: string;
+}
+
+export const listRoomDevices = (params?: QueryParams) =>
+  apiClient.get<Page<RoomDeviceRead>>("/room-devices", params);
+export const assignRoomDevice = (body: RoomDeviceWrite) =>
+  apiClient.post<RoomDeviceRead>("/room-devices", body);
+export const unassignRoomDevice = (mapId: string) =>
+  apiClient.del<void>(`/room-devices/${mapId}`);
 
 // ---------------------------------------------------------------------------
 // Facility, rooms and the room catalogue
@@ -386,8 +449,17 @@ export interface PackageRead {
   amenity_type_name: string | null;
   is_sub_package: boolean;
   facility_id: string | null;
+  price?: number | string | null;
+  currency_id?: number | null;
+  currency_code?: string | null;
+  currency_symbol?: string | null;
   status: number;
+  feature_ids?: string[];
   feature_names: string[];
+  sub_package_ids?: string[];
+  sub_package_names?: string[];
+  parent_package_ids?: string[];
+  parent_package_names?: string[];
   room_count: number;
   created_on: string;
   updated_on: string;
@@ -400,7 +472,11 @@ export const createPackage = (body: {
   amenity_type: string;
   description?: string | null;
   is_sub_package?: boolean;
+  price?: number | string | null;
+  currency_id?: number | null;
   feature_ids?: string[];
+  sub_package_ids?: string[];
+  parent_package_id?: string | null;
 }) => apiClient.post<PackageRead>("/packages", body);
 export const updatePackage = (
   id: string,
@@ -408,7 +484,11 @@ export const updatePackage = (
     name?: string;
     amenity_type?: string;
     description?: string | null;
+    price?: number | string | null;
+    currency_id?: number | null;
     feature_ids?: string[];
+    sub_package_ids?: string[];
+    parent_package_id?: string | null;
     /** 0 retires the package. See updateAmenityType. */
     status?: number | null;
   },
@@ -458,6 +538,8 @@ export interface OfferRead {
   max_discount_value: string | null;
   min_order_value: string | null;
   status: number | null;
+  promo_code_icon?: string | null;
+  image_url?: string | null;
   room_names: string[];
   created_on: string;
   updated_on: string;
@@ -473,6 +555,7 @@ export interface OfferWrite {
   discount_percentage?: string | null;
   max_discount_value?: string | null;
   min_order_value?: string | null;
+  promo_code_icon?: string | null;
   amenity_ids?: string[];
 }
 
@@ -492,6 +575,8 @@ export interface EventRead {
   interested_attendees: number | null;
   start_date_time: string | null;
   end_date_time: string | null;
+  image_id?: string | null;
+  image_url?: string | null;
   cancellation_reason: string | null;
   facility_id: string;
   status: number | null;
@@ -507,7 +592,8 @@ export interface EventWrite {
   expected_attendees?: number | null;
   start_date_time?: string | null;
   end_date_time?: string | null;
-  /** PATCH only: 0 retires the event. `interested_attendees` is not settable. */
+  image_id?: string | null;
+  facility_id?: string | null;
   status?: number | null;
   cancellation_reason?: string | null;
 }

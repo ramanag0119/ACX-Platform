@@ -25,8 +25,11 @@ const INVALIDATE = {
   serviceRequests: ["service-requests", "service-statuses", "daily-data-points"],
   serviceCatalogue: ["service-categories", "service-items", "service-types"],
   stays: ["stays", "occupancy", "rooms", "invoices", "daily-data-points", "count"],
-  occupancy: ["occupancy", "rooms", "amenity-conditions", "amenity-statuses"],
+  occupancy: ["occupancy", "rooms", "amenity-conditions", "amenity-statuses", "count"],
   limitConfigs: ["limit-configs", "value-alerts"],
+  // A device's room is filled in from the mapping on every /devices read, and
+  // occupancy counts a room's devices from it.
+  roomDevices: ["room-devices", "devices", "occupancy"],
   facility: ["facilities", "rooms", "buildings", "floors", "properties"],
   catalogue: ["amenity-types", "packages", "features", "rooms"],
   offers: ["offers"],
@@ -128,6 +131,11 @@ export const useUpdateRole = () =>
     { success: "Role updated" },
   );
 
+export const useDeleteRole = () =>
+  useApiMutation((id: string) => writes.deleteRole(id), INVALIDATE.roles, {
+    success: "Role deleted successfully",
+  });
+
 export const useReplaceRolePermissions = () =>
   useApiMutation(
     ({ id, permissions }: { id: string; permissions: writes.PermissionEntry[] }) =>
@@ -194,12 +202,14 @@ export const useCreateServiceCategory = (opts?: Options<writes.ServiceCategoryWr
     ...opts,
   });
 
-export const useUpdateServiceCategory = () =>
+export const useUpdateServiceCategory = (
+  opts?: Options<{ id: string; body: Partial<writes.ServiceCategoryWrite> }, unknown>,
+) =>
   useApiMutation(
     ({ id, body }: { id: string; body: Partial<writes.ServiceCategoryWrite> }) =>
       writes.updateServiceCategory(id, body),
     INVALIDATE.serviceCatalogue,
-    { success: "Category updated" },
+    { success: "Category updated", ...opts },
   );
 
 export const useCreateServiceItem = (opts?: Options<writes.ServiceItemWrite, unknown>) =>
@@ -208,12 +218,14 @@ export const useCreateServiceItem = (opts?: Options<writes.ServiceItemWrite, unk
     ...opts,
   });
 
-export const useUpdateServiceItem = () =>
+export const useUpdateServiceItem = (
+  opts?: Options<{ id: string; body: Partial<writes.ServiceItemWrite> }, unknown>,
+) =>
   useApiMutation(
     ({ id, body }: { id: string; body: Partial<writes.ServiceItemWrite> }) =>
       writes.updateServiceItem(id, body),
     INVALIDATE.serviceCatalogue,
-    { success: "Item updated" },
+    { success: "Item updated", ...opts },
   );
 
 // ---------------------------------------------------------------------------
@@ -344,6 +356,22 @@ export const useUpdateLimitConfig = () =>
     INVALIDATE.limitConfigs,
     { success: "Limit configuration updated" },
   );
+
+export const useDeleteLimitConfig = () =>
+  useApiMutation((id: string) => writes.deleteLimitConfig(id), INVALIDATE.limitConfigs, {
+    success: "Limit configuration deleted",
+  });
+
+export const useAssignRoomDevice = (opts?: Options<writes.RoomDeviceWrite, unknown>) =>
+  useApiMutation(writes.assignRoomDevice, INVALIDATE.roomDevices, {
+    success: "Device installed in room",
+    ...opts,
+  });
+
+export const useUnassignRoomDevice = () =>
+  useApiMutation(writes.unassignRoomDevice, INVALIDATE.roomDevices, {
+    success: "Device removed from room",
+  });
 
 // ---------------------------------------------------------------------------
 // Facility, rooms, catalogue
@@ -512,4 +540,16 @@ export const useUpdateJobOrder = () =>
 export const useRemoveJobOrder = () =>
   useApiMutation((id: string) => writes.removeJobOrder(id), INVALIDATE.jobOrders, {
     success: "Job order removed",
+  });
+
+export const useUpdateKeySettings = (opts?: Options<Parameters<typeof writes.updateKeySettings>[0], unknown>) =>
+  useApiMutation(writes.updateKeySettings, ["key-settings", "facilities"], {
+    success: "Default key manager settings saved",
+    ...opts,
+  });
+
+export const useResetKeySettings = (opts?: Options<void, unknown>) =>
+  useApiMutation(writes.resetKeySettings, ["key-settings", "facilities"], {
+    success: "Default key configuration reset successfully",
+    ...opts,
   });

@@ -25,7 +25,8 @@ WHAT THE SCHEMA ACTUALLY CONTAINS (verified against the live database):
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -46,13 +47,18 @@ class AmenityStatusRead(ORMModel):
 
 
 class AmenityConditionRead(ORMModel):
-    """A row of `amenity_condition`: Dirty, Low battery, Under maintenance,
-    Sanitation."""
+    """A row of `amenity_condition` or status-specific applicable condition option."""
 
     id: int = Field(examples=[3])
     name: str = Field(examples=["Under maintenance"])
-    created_on: datetime
-    updated_on: datetime
+    display_name: str | None = Field(default=None, examples=["Under Maintenance"])
+    is_active: bool = Field(default=True)
+    is_applicable: bool = Field(default=True)
+    blocks_checkin: bool = Field(default=False)
+    blocks_readiness: bool = Field(default=False)
+    created_on: datetime | None = None
+    updated_on: datetime | None = None
+
 
 
 class OccupantRef(ORMModel):
@@ -91,7 +97,22 @@ class OccupancyRead(ORMModel):
     occupancy_status: str | None = Field(
         default=None,
         examples=["Available"],
-        description="Authoritative derived occupancy status: Available | Occupied | Allotted | Unavailable",
+        description="Authoritative derived occupancy category: Available | Occupied | Allotted | Unavailable",
+    )
+    occupancy_status_id: int | None = Field(
+        default=None,
+        examples=[0],
+        description="Authoritative derived occupancy status ID: 0 Available | 1 Occupied | 2 Unavailable | 3 Allotted",
+    )
+    room_status: str | None = Field(
+        default=None,
+        examples=["Ready to Occupy"],
+        description="Authoritative unified Room Status: Ready to Occupy | Need Maintenance | Under Maintenance | Sanitation | Low Battery",
+    )
+    room_status_id: int | None = Field(
+        default=None,
+        examples=[5],
+        description="Authoritative unified Room Status ID from amenity_condition",
     )
     conditions: list[AmenityConditionRead] = Field(
         default_factory=list, description="Active rows from amenity_condition_status"
@@ -121,4 +142,77 @@ class OccupancyDetail(OccupancyRead):
     occupants: list[OccupantRef] = Field(
         description="stay_user rows for the current in-house stay"
     )
-    device_count: int = Field(description="Devices installed in this room")
+    device_count: int | None = Field(
+        default=None,
+        description=(
+            "Devices installed in this room. NULL means UNKNOWN -- the OSS "
+            "device service was unreachable -- and is distinct from 0, which "
+            "means the room genuinely has no devices."
+        ),
+    )
+
+
+class OccupancyStatusSummary(BaseModel):
+    status_id: int | None = None
+    status: str
+    count: int
+    percent: float
+
+
+class DailyOccupancyMetrics(BaseModel):
+    target_date: date
+    start_of_day: int
+    start_of_day_percent: float
+    realized_check_in: int
+    realized_check_in_percent: float
+    realized_check_out: int
+    realized_check_out_percent: float
+    current_status: int
+    current_status_percent: float
+    expected_check_in: int
+    expected_check_in_percent: float
+    expected_check_out: int
+    expected_check_out_percent: float
+    end_of_day: int
+    end_of_day_percent: float
+
+
+class OccupancyDailyPoint(BaseModel):
+    metric_date: date
+    total_rooms: int
+    occupied_rooms: int
+    available_rooms: int
+    occupancy_percent: float
+    check_ins: int
+    check_outs: int
+    has_data: bool
+
+
+class OccupancySummaryRead(BaseModel):
+    total_rooms: int
+    occupied: int
+    available: int
+    allotted: int
+    unavailable: int
+    unknown: int
+    unclassified: int = 0
+    occupied_percent: float
+    available_percent: float
+    allotted_percent: float
+    unavailable_percent: float
+    unknown_percent: float
+    unclassified_percent: float = 0.0
+    by_status: list[OccupancyStatusSummary]
+    daily_metrics: DailyOccupancyMetrics
+
+
+class OccupancyKPIMetadata(BaseModel):
+    """Database-backed metadata and routing configuration for occupancy dashboard KPIs."""
+
+    key: str = Field(examples=["stays_in_room"])
+    label: str = Field(examples=["Stays in House"])
+    target_route: str = Field(examples=["/check-in"])
+    count_source: str = Field(examples=["stays"])
+    query_params: dict[str, Any] = Field(default_factory=dict)
+    description: str | None = Field(default=None, examples=["Active in-house stays"])
+

@@ -83,10 +83,30 @@ def seed(session: Session, ctx: dict) -> dict[str, int]:
         email="frontdesk@hms-demo.invalid",
         additional_email="ops@hms-demo.invalid",
         google_map_link="https://maps.example.invalid/ikanos-grand-chennai",
-        cloud_details={"region": "ap-south-1", "tier": "demo"},
+        cloud_details={
+            "region": "ap-south-1",
+            "tier": "demo",
+            "occupancy_kpi_metadata": {
+                "stays_in_room": {
+                    "key": "stays_in_room",
+                    "label": "Stays in House",
+                    "target_route": "/check-in",
+                    "count_source": "stays",
+                    "query_params": {"is_in_house": True},
+                    "description": "Active in-house stays",
+                },
+                "room_in_house": {
+                    "key": "room_in_house",
+                    "label": "Room in House",
+                    "target_route": "/occupancy?is_occupied=true",
+                    "count_source": "occupancy",
+                    "query_params": {"is_occupied": True},
+                    "description": "Rooms with active guest occupancy",
+                },
+            },
+        },
         created_by=system.id,
-        # currency_id is left NULL: there is no `currencies` table in IKANOS,
-        # so there is nothing to point at. Blueprint OPEN DECISION #1.
+        currency_id=1,  # INR (Indian Rupee)
     )
     ctx["facility"] = facility
     counts["facility"] = 1

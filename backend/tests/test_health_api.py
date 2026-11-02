@@ -110,18 +110,19 @@ def test_db_health_returns_ok(client):
     assert r.status_code == 200
     body = r.json()
     assert body["status"] == "ok"
-    assert body["database"] == "hms_db"
-    assert body["schema_name"] == settings.POSTGRES_SCHEMA
+    assert body["database"] == settings.MYSQL_DATABASE
+    # MySQL has no schema inside the database; the database IS the schema.
+    assert body["schema_name"] == settings.MYSQL_DATABASE
 
 
-def test_db_health_values_come_from_postgres_not_from_code(client):
+def test_db_health_values_come_from_the_database_not_from_code(client):
     """Every field must match what the database itself reports."""
     body = client.get(f"{V1}/health/db").json()
 
     session = SessionLocal()
     try:
-        database = session.execute(text("SELECT current_database()")).scalar_one()
-        version = session.execute(text("SHOW server_version")).scalar_one()
+        database = session.execute(text("SELECT database()")).scalar_one()
+        version = session.execute(text("SELECT version()")).scalar_one()
         revision = session.execute(
             text("SELECT version_num FROM alembic_version")
         ).scalar_one()
@@ -135,7 +136,7 @@ def test_db_health_values_come_from_postgres_not_from_code(client):
 
 def test_db_health_reports_the_applied_migration(client):
     body = client.get(f"{V1}/health/db").json()
-    assert body["alembic_revision"] == "7c4e2b9a1d53"
+    assert body["alembic_revision"] == "0e2687233b59"
 
 
 def test_db_health_measures_real_latency(client):
@@ -259,6 +260,8 @@ DELIVERED_PATHS = {
     f"{V1}/health/db",
     # About screen -- the running API version
     f"{V1}/health/version",
+    # OSS dispatch -- reachability of each OSS domain service
+    f"{V1}/health/oss",
     # Phase 2.2 -- facility and property hierarchy
     f"{V1}/facilities",
     f"{V1}/facilities/{{facility_id}}",
@@ -374,6 +377,9 @@ DELIVERED_PATHS = {
     f"{V1}/devices/{{device_id}}/maintenance",
     f"{V1}/limit-configs",
     f"{V1}/limit-configs/{{config_id}}",
+    # OSS dispatch -- which OSS device is installed in which room
+    f"{V1}/room-devices",
+    f"{V1}/room-devices/{{map_id}}",
     # Room catalogue
     f"{V1}/amenity-types",
     f"{V1}/amenity-types/{{amenity_type_id}}",
@@ -405,6 +411,9 @@ DELIVERED_PATHS = {
     f"{V1}/reports",
     f"{V1}/reports/{{report_key}}",
     f"{V1}/reports/{{report_key}}/export.xlsx",
+    # Reference data -- Country and Gender options
+    f"{V1}/countries",
+    f"{V1}/countries/genders",
 }
 
 

@@ -26,9 +26,12 @@ from app.api.deps import DbSession, require_permission
 from app.schemas.common import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, Page
 from app.schemas.facility import (
     BuildingRead,
+    CountryRead,
+    CurrencyRead,
     FacilityDetail,
     FacilityRead,
     FloorRead,
+    GenderOption,
     PropertyRead,
     RoomRead,
 )
@@ -312,3 +315,100 @@ def get_room(room_id: uuid.UUID, db: DbSession) -> RoomRead:
     if row is None:
         raise _missing("Room", room_id)
     return RoomRead.model_validate(row)
+
+
+# ---------------------------------------------------------------------------
+# Country reference data & Gender reference
+# ---------------------------------------------------------------------------
+
+countries_router = APIRouter(
+    prefix="/countries", tags=["facilities"], responses=AUTH_RESPONSES
+)
+
+
+@countries_router.get(
+    "",
+    response_model=Page[CountryRead],
+    summary="List country reference data",
+    description="239 reference rows for country codes, ISO codes, and nationalities.",
+)
+def list_countries(
+    db: DbSession,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(250, ge=1, le=500),
+    search: str | None = Query(None, description="Search by name, nice_name, ISO code, or phone code"),
+) -> Page[CountryRead]:
+    rows, total = service.list_countries(db, page=page, page_size=page_size, search=search)
+    return Page[CountryRead](
+        items=[CountryRead.model_validate(r) for r in rows],
+        page=page,
+        page_size=page_size,
+        total=total,
+    )
+
+
+@countries_router.get(
+    "/genders",
+    response_model=list[GenderOption],
+    summary="List gender reference options",
+    description="Options derived authoritatively from PostgreSQL's `gender` enum type.",
+)
+def list_genders(db: DbSession) -> list[GenderOption]:
+    options = service.get_gender_options(db)
+    return [GenderOption.model_validate(o) for o in options]
+
+
+# ---------------------------------------------------------------------------
+# Currency reference data (ISO 4217 master)
+# ---------------------------------------------------------------------------
+
+currencies_router = APIRouter(
+    prefix="/currencies", tags=["facilities"], responses=AUTH_RESPONSES
+)
+
+
+@currencies_router.get(
+    "",
+    response_model=list[CurrencyRead],
+    summary="List supported currencies",
+    description="Authoritative ISO 4217 currencies from the database master table.",
+)
+def list_currencies(
+    db: DbSession,
+    active_only: bool = Query(True, description="Filter only active currencies"),
+) -> list[CurrencyRead]:
+    from sqlalchemy import select
+    from app.models import Currency
+
+    stmt = select(Currency).order_by(Currency.id)
+    if active_only:
+        stmt = stmt.where(Currency.is_active == True)  # noqa: E712
+    currencies = db.execute(stmt).scalars().all()
+    return [CurrencyRead.model_validate(c) for c in currencies]
+
+
+@currencies_router.get(
+    "/{id_or_code}",
+    response_model=CurrencyRead,
+    responses=NOT_FOUND,
+    summary="Get currency by ID or ISO code",
+)
+def get_currency(id_or_code: str, db: DbSession) -> CurrencyRead:
+    from sqlalchemy import select
+    from app.models import Currency
+
+    if id_or_code.isdigit():
+        currency = db.get(Currency, int(id_or_code))
+    else:
+        currency = (
+            db.execute(select(Currency).where(Currency.code == id_or_code.upper()))
+            .scalars()
+            .first()
+        )
+    if currency is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Currency '{id_or_code}' not found.",
+        )
+    return CurrencyRead.model_validate(currency)
+

@@ -19,6 +19,7 @@ from app.models import (
     AmenityStatus,
     CommandType,
     Country,
+    Currency,
     DeviceParam,
     DeviceType,
     EntityType,
@@ -55,12 +56,44 @@ def seed(session: Session) -> dict[str, int]:
         )
     counts["country"] = len(countries)
 
+    currencies = [
+        (1, "INR", "Indian Rupee", "₹", 2),
+        (2, "USD", "US Dollar", "$", 2),
+        (3, "EUR", "Euro", "€", 2),
+        (4, "GBP", "British Pound", "£", 2),
+        (5, "AED", "UAE Dirham", "د.إ", 2),
+        (6, "SGD", "Singapore Dollar", "S$", 2),
+        (7, "JPY", "Japanese Yen", "¥", 0),
+    ]
+    for cid, code, name, symbol, minor in currencies:
+        upsert(
+            session,
+            Currency,
+            {"id": cid},
+            code=code,
+            name=name,
+            symbol=symbol,
+            minor_units=minor,
+            is_active=True,
+        )
+    counts["currency"] = len(currencies)
+
     for cid, name in ref.AMENITY_STATUSES:
         upsert(session, AmenityStatus, {"id": cid}, amenity_status_name=name)
     counts["amenity_status"] = len(ref.AMENITY_STATUSES)
 
+    condition_displays = {
+        1: "Need Maintenance",
+        2: "Low Battery",
+        3: "Under Maintenance",
+        4: "Sanitation Required",
+        5: "Ready to Occupy",
+        6: "Guest Assistance Required",
+        7: "Device Offline",
+    }
     for cid, name in ref.AMENITY_CONDITIONS:
-        upsert(session, AmenityCondition, {"id": cid}, name=name)
+        disp = condition_displays.get(cid, name)
+        upsert(session, AmenityCondition, {"id": cid}, name=name, display_name=disp)
     counts["amenity_condition"] = len(ref.AMENITY_CONDITIONS)
 
     for cid, name in ref.SERVICE_TYPES:

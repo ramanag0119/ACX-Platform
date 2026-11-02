@@ -6,11 +6,10 @@ Blueprint §5, tables 1-8.
 import uuid
 from datetime import datetime
 
-from sqlalchemy import ForeignKey, Integer, SmallInteger, String, Text
-from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.dialects.postgresql import UUID as PGUUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import Boolean, ForeignKey, Integer, SmallInteger, String, Text
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.db.types import GUID, JSONB
 from app.db.base import Base, HMSBase, SmallIntLookupPk, TimestampMixin, UUIDPk
 
 # ---------------------------------------------------------------------------
@@ -43,7 +42,7 @@ class Organisation(HMSBase, UUIDPk):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     org_uid: Mapped[str] = mapped_column(String(3), nullable=False, unique=True)
     created_by: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=False
+        GUID(), user_fk(ondelete="RESTRICT"), nullable=False
     )
 
 
@@ -54,7 +53,7 @@ class Facility(HMSBase, UUIDPk):
     __tablename__ = "facility"
 
     org_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("organisation.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
@@ -63,8 +62,11 @@ class Facility(HMSBase, UUIDPk):
     # tables are dropped -- blueprint §2.5, OPEN DECISION #2.
     facility_uid: Mapped[str] = mapped_column(String(3), nullable=False, unique=True)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
-    # REVIEW: no `currencies` table exists in the dump, so no FK is declared.
-    currency_id: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+    # Authoritative ISO 4217 currency.
+    currency_id: Mapped[int | None] = mapped_column(
+        SmallInteger, ForeignKey("currency.id", ondelete="RESTRICT"), nullable=True
+    )
+    currency: Mapped["Currency | None"] = relationship("Currency")
     city: Mapped[str | None] = mapped_column(String(100), nullable=True)
     state: Mapped[str | None] = mapped_column(String(100), nullable=True)
     pin_code: Mapped[str | None] = mapped_column(String(20), nullable=True)
@@ -74,14 +76,14 @@ class Facility(HMSBase, UUIDPk):
     google_map_link: Mapped[str | None] = mapped_column(String(256), nullable=True)
     cloud_details: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     facility_image_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), attachment_fk(ondelete="CASCADE"), nullable=True
+        GUID(), attachment_fk(ondelete="CASCADE"), nullable=True
     )
     # Drives the Default Key Settings module.
     default_key_user: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=True
+        GUID(), user_fk(ondelete="RESTRICT"), nullable=True
     )
     created_by: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=False
+        GUID(), user_fk(ondelete="RESTRICT"), nullable=False
     )
 
     # NOT PRESENT, NOT ADDED (blueprint §11.9 / OPEN DECISION #9):
@@ -99,12 +101,12 @@ class FacilityUser(Base, TimestampMixin):
     __tablename__ = "facility_user"
 
     facility_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("facility.id", ondelete="CASCADE"),
         primary_key=True,
     )
     app_user_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         user_fk(ondelete="CASCADE"),
         primary_key=True,
         index=True,
@@ -113,7 +115,7 @@ class FacilityUser(Base, TimestampMixin):
         SmallInteger, nullable=True, server_default="1"
     )
     created_by: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=False
+        GUID(), user_fk(ondelete="RESTRICT"), nullable=False
     )
 
 
@@ -125,12 +127,12 @@ class PropertyType(HMSBase, UUIDPk):
 
     property_type_name: Mapped[str] = mapped_column(String(200), nullable=False)
     property_type_image_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), attachment_fk(ondelete="RESTRICT"), nullable=True
+        GUID(), attachment_fk(ondelete="RESTRICT"), nullable=True
     )
     # 1-3; drives property_chain depth. tinyint(1) in IKANOS but not a boolean.
     levels: Mapped[int] = mapped_column(SmallInteger, nullable=False)
     facility_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("facility.id", ondelete="CASCADE"),
         nullable=True,
         index=True,
@@ -148,13 +150,13 @@ class Property(HMSBase, UUIDPk):
 
     property_name: Mapped[str] = mapped_column(String(200), nullable=False)
     property_type_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("property_type.id", ondelete="RESTRICT"),
         nullable=False,
         index=True,
     )
     facility_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("facility.id", ondelete="CASCADE"),
         nullable=True,
         index=True,
@@ -163,7 +165,7 @@ class Property(HMSBase, UUIDPk):
         SmallInteger, nullable=False, server_default="1"
     )
     created_by: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="CASCADE"), nullable=True
+        GUID(), user_fk(ondelete="CASCADE"), nullable=True
     )
 
 
@@ -174,25 +176,25 @@ class PropertyChain(HMSBase, UUIDPk):
     __tablename__ = "property_chain"
 
     level_one_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("property.id", ondelete="RESTRICT"),
         nullable=False,
         index=True,
     )
     level_two_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("property.id", ondelete="RESTRICT"),
         nullable=True,
         index=True,
     )
     level_three_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("property.id", ondelete="RESTRICT"),
         nullable=True,
         index=True,
     )
     facility_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("facility.id", ondelete="CASCADE"),
         nullable=True,
         index=True,
@@ -201,7 +203,7 @@ class PropertyChain(HMSBase, UUIDPk):
         SmallInteger, nullable=False, server_default="1"
     )
     created_by: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="CASCADE"), nullable=True
+        GUID(), user_fk(ondelete="CASCADE"), nullable=True
     )
 
 
@@ -211,7 +213,7 @@ class Attachment(HMSBase, UUIDPk):
     __tablename__ = "attachment"
 
     facility_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("facility.id", ondelete="CASCADE", use_alter=True),
         nullable=True,
         index=True,
@@ -219,7 +221,7 @@ class Attachment(HMSBase, UUIDPk):
     file_name: Mapped[str] = mapped_column(String(100), nullable=False)
     file_path: Mapped[str] = mapped_column(String(256), nullable=False)
     created_by: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="CASCADE"), nullable=True, index=True
+        GUID(), user_fk(ondelete="CASCADE"), nullable=True, index=True
     )
 
 
@@ -238,3 +240,15 @@ class Country(Base, TimestampMixin, SmallIntLookupPk):
     nice_name: Mapped[str] = mapped_column(String(50), nullable=False)
     iso3: Mapped[str | None] = mapped_column(String(3), nullable=True)
     num_code: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+
+
+class Currency(Base, TimestampMixin, SmallIntLookupPk):
+    """Authoritative ISO 4217 currency master table."""
+
+    __tablename__ = "currency"
+
+    code: Mapped[str] = mapped_column(String(3), nullable=False, unique=True, index=True)
+    name: Mapped[str] = mapped_column(String(50), nullable=False)
+    symbol: Mapped[str] = mapped_column(String(10), nullable=False)
+    minor_units: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=2, server_default="2")
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")

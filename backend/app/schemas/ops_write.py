@@ -122,6 +122,9 @@ class ServiceItemCreate(Body):
     amenity_id: uuid.UUID | None = None
     facility_id: uuid.UUID | None = None
     status: int | None = Field(default=1, ge=0, le=1)
+    is_veg: bool | None = None
+    is_spicy: bool | None = None
+    type_of_service: str | None = None
 
 
 class ServiceItemUpdate(Body):
@@ -131,6 +134,9 @@ class ServiceItemUpdate(Body):
     price_per_unit: Decimal | None = Field(default=None, ge=0)
     amenity_id: uuid.UUID | None = None
     status: int | None = Field(default=None, ge=0, le=1)
+    is_veg: bool | None = None
+    is_spicy: bool | None = None
+    type_of_service: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -216,7 +222,7 @@ class RoomStateUpdate(Body):
 
 
 class RoomConditionsBody(Body):
-    #: `amenity_condition` ids: 1 Dirty, 2 Low battery, 3 Under maintenance, 4 Sanitation.
+    #: Exactly one `amenity_condition` id: 1 Dirty, 2 Low battery, 3 Under maintenance, 4 Sanitation, 5 Ready for occupant.
     condition_ids: list[int] = Field(default_factory=list)
 
 
@@ -291,6 +297,9 @@ class LimitConfigCreate(Body):
 
 
 class LimitConfigUpdate(Body):
+    parameter: str | None = Field(default=None, min_length=1, max_length=100)
+    device_name: str | None = Field(default=None, min_length=1, max_length=255)
+    device_id: uuid.UUID | None = None
     limit_check: bool | None = None
     is_percentage_value: bool | None = None
     nominal: Decimal | None = None
@@ -316,6 +325,7 @@ class FacilityUpdate(Body):
     google_map_link: str | None = Field(default=None, max_length=500)
     guest_rooms: int | None = Field(default=None, ge=0)
     default_key_user: uuid.UUID | None = None
+    currency_id: int | None = Field(default=None, description="Authoritative ISO 4217 Currency ID")
 
 
 class RoomCreate(Body):
@@ -361,17 +371,26 @@ class PackageCreate(Body):
     description: str | None = None
     is_sub_package: bool = False
     facility_id: uuid.UUID | None = None
+    price: Decimal | None = Field(default=None, ge=0, description="Authoritative rate plan price")
+    currency_id: int | None = Field(default=None, description="Currency ID (FK to currency)")
     status: int = Field(default=1, ge=0, le=1)
     #: `package_feature` rows; each references a `feature`.
     feature_ids: list[uuid.UUID] = Field(default_factory=list)
+    #: `sub_package` rows linking parent packages to sub-packages.
+    sub_package_ids: list[uuid.UUID] = Field(default_factory=list)
+    parent_package_id: uuid.UUID | None = None
 
 
 class PackageUpdate(Body):
     name: str | None = Field(default=None, min_length=1, max_length=255)
     amenity_type: uuid.UUID | None = None
     description: str | None = None
+    price: Decimal | None = Field(default=None, ge=0, description="Authoritative rate plan price")
+    currency_id: int | None = Field(default=None, description="Currency ID (FK to currency)")
     status: int | None = Field(default=None, ge=0, le=1)
     feature_ids: list[uuid.UUID] | None = None
+    sub_package_ids: list[uuid.UUID] | None = None
+    parent_package_id: uuid.UUID | None = None
 
 
 class FeatureCreate(Body):
@@ -404,6 +423,7 @@ class PromoCodeCreate(Body):
     max_discount_value: Decimal | None = Field(default=None, ge=0)
     min_order_value: Decimal | None = Field(default=None, ge=0)
     status: int | None = Field(default=1, ge=0, le=1)
+    promo_code_icon: uuid.UUID | None = None
     #: `promo_code_amenity` rows -- which rooms the offer applies to.
     amenity_ids: list[uuid.UUID] = Field(default_factory=list)
 
@@ -418,6 +438,7 @@ class PromoCodeUpdate(Body):
     max_discount_value: Decimal | None = Field(default=None, ge=0)
     min_order_value: Decimal | None = Field(default=None, ge=0)
     status: int | None = Field(default=None, ge=0, le=1)
+    promo_code_icon: uuid.UUID | None = None
     amenity_ids: list[uuid.UUID] | None = None
 
 
@@ -429,6 +450,7 @@ class FacilityEventCreate(Body):
     expected_attendees: int | None = Field(default=None, ge=0)
     start_date_time: datetime | None = None
     end_date_time: datetime | None = None
+    image_id: uuid.UUID | None = None
     facility_id: uuid.UUID | None = None
     status: int | None = Field(default=1, ge=0, le=1)
 
@@ -441,6 +463,7 @@ class FacilityEventUpdate(Body):
     expected_attendees: int | None = Field(default=None, ge=0)
     start_date_time: datetime | None = None
     end_date_time: datetime | None = None
+    image_id: uuid.UUID | None = None
     status: int | None = Field(default=None, ge=0, le=1)
     cancellation_reason: str | None = Field(default=None, max_length=255)
 
@@ -466,3 +489,32 @@ class OccasionUpdate(Body):
     is_repeatable: int | None = Field(default=None, ge=0, le=1)
     notify_to_hub: int | None = Field(default=None, ge=0, le=1)
     status: int | None = Field(default=None, ge=0, le=1)
+
+
+class BulkUploadRowError(BaseModel):
+    row: int
+    error: str
+
+
+class BulkUploadResult(BaseModel):
+    import_job_id: uuid.UUID
+    total_records: int
+    success_count: int
+    error_count: int
+    status: str
+    errors: list[BulkUploadRowError] = Field(default_factory=list)
+
+
+class ImportJobRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    import_job_name: str | None = None
+    entity_type: str
+    import_status: str
+    total_records: int | None = None
+    success_count: int | None = None
+    error_count: int | None = None
+    import_file_name: str | None = None
+    completed_on: datetime | None = None
+    created_on: datetime

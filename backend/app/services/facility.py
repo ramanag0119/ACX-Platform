@@ -19,21 +19,25 @@ from __future__ import annotations
 import uuid
 from collections import defaultdict
 
-from sqlalchemy import Select, func, select
+from sqlalchemy import Select, func, select, text, update
 from sqlalchemy.orm import Session, aliased
 
+from app.models import enums
 from app.models import (
+    AccessKey,
     Amenity,
     AmenityCondition,
     AmenityConditionStatus,
     AmenityStatus,
     AmenityType,
+    AppUser,
     Facility,
     Package,
     Property,
     PropertyChain,
     PropertyType,
 )
+from app.services.writes import Invalid, require_row, transaction
 
 # `property` aliased twice: the same table supplies both levels of a chain.
 BuildingProp = aliased(Property, name="building_property")
@@ -281,6 +285,7 @@ def _conditions_for(db: Session, amenity_ids: list[uuid.UUID]) -> dict[uuid.UUID
             AmenityConditionStatus.amenity_id,
             AmenityCondition.id,
             AmenityCondition.name,
+            func.coalesce(AmenityCondition.display_name, AmenityCondition.name).label("display_name"),
         )
         .join(
             AmenityCondition,
@@ -293,8 +298,8 @@ def _conditions_for(db: Session, amenity_ids: list[uuid.UUID]) -> dict[uuid.UUID
         .order_by(AmenityCondition.id)
     ).all()
     out: dict[uuid.UUID, list[dict]] = defaultdict(list)
-    for amenity_id, condition_id, name in rows:
-        out[amenity_id].append({"id": condition_id, "name": name})
+    for amenity_id, condition_id, name, display_name in rows:
+        out[amenity_id].append({"id": condition_id, "name": name, "display_name": display_name})
     return out
 
 
@@ -327,8 +332,28 @@ def list_rooms(
     total = _count(db, stmt)
     rows = [dict(r) for r in db.execute(_page(stmt, page=page, page_size=page_size)).mappings().all()]
     conditions = _conditions_for(db, [r["id"] for r in rows])
+    cond_master = {
+        c.id: c.display_name or c.name
+        for c in db.execute(select(AmenityCondition)).scalars().all()
+    }
     for row in rows:
-        row["conditions"] = conditions.get(row["id"], [])
+        conds = conditions.get(row["id"], [])
+        row["conditions"] = conds
+        if conds:
+            row["room_status_id"] = conds[0]["id"]
+            row["room_status"] = conds[0].get("display_name") or conds[0].get("name")
+        else:
+            if row.get("status") == 1:
+                row["room_status_id"] = None
+                row["room_status"] = None
+            elif row.get("status") == 2:
+                row["room_status_id"] = 3
+                row["room_status"] = cond_master.get(3, "Under Maintenance")
+            else:
+                row["room_status_id"] = 5
+                row["room_status"] = cond_master.get(5, "Ready to Occupy")
+        st = row.get("status")
+        row["occupancy_status"] = "Occupied" if st == 1 else ("Allotted" if st == 3 else ("Unavailable" if st == 2 else "Available"))
     return rows, total
 
 
@@ -337,5 +362,123 @@ def get_room(db: Session, room_id: uuid.UUID):
     if row is None:
         return None
     row = dict(row)
-    row["conditions"] = _conditions_for(db, [row["id"]]).get(row["id"], [])
+    conds = _conditions_for(db, [row["id"]]).get(row["id"], [])
+    row["conditions"] = conds
+    cond_master = {
+        c.id: c.display_name or c.name
+        for c in db.execute(select(AmenityCondition)).scalars().all()
+    }
+    if conds:
+        row["room_status_id"] = conds[0]["id"]
+        row["room_status"] = conds[0].get("display_name") or conds[0].get("name")
+    else:
+        if row.get("status") == 1:
+            row["room_status_id"] = None
+            row["room_status"] = None
+        elif row.get("status") == 2:
+            row["room_status_id"] = 3
+            row["room_status"] = cond_master.get(3, "Under Maintenance")
+        else:
+            row["room_status_id"] = 5
+            row["room_status"] = cond_master.get(5, "Ready to Occupy")
+    st = row.get("status")
+    row["occupancy_status"] = "Occupied" if st == 1 else ("Allotted" if st == 3 else ("Unavailable" if st == 2 else "Available"))
     return row
+
+
+def list_countries(
+    db: Session,
+    *,
+    page: int = 1,
+    page_size: int = 250,
+    search: str | None = None,
+) -> tuple[list, int]:
+    from sqlalchemy import or_
+    from app.models.facility import Country
+
+    stmt = select(Country).order_by(Country.nice_name)
+    if search:
+        q = f"%{search.strip().lower()}%"
+        stmt = stmt.where(
+            or_(
+                func.lower(Country.nice_name).like(q),
+                func.lower(Country.name).like(q),
+                Country.phone_code.like(f"%{search.strip().lstrip('+')}%"),
+                func.lower(Country.iso_code).like(q),
+            )
+        )
+    total = _count(db, stmt)
+    rows = list(db.execute(_page(stmt, page=page, page_size=page_size)).scalars().all())
+    return rows, total
+
+
+def get_gender_options(db: Session) -> list[dict[str, str]]:  # noqa: ARG001
+    """Gender options, from the `gender` enum the schema is built from.
+
+    The column's allowed values are exactly these on MySQL and PostgreSQL
+    alike (both migrations take them from the same list), so the model enum is
+    the authority -- no catalog query, which differs per database."""
+    return [{"value": v, "label": v.title()} for v in enums.gender.enums]
+
+
+# ---------------------------------------------------------------------------
+# Default Key Settings
+# ---------------------------------------------------------------------------
+
+
+def get_key_settings(db: Session, facility_id: uuid.UUID) -> dict:
+    facility = require_row(db, Facility, facility_id, "Facility")
+    manager_name = None
+    manager_email = None
+    if facility.default_key_user:
+        manager = db.get(AppUser, facility.default_key_user)
+        if manager:
+            name_parts = [manager.first_name, manager.last_name]
+            manager_name = " ".join([p for p in name_parts if p])
+            manager_email = manager.email
+
+    active_keys_count = db.execute(
+        select(func.count())
+        .select_from(AccessKey)
+        .where(AccessKey.key_type == 4, AccessKey.status == 1)
+    ).scalar() or 0
+
+    return {
+        "facility_id": facility.id,
+        "default_key_user": facility.default_key_user,
+        "manager_name": manager_name,
+        "manager_email": manager_email,
+        "active_keys_count": active_keys_count,
+    }
+
+
+def update_key_settings(
+    db: Session, facility_id: uuid.UUID, *, default_key_user: uuid.UUID | None, actor_id: uuid.UUID
+) -> dict:
+    with transaction(db):
+        facility = require_row(db, Facility, facility_id, "Facility")
+        if default_key_user is not None:
+            user = db.get(AppUser, default_key_user)
+            if not user:
+                raise Invalid("Selected manager user does not exist.")
+            if user.is_staff != 1:
+                raise Invalid("Selected manager must be an active staff member.")
+        facility.default_key_user = default_key_user
+    db.refresh(facility)
+    return get_key_settings(db, facility_id)
+
+
+def reset_key_settings(db: Session, facility_id: uuid.UUID, actor_id: uuid.UUID) -> dict:
+    """Revoke all default keys and reset designated default key manager."""
+    with transaction(db):
+        facility = require_row(db, Facility, facility_id, "Facility")
+        facility.default_key_user = None
+        # Revoke all active default keys (key_type=4)
+        db.execute(
+            update(AccessKey)
+            .where(AccessKey.key_type == 4, AccessKey.status == 1)
+            .values(status=0)
+        )
+    db.refresh(facility)
+    return get_key_settings(db, facility_id)
+

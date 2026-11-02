@@ -23,6 +23,8 @@ import type {
   AmenityStatusRead,
   ApiVersion,
   BuildingRead,
+  CountryRead,
+  CurrencyRead,
   CurrentUser,
   CaleidoAtWorkRead,
   DailyDataPointRead,
@@ -31,17 +33,22 @@ import type {
   DeviceRead,
   DeviceStatRead,
   DeviceTypeRead,
+  EnergyStatCreate,
   EnergyStatRead,
   EnergySummaryRead,
   FacilityRead,
   FloorRead,
+  GenderOption,
   IncidentRead,
   InvoiceRead,
   ModuleRead,
   NotificationRead,
   NotificationTemplateRead,
+  OccupancyDailyPoint,
   OccupancyDetail,
+  OccupancyKPIMetadata,
   OccupancyRead,
+  OccupancySummaryRead,
   OtherDeviceReadingRead,
   Page,
   PermissionRead,
@@ -52,12 +59,16 @@ import type {
   RoomRead,
   ServiceCategoryRead,
   ServiceItemRead,
+  ServiceRequestDetail,
   ServiceRequestRead,
   ServiceStatusRead,
+  ServiceTrackingSummary,
+  RoleTypeOption,
   ServiceTypeRead,
   StayOccupantRead,
   StayRead,
   TokenResponse,
+  UserDetail,
   UserPermissionRead,
   UserRead,
   ValueAlertRead,
@@ -91,16 +102,24 @@ export const listFloors = (params?: QueryParams) =>
 export const listRooms = (params?: QueryParams) =>
   apiClient.get<Page<RoomRead>>("/rooms", params);
 export const getRoom = (roomId: string) => apiClient.get<RoomRead>(`/rooms/${roomId}`);
+export const listCountries = (params?: QueryParams) =>
+  apiClient.get<Page<CountryRead>>("/countries", params);
+export const listGenders = () =>
+  apiClient.get<GenderOption[]>("/countries/genders");
 
 // --- Users, roles, permissions (Phase 2.3) ---------------------------------
 
 export const listUsers = (params?: QueryParams) =>
   apiClient.get<Page<UserRead>>("/users", params);
-export const getUser = (userId: string) => apiClient.get<UserRead>(`/users/${userId}`);
+export const getUser = (userId: string) => apiClient.get<UserDetail>(`/users/${userId}`);
+export const listAssignableRoles = (params?: QueryParams) =>
+  apiClient.get<RoleRead[]>("/users/roles", params);
 export const listUserPermissions = (userId: string, params?: QueryParams) =>
   apiClient.get<UserPermissionRead[]>(`/users/${userId}/permissions`, params);
 export const listRoles = (params?: QueryParams) =>
   apiClient.get<Page<RoleRead>>("/roles", params);
+export const listRoleTypes = () =>
+  apiClient.get<RoleTypeOption[]>("/roles/types");
 export const listRolePermissions = (roleId: string) =>
   apiClient.get<RolePermissionRead[]>(`/roles/${roleId}/permissions`);
 export const listModules = (params?: QueryParams) =>
@@ -120,6 +139,10 @@ export const listServiceItems = (params?: QueryParams) =>
   apiClient.get<Page<ServiceItemRead>>("/service-items", params);
 export const listServiceRequests = (params?: QueryParams) =>
   apiClient.get<Page<ServiceRequestRead>>("/service-requests", params);
+export const getServiceRequest = (requestId: string) =>
+  apiClient.get<ServiceRequestDetail>(`/service-requests/${requestId}`);
+export const getServiceTrackingSummary = (params?: QueryParams) =>
+  apiClient.get<ServiceTrackingSummary>("/service-requests/summary", params);
 
 // --- Devices (Phase 2.6) ---------------------------------------------------
 
@@ -150,12 +173,20 @@ export const listActivities = (params?: QueryParams) =>
 
 export const listOccupancy = (params?: QueryParams) =>
   apiClient.get<Page<OccupancyRead>>("/occupancy", params);
+export const getOccupancySummary = (params?: QueryParams) =>
+  apiClient.get<OccupancySummaryRead>("/occupancy/summary", params);
+export const listOccupancyDaily = (params: QueryParams) =>
+  apiClient.get<OccupancyDailyPoint[]>("/occupancy/daily", params);
+export const listOccupancyKpis = (params?: QueryParams) =>
+  apiClient.get<OccupancyKPIMetadata[]>("/occupancy/kpis", params);
 export const getOccupancy = (amenityId: string) =>
   apiClient.get<OccupancyDetail>(`/occupancy/${amenityId}`);
 export const listAmenityStatuses = (params?: QueryParams) =>
   apiClient.get<Page<AmenityStatusRead>>("/amenity-statuses", params);
 export const listAmenityConditions = (params?: QueryParams) =>
   apiClient.get<Page<AmenityConditionRead>>("/amenity-conditions", params);
+export const getRoomApplicableConditions = (amenityId: string) =>
+  apiClient.get<AmenityConditionRead[]>(`/occupancy/${amenityId}/applicable-conditions`);
 export const listStays = (params?: QueryParams) =>
   apiClient.get<Page<StayRead>>("/stays", params);
 export const getStay = (stayId: string) => apiClient.get<StayRead>(`/stays/${stayId}`);
@@ -185,3 +216,12 @@ export const listDailyDataPoints = (params?: QueryParams) =>
 /** The Caleido At Work rings, aggregated backend-side -- one row per metric. */
 export const getCaleidoAtWork = (params?: QueryParams) =>
   apiClient.get<CaleidoAtWorkRead>("/daily-data-points/summary", params);
+
+// --- Currencies & Telemetry Ingestion ---------------------------------------
+
+export const listCurrencies = (params?: QueryParams) =>
+  apiClient.get<CurrencyRead[]>("/currencies", params);
+export const getCurrency = (idOrCode: string | number) =>
+  apiClient.get<CurrencyRead>(`/currencies/${idOrCode}`);
+export const ingestEnergyStat = (body: EnergyStatCreate) =>
+  apiClient.post<EnergyStatRead>("/energy-stats", body);

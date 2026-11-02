@@ -30,7 +30,7 @@ export const DEFAULT_PAGE_SIZE = 20;
 export const MAX_PAGE_SIZE = 100;
 
 // ---------------------------------------------------------------------------
-// PostgreSQL enum labels
+// Database enum labels
 // ---------------------------------------------------------------------------
 /**
  * These mirror `app/schemas/filters.py`, which mirrors the `pg_enum` labels.
@@ -150,11 +150,41 @@ export const KNOWN_INCIDENT_STATUSES = [
   "Resolved",
 ] as const;
 
-/** Referenced user. The backend never returns more than this for a person. */
+/** Referenced user. */
 export interface UserRef {
   id: string;
   name: string;
   emp_id: string | null;
+}
+
+/** Booker details including contact info, gender, and nationality reference. */
+export interface BookerDetail extends UserRef {
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  phone_number: string | null;
+  gender: string | null;
+  country: number | null;
+  nationality: number | null;
+  nationality_name: string | null;
+  city: string | null;
+}
+
+/** A row of country reference data. */
+export interface CountryRead {
+  id: number;
+  name: string;
+  nice_name: string;
+  phone_code: string;
+  iso_code: string | null;
+  iso3: string | null;
+  num_code: number | null;
+}
+
+/** Database-backed enum option for gender. */
+export interface GenderOption {
+  value: string;
+  label: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -209,6 +239,7 @@ export interface RoleRead {
   role_type: RoleType;
   status: number | null;
   facility_id: string;
+  notification_preferences?: string[] | null;
   created_on: string;
   updated_on: string;
 }
@@ -268,13 +299,41 @@ export interface UserRead {
   department_name: string | null;
   job_function_id: string | null;
   job_function_name: string | null;
+  role_id?: string | null;
+  role_name?: string | null;
   created_on: string;
   updated_on: string;
+}
+
+export interface UserRoleItem {
+  role_id: string;
+  role_name: string;
+  role_type: string;
+  facility_id: string;
+}
+
+export interface UserDetail extends UserRead {
+  roles: UserRoleItem[];
+  facility_ids: string[];
+}
+
+export interface RoleTypeOption {
+  value: string;
+  label: string;
 }
 
 // ---------------------------------------------------------------------------
 // Facility & property hierarchy (Phase 2.2)
 // ---------------------------------------------------------------------------
+
+export interface CurrencyRead {
+  id: number;
+  code: string;
+  name: string;
+  symbol: string;
+  minor_units: number;
+  is_active: boolean;
+}
 
 export interface FacilityRead {
   id: string;
@@ -289,6 +348,7 @@ export interface FacilityRead {
   additional_email: string | null;
   google_map_link: string | null;
   currency_id: number | null;
+  currency?: CurrencyRead | null;
   facility_image_id: string | null;
   default_key_user: string | null;
   created_on: string;
@@ -401,12 +461,33 @@ export interface ServiceItemRead {
   service_type: number | null;
   service_type_name: string | null;
   price_per_unit: string | null;
+  currency_id?: number | null;
+  currency_code?: string | null;
+  currency_symbol?: string | null;
   amenity_id: string | null;
   item_icon: string | null;
   facility_id: string | null;
   status: number | null;
+  is_veg?: boolean | null;
+  is_spicy?: boolean | null;
+  type_of_service?: string | null;
   created_on: string;
   updated_on: string;
+}
+
+export interface ServiceTypeSummary {
+  service_type_id: number;
+  name: string;
+  total_count: number;
+  completed_count: number;
+  pending_count: number;
+}
+
+export interface ServiceTrackingSummary {
+  total_services: number;
+  total_completed: number;
+  total_pending: number;
+  by_type: ServiceTypeSummary[];
 }
 
 export interface ServiceRequestRead {
@@ -436,8 +517,29 @@ export interface ServiceRequestRead {
   total_amount: string | null;
   expected_date: string | null;
   completed_on: string | null;
+  quantity?: number | null;
   created_on: string;
   updated_on: string;
+}
+
+export interface ServiceRequestItemRead {
+  id: string;
+  item_id: string | null;
+  item_name: string | null;
+  category_id: string | null;
+  category_name: string | null;
+  quantity: number | null;
+  price_per_unit: string | null;
+  assigned_to: UserRef | null;
+  status: number | null;
+  status_name: string | null;
+  created_on: string;
+  updated_on: string;
+}
+
+export interface ServiceRequestDetail extends ServiceRequestRead {
+  items: ServiceRequestItemRead[];
+  item_count: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -641,8 +743,13 @@ export interface AmenityStatusRead {
 export interface AmenityConditionRead {
   id: number;
   name: string;
+  display_name?: string | null;
   created_on: string;
   updated_on: string;
+  is_active?: boolean;
+  is_applicable?: boolean;
+  blocks_checkin?: boolean;
+  blocks_readiness?: boolean;
 }
 
 export interface CurrentStayRef {
@@ -669,6 +776,7 @@ export interface OccupancyRead {
   status: number | null;
   status_name: string | null;
   occupancy_status?: string | null;
+  occupancy_status_id?: number | null;
   conditions: AmenityConditionRead[];
   facility_id: string | null;
   building_id: string | null;
@@ -691,6 +799,68 @@ export interface OccupancyDetail extends OccupancyRead {
   device_count: number;
 }
 
+export interface OccupancyStatusSummary {
+  status_id?: number | null;
+  status: string;
+  count: number;
+  percent: number;
+}
+
+export interface DailyOccupancyMetrics {
+  target_date: string;
+  start_of_day: number;
+  start_of_day_percent: number;
+  realized_check_in: number;
+  realized_check_in_percent: number;
+  realized_check_out: number;
+  realized_check_out_percent: number;
+  current_status: number;
+  current_status_percent: number;
+  expected_check_in: number;
+  expected_check_in_percent: number;
+  expected_check_out: number;
+  expected_check_out_percent: number;
+  end_of_day: number;
+  end_of_day_percent: number;
+}
+
+export interface OccupancySummaryRead {
+  total_rooms: number;
+  occupied: number;
+  available: number;
+  allotted: number;
+  unavailable: number;
+  unknown: number;
+  occupied_percent: number;
+  available_percent: number;
+  allotted_percent: number;
+  unavailable_percent: number;
+  unknown_percent: number;
+  by_status: OccupancyStatusSummary[];
+  daily_metrics: DailyOccupancyMetrics;
+}
+
+export interface OccupancyDailyPoint {
+  metric_date: string;
+  total_rooms: number;
+  occupied_rooms: number;
+  available_rooms: number;
+  occupancy_percent: number;
+  check_ins: number;
+  check_outs: number;
+  has_data: boolean;
+}
+
+export interface OccupancyKPIMetadata {
+  key: string;
+  label: string;
+  target_route: string;
+  count_source: string;
+  query_params: Record<string, unknown>;
+  description?: string | null;
+}
+
+
 export interface StayRead {
   id: string;
   internal_stay_ref_number: string;
@@ -698,7 +868,7 @@ export interface StayRead {
   status: StayStatus | null;
   document_approval_status: DocumentApprovalStatus;
   request_source: RequestSource | null;
-  booker: UserRef | null;
+  booker: BookerDetail | null;
   no_of_rooms: number | null;
   no_of_guests: number;
   expected_checkin_time: string;
@@ -713,6 +883,10 @@ export interface StayRead {
   checkout_initiated_by: string | null;
   occupant_count: number;
   room_count: number;
+  room_number?: string | null;
+  room_type_name?: string | null;
+  guest_email?: string | null;
+  guest_phone_number?: string | null;
   created_on: string;
   updated_on: string;
 }
@@ -761,6 +935,9 @@ export interface InvoiceRead {
   net_amount: string | null;
   total_tax: string | null;
   total_amount: string | null;
+  currency_id?: number | null;
+  currency_code?: string | null;
+  currency_symbol?: string | null;
   created_on: string;
   updated_on: string;
 }
@@ -838,9 +1015,9 @@ export interface OtherDeviceReadingRead {
   created_on: string;
 }
 
-/** `energy_unit` is ALWAYS null: `energy_stat` stores no unit column.
- *  Never label these values kWh. */
 export interface EnergyStatRead {
+  device_id: string;
+  device_uid: string | null;
   device_name: string;
   facility_id: string;
   amenity_id: string;
@@ -852,9 +1029,19 @@ export interface EnergyStatRead {
   hour: number;
   hour_timestamp: string;
   energy_consumed: number;
-  energy_unit: null;
+  energy_unit: string | null;
   created_on: string;
   updated_on: string;
+}
+
+export interface EnergyStatCreate {
+  facility_id: string;
+  amenity_id: string;
+  device_id?: string | null;
+  device_name?: string | null;
+  hour?: number | null;
+  hour_timestamp?: string | null;
+  energy_consumed: number;
 }
 
 export interface EnergySummaryBucket {
@@ -906,4 +1093,39 @@ export interface DailyDataPointRead {
   facility_id: string;
   created_on: string;
   updated_on: string;
+}
+
+export interface BulkUploadRowError {
+  row: number;
+  error: string;
+}
+
+export interface BulkUploadResult {
+  import_job_id: string;
+  total_records: number;
+  success_count: number;
+  error_count: number;
+  status: string;
+  errors: BulkUploadRowError[];
+}
+
+export interface ImportJobRead {
+  id: string;
+  import_job_name: string | null;
+  entity_type: string;
+  import_status: string;
+  total_records: number | null;
+  success_count: number | null;
+  error_count: number | null;
+  import_file_name: string | null;
+  completed_on: string | null;
+  created_on: string;
+}
+
+export interface KeySettingsRead {
+  facility_id: string;
+  default_key_user: string | null;
+  manager_name: string | null;
+  manager_email: string | null;
+  active_keys_count: number;
 }

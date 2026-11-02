@@ -178,13 +178,25 @@ export const useFloors = (params?: QueryParams, options?: EnabledOption) =>
   useApiQuery(["floors", params], () => api.listFloors(params), options);
 export const useRooms = (params?: QueryParams) =>
   useApiQuery(["rooms", params], () => api.listRooms(params));
+export const useCountries = (params?: QueryParams) =>
+  useApiQuery(["countries", params], () => api.listCountries(params));
+export const useGenders = () =>
+  useApiQuery(["countries", "genders"], () => api.listGenders());
 
 // --- Users, roles, permissions ---------------------------------------------
 
 export const useUsers = (params?: QueryParams) =>
   useApiQuery(["users", params], () => api.listUsers(params));
+export const useUser = (userId: string | null) =>
+  useApiQuery(["users", userId], () => api.getUser(userId!), {
+    enabled: Boolean(userId),
+  });
 export const useRoles = (params?: QueryParams) =>
   useApiQuery(["roles", params], () => api.listRoles(params));
+export const useAssignableRoles = (params?: QueryParams, options?: EnabledOption) =>
+  useApiQuery(["users", "roles", params], () => api.listAssignableRoles(params), options);
+export const useRoleTypes = (options?: EnabledOption) =>
+  useApiQuery(["roles", "types"], () => api.listRoleTypes(), options);
 export const useRolePermissions = (roleId: string | null) =>
   useApiQuery(["roles", roleId, "permissions"], () => api.listRolePermissions(roleId!), {
     enabled: Boolean(roleId),
@@ -204,6 +216,14 @@ export const useServiceItems = (params?: QueryParams) =>
   useApiQuery(["service-items", params], () => api.listServiceItems(params));
 export const useServiceRequests = (params?: QueryParams) =>
   useApiQuery(["service-requests", params], () => api.listServiceRequests(params));
+export const useServiceRequest = (requestId: string | null) =>
+  useApiQuery(
+    ["service-requests", requestId],
+    () => api.getServiceRequest(requestId!),
+    { enabled: Boolean(requestId) },
+  );
+export const useServiceTrackingSummary = (params?: QueryParams) =>
+  useApiQuery(["service-requests", "summary", params], () => api.getServiceTrackingSummary(params));
 
 // --- Devices ---------------------------------------------------------------
 
@@ -263,10 +283,25 @@ export const useOccupancyDetail = (amenityId: string | null) =>
   useApiQuery(["occupancy", "detail", amenityId], () => api.getOccupancy(amenityId!), {
     enabled: Boolean(amenityId),
   });
+export const useOccupancySummary = (params?: QueryParams, options?: EnabledOption) =>
+  useApiQuery(["occupancy", "summary", params], () => api.getOccupancySummary(params), options);
+export const useOccupancyDaily = (params: QueryParams, options?: EnabledOption) =>
+  useApiQuery(["occupancy", "daily", params], () => api.listOccupancyDaily(params), options);
+export const useOccupancyKpis = (params?: QueryParams, options?: EnabledOption) =>
+  useApiQuery(["occupancy", "kpis", params], () => api.listOccupancyKpis(params), options);
 export const useAmenityStatuses = (params?: QueryParams, options?: EnabledOption) =>
   useApiQuery(["amenity-statuses", params], () => api.listAmenityStatuses(params), options);
 export const useAmenityConditions = (params?: QueryParams) =>
   useApiQuery(["amenity-conditions", params], () => api.listAmenityConditions(params));
+export const useRoomApplicableConditions = (
+  amenityId: string | null | undefined,
+  options?: EnabledOption,
+) =>
+  useApiQuery(
+    ["occupancy", amenityId, "applicable-conditions"],
+    () => api.getRoomApplicableConditions(amenityId!),
+    { enabled: Boolean(amenityId), ...options },
+  );
 export const useStays = (params?: QueryParams) =>
   useApiQuery(["stays", params], () => api.listStays(params));
 export const useStayRoomAllocations = (stayId: string | null) =>
@@ -329,6 +364,8 @@ export const useOccasionTypes = () =>
   useApiQuery(["holidays", "types"], () => writeApi.listOccasionTypes());
 export const useLimitConfigs = (params?: QueryParams) =>
   useApiQuery(["limit-configs", params], () => writeApi.listLimitConfigs(params as never));
+export const useRoomDevices = (params?: QueryParams) =>
+  useApiQuery(["room-devices", params], () => writeApi.listRoomDevices(params));
 
 /** Services Planning. One endpoint per tab, filtered by `request_type`. */
 export const useMaintenanceRequests = (params?: QueryParams) =>
@@ -369,3 +406,11 @@ export const useReport = (
     () => reportApi.runReport(key as string, params),
     { enabled: Boolean(key) && enabled },
   );
+
+export const useKeySettings = (options?: { enabled?: boolean }) =>
+  useApiQuery(["key-settings"], () => writeApi.getKeySettings(), options);
+
+export const useCurrencies = (params?: QueryParams) =>
+  useApiQuery(["currencies", params], () => api.listCurrencies(params), {
+    staleTime: 10 * 60_000,
+  });

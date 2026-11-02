@@ -9,10 +9,10 @@ the Phase 1 foundation.
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index, SmallInteger, String
-from sqlalchemy.dialects.postgresql import UUID as PGUUID
+from sqlalchemy import ForeignKey, Index, SmallInteger, String
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.db.types import GUID, UTCDateTime
 from app.db.base import (
     Base,
     BigIntPk,
@@ -44,7 +44,7 @@ class AccessKey(HMSBase, UUIDPk):
     __tablename__ = "access_key"
 
     user_device_acl_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("user_device_acl.id", ondelete="CASCADE"),
         nullable=True,
         index=True,
@@ -58,20 +58,20 @@ class AccessKey(HMSBase, UUIDPk):
         index=True,
     )
     device_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("device.id", ondelete="CASCADE"),
         nullable=True,
         index=True,
     )
     stay_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("stay.id", ondelete="CASCADE"),
         nullable=True,
         index=True,
     )
     # Staff key issued for maintenance access.
     maintenance_request_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("maintenance_request.id", ondelete="CASCADE"),
         nullable=True,
     )
@@ -79,7 +79,7 @@ class AccessKey(HMSBase, UUIDPk):
         SmallInteger, nullable=True, server_default="1"
     )
     created_by: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=False
+        GUID(), user_fk(ondelete="RESTRICT"), nullable=False
     )
 
 
@@ -93,7 +93,7 @@ class UserDeviceAcl(HMSBase, UUIDPk):
     __tablename__ = "user_device_acl"
 
     app_user_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="CASCADE"), nullable=False, index=True
+        GUID(), user_fk(ondelete="CASCADE"), nullable=False, index=True
     )
     device_type_id: Mapped[int] = mapped_column(
         SmallInteger,
@@ -102,36 +102,36 @@ class UserDeviceAcl(HMSBase, UUIDPk):
         index=True,
     )
     device_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("device.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
     amenity_type_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("amenity_type.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
     amenity_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("amenity.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
     stay_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("stay.id", ondelete="CASCADE"),
         nullable=True,
         index=True,
     )
-    start_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    start_time: Mapped[datetime] = mapped_column(UTCDateTime(), nullable=False)
     end_time: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, index=True
+        UTCDateTime(), nullable=False, index=True
     )
     status_id: Mapped[int] = mapped_column(SmallInteger, nullable=False)
     created_by: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="CASCADE"), nullable=True
+        GUID(), user_fk(ondelete="CASCADE"), nullable=True
     )
 
 
@@ -143,28 +143,28 @@ class LockActivityLog(HMSBase, BigIntPk):
 
     __tablename__ = "lock_activity_log"
 
-    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    timestamp: Mapped[datetime] = mapped_column(UTCDateTime(), nullable=False)
     app_user_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="CASCADE"), nullable=True, index=True
+        GUID(), user_fk(ondelete="CASCADE"), nullable=True, index=True
     )
     event: Mapped[str | None] = mapped_column(enums.lock_event, nullable=True)
     unlock_mode: Mapped[str | None] = mapped_column(
         enums.lock_unlock_mode, nullable=True
     )
     lock_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("device.id", ondelete="CASCADE"), nullable=False
+        GUID(), ForeignKey("device.id", ondelete="CASCADE"), nullable=False
     )
     amenity_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("amenity.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
     stay_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("stay.id", ondelete="CASCADE"), nullable=True
+        GUID(), ForeignKey("stay.id", ondelete="CASCADE"), nullable=True
     )
     facility_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("facility.id", ondelete="CASCADE"),
         nullable=False,
         index=True,

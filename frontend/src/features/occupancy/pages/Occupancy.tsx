@@ -17,12 +17,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowRight, Clock } from "lucide-react";
+import { ArrowRight, Clock, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { RoomDetailsModal } from "../components/RoomDetailsModal";
 import { ConditionBadge } from "../components/ConditionBadge";
 import { conditionLabel, roomStatusBadgeClass, ROOM_STATUS } from "../lib/roomStatus";
-import { STATUS_QUERY_PARAM } from "../lib/occupancyLinks";
+import { IS_OCCUPIED_QUERY_PARAM, STATUS_QUERY_PARAM } from "../lib/occupancyLinks";
 import { DataState, TableLoading } from "@/core/components/DataState";
 import { useAuth } from "@/core/contexts/AuthContext";
 import { ReallocateRoomDialog } from "../components/ReallocateRoomDialog";
@@ -97,11 +97,11 @@ const toRow = (item: OccupancyRead): RoomRow => ({
   buildingName: item.building_name ?? "-",
   floorName: item.floor_name ?? "-",
   guestName: item.current_stay?.booker?.name ?? "-",
-  occupancyStatus: item.occupancy_status ?? item.status_name ?? "Available",
+  occupancyStatus: item.occupancy_status ?? item.status_name ?? "Unknown",
   statusName: item.status_name ?? "-",
   // Display label only -- `conditionIds` below still carries the stored ids,
   // so filtering and saving keep working on the backend vocabulary.
-  conditions: item.conditions.map((condition) => conditionLabel(condition.name)),
+  conditions: item.conditions.map((condition) => conditionLabel(condition)),
   stayId: item.current_stay?.stay_id ?? null,
   // `actual_checkin_time` is what makes a stay in-house.
   checkedIn: Boolean(item.current_stay?.actual_checkin_time),
@@ -214,9 +214,11 @@ const Occupancy = () => {
    */
   const [searchParams, setSearchParams] = useSearchParams();
   const initialStatus = searchParams.get(STATUS_QUERY_PARAM);
+  const initialIsOccupied = searchParams.get(IS_OCCUPIED_QUERY_PARAM) === "true";
   const [filterBy, setFilterBy] = useState(
     () => initialStatus || ALL_FILTER_VALUE,
   );
+  const [isOccupiedOnly, setIsOccupiedOnly] = useState<boolean>(() => initialIsOccupied);
   /**
    * The user's Building / Floor pick.
    * Default to "all" (ALL_FILTER_VALUE) so that rooms across the property are
@@ -233,7 +235,19 @@ const Occupancy = () => {
     } else if (!statusInUrl && filterBy !== ALL_FILTER_VALUE && initialStatus) {
       setFilterBy(ALL_FILTER_VALUE);
     }
-  }, [searchParams, filterBy, initialStatus]);
+
+    const occupiedInUrl = searchParams.get(IS_OCCUPIED_QUERY_PARAM) === "true";
+    if (occupiedInUrl !== isOccupiedOnly) {
+      setIsOccupiedOnly(occupiedInUrl);
+    }
+  }, [searchParams, filterBy, initialStatus, isOccupiedOnly]);
+
+  const clearOccupiedFilter = () => {
+    setIsOccupiedOnly(false);
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete(IS_OCCUPIED_QUERY_PARAM);
+    setSearchParams(newParams, { replace: true });
+  };
 
   const handleStatusChange = (status: string) => {
     setFilterBy(status);
@@ -281,11 +295,11 @@ const Occupancy = () => {
   const floorsQuery = useFloors(
     mayReadFacility
       ? {
-          page: 1,
-          page_size: MAX_PAGE_SIZE,
-          // Floors follow the chosen building; the endpoint owns the join.
-          ...(buildingFilter !== ALL_FILTER_VALUE ? { building_id: buildingFilter } : {}),
-        }
+        page: 1,
+        page_size: MAX_PAGE_SIZE,
+        // Floors follow the chosen building; the endpoint owns the join.
+        ...(buildingFilter !== ALL_FILTER_VALUE ? { building_id: buildingFilter } : {}),
+      }
       : undefined,
     { enabled: mayReadFacility },
   );
@@ -307,6 +321,7 @@ const Occupancy = () => {
     ...(buildingFilter !== ALL_FILTER_VALUE ? { building_id: buildingFilter } : {}),
     ...(floorFilter !== ALL_FILTER_VALUE ? { floor_id: floorFilter } : {}),
     ...(filterBy !== ALL_FILTER_VALUE ? { occupancy_status: filterBy } : {}),
+    ...(isOccupiedOnly ? { is_occupied: true } : {}),
   };
 
   const isGuest = activeTab === "guest";
@@ -339,9 +354,15 @@ const Occupancy = () => {
   }, [isGuest, guestQuery.data, restaurantQuery.data, othersQuery.data]);
 
   const filteredRooms = useMemo(() => {
-    if (filterBy === ALL_FILTER_VALUE) return rows;
-    return rows.filter((room) => room.occupancyStatus === filterBy);
-  }, [rows, filterBy]);
+    let result = rows;
+    if (isOccupiedOnly) {
+      result = result.filter((room) => room.checkedIn);
+    }
+    if (filterBy !== ALL_FILTER_VALUE) {
+      result = result.filter((room) => room.occupancyStatus === filterBy);
+    }
+    return result;
+  }, [rows, filterBy, isOccupiedOnly]);
 
   /**
    * Choosing a building clears the floor pick, so the floor falls back to the
@@ -451,6 +472,39 @@ const Occupancy = () => {
                 </SelectContent>
               </Select>
             </div>
+
+            {isOccupiedOnly && (
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                <span>Filter: Room in House</span>
+                <button
+                  type="button"
+                  onClick={clearOccupiedFilter}
+                  className="hover:opacity-75 focus:outline-none ml-1 p-0.5 rounded-full hover:bg-emerald-500/20 transition-colors"
+                  aria-label="Clear Room in House filter"
+                  title="Clear Room in House filter"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            )}
+
+            {(isOccupiedOnly || filterBy !== ALL_FILTER_VALUE || buildingFilter !== ALL_FILTER_VALUE || floorFilter !== ALL_FILTER_VALUE) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setIsOccupiedOnly(false);
+                  setFilterBy(ALL_FILTER_VALUE);
+                  setBuildingChoice(ALL_FILTER_VALUE);
+                  setFloorChoice(ALL_FILTER_VALUE);
+                  setSearchParams(new URLSearchParams(), { replace: true });
+                }}
+                className="text-xs text-muted-foreground hover:text-foreground h-9 px-2.5"
+                title="Reset all filters"
+              >
+                Reset Filters
+              </Button>
+            )}
           </div>
 
           {/* Table */}
@@ -473,8 +527,8 @@ const Occupancy = () => {
                     <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3.5 px-5 whitespace-nowrap min-w-[150px] text-left">Check-In</TableHead>
                     <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3.5 px-5 whitespace-nowrap min-w-[170px] text-left">Check-Out</TableHead>
                     <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3.5 px-8 whitespace-nowrap min-w-[170px] text-center">Generate <span className="text-muted-foreground/60">↓</span></TableHead>
-                    <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3.5 px-8 whitespace-nowrap min-w-[220px] text-center">Room Status</TableHead>
                     <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3.5 px-8 whitespace-nowrap min-w-[240px] text-center">Room Condition</TableHead>
+                    <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3.5 px-8 whitespace-nowrap min-w-[220px] text-center">Room Status</TableHead>
                     <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3.5 px-6 whitespace-nowrap min-w-[120px] text-center">Reassign</TableHead>
                     <TableHead className="text-muted-foreground dark:text-slate-400 font-semibold text-xs py-3.5 px-6 whitespace-nowrap min-w-[130px] text-center">Invoice <span className="text-muted-foreground/60">↓</span></TableHead>
                   </TableRow>
@@ -536,22 +590,13 @@ const Occupancy = () => {
                           <span className="badge hms-muted text-[11px] font-medium tracking-wide uppercase px-3 py-1 rounded-full bg-muted/40 border border-border/50">No stay</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-center py-3.5 px-8 whitespace-nowrap min-w-[220px]">
-                        <Badge
-                          variant="outline"
-                          className={`${roomStatusBadgeClass(room.occupancyStatus)} px-3.5 py-1 text-xs tracking-wider uppercase font-semibold`}
-                        >
-                          {room.occupancyStatus}
-                        </Badge>
-                      </TableCell>
                       <TableCell className="text-center py-3.5 px-8 min-w-[240px]">
                         <div
                           role="button"
                           aria-disabled={!mayWriteOccupancy}
                           tabIndex={mayWriteOccupancy ? 0 : -1}
-                          className={`hms-cell-trigger flex items-center justify-center gap-2 flex-wrap min-h-[32px] ${
-                            mayWriteOccupancy ? "cursor-pointer" : "cursor-not-allowed"
-                          }`}
+                          className={`hms-cell-trigger flex items-center justify-center gap-2 flex-wrap min-h-[32px] ${mayWriteOccupancy ? "cursor-pointer" : "cursor-not-allowed"
+                            }`}
                           onClick={() => mayWriteOccupancy && setConditionsRoom(room)}
                           onKeyDown={(event) => {
                             if ((event.key === "Enter" || event.key === " ") && mayWriteOccupancy) {
@@ -576,6 +621,14 @@ const Occupancy = () => {
                           )}
                         </div>
                       </TableCell>
+                      <TableCell className="text-center py-3.5 px-8 whitespace-nowrap min-w-[220px]">
+                        <Badge
+                          variant="outline"
+                          className={`${roomStatusBadgeClass(room.occupancyStatus)} px-3.5 py-1 text-xs tracking-wider uppercase font-semibold`}
+                        >
+                          {room.occupancyStatus}
+                        </Badge>
+                      </TableCell>
                       <TableCell className="text-center py-3.5 px-6 whitespace-nowrap min-w-[120px]">
                         <Button
                           size="sm"
@@ -586,8 +639,8 @@ const Occupancy = () => {
                             !room.stayId
                               ? "No stay holds this Room"
                               : mayWriteBookings
-                              ? "Move this stay to another Room"
-                              : "Your role cannot change bookings"
+                                ? "Move this stay to another Room"
+                                : "Your role cannot change bookings"
                           }
                         >
                           <ArrowRight className="h-4 w-4" />
@@ -645,6 +698,8 @@ const Occupancy = () => {
         amenityId={conditionsRoom?.amenityId ?? null}
         roomName={conditionsRoom?.roomNo ?? ""}
         selectedIds={conditionsRoom?.conditionIds ?? []}
+        currentConditions={conditionsRoom?.conditions ?? []}
+        roomStatus={conditionsRoom?.occupancyStatus ?? conditionsRoom?.statusName}
       />
 
       <RoomDetailsModal

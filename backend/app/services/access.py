@@ -19,7 +19,7 @@ from __future__ import annotations
 import uuid
 from collections import defaultdict
 
-from sqlalchemy import Select, func, or_, select
+from sqlalchemy import Integer, Select, cast, func, literal_column, or_, select
 from sqlalchemy.orm import Session, aliased
 
 from app.models import (
@@ -167,7 +167,7 @@ def list_roles(
     facility_id: uuid.UUID | None = None,
     role_type: str | None = None,
 ):
-    stmt = select(Role).order_by(Role.name)
+    stmt = select(Role).where((Role.status == 1) | (Role.status.is_(None))).order_by(Role.name)
     if facility_id:
         stmt = stmt.where(Role.facility_id == facility_id)
     if role_type:
@@ -175,6 +175,30 @@ def list_roles(
     total = _count(db, stmt)
     rows = db.execute(_page(stmt, page=page, page_size=page_size)).scalars().all()
     return rows, total
+
+
+def list_assignable_roles(
+    db: Session,
+    *,
+    facility_id: uuid.UUID | None = None,
+    is_admin: bool = False,
+) -> list[Role]:
+    """Roles assignable to staff members by the current user.
+
+    Excludes non-interactive system users and guest accounts.
+    Administrative roles are only included if the caller is an administrator.
+    """
+    stmt = (
+        select(Role)
+        .where(Role.role_type.notin_(["system_user", "guest"]))
+        .order_by(Role.name)
+    )
+    if not is_admin:
+        stmt = stmt.where(Role.role_type != "admin")
+    if facility_id:
+        stmt = stmt.where((Role.facility_id == facility_id) | (Role.facility_id.is_(None)))
+    stmt = stmt.where((Role.status == 1) | (Role.status.is_(None)))
+    return list(db.execute(stmt).scalars().all())
 
 
 def get_role(db: Session, role_id: uuid.UUID) -> Role | None:
@@ -211,11 +235,30 @@ def role_user_count(db: Session, role_id: uuid.UUID) -> int:
 
 
 def _user_stmt() -> Select:
+    role_name_subq = (
+        select(Role.name)
+        .select_from(UserRole)
+        .join(Role, Role.id == UserRole.role_id)
+        .where(UserRole.app_user_id == AppUser.id)
+        .limit(1)
+        .scalar_subquery()
+    ).label("role_name")
+
+    role_id_subq = (
+        select(UserRole.role_id)
+        .select_from(UserRole)
+        .where(UserRole.app_user_id == AppUser.id)
+        .limit(1)
+        .scalar_subquery()
+    ).label("role_id")
+
     return (
         select(
             *_USER_COLUMNS,
             Department.department_name.label("department_name"),
             JobFunction.function_name.label("job_function_name"),
+            role_name_subq,
+            role_id_subq,
         )
         .select_from(AppUser)
         .outerjoin(Department, Department.id == AppUser.department_id)
@@ -233,6 +276,7 @@ def list_users(
     is_staff: int | None = None,
     department_id: uuid.UUID | None = None,
     job_function_id: uuid.UUID | None = None,
+    q: str | None = None,
 ):
     stmt = _user_stmt().order_by(AppUser.first_name, AppUser.last_name)
 
@@ -250,6 +294,16 @@ def list_users(
         stmt = stmt.where(AppUser.department_id == department_id)
     if job_function_id:
         stmt = stmt.where(AppUser.job_function_id == job_function_id)
+    if q and q.strip():
+        term = f"%{q.strip()}%"
+        stmt = stmt.where(
+            AppUser.first_name.ilike(term)
+            | AppUser.last_name.ilike(term)
+            | AppUser.email.ilike(term)
+            | AppUser.phone_number.ilike(term)
+            | AppUser.emp_id.ilike(term)
+            | AppUser.user_name.ilike(term)
+        )
 
     total = _count(db, stmt)
     rows = db.execute(_page(stmt, page=page, page_size=page_size)).mappings().all()
@@ -291,6 +345,11 @@ def user_facility_ids(db: Session, user_id: uuid.UUID) -> list[uuid.UUID]:
     )
 
 
+#: GROUP_CONCAT separator for role names (MySQL). SEPARATOR takes a string
+#: literal, not a bind; the ASCII unit separator cannot appear in a role name.
+ROLE_SEP = "\x1f"
+
+
 def user_permissions(
     db: Session, user_id: uuid.UUID, *, facility_id: uuid.UUID | None = None
 ) -> list[dict]:
@@ -299,15 +358,26 @@ def user_permissions(
     `user_role` is facility-scoped, so `facility_id` narrows the calculation to
     the roles held at one facility.
     """
+    # OR across roles is MAX over 0/1, which both MySQL and PostgreSQL support
+    # (bool_or is PostgreSQL only). Role names are aggregated with the
+    # dialect's own function and split back into a list below.
+    mysql = db.bind.dialect.name == "mysql"
+    roles = (
+        func.group_concat(
+            func.distinct(Role.name).op("SEPARATOR")(literal_column(f"'{ROLE_SEP}'"))
+        )
+        if mysql
+        else func.array_agg(func.distinct(Role.name))
+    )
     stmt = (
         select(
             RoleModulePermission.module_id,
             RoleModule.module_name,
-            func.bool_or(RoleModulePermission.read_access).label("read_access"),
-            func.bool_or(
-                func.coalesce(RoleModulePermission.write_access, False)
+            func.max(cast(RoleModulePermission.read_access, Integer)).label("read_access"),
+            func.max(
+                cast(func.coalesce(RoleModulePermission.write_access, False), Integer)
             ).label("write_access"),
-            func.array_agg(func.distinct(Role.name)).label("granted_by_roles"),
+            roles.label("granted_by_roles"),
         )
         .select_from(UserRole)
         .join(Role, Role.id == UserRole.role_id)
@@ -326,7 +396,9 @@ def user_permissions(
             "module_name": r.module_name,
             "read_access": bool(r.read_access),
             "write_access": bool(r.write_access),
-            "granted_by_roles": sorted(r.granted_by_roles),
+            "granted_by_roles": sorted(
+                r.granted_by_roles.split(ROLE_SEP) if mysql else r.granted_by_roles
+            ),
         }
         for r in db.execute(stmt).all()
     ]

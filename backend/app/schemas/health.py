@@ -26,12 +26,15 @@ class VersionResponse(BaseModel):
 
 
 class DatabaseHealthResponse(BaseModel):
-    """`GET /api/v1/health/db` — every field is read live from PostgreSQL."""
+    """`GET /api/v1/health/db` — every field is read live from the BSS MySQL."""
 
     status: str = Field(examples=["ok"])
-    database: str = Field(examples=["hms_db"], description="SELECT current_database()")
-    schema_name: str = Field(examples=["public"])
-    server_version: str = Field(examples=["16.12"], description="PostgreSQL version")
+    database: str = Field(examples=["inspironics_app"], description="SELECT database()")
+    schema_name: str = Field(
+        examples=["inspironics_app"],
+        description="MySQL has no schema inside the database; it IS the database",
+    )
+    server_version: str = Field(examples=["8.4.13"], description="MySQL version")
     alembic_revision: str | None = Field(
         default=None, examples=["0e2687233b59"], description="Applied migration head"
     )
@@ -50,3 +53,18 @@ class ErrorResponse(BaseModel):
     """The single error envelope used by every endpoint."""
 
     error: ErrorBody
+
+
+class OssDomainHealth(BaseModel):
+    domain: str = Field(examples=["device"])
+    url: str = Field(examples=["http://127.0.0.1:8001"])
+    status: str = Field(examples=["ok"], description="ok | unreachable")
+    latency_ms: float | None = Field(default=None, examples=[3.2])
+
+
+class OssHealthResponse(BaseModel):
+    """`GET /api/v1/health/oss` — reachability of each OSS domain service."""
+
+    enabled: bool = Field(description="OSS_ENABLED; when false no route is forwarded")
+    status: str = Field(examples=["ok"], description="ok | degraded | disabled")
+    domains: list[OssDomainHealth]

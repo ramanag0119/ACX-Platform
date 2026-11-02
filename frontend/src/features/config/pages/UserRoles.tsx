@@ -23,14 +23,15 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Trash2, X, ChevronDown, Edit } from "lucide-react";
 import { DataState, TableLoading } from "@/core/components/DataState";
-import { useNotificationTemplates, useRolePermissions, useRoles } from "@/lib/api/hooks";
+import { useNotificationTemplates, useRolePermissions, useRoles, useRoleTypes } from "@/lib/api/hooks";
 import { useAuth } from "@/core/contexts/AuthContext";
 import {
   useCreateRole,
+  useDeleteRole,
   useReplaceRolePermissions,
   useUpdateRole,
 } from "@/lib/api/mutations";
-import { MAX_PAGE_SIZE } from "@/lib/api/types";
+import { MAX_PAGE_SIZE, RoleType } from "@/lib/api/types";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useScrollToTop } from "@/hooks/use-scroll-to-top";
 
@@ -64,30 +65,39 @@ import { useScrollToTop } from "@/hooks/use-scroll-to-top";
 const UserRoles = () => {
     // --- Live data -------------------------------------------------------
     const rolesQuery = useRoles({ page: 1, page_size: MAX_PAGE_SIZE });
-    const { canWrite } = useAuth();
+    const { canRead, canWrite } = useAuth();
+    const mayRead = canRead("user_roles");
     const mayWrite = canWrite("user_roles");
     const createRole = useCreateRole();
     const updateRole = useUpdateRole();
+    const deleteRole = useDeleteRole();
     const savePermissions = useReplaceRolePermissions();
+    const [roleToDelete, setRoleToDelete] = useState<{ id: string; name: string } | null>(null);
+    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
     const [editingRole, setEditingRole] = useState<{
         id: string;
         name: string;
         roleType: string;
+        notificationPreferences: string[];
     } | null>(null);
+    const [isEditDropdownOpen, setIsEditDropdownOpen] = useState(false);
     /** Pending matrix ticks, keyed by module id; empty until the user changes one. */
     const [matrixEdits, setMatrixEdits] = useState<
         Record<string, { view: boolean; edit: boolean }>
     >({});
     const templatesQuery = useNotificationTemplates({ page: 1, page_size: MAX_PAGE_SIZE });
     const notificationTypes = (templatesQuery.data?.items ?? []).map((template) => template.name);
+    const roleTypesQuery = useRoleTypes({ enabled: mayRead });
+    const roleTypes = roleTypesQuery.data ?? [];
 
     const roles = (rolesQuery.data?.items ?? []).map((role) => ({
         id: role.id,
         userRole: role.name,
         roleType: role.role_type,
-        // `role` carries a description; per-role notification subscriptions
-        // are not exposed by any endpoint.
-        notifications: role.description ?? "-",
+        notificationPreferences: role.notification_preferences ?? [],
+        notifications: (role.notification_preferences && role.notification_preferences.length > 0)
+            ? role.notification_preferences.join(", ")
+            : (role.description ?? "-"),
     }));
 
     // Form state
@@ -161,7 +171,11 @@ const UserRoles = () => {
     const handleSubmit = () => {
         if (!roleName.trim() || !roleType) return;
         createRole.mutate(
-            { name: roleName.trim(), role_type: roleType as "staff" | "manager" | "admin" },
+            {
+                name: roleName.trim(),
+                role_type: roleType as RoleType,
+                notification_preferences: selectedNotifications,
+            },
             {
                 onSuccess: () => {
                     setRoleName("");
@@ -207,13 +221,18 @@ const UserRoles = () => {
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                                 <div className="space-y-2">
                                     <Label htmlFor="role-type" className="text-sm font-medium">Role Type</Label>
-                                    <Select value={roleType} onValueChange={setRoleType}>
+                                    <Select value={roleType} onValueChange={setRoleType} disabled={roleTypesQuery.isLoading}>
                                         <SelectTrigger className="h-10 bg-muted/20 border-border dark:border-slate-700/80">
-                                            <SelectValue placeholder="Select Role type" />
+                                            <SelectValue placeholder={roleTypesQuery.isLoading ? "Loading role types..." : roleTypesQuery.isError ? "Failed to load role types" : "Select Role type"} />
                                         </SelectTrigger>
                                         <SelectContent className="bg-popover text-popover-foreground border-border">
-                                            <SelectItem value="staff">Staff</SelectItem>
-                                            <SelectItem value="manager">Manager</SelectItem>
+                                            {roleTypes.length === 0 ? (
+                                                <div className="p-2 text-xs text-muted-foreground text-center">No role types available</div>
+                                            ) : (
+                                                roleTypes.map(t => (
+                                                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                                                ))
+                                            )}
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -338,10 +357,19 @@ const UserRoles = () => {
                                                 <TableCell className="text-cyan-600">{role.notifications}</TableCell>
                                                 <TableCell className="text-center">
                                                     <div className="flex gap-2 justify-center">
-                                                        <Button size="sm" className="h-7 w-7 p-0 rounded-[3px]" disabled={!mayWrite} onClick={() => { setEditingRole({ id: role.id, name: role.userRole, roleType: role.roleType }); setEditModalOpen(true); }}>
+                                                        <Button size="sm" className="h-7 w-7 p-0 rounded-[3px]" disabled={!mayWrite} onClick={() => { setEditingRole({ id: role.id, name: role.userRole, roleType: role.roleType, notificationPreferences: role.notificationPreferences }); setIsEditDropdownOpen(false); setEditModalOpen(true); }}>
                                                             <Edit className="h-[14px] w-[14px]" />
                                                         </Button>
-                                                        <Button size="sm" className="bg-red-500 hover:bg-red-600 text-white h-7 w-7 p-0 rounded-[3px]">
+                                                        <Button
+                                                            size="sm"
+                                                            className="bg-red-500 hover:bg-red-600 text-white h-7 w-7 p-0 rounded-[3px]"
+                                                            disabled={!mayWrite || deleteRole.isPending}
+                                                            title={!mayWrite ? "Permission required" : "Delete role"}
+                                                            onClick={() => {
+                                                                setRoleToDelete({ id: role.id, name: role.userRole });
+                                                                setDeleteConfirmOpen(true);
+                                                            }}
+                                                        >
                                                             <Trash2 className="h-[14px] w-[14px]" />
                                                         </Button>
                                                     </div>
@@ -508,9 +536,9 @@ const UserRoles = () => {
                                         )
                                     }
                                 >
-                                    <option value="manager">Manager</option>
-                                    <option value="staff">Staff</option>
-                                    <option value="admin">Admin</option>
+                                    {roleTypes.map(t => (
+                                        <option key={t.value} value={t.value}>{t.label}</option>
+                                    ))}
                                 </select>
                                 <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                             </div>
@@ -532,11 +560,100 @@ const UserRoles = () => {
 
                         <div className="grid grid-cols-[200px_1fr] items-start gap-4">
                             <Label className="text-sm font-medium text-gray-800 pt-2">Notification Subscription</Label>
-                            <div className="relative border border-gray-300 rounded-[4px] p-2 pr-8 flex flex-wrap gap-2 min-h-[40px] bg-transparent">
-                                <div className="bg-brand-teal text-white text-[12px] px-2 py-0.5 rounded-[2px] flex items-center gap-1 hover:bg-brand-teal/90 cursor-default shadow-sm border border-brand-teal">
-                                    maintenance-request-creation <X className="h-[10px] w-[10px] cursor-pointer hover:opacity-80 stroke-[3]" />
+                            <div className="relative">
+                                <div
+                                    className="relative border border-gray-300 rounded-[4px] p-2 pr-8 flex flex-wrap gap-2 min-h-[40px] bg-transparent cursor-pointer"
+                                    onClick={() => setIsEditDropdownOpen((prev) => !prev)}
+                                >
+                                    {(editingRole?.notificationPreferences ?? []).length === 0 ? (
+                                        <span className="text-sm text-gray-400 select-none">Select notifications...</span>
+                                    ) : (
+                                        (editingRole?.notificationPreferences ?? []).map((notif) => (
+                                            <div
+                                                key={notif}
+                                                className="bg-brand-teal text-white text-[12px] px-2 py-0.5 rounded-[2px] flex items-center gap-1 hover:bg-brand-teal/90 shadow-sm border border-brand-teal"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setEditingRole((curr) =>
+                                                        curr
+                                                            ? {
+                                                                  ...curr,
+                                                                  notificationPreferences: curr.notificationPreferences.filter(
+                                                                      (n) => n !== notif,
+                                                                  ),
+                                                              }
+                                                            : curr,
+                                                    );
+                                                }}
+                                            >
+                                                {notif}
+                                                <X className="h-[10px] w-[10px] cursor-pointer hover:opacity-80 stroke-[3]" />
+                                            </div>
+                                        ))
+                                    )}
+                                    <ChevronDown className="absolute right-2 top-3 h-4 w-4 text-gray-400 pointer-events-none" />
                                 </div>
-                                <ChevronDown className="absolute right-2 top-3 h-4 w-4 text-gray-400 pointer-events-none" />
+                                {isEditDropdownOpen && (
+                                    <div className="absolute z-50 w-full mt-1 bg-white text-gray-800 border border-gray-200 rounded-[4px] shadow-xl max-h-56 overflow-auto">
+                                        <div className="flex items-center space-x-2 p-2 border-b border-gray-100 bg-gray-50">
+                                            <Checkbox
+                                                id="select-all-edit"
+                                                checked={
+                                                    (editingRole?.notificationPreferences ?? []).length ===
+                                                    notificationTypes.length
+                                                }
+                                                onCheckedChange={() => {
+                                                    setEditingRole((curr) => {
+                                                        if (!curr) return curr;
+                                                        const allSelected =
+                                                            curr.notificationPreferences.length === notificationTypes.length;
+                                                        return {
+                                                            ...curr,
+                                                            notificationPreferences: allSelected ? [] : [...notificationTypes],
+                                                        };
+                                                    });
+                                                }}
+                                            />
+                                            <label htmlFor="select-all-edit" className="text-xs font-semibold cursor-pointer flex-1">
+                                                Select All
+                                            </label>
+                                        </div>
+                                        {notificationTypes.map((notification) => {
+                                            const isSelected = (editingRole?.notificationPreferences ?? []).includes(
+                                                notification,
+                                            );
+                                            return (
+                                                <div
+                                                    key={notification}
+                                                    className="flex items-center space-x-2 p-2 hover:bg-gray-50 cursor-pointer"
+                                                    onClick={() => {
+                                                        setEditingRole((curr) => {
+                                                            if (!curr) return curr;
+                                                            return {
+                                                                ...curr,
+                                                                notificationPreferences: isSelected
+                                                                    ? curr.notificationPreferences.filter((n) => n !== notification)
+                                                                    : [...curr.notificationPreferences, notification],
+                                                            };
+                                                        });
+                                                    }}
+                                                >
+                                                    <Checkbox
+                                                        id={`edit-notif-${notification}`}
+                                                        checked={isSelected}
+                                                        onCheckedChange={() => {}}
+                                                    />
+                                                    <label
+                                                        htmlFor={`edit-notif-${notification}`}
+                                                        className="text-xs cursor-pointer flex-1"
+                                                    >
+                                                        {notification}
+                                                    </label>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -557,6 +674,7 @@ const UserRoles = () => {
                                                 | "staff"
                                                 | "manager"
                                                 | "admin",
+                                            notification_preferences: editingRole.notificationPreferences,
                                         },
                                     },
                                     { onSuccess: () => setEditModalOpen(false) },
@@ -565,6 +683,54 @@ const UserRoles = () => {
                         >
                             Update
                         </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Soft Delete Role Confirmation Dialog */}
+            <Dialog open={deleteConfirmOpen} onOpenChange={(open) => !deleteRole.isPending && setDeleteConfirmOpen(open)}>
+                <DialogContent className="max-w-[440px] bg-white dark:bg-card text-foreground border-0 p-6 overflow-hidden rounded-xl shadow-2xl [&>button]:hidden">
+                    <div className="flex flex-col space-y-4">
+                        <div className="flex items-center gap-3 text-red-600">
+                            <div className="p-2 bg-red-100 dark:bg-red-950/50 rounded-full">
+                                <Trash2 className="h-5 w-5" />
+                            </div>
+                            <h3 className="text-lg font-semibold text-foreground">
+                                Delete Role
+                            </h3>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                            Are you sure you want to delete role <span className="font-semibold text-foreground">"{roleToDelete?.name}"</span>? This will deactivate the role.
+                        </p>
+                        <div className="flex justify-end gap-3 pt-4 border-t border-border">
+                            <Button
+                                variant="outline"
+                                disabled={deleteRole.isPending}
+                                onClick={() => {
+                                    setDeleteConfirmOpen(false);
+                                    setRoleToDelete(null);
+                                }}
+                                className="rounded-lg px-4"
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                disabled={deleteRole.isPending}
+                                onClick={() => {
+                                    if (!roleToDelete) return;
+                                    deleteRole.mutate(roleToDelete.id, {
+                                        onSuccess: () => {
+                                            setDeleteConfirmOpen(false);
+                                            setRoleToDelete(null);
+                                        },
+                                    });
+                                }}
+                                className="rounded-lg px-4"
+                            >
+                                {deleteRole.isPending ? "Deleting..." : "Delete"}
+                            </Button>
+                        </div>
                     </div>
                 </DialogContent>
             </Dialog>

@@ -45,6 +45,7 @@ from app.schemas.common import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, Page
 from app.schemas.energy import (
     CaleidoAtWorkRead,
     DailyDataPointRead,
+    EnergyStatCreate,
     EnergyStatRead,
     EnergySummaryRead,
 )
@@ -89,8 +90,7 @@ daily_data_points_router = APIRouter(
         "time. IKANOS stores energy hourly only, so day and per-room views are "
         "aggregated on read. No tariff, carbon factor or baseline is applied. "
         "`energy_unit` describes the `active_energy` PARAMETER's configured "
-        "unit, read from `device_param`; `energy_stat` itself stores none, so "
-        "the per-row endpoint still returns null. Nothing is converted."
+        "unit, read from `device_param`."
     ),
 )
 def energy_summary(
@@ -102,6 +102,7 @@ def energy_summary(
     amenity_id: uuid.UUID | None = Query(None),
     building_id: uuid.UUID | None = Query(None),
     floor_id: uuid.UUID | None = Query(None),
+    device_id: uuid.UUID | None = Query(None, description="Authoritative device UUID"),
     device_name: str | None = Query(None),
     hour_from: int | None = Query(None, description="Raw `hour` lower bound"),
     hour_to: int | None = Query(None, description="Raw `hour` upper bound"),
@@ -120,8 +121,8 @@ def energy_summary(
     try:
         data = svc.energy_summary(
             db, group_by=group_by, facility_id=facility_id, amenity_id=amenity_id,
-            building_id=building_id, floor_id=floor_id, device_name=device_name,
-            hour_from=hour_from, hour_to=hour_to,
+            building_id=building_id, floor_id=floor_id, device_id=device_id,
+            device_name=device_name, hour_from=hour_from, hour_to=hour_to,
             date_from=date_from, date_to=date_to,
         )
     except ValueError as exc:
@@ -136,9 +137,8 @@ def energy_summary(
     response_model=Page[EnergyStatRead],
     summary="List hourly energy statistics",
     description=(
-        "One row per (device_name, facility, amenity, hour). `energy_consumed` "
-        "is returned raw and `energy_unit` is always null -- `energy_stat` has "
-        "no unit column. There is no FK to `device`; `device_name` is free text."
+        "One row per (device_name, facility, amenity, hour). `device_id` "
+        "references the authoritative device foreign key."
     ),
 )
 def list_energy_stats(
@@ -149,7 +149,8 @@ def list_energy_stats(
     amenity_id: uuid.UUID | None = Query(None, description="The room"),
     building_id: uuid.UUID | None = Query(None, description="Via property_chain"),
     floor_id: uuid.UUID | None = Query(None, description="Via property_chain"),
-    device_name: str | None = Query(None, description="Free text, exact match"),
+    device_id: uuid.UUID | None = Query(None, description="Authoritative device UUID"),
+    device_name: str | None = Query(None, description="Free text / protocol identifier"),
     hour_from: int | None = Query(None, description="Hours since 2000-01-01 UTC"),
     hour_to: int | None = Query(None, description="Hours since 2000-01-01 UTC"),
     timestamp_from: datetime | None = Query(
@@ -167,12 +168,64 @@ def list_energy_stats(
     rows, total = svc.list_energy_stats(
         db, page=page, page_size=page_size, facility_id=facility_id,
         amenity_id=amenity_id, building_id=building_id, floor_id=floor_id,
-        device_name=device_name, hour_from=hour_from, hour_to=hour_to,
+        device_id=device_id, device_name=device_name, hour_from=hour_from, hour_to=hour_to,
     )
     return Page[EnergyStatRead](
         items=[EnergyStatRead.model_validate(r) for r in rows],
         page=page, page_size=page_size, total=total,
     )
+
+
+@energy_stats_router.post(
+    "",
+    response_model=EnergyStatRead,
+    status_code=http_status.HTTP_201_CREATED,
+    summary="Ingest energy telemetry",
+    description=(
+        "Ingest an hourly active energy telemetry reading. Validates and enforces "
+        "the authoritative device foreign key relationship, preserves external "
+        "device identifier metadata, and executes an idempotent upsert."
+    ),
+)
+def ingest_energy_stat(
+    payload: EnergyStatCreate,
+    db: DbSession,
+) -> EnergyStatRead:
+    try:
+        stat = svc.ingest_energy_stat(
+            db,
+            facility_id=payload.facility_id,
+            amenity_id=payload.amenity_id,
+            energy_consumed=payload.resolved_energy_consumed(),
+            device_id=payload.device_id,
+            device_uid=payload.device_uid,
+            device_name=payload.device_name,
+            hour=payload.hour,
+            hour_timestamp=payload.hour_timestamp,
+        )
+        db.commit()
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=http_status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)
+        ) from exc
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=http_status.HTTP_400_BAD_REQUEST, detail=str(exc)
+        ) from exc
+
+    rows, _ = svc.list_energy_stats(
+        db, page=1, page_size=1, facility_id=stat.facility_id,
+        amenity_id=stat.amenity_id, device_id=stat.device_id,
+        hour_from=stat.hour, hour_to=stat.hour,
+    )
+    if not rows:
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve ingested telemetry row.",
+        )
+    return EnergyStatRead.model_validate(rows[0])
 
 
 # ---------------------------------------------------------------------------

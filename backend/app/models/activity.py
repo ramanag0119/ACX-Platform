@@ -25,11 +25,11 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    text,
 )
-from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.db.types import GUID, JSONB
 from app.db.base import (
     Base,
     BigIntPk,
@@ -69,7 +69,7 @@ class ActivityType(Base, TimestampMixin, SmallIntLookupPk):
     )
     notification_type: Mapped[str] = mapped_column(CHAR(3), nullable=False)
     is_subscribable: Mapped[bool | None] = mapped_column(
-        Boolean, nullable=True, server_default="true"
+        Boolean, nullable=True, server_default=text("true")
     )
 
 
@@ -89,17 +89,17 @@ class Activity(HMSBase, BigIntPk):
     # by design (confirms NEEDS_REVIEW D9).
     entity_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
     facility_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("facility.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
     # Who caused it.
     actor_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="CASCADE"), nullable=False, index=True
+        GUID(), user_fk(ondelete="CASCADE"), nullable=False, index=True
     )
     stay_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("stay.id", ondelete="CASCADE"), nullable=True
+        GUID(), ForeignKey("stay.id", ondelete="CASCADE"), nullable=True
     )
     # Comma-separated dispatch notification ids.
     activity_response_ids: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -123,7 +123,7 @@ class ActivityNotifier(Base, TimestampMixin):
         BigInteger, ForeignKey("activity.id", ondelete="CASCADE"), primary_key=True
     )
     app_user_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         user_fk(ondelete="CASCADE"),
         primary_key=True,
         index=True,
@@ -153,7 +153,7 @@ class ActivityRoleAssociation(Base, TimestampMixin):
         primary_key=True,
     )
     role_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("role.id", ondelete="RESTRICT"),
         primary_key=True,
         index=True,
@@ -191,7 +191,7 @@ class Notification(HMSBase, BigIntPk):
         BigInteger, nullable=True, index=True
     )
     template_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("notification_template.id", ondelete="RESTRICT"),
         nullable=True,
         index=True,
@@ -210,7 +210,7 @@ class NotificationReceiver(HMSBase, BigIntPk):
     __tablename__ = "notification_receiver"
 
     app_user_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=True, index=True
+        GUID(), user_fk(ondelete="RESTRICT"), nullable=True, index=True
     )
     notification_id: Mapped[int] = mapped_column(
         BigInteger,

@@ -9,10 +9,10 @@ IKANOS `caleido.jobs` is renamed `job_order` to resolve the collision with
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, SmallInteger, String
-from sqlalchemy.dialects.postgresql import UUID as PGUUID
+from sqlalchemy import ForeignKey, SmallInteger, String
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.db.types import GUID, UTCDateTime
 from app.db.base import Base, HMSBase, TimestampMixin, UUIDPk
 from app.models import enums
 from app.models.facility import user_fk
@@ -35,26 +35,26 @@ class JobOrder(HMSBase, UUIDPk):
         enums.job_order_type_of_work, nullable=False
     )
     work_commence: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
+        UTCDateTime(), nullable=False
     )
     estimated_completion_date: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
+        UTCDateTime(), nullable=False
     )
     # Technician on-site code.
     authentication_code: Mapped[str] = mapped_column(String(20), nullable=False)
     # [FACT] jobs.assigned_to -> users.user_id, NOT an employee table.
     assigned_to: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=True, index=True
+        GUID(), user_fk(ondelete="RESTRICT"), nullable=True, index=True
     )
     job_order_status: Mapped[str] = mapped_column(
         enums.job_order_status, nullable=False, server_default="pending", index=True
     )
     completed_on: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
+        UTCDateTime(), nullable=True
     )
     status: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
     created_by: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=False
+        GUID(), user_fk(ondelete="RESTRICT"), nullable=False
     )
 
 
@@ -67,12 +67,12 @@ class JobOrderDevice(Base, TimestampMixin):
     __tablename__ = "job_order_device"
 
     job_order_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("job_order.id", ondelete="RESTRICT"),
         primary_key=True,
     )
     device_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("device.id", ondelete="RESTRICT"),
         primary_key=True,
         index=True,
@@ -85,12 +85,12 @@ class JobOrderAmenity(Base, TimestampMixin):
     __tablename__ = "job_order_amenity"
 
     job_order_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("job_order.id", ondelete="RESTRICT"),
         primary_key=True,
     )
     amenity_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("amenity.id", ondelete="RESTRICT"),
         primary_key=True,
         index=True,

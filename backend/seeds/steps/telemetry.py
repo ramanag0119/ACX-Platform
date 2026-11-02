@@ -208,6 +208,7 @@ def seed(session: Session, ctx: dict) -> dict[str, int]:
                     "amenity_id": rooms[room_name].id,
                     "hour": ikanos_hour(moment),
                 },
+                device_id=device.id,
                 energy_consumed=consumed,
             )
             n_energy += 1

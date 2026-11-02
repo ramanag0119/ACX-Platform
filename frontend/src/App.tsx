@@ -24,6 +24,7 @@ import UserRoles from "@/features/config/pages/UserRoles";
 import Employees from "@/features/config/pages/Employees";
 import JobOrder from "@/features/config/pages/JobOrder";
 import LimitConfigAlert from "@/features/config/pages/LimitConfigAlert";
+import RoomDevices from "@/features/config/pages/RoomDevices";
 import Offers from "@/features/marketing/pages/Offers";
 import Holidays from "@/features/marketing/pages/Holidays";
 import Events from "@/features/marketing/pages/Events";
@@ -70,11 +71,13 @@ const App = () => (
               <Route path="/config/employees" element={<Employees />} />
               <Route path="/config/job-order" element={<JobOrder />} />
               <Route path="/config/limit-alert" element={<LimitConfigAlert />} />
+              <Route path="/config/room-devices" element={<RoomDevices />} />
               <Route path="/offers" element={<Offers />} />
               <Route path="/holidays" element={<Holidays />} />
               <Route path="/events" element={<Events />} />
               <Route path="/reports/*" element={<Reports />} />
               <Route path="/tickets" element={<Tickets />} />
+              <Route path="/manage/tickets" element={<Tickets />} />
               {/* /power-view, /energy-view and /room-view are retired. Their
                   room-level figures are part of Room Details on /occupancy,
                   so old links land there rather than on a dead page. */}

@@ -52,6 +52,8 @@ class LimitConfigRead(BaseModel):
     parameter: str
     device_name: str
     device_id: uuid.UUID | None
+    room_id: uuid.UUID | None = None
+    room_number: str | None = None
     limit_check: bool
     is_percentage_value: bool
     nominal: Decimal | None
@@ -84,9 +86,44 @@ def list_limit_configs(
     device_id: uuid.UUID | None = None,
     parameter: str | None = None,
     facility_id: uuid.UUID | None = None,
+    q: str | None = None,
 ):
-    stmt = select(ValueAlertLimitConfig).order_by(
-        ValueAlertLimitConfig.device_name, ValueAlertLimitConfig.parameter
+    from sqlalchemy import and_, or_
+    from app.models import Amenity
+
+    stmt = (
+        select(
+            ValueAlertLimitConfig.id,
+            ValueAlertLimitConfig.parameter,
+            ValueAlertLimitConfig.device_name,
+            ValueAlertLimitConfig.device_id,
+            Device.amenity_id.label("room_id"),
+            Amenity.name.label("room_number"),
+            ValueAlertLimitConfig.limit_check,
+            ValueAlertLimitConfig.is_percentage_value,
+            ValueAlertLimitConfig.nominal,
+            ValueAlertLimitConfig.limit_low_percentage,
+            ValueAlertLimitConfig.limit_high_percentage,
+            ValueAlertLimitConfig.limit_low_value,
+            ValueAlertLimitConfig.limit_high_value,
+            ValueAlertLimitConfig.remarks,
+            ValueAlertLimitConfig.facility_id,
+            ValueAlertLimitConfig.created_on,
+            ValueAlertLimitConfig.updated_on,
+        )
+        .select_from(ValueAlertLimitConfig)
+        .outerjoin(
+            Device,
+            or_(
+                Device.id == ValueAlertLimitConfig.device_id,
+                and_(
+                    Device.device_name == ValueAlertLimitConfig.device_name,
+                    Device.facility_id == ValueAlertLimitConfig.facility_id,
+                ),
+            ),
+        )
+        .outerjoin(Amenity, Amenity.id == Device.amenity_id)
+        .order_by(ValueAlertLimitConfig.device_name, ValueAlertLimitConfig.parameter)
     )
     if device_id:
         stmt = stmt.where(ValueAlertLimitConfig.device_id == device_id)
@@ -94,9 +131,17 @@ def list_limit_configs(
         stmt = stmt.where(ValueAlertLimitConfig.parameter == parameter)
     if facility_id:
         stmt = stmt.where(ValueAlertLimitConfig.facility_id == facility_id)
+    if q:
+        pattern = f"%{q.strip()}%"
+        stmt = stmt.where(
+            ValueAlertLimitConfig.device_name.ilike(pattern)
+            | ValueAlertLimitConfig.parameter.ilike(pattern)
+            | ValueAlertLimitConfig.remarks.ilike(pattern)
+            | Amenity.name.ilike(pattern)
+        )
     total = _count(db, stmt)
     rows = (
-        db.execute(stmt.limit(page_size).offset((page - 1) * page_size)).scalars().all()
+        db.execute(stmt.limit(page_size).offset((page - 1) * page_size)).mappings().all()
     )
     return rows, total
 

@@ -1,16 +1,32 @@
-# HMS Backend — Phase 1 (Database Foundation)
+# HMS Backend — BSS on MySQL `inspironics_app`
+#
+# No PostgreSQL driver is declared here. The legacy `hms_db` has been removed
+# from the application, and the OSS database (`insp_iot`) is reached only
+# through the OSS microservice, which declares its own psycopg2 in
+# oss-service/requirements.txt.
+#
+# NOTE: psycopg2-binary may still be PRESENT in an existing shared .venv,
+# because oss-service has no .venv of its own yet (ecosystem.config.js expects
+# oss-service/.venv). Create that venv, then `pip uninstall psycopg2-binary`
+# here, and a stray PostgreSQL URL becomes unconnectable from the backend.
 fastapi==0.135.3
 uvicorn[standard]==0.34.0
 sqlalchemy==2.0.52
 alembic==1.19.1
-psycopg2-binary==2.9.11
+# MySQL 8 driver; cryptography is needed for caching_sha2_password auth.
+PyMySQL==1.2.3
+cryptography==50.0.2
 pydantic==2.12.5
 pydantic-settings==2.7.1
 python-dotenv==1.0.1
 
 # --- Testing ---
 pytest==9.1.1
-httpx==0.28.1  # required by fastapi.testclient
+
+# --- HTTP client ---
+# Used by fastapi.testclient AND at runtime by app/services/oss_client.py to
+# reach the OSS microservice when OSS_ENABLED.
+httpx==0.28.1
 
 # --- Authentication (Phase 2.4) ---
 python-jose[cryptography]==3.5.0
@@ -18,3 +34,4 @@ bcrypt==5.0.0
 
 # --- Reporting exports ---
 openpyxl==3.1.5  # .xlsx writer for GET /reports/{key}/export.xlsx
+python-multipart>=0.0.32

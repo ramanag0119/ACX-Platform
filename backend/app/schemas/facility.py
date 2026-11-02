@@ -32,6 +32,41 @@ class ORMModel(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Reference data: Country & Gender
+# ---------------------------------------------------------------------------
+
+
+class CountryRead(ORMModel):
+    """A row of `country` reference data."""
+
+    id: int
+    name: str = Field(examples=["INDIA"])
+    nice_name: str = Field(examples=["India"])
+    phone_code: str = Field(examples=["91"])
+    iso_code: str | None = Field(default=None, examples=["IN"])
+    iso3: str | None = Field(default=None, examples=["IND"])
+    num_code: int | None = None
+
+
+class GenderOption(BaseModel):
+    """Database-backed enum option for gender."""
+
+    value: str = Field(examples=["male"])
+    label: str = Field(examples=["Male"])
+
+
+class CurrencyRead(ORMModel):
+    """Authoritative ISO 4217 currency."""
+
+    id: int = Field(examples=[1])
+    code: str = Field(examples=["INR"])
+    name: str = Field(examples=["Indian Rupee"])
+    symbol: str = Field(examples=["₹"])
+    minor_units: int = Field(examples=[2])
+    is_active: bool = Field(default=True)
+
+
+# ---------------------------------------------------------------------------
 # Facility
 # ---------------------------------------------------------------------------
 
@@ -52,8 +87,9 @@ class FacilityRead(ORMModel):
     google_map_link: str | None = None
     currency_id: int | None = Field(
         default=None,
-        description="No `currency` table exists in the schema, so this is a bare id.",
+        description="Foreign key to `currency.id`.",
     )
+    currency: CurrencyRead | None = None
     facility_image_id: uuid.UUID | None = None
     default_key_user: uuid.UUID | None = None
     created_on: datetime
@@ -175,3 +211,16 @@ class RoomRead(ORMModel):
     )
     created_on: datetime
     updated_on: datetime
+
+
+class KeySettingsRead(ORMModel):
+    facility_id: uuid.UUID
+    default_key_user: uuid.UUID | None = None
+    manager_name: str | None = None
+    manager_email: str | None = None
+    active_keys_count: int = 0
+
+
+class KeySettingsUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    default_key_user: uuid.UUID | None = None

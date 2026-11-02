@@ -154,7 +154,7 @@ class StayRead(ORMModel):
     )
     display_status: str = Field(
         description=(
-            "Derived presentation label for UI display (e.g. 'In-Room', 'Checked Out', 'Pending'). "
+            "Derived presentation label for UI display (e.g. 'In-House', 'Checked Out', 'Pending'). "
             "Authoritatively computed by the backend from stay status, check-in, and check-out state."
         )
     )
@@ -163,6 +163,10 @@ class StayRead(ORMModel):
     checkout_initiated_by: uuid.UUID | None = None
     occupant_count: int
     room_count: int = Field(description="Rows in room_allocation")
+    room_number: str | None = Field(default=None, description="Primary allocated room name / number")
+    room_type_name: str | None = Field(default=None, description="Primary allocated room type name")
+    guest_email: str | None = Field(default=None, description="Booker / guest email")
+    guest_phone_number: str | None = Field(default=None, description="Booker / guest mobile number")
     created_on: datetime
     updated_on: datetime
 
@@ -188,6 +192,9 @@ class InvoiceRef(ORMModel):
     id: uuid.UUID
     invoice_number: str
     total_amount: Decimal | None = None
+    currency_id: int | None = None
+    currency_code: str | None = None
+    currency_symbol: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -218,6 +225,9 @@ class InvoiceRead(ORMModel):
     net_amount: Decimal | None = None
     total_tax: Decimal | None = None
     total_amount: Decimal | None = None
+    currency_id: int | None = Field(default=None, description="Foreign key to `currency.id`")
+    currency_code: str | None = Field(default=None, examples=["INR"])
+    currency_symbol: str | None = Field(default=None, examples=["₹"])
     created_on: datetime
     updated_on: datetime
 

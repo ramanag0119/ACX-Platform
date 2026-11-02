@@ -30,7 +30,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.api.deps import CurrentUser, DbSession, require_permission
 from app.schemas.common import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, Page
-from app.schemas.facility import FacilityRead, RoomRead
+from app.schemas.facility import FacilityRead, KeySettingsRead, KeySettingsUpdate, RoomRead
 from app.schemas.health import ErrorResponse
 from app.schemas.ops_write import (
     AmenityTypeCreate,
@@ -178,10 +178,20 @@ def update_room(room_id: uuid.UUID, payload: RoomUpdate, db: DbSession) -> RoomR
     summary="List amenity types",
 )
 def list_amenity_types(
-    db: DbSession, page: int = 1, page_size: int = DEFAULT_PAGE_SIZE
+    db: DbSession,
+    page: int = 1,
+    page_size: int = DEFAULT_PAGE_SIZE,
+    amenity_category: str | None = Query(None, description="Filter by amenity_category: room, restaurant, others"),
+    status: int | None = Query(None, description="Filter by status (1 active, 0 inactive)"),
 ) -> Page[AmenityTypeRead]:
     page, page_size = _page_args(page, page_size)
-    rows, total = catalog.list_amenity_types(db, page=page, page_size=page_size)
+    rows, total = catalog.list_amenity_types(
+        db,
+        page=page,
+        page_size=page_size,
+        amenity_category=amenity_category,
+        status=status,
+    )
     return Page[AmenityTypeRead](
         items=[AmenityTypeRead.model_validate(r) for r in rows],
         page=page, page_size=page_size, total=total,
@@ -241,6 +251,7 @@ def list_packages(
     page: int = 1,
     page_size: int = DEFAULT_PAGE_SIZE,
     is_sub_package: bool | None = None,
+    parent_package_id: uuid.UUID | None = Query(None, description="Filter sub-packages linked to parent package"),
     include_removed: bool = Query(False, description="Include status = 0 rows"),
 ) -> Page[PackageRead]:
     page, page_size = _page_args(page, page_size)
@@ -249,6 +260,7 @@ def list_packages(
         page=page,
         page_size=page_size,
         is_sub_package=is_sub_package,
+        parent_package_id=parent_package_id,
         include_removed=include_removed,
     )
     return Page[PackageRead](items=items, page=page, page_size=page_size, total=total)
@@ -303,10 +315,15 @@ def update_package(
     description="`feature` -- the Room Amenities tab of Facility Management.",
 )
 def list_features(
-    db: DbSession, page: int = 1, page_size: int = DEFAULT_PAGE_SIZE
+    db: DbSession,
+    page: int = 1,
+    page_size: int = DEFAULT_PAGE_SIZE,
+    status: int | None = Query(None, description="Filter by status (1 active, 0 inactive)"),
 ) -> Page[FeatureRead]:
     page, page_size = _page_args(page, page_size)
-    rows, total = catalog.list_features(db, page=page, page_size=page_size)
+    rows, total = catalog.list_features(
+        db, page=page, page_size=page_size, status=status
+    )
     return Page[FeatureRead](
         items=[FeatureRead.model_validate(r) for r in rows],
         page=page, page_size=page_size, total=total,
@@ -359,10 +376,13 @@ def update_feature(
     description="`promo_code` plus the room names from `promo_code_amenity`.",
 )
 def list_offers(
-    db: DbSession, page: int = 1, page_size: int = DEFAULT_PAGE_SIZE
+    db: DbSession,
+    page: int = 1,
+    page_size: int = DEFAULT_PAGE_SIZE,
+    q: str | None = None,
 ) -> Page[PromoCodeRead]:
     page, page_size = _page_args(page, page_size)
-    items, total = catalog.list_promo_codes(db, page=page, page_size=page_size)
+    items, total = catalog.list_promo_codes(db, page=page, page_size=page_size, q=q)
     return Page[PromoCodeRead](items=items, page=page, page_size=page_size, total=total)
 
 
@@ -410,12 +430,15 @@ def update_offer(
     summary="List events",
 )
 def list_events(
-    db: DbSession, page: int = 1, page_size: int = DEFAULT_PAGE_SIZE
+    db: DbSession,
+    page: int = 1,
+    page_size: int = DEFAULT_PAGE_SIZE,
+    q: str | None = None,
 ) -> Page[FacilityEventRead]:
     page, page_size = _page_args(page, page_size)
-    rows, total = catalog.list_events(db, page=page, page_size=page_size)
+    items, total = catalog.list_events(db, page=page, page_size=page_size, q=q)
     return Page[FacilityEventRead](
-        items=[FacilityEventRead.model_validate(r) for r in rows],
+        items=items,
         page=page, page_size=page_size, total=total,
     )
 
@@ -519,3 +542,55 @@ def update_holiday(
 ) -> OccasionRead:
     service.update_occasion(db, occasion_id, changes=payload.model_dump(exclude_unset=True))
     return _found(catalog.get_occasion(db, occasion_id), "Occasion", occasion_id)
+
+
+# ---------------------------------------------------------------------------
+# Default Key Settings
+# ---------------------------------------------------------------------------
+
+DEFAULT_KEY_READ = [Depends(require_permission("default_key", "read"))]
+DEFAULT_KEY_WRITE = [Depends(require_permission("default_key", "write"))]
+
+key_settings_router = APIRouter(
+    prefix="/key-settings", tags=["key-settings"], responses=RESPONSES
+)
+
+
+@key_settings_router.get(
+    "",
+    response_model=KeySettingsRead,
+    dependencies=DEFAULT_KEY_READ,
+    summary="Get current default key configuration",
+)
+def get_key_settings(db: DbSession, current_user: CurrentUser) -> KeySettingsRead:
+    facility_id = current_user.facility_ids[0] if current_user.facility_ids else access_write.default_facility_id(db, current_user.facility_ids)
+    data = facility_read.get_key_settings(db, facility_id)
+    return KeySettingsRead(**data)
+
+
+@key_settings_router.put(
+    "",
+    response_model=KeySettingsRead,
+    dependencies=DEFAULT_KEY_WRITE,
+    summary="Save default key configuration (manager assignment)",
+)
+def update_key_settings(
+    payload: KeySettingsUpdate, db: DbSession, current_user: CurrentUser
+) -> KeySettingsRead:
+    facility_id = current_user.facility_ids[0] if current_user.facility_ids else access_write.default_facility_id(db, current_user.facility_ids)
+    data = facility_read.update_key_settings(
+        db, facility_id, default_key_user=payload.default_key_user, actor_id=current_user.id
+    )
+    return KeySettingsRead(**data)
+
+
+@key_settings_router.post(
+    "/reset",
+    response_model=KeySettingsRead,
+    dependencies=DEFAULT_KEY_WRITE,
+    summary="Reset default key: revoke all default keys and clear manager assignment",
+)
+def reset_key_settings(db: DbSession, current_user: CurrentUser) -> KeySettingsRead:
+    facility_id = current_user.facility_ids[0] if current_user.facility_ids else access_write.default_facility_id(db, current_user.facility_ids)
+    data = facility_read.reset_key_settings(db, facility_id, actor_id=current_user.id)
+    return KeySettingsRead(**data)

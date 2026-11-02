@@ -39,7 +39,7 @@ export interface ReportFilterSpec {
 export interface ReportInfo {
   key: string;
   title: string;
-  /** The PostgreSQL tables behind it, shown under the report title. */
+  /** The database tables behind it, shown under the report title. */
   source: string;
   description: string;
   columns: ReportColumn[];

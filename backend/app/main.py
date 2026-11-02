@@ -5,7 +5,8 @@ centralised error handling, OpenAPI, and the two health endpoints. NO business
 APIs exist yet -- facility, room, user, device, alert and dashboard routes all
 come in a later phase.
 
-    React frontend -> FastAPI -> SQLAlchemy -> PostgreSQL hms_db
+    React frontend -> FastAPI -> SQLAlchemy -> MySQL inspironics_app (BSS)
+                                            -> OSS service API  -> insp_iot (OSS)
 
 Run locally:  uvicorn app.main:app --reload --port 8000
 """
@@ -65,7 +66,8 @@ def create_app() -> FastAPI:
     )
     def health() -> LivenessResponse:
         """Is the process up? Deliberately does not touch the database, so it
-        stays meaningful when PostgreSQL is the thing that is down."""
+        stays meaningful when the BSS MySQL is the thing that is down.
+        Readiness -- "can this process actually serve?" -- is `/health/db`."""
         return LivenessResponse(
             status="ok",
             app=settings.APP_NAME,

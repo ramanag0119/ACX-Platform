@@ -39,6 +39,7 @@ from app.models import (
     Firmware,
     IncidentEvent,
     IncidentStatus,
+    ValueAlert,
     ValueAlertLimitConfig,
 )
 from app.services.limit_config import bool_to_yesno, bool_to_yn, flag_to_bool
@@ -253,6 +254,24 @@ def update_limit_config(
 ) -> ValueAlertLimitConfig:
     with transaction(db):
         row = require_row(db, ValueAlertLimitConfig, config_id, "Limit configuration")
+        if ("device_name" in changes and changes["device_name"] != row.device_name) or (
+            "parameter" in changes and changes["parameter"] != row.parameter
+        ):
+            target_device = changes.get("device_name", row.device_name)
+            target_param = changes.get("parameter", row.parameter)
+            clash = db.execute(
+                select(ValueAlertLimitConfig.id)
+                .where(ValueAlertLimitConfig.device_name == target_device)
+                .where(ValueAlertLimitConfig.parameter == target_param)
+                .where(ValueAlertLimitConfig.facility_id == row.facility_id)
+                .where(ValueAlertLimitConfig.id != config_id)
+            ).scalars().first()
+            if clash is not None:
+                raise Conflict(
+                    f"A limit configuration for {target_param} on "
+                    f"{target_device} already exists."
+                )
+
         merged = {
             "is_percentage_value": row.is_percentage_value,
             "limit_low_percentage": row.limit_low_percentage,
@@ -291,3 +310,17 @@ def _validate_limits(data: dict) -> None:
         )
     if low is not None and high is not None and low >= high:
         raise Invalid(f"The low {label} limit must be below the high {label} limit.")
+
+
+def delete_limit_config(db: Session, config_id: uuid.UUID) -> None:
+    with transaction(db):
+        row = require_row(db, ValueAlertLimitConfig, config_id, "Limit configuration")
+        alert_exists = db.execute(
+            select(ValueAlert.id).where(ValueAlert.limit_config_id == config_id).limit(1)
+        ).first()
+        if alert_exists:
+            raise Conflict(
+                "Cannot delete this limit configuration because it is referenced by existing alerts."
+            )
+        db.delete(row)
+

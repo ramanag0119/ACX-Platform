@@ -30,13 +30,16 @@ from __future__ import annotations
 import pytest
 from sqlalchemy import text
 
+from app.db.verify_schema import live_enums
+
+
 @pytest.fixture(scope="module", autouse=True)
 def require_seeded(db):
     if not db.execute(text("SELECT count(*) FROM device")).scalar_one():
         pytest.skip("database is not seeded; run `python -m seeds.run_seed`")
 
 
-# (endpoint, query parameter, the pg_enum type whose labels it accepts)
+# (endpoint, query parameter, the enum type whose labels it accepts)
 ENUM_FILTERS = [
     ("/api/v1/devices", "health_status", "device_health_status"),
     ("/api/v1/devices", "device_config_status", "device_config_status"),
@@ -64,18 +67,7 @@ LABELS_FROM_OPENAPI_ONLY: set[tuple[str, str]] = set()
 
 
 def _enum_labels(db, type_name: str) -> set[str]:
-    rows = db.execute(
-        text(
-            """
-            SELECT e.enumlabel
-            FROM pg_enum e
-            JOIN pg_type t ON t.oid = e.enumtypid
-            JOIN pg_namespace n ON n.oid = t.typnamespace
-            WHERE n.nspname = 'public' AND t.typname = :name
-            """
-        ),
-        {"name": type_name},
-    ).scalars().all()
+    rows = live_enums(db.connection()).get(type_name)
     assert rows, f"{type_name} is not an enum in this database"
     return set(rows)
 

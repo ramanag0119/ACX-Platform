@@ -94,8 +94,11 @@ def list_job_orders(
     Soft-deleted rows stay out unless `include_removed`, the same rule every
     other list endpoint in the project follows.
     """
+    # `IS NULL` first gives NULLS LAST on MySQL too, which has no NULLS LAST.
     stmt = _job_stmt().order_by(
-        JobOrder.work_commence.desc().nullslast(), JobOrder.created_on.desc()
+        JobOrder.work_commence.is_(None),
+        JobOrder.work_commence.desc(),
+        JobOrder.created_on.desc(),
     )
     if not include_removed:
         # `status` is nullable with no server default; the seeded live rows carry
@@ -132,11 +135,16 @@ def list_job_orders(
                 .where(Amenity.facility_id == facility_id)
             )
         )
-    if search:
+    if search and search.strip():
         needle = f"%{search.strip()}%"
         stmt = stmt.where(
             JobOrder.order_reference.ilike(needle)
             | JobOrder.description.ilike(needle)
+            | JobOrder.id.in_(
+                select(JobOrderAmenity.job_order_id)
+                .join(Amenity, Amenity.id == JobOrderAmenity.amenity_id)
+                .where(Amenity.name.ilike(needle))
+            )
         )
 
     total = _count(db, stmt)

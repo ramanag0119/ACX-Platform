@@ -531,3 +531,105 @@ def test_a_failed_feature_link_rolls_the_package_back(api, db, amenity_type_id, 
     assert r.status_code == 422
     db.rollback()
     assert db.execute(text("SELECT count(*) FROM package")).scalar_one() == before
+
+
+# ---------------------------------------------------------------------------
+# Database-driven Dropdown & Relationship Verifications
+# ---------------------------------------------------------------------------
+
+
+def test_amenity_types_filter_category_and_status(api):
+    """Room types dropdown should only receive amenity_category = 'room'."""
+    r_all = api.get(f"{V1}/amenity-types?page_size=100").json()
+    assert r_all["total"] > 0
+
+    r_room = api.get(f"{V1}/amenity-types?page_size=100&amenity_category=room").json()
+    assert r_room["total"] > 0
+    assert all(item["amenity_category"] == "room" for item in r_room["items"])
+    assert r_room["total"] < r_all["total"]
+
+    r_active = api.get(f"{V1}/amenity-types?page_size=100&status=1").json()
+    assert all(item["status"] == 1 for item in r_active["items"])
+
+
+def test_features_filter_status(api):
+    """Features dropdown can filter active vs inactive features."""
+    r_active = api.get(f"{V1}/features?page_size=100&status=1").json()
+    assert all(item["status"] == 1 for item in r_active["items"])
+
+
+def test_create_parent_package_with_sub_packages_persists(
+    api, db, amenity_type_id, unique, cleanup
+):
+    """Parent package links sub-packages and echoes sub_package_ids and sub_package_names."""
+    # Find existing sub-package
+    sub_pkgs = api.get(f"{V1}/packages?page_size=10&is_sub_package=true").json()
+    assert len(sub_pkgs["items"]) > 0
+    target_sp = sub_pkgs["items"][0]
+
+    r = api.post(
+        f"{V1}/packages",
+        json={
+            "name": f"Parent Pkg {unique}",
+            "amenity_type": str(amenity_type_id),
+            "is_sub_package": False,
+            "sub_package_ids": [target_sp["id"]],
+        },
+    )
+    assert r.status_code == 201
+    pkg = r.json()
+    package_id = pkg["id"]
+    cleanup.sql("DELETE FROM sub_package WHERE parent_package_id = :p", {"p": package_id})
+    cleanup.add("package", package_id)
+
+    assert target_sp["id"] in pkg["sub_package_ids"]
+    assert target_sp["name"] in pkg["sub_package_names"]
+
+    # Verify query by parent_package_id returns target_sp
+    by_parent = api.get(f"{V1}/packages?parent_package_id={package_id}").json()
+    assert any(p["id"] == target_sp["id"] for p in by_parent["items"])
+
+
+def test_create_sub_package_with_parent_package_persists(
+    api, db, amenity_type_id, package_id, unique, cleanup
+):
+    """Sub-package can link to parent package upon creation."""
+    # Parent must not be a sub-package
+    parent = api.get(f"{V1}/packages?page_size=10&is_sub_package=false").json()["items"][0]
+
+    r = api.post(
+        f"{V1}/packages",
+        json={
+            "name": f"Sub Pkg {unique}",
+            "amenity_type": str(amenity_type_id),
+            "is_sub_package": True,
+            "parent_package_id": parent["id"],
+        },
+    )
+    assert r.status_code == 201
+    pkg = r.json()
+    sub_pkg_id = pkg["id"]
+    cleanup.sql("DELETE FROM sub_package WHERE sub_package_id = :p", {"p": sub_pkg_id})
+    cleanup.add("package", sub_pkg_id)
+
+    assert parent["id"] in pkg["parent_package_ids"]
+    assert parent["name"] in pkg["parent_package_names"]
+
+
+def test_invalid_sub_package_relationship_rejected(api, amenity_type_id, unique):
+    """Sub-package cannot be parent of another package."""
+    sub_pkgs = api.get(f"{V1}/packages?page_size=10&is_sub_package=true").json()["items"]
+    assert len(sub_pkgs) >= 2
+    sp1 = sub_pkgs[0]
+
+    # Attempt to use sp1 as parent
+    r = api.post(
+        f"{V1}/packages",
+        json={
+            "name": f"Invalid Sub {unique}",
+            "amenity_type": str(amenity_type_id),
+            "is_sub_package": True,
+            "parent_package_id": sp1["id"],
+        },
+    )
+    assert r.status_code == 422

@@ -25,8 +25,10 @@ from sqlalchemy.orm import Session
 
 from app.models import (
     Amenity,
+    AmenityStatus,
     AmenityType,
     AppUser,
+    Currency,
     Facility,
     FacilityEvent,
     Feature,
@@ -34,10 +36,12 @@ from app.models import (
     OccasionType,
     Package,
     PackageFeature,
+    SubPackage,
     PromoCode,
     PromoCodeAmenity,
     PropertyChain,
 )
+from app.services.occupancy import ensure_available_room_default_condition
 from app.services.writes import (
     Conflict,
     Invalid,
@@ -58,6 +62,8 @@ def update_facility(db: Session, facility_id: uuid.UUID, *, changes: dict) -> Fa
     with transaction(db):
         facility = require_row(db, Facility, facility_id, "Facility")
         require_exists(db, AppUser, changes.get("default_key_user"), "Default key user")
+        if changes.get("currency_id") is not None:
+            require_exists(db, Currency, changes["currency_id"], "Currency")
         apply_changes(facility, changes)
     db.refresh(facility)
     return facility
@@ -103,6 +109,13 @@ def create_room(
             **data,
         )
         db.add(room)
+        db.flush()
+
+        available_status_id = db.execute(
+            select(AmenityStatus.id).where(AmenityStatus.amenity_status_name == "Available")
+        ).scalars().first()
+        if room.status == available_status_id or room.status == 0:
+            ensure_available_room_default_condition(db, room)
     db.refresh(room)
     return room
 
@@ -164,9 +177,22 @@ def create_package(
     db: Session, *, data: dict, actor_id: uuid.UUID, facility_id: uuid.UUID
 ) -> Package:
     feature_ids = data.pop("feature_ids", None) or []
+    sub_package_ids = data.pop("sub_package_ids", None) or []
+    parent_package_id = data.pop("parent_package_id", None)
     with transaction(db):
         ensure_unique(db, Package, Package.name, data["name"], "Package")
         require_exists(db, AmenityType, data["amenity_type"], "Amenity type")
+        if data.get("currency_id") is not None:
+            require_exists(db, Currency, data["currency_id"], "Currency")
+        is_sub = data.get("is_sub_package", False)
+
+        if is_sub and parent_package_id:
+            parent = require_row(db, Package, parent_package_id, "Parent package")
+            if parent.is_sub_package:
+                raise Invalid("Parent package cannot itself be a sub-package.")
+        elif not is_sub and parent_package_id:
+            raise Invalid("A parent package cannot declare a parent_package_id.")
+
         row = Package(
             id=uuid.uuid4(),
             facility_id=data.pop("facility_id", None) or facility_id,
@@ -176,6 +202,12 @@ def create_package(
         db.add(row)
         db.flush()
         _replace_package_features(db, row.id, feature_ids, actor_id)
+
+        if not is_sub and sub_package_ids:
+            _replace_sub_packages(db, row.id, sub_package_ids, actor_id)
+        elif is_sub and parent_package_id:
+            db.add(SubPackage(parent_package_id=parent_package_id, sub_package_id=row.id, created_by=actor_id))
+
     db.refresh(row)
     return row
 
@@ -205,6 +237,8 @@ def update_package(
     db: Session, package_id: uuid.UUID, *, changes: dict, actor_id: uuid.UUID
 ) -> Package:
     feature_ids = changes.pop("feature_ids", None)
+    sub_package_ids = changes.pop("sub_package_ids", None)
+    parent_package_id = changes.pop("parent_package_id", None)
     with transaction(db):
         row = require_row(db, Package, package_id, "Package")
         if changes.get("name"):
@@ -212,11 +246,21 @@ def update_package(
                 db, Package, Package.name, changes["name"], "Package", exclude_id=package_id
             )
         require_exists(db, AmenityType, changes.get("amenity_type"), "Amenity type")
+        if changes.get("currency_id") is not None:
+            require_exists(db, Currency, changes["currency_id"], "Currency")
         if changes.get("status") == 0:
             _assert_package_unused(db, package_id)
         apply_changes(row, changes)
         if feature_ids is not None:
             _replace_package_features(db, package_id, feature_ids, actor_id)
+        if not row.is_sub_package and sub_package_ids is not None:
+            _replace_sub_packages(db, package_id, sub_package_ids, actor_id)
+        elif row.is_sub_package and parent_package_id is not None:
+            parent = require_row(db, Package, parent_package_id, "Parent package")
+            if parent.is_sub_package:
+                raise Invalid("Parent package cannot itself be a sub-package.")
+            db.execute(delete(SubPackage).where(SubPackage.sub_package_id == package_id))
+            db.add(SubPackage(parent_package_id=parent_package_id, sub_package_id=package_id, created_by=actor_id))
     db.refresh(row)
     return row
 
@@ -235,6 +279,26 @@ def _replace_package_features(
                 package_id=package_id,
                 feature_id=feature_id,
                 status=1,
+                created_by=actor_id,
+            )
+        )
+
+
+def _replace_sub_packages(
+    db: Session, parent_package_id: uuid.UUID, sub_package_ids: list[uuid.UUID], actor_id: uuid.UUID
+) -> None:
+    for sp_id in sub_package_ids:
+        sp = require_row(db, Package, sp_id, "Sub-package")
+        if not sp.is_sub_package:
+            raise Invalid(f"Package '{sp.name}' is not a sub-package.")
+        if sp.id == parent_package_id:
+            raise Invalid("A package cannot be its own sub-package.")
+    db.execute(delete(SubPackage).where(SubPackage.parent_package_id == parent_package_id))
+    for sp_id in sub_package_ids:
+        db.add(
+            SubPackage(
+                parent_package_id=parent_package_id,
+                sub_package_id=sp_id,
                 created_by=actor_id,
             )
         )

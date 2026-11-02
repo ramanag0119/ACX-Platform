@@ -118,16 +118,22 @@ class ServiceItemRead(ORMModel):
         default=None,
         examples=["150.00"],
         description=(
-            "Real column. Service-item price only -- NOT room tariff. "
-            "OPEN DECISION #10 (package.price, invoice.status) remains unresolved."
+            "Service-item price stored as NUMERIC(10, 2)."
         ),
     )
+    currency_id: int | None = Field(default=None, description="Foreign key to `currency.id`")
+    currency_code: str | None = Field(default=None, examples=["INR"])
+    currency_symbol: str | None = Field(default=None, examples=["₹"])
     amenity_id: uuid.UUID | None = Field(
         default=None, description="Venue this item belongs to, e.g. a restaurant"
     )
     item_icon: uuid.UUID | None = Field(default=None, description="attachment.id")
     facility_id: uuid.UUID | None = None
     status: int | None = None
+    is_veg: bool | None = Field(default=None, description="Veg/Non-Veg attribute stored in metadata")
+    is_spicy: bool | None = Field(default=None, description="Spicy indicator stored in metadata")
+    type_of_service: str | None = Field(default=None, description="Type of service/food_code stored in metadata")
+    item_metadata: dict | None = Field(default=None, description="Raw metadata bag")
     created_on: datetime
     updated_on: datetime
 
@@ -194,6 +200,9 @@ class ServiceRequestRead(ORMModel):
     total_amount: Decimal | None = None
     expected_date: datetime | None = None
     completed_on: datetime | None = None
+    quantity: int | None = Field(
+        default=None, description="Total item quantity from service_request_item"
+    )
     created_on: datetime
     updated_on: datetime
 
@@ -201,3 +210,26 @@ class ServiceRequestRead(ORMModel):
 class ServiceRequestDetail(ServiceRequestRead):
     items: list[ServiceRequestItemRead]
     item_count: int
+
+
+class ServiceTypeSummary(BaseModel):
+    service_type_id: int
+    name: str
+    total_count: int
+    completed_count: int
+    pending_count: int
+    in_progress_count: int = 0
+    assigned_count: int = 0
+    canceled_count: int = 0
+
+
+class ServiceTrackingSummary(BaseModel):
+    total_services: int
+    total_completed: int
+    total_pending: int
+    total_in_progress: int = 0
+    total_assigned: int = 0
+    total_canceled: int = 0
+    by_type: list[ServiceTypeSummary]
+    by_status: dict[str, int] = Field(default_factory=dict)
+
