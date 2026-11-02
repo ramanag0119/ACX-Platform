@@ -10,11 +10,10 @@ The executor is the `caleido_scheduler` pair; its `jobs` table is renamed
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, LargeBinary, SmallInteger, String
-from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.dialects.postgresql import UUID as PGUUID
+from sqlalchemy import ForeignKey, Integer, LargeBinary, SmallInteger, String
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.db.types import GUID, JSONB, UTCDateTime
 from app.db.base import Base, BigIntPk, HMSBase, TimestampMixin, UUIDPk
 from app.models import enums
 
@@ -50,13 +49,13 @@ class SchedulerJobExecution(HMSBase, BigIntPk):
     __tablename__ = "scheduler_job_execution"
 
     scheduler_job_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("scheduler_job.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
     job_execution_date: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, index=True
+        UTCDateTime(), nullable=False, index=True
     )
     job_response: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
     status: Mapped[str] = mapped_column(

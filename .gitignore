@@ -34,3 +34,13 @@ hms_db_full_backup.sql
 *_backup.sql
 *_dump.sql
 *.dump
+
+# --- Local credential vault -- NEVER commit ---
+# secure-local/ holds the KeePass vault for the BSS MySQL credentials. The
+# .kdbx is encrypted, but an encrypted vault in a public history is still an
+# offline brute-force target, so the whole directory stays out of git.
+# The vault's MASTER PASSWORD is never stored here, or anywhere in this repo.
+secure-local/
+*.kdbx
+*.kdb
+*.zip

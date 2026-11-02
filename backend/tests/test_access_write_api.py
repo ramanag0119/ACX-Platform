@@ -12,7 +12,7 @@ from __future__ import annotations
 import uuid
 
 import pytest
-from sqlalchemy import text
+from sqlalchemy import Boolean, text
 
 from app.core.config import settings
 
@@ -129,8 +129,10 @@ def test_create_role_with_permissions_persists_both_tables(api, db, unique, clea
     cleanup.add("role", role_id)
 
     grant = db.execute(
+        # Typed so MySQL's TINYINT(1) comes back as a bool, as PostgreSQL's does.
         text("SELECT read_access, write_access FROM role_module_permission "
-             "WHERE role_id = :r AND module_id = :m"),
+             "WHERE role_id = :r AND module_id = :m")
+        .columns(read_access=Boolean, write_access=Boolean),
         {"r": role_id, "m": module_id},
     ).one()
     assert grant.read_access is True

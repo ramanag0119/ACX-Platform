@@ -31,7 +31,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
  *
  * Configures the designated staff manager in `facility.default_key_user`,
  * and manages default master access keys in `access_key` (key_type=4).
- * Fully database-driven with PostgreSQL persistence and RBAC permissions.
+ * Fully database-driven with BSS persistence and RBAC permissions.
  */
 const KeySettings = () => {
   const { canWrite } = useAuth();
@@ -93,7 +93,7 @@ const KeySettings = () => {
                 Active Default Master Keys
               </div>
               <div className="text-xs text-muted-foreground">
-                Authoritative count from PostgreSQL <code className="font-mono">access_key</code>
+                Authoritative count from <code className="font-mono">access_key</code>
               </div>
             </div>
           </div>

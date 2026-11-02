@@ -14,6 +14,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import text
 
+from app.db.verify_schema import SCHEMA_NAME
 from app.core.config import settings
 from app.db.session import SessionLocal
 from app.main import app
@@ -192,7 +193,7 @@ def test_service_request_amounts_are_null_as_seeded(client, db):
 def test_no_priority_field_exists(client, db):
     cols = db.execute(
         text("SELECT column_name FROM information_schema.columns "
-             "WHERE table_schema='public' AND table_name='service_request'")
+             f"WHERE table_schema='{SCHEMA_NAME}' AND table_name='service_request'")
     ).scalars().all()
     assert "priority" not in cols
     body = client.get(f"{V1}/service-requests").json()

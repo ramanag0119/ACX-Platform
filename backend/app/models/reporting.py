@@ -7,10 +7,9 @@ import uuid
 from datetime import date
 
 from sqlalchemy import BigInteger, Date, ForeignKey, Index, Numeric, String
-from sqlalchemy.dialects.postgresql import DOUBLE_PRECISION
-from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.db.types import DOUBLE, GUID
 from app.db.base import Base, TimestampMixin
 from app.models import enums
 from typing import TYPE_CHECKING
@@ -33,7 +32,7 @@ class EnergyStat(Base, TimestampMixin):
 
     # Authoritative device relationship
     device_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("device.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
@@ -41,18 +40,18 @@ class EnergyStat(Base, TimestampMixin):
     # External/source device name identifier
     device_name: Mapped[str] = mapped_column(String(11), primary_key=True)
     facility_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("facility.id", ondelete="CASCADE"),
         primary_key=True,
     )
     amenity_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("amenity.id", ondelete="CASCADE"),
         primary_key=True,
     )
     # Hours elapsed since 2000 -- NOT a timestamp.
     hour: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    energy_consumed: Mapped[float] = mapped_column(DOUBLE_PRECISION, nullable=False)
+    energy_consumed: Mapped[float] = mapped_column(DOUBLE, nullable=False)
 
     device: Mapped["Device"] = relationship("Device", backref="energy_stats")
 
@@ -83,7 +82,7 @@ class DailyDualDataPoint(Base, TimestampMixin):
     # Denominator, e.g. rooms total.
     dp_2: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
     facility_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("facility.id", ondelete="CASCADE"),
         nullable=False,
     )

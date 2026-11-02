@@ -217,10 +217,12 @@ def incident(db, cleanup):
         "WHERE id = :value",
         {"status": row.current_incident_status, "who": row.assigned_to, "value": row.id},
     )
+    # History is append-only with an identity key: everything above the
+    # current maximum is what this test added (portable; no INTERVAL syntax).
+    last_id = db.execute(text("SELECT coalesce(max(id), 0) FROM incident_history")).scalar_one()
     cleanup.sql(
-        "DELETE FROM incident_history WHERE incident_id = :value AND created_on > now() - "
-        "interval '1 hour'",
-        {"value": row.id},
+        "DELETE FROM incident_history WHERE incident_id = :value AND id > :last_id",
+        {"value": row.id, "last_id": last_id},
     )
     return row.id
 

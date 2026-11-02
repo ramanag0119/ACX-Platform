@@ -12,7 +12,7 @@ import { useSurfaceTokens } from "@/core/styles/surfaceTokens";
 /**
  * Room View, driven by authoritative database-aggregated GET /occupancy/summary.
  *
- * All room counts and daily operational metrics are computed directly by PostgreSQL
+ * All room counts and daily operational metrics are computed directly by the database
  * aggregate queries covering the entire authorized property/floor scope, completely
  * eliminating the 100-record pagination limitation and null placeholder rows.
  */

@@ -87,7 +87,7 @@ const Holidays = () => {
     /**
      * Create or update an `occasion`.
      *
-     * The type comes directly from the PostgreSQL `occasion_type` database table.
+     * The type comes directly from the `occasion_type` database table.
      */
     const handleSubmit = () => {
         if (!validateForm()) return;

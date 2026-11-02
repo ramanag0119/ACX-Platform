@@ -69,7 +69,7 @@ export class ApiError extends Error {
     return this.status === 422;
   }
 
-  /** 500 from the app, or 503 when PostgreSQL is unreachable. */
+  /** 500 from the app, or 503 when the database is unreachable. */
   get isServerError() {
     return this.status >= 500;
   }

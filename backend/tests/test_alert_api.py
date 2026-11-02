@@ -14,6 +14,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import text
 
+from app.db.verify_schema import SCHEMA_NAME
 from app.core.config import settings
 from app.db.session import SessionLocal
 from app.main import app
@@ -165,7 +166,7 @@ def test_device_alert_has_no_facility_or_status_column(db):
     cols = set(
         db.execute(
             text("SELECT column_name FROM information_schema.columns "
-                 "WHERE table_schema='public' AND table_name='device_alert'")
+                 f"WHERE table_schema='{SCHEMA_NAME}' AND table_name='device_alert'")
         ).scalars()
     )
     assert "facility_id" not in cols, "facility is resolved from the device"
@@ -266,7 +267,7 @@ def test_resolution_notes_live_in_history_not_on_the_incident(client, db):
     cols = set(
         db.execute(
             text("SELECT column_name FROM information_schema.columns "
-                 "WHERE table_schema='public' AND table_name='device_incident'")
+                 f"WHERE table_schema='{SCHEMA_NAME}' AND table_name='device_incident'")
         ).scalars()
     )
     assert "resolved_on" not in cols and "notes" not in cols and "severity" not in cols

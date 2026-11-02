@@ -94,8 +94,11 @@ def list_job_orders(
     Soft-deleted rows stay out unless `include_removed`, the same rule every
     other list endpoint in the project follows.
     """
+    # `IS NULL` first gives NULLS LAST on MySQL too, which has no NULLS LAST.
     stmt = _job_stmt().order_by(
-        JobOrder.work_commence.desc().nullslast(), JobOrder.created_on.desc()
+        JobOrder.work_commence.is_(None),
+        JobOrder.work_commence.desc(),
+        JobOrder.created_on.desc(),
     )
     if not include_removed:
         # `status` is nullable with no server default; the seeded live rows carry

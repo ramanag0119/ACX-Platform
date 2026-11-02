@@ -23,11 +23,11 @@ import argparse
 import sys
 from collections import OrderedDict
 
-from sqlalchemy import text
+from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 
 from app.db.session import SessionLocal, engine
-from app.models import APPROVED_TABLES
+from app.models import APPROVED_TABLES, Base
 from seeds.steps import (
     activity,
     alerts,
@@ -78,13 +78,33 @@ def row_counts(session: Session) -> "OrderedDict[str, int]":
     counts: OrderedDict[str, int] = OrderedDict()
     for table in APPROVED_TABLES:
         counts[table] = session.execute(
-            text(f'SELECT count(*) FROM public."{table}"')
+            select(func.count()).select_from(Base.metadata.tables[table])
         ).scalar_one()
     return counts
 
 
 def schema_fingerprint(session: Session) -> dict[str, int]:
     q = lambda sql: session.execute(text(sql)).scalar_one()  # noqa: E731
+    if session.bind.dialect.name == "mysql":
+        # MySQL has no enum types, only enum columns; that is what is counted.
+        return {
+            "tables": q(
+                "SELECT count(*) FROM information_schema.tables "
+                "WHERE table_schema=database() AND table_name<>'alembic_version'"
+            ),
+            "enums": q(
+                "SELECT count(*) FROM information_schema.columns "
+                "WHERE table_schema=database() AND data_type='enum'"
+            ),
+            "foreign_keys": q(
+                "SELECT count(*) FROM information_schema.table_constraints "
+                "WHERE table_schema=database() AND constraint_type='FOREIGN KEY'"
+            ),
+            "indexes": q(
+                "SELECT count(DISTINCT table_name, index_name) "
+                "FROM information_schema.statistics WHERE table_schema=database()"
+            ),
+        }
     return {
         "tables": q(
             "SELECT count(*) FROM information_schema.tables "

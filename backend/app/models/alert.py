@@ -13,7 +13,6 @@ from datetime import datetime
 from sqlalchemy import (
     BigInteger,
     CHAR,
-    DateTime,
     ForeignKey,
     Index,
     Integer,
@@ -21,11 +20,10 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
 )
-from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import SmallInteger
 
+from app.db.types import GUID, JSONB, UTCDateTime
 from app.db.base import (
     Base,
     BigIntPk,
@@ -87,14 +85,14 @@ class DeviceAlert(HMSBase, BigIntPk):
     __tablename__ = "device_alert"
 
     device_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("device.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
     # The affected room.
     amenity_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("amenity.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
@@ -111,7 +109,7 @@ class DeviceAlert(HMSBase, BigIntPk):
     )
     alert_data: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     created_by: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=False
+        GUID(), user_fk(ondelete="RESTRICT"), nullable=False
     )
 
     __table_args__ = (Index("ix_device_alert_created_on", "created_on"),)
@@ -129,19 +127,19 @@ class DeviceIncident(HMSBase, UUIDPk):
     __tablename__ = "device_incident"
 
     facility_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("facility.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
     amenity_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("amenity.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
     device_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("device.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
@@ -156,7 +154,7 @@ class DeviceIncident(HMSBase, UUIDPk):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     # -> app_user, NOT the deleted `employee` table.
     assigned_to: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=True, index=True
+        GUID(), user_fk(ondelete="RESTRICT"), nullable=True, index=True
     )
     latest_alert_id: Mapped[int | None] = mapped_column(
         BigInteger,
@@ -171,7 +169,7 @@ class DeviceIncident(HMSBase, UUIDPk):
         index=True,
     )
     updated_by: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=True
+        GUID(), user_fk(ondelete="RESTRICT"), nullable=True
     )
 
     __table_args__ = (Index("ix_device_incident_created_on", "created_on"),)
@@ -187,7 +185,7 @@ class IncidentHistory(HMSBase, BigIntPk):
     __tablename__ = "incident_history"
 
     incident_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("device_incident.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
@@ -200,7 +198,7 @@ class IncidentHistory(HMSBase, BigIntPk):
     )
     incident_event_data: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     created_by: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), user_fk(ondelete="RESTRICT"), nullable=False
+        GUID(), user_fk(ondelete="RESTRICT"), nullable=False
     )
 
 
@@ -222,7 +220,7 @@ class ValueAlertLimitConfig(HMSBase, UUIDPk):
     device_name: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     # [INFER] added; not present in IKANOS.
     device_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("device.id", ondelete="RESTRICT"), nullable=True
+        GUID(), ForeignKey("device.id", ondelete="RESTRICT"), nullable=True
     )
     limit_check: Mapped[str] = mapped_column(CHAR(1), nullable=False)
     is_percentage_value: Mapped[str] = mapped_column(CHAR(3), nullable=False)
@@ -233,7 +231,7 @@ class ValueAlertLimitConfig(HMSBase, UUIDPk):
     limit_high_value: Mapped[int | None] = mapped_column(Integer, nullable=True)
     remarks: Mapped[str] = mapped_column(Text, nullable=False)
     facility_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("facility.id", ondelete="RESTRICT"),
         nullable=False,
         index=True,
@@ -264,7 +262,7 @@ class ValueAlert(HMSBase, UUIDPk):
     __tablename__ = "value_alert"
 
     device_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("device.id", ondelete="RESTRICT"),
         nullable=False,
         index=True,
@@ -276,13 +274,13 @@ class ValueAlert(HMSBase, UUIDPk):
     )
     device_name: Mapped[str] = mapped_column(String(50), nullable=False)
     amenity_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("amenity.id", ondelete="RESTRICT"),
         nullable=False,
         index=True,
     )
     limit_config_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("value_alert_limit_config.id", ondelete="RESTRICT"),
         nullable=False,
         index=True,
@@ -291,7 +289,7 @@ class ValueAlert(HMSBase, UUIDPk):
     device_status_id: Mapped[int] = mapped_column(Integer, nullable=False)
     # `date` in IKANOS; widened to a timestamp.
     timestamp: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, index=True
+        UTCDateTime(), nullable=False, index=True
     )
     limit_value: Mapped[str] = mapped_column(String(50), nullable=False)
     # "low" or "high" -- a varchar in IKANOS, NOT an enum.
@@ -302,7 +300,7 @@ class ValueAlert(HMSBase, UUIDPk):
         SmallInteger, nullable=False, server_default="0", index=True
     )
     facility_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(),
         ForeignKey("facility.id", ondelete="RESTRICT"),
         nullable=False,
         index=True,

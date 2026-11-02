@@ -1,0 +1,12 @@
+# HMS OSS (device/operations) microservice
+fastapi==0.135.3
+uvicorn[standard]==0.34.0
+sqlalchemy==2.0.52
+psycopg2-binary==2.9.11
+pydantic==2.12.5
+pydantic-settings==2.7.1
+python-dotenv==1.0.1
+
+# --- Testing ---
+pytest==9.1.1
+httpx==0.28.1  # required by fastapi.testclient

@@ -152,8 +152,10 @@ def list_maintenance_requests(
     include_removed: bool = False,
     q: str | None = None,
 ):
+    # `IS NULL` first gives NULLS LAST on MySQL too, which has no NULLS LAST.
     stmt = _request_stmt().order_by(
-        MaintenanceRequest.maintenance_start_date.desc().nullslast(),
+        MaintenanceRequest.maintenance_start_date.is_(None),
+        MaintenanceRequest.maintenance_start_date.desc(),
         MaintenanceRequest.created_on.desc(),
     )
     # Soft-deleted rows stay out unless explicitly asked for, the same rule the

@@ -30,7 +30,7 @@ export const DEFAULT_PAGE_SIZE = 20;
 export const MAX_PAGE_SIZE = 100;
 
 // ---------------------------------------------------------------------------
-// PostgreSQL enum labels
+// Database enum labels
 // ---------------------------------------------------------------------------
 /**
  * These mirror `app/schemas/filters.py`, which mirrors the `pg_enum` labels.

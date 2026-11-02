@@ -19,7 +19,7 @@ from __future__ import annotations
 import uuid
 from collections import defaultdict
 
-from sqlalchemy import Select, func, or_, select
+from sqlalchemy import Integer, Select, cast, func, literal_column, or_, select
 from sqlalchemy.orm import Session, aliased
 
 from app.models import (
@@ -345,6 +345,11 @@ def user_facility_ids(db: Session, user_id: uuid.UUID) -> list[uuid.UUID]:
     )
 
 
+#: GROUP_CONCAT separator for role names (MySQL). SEPARATOR takes a string
+#: literal, not a bind; the ASCII unit separator cannot appear in a role name.
+ROLE_SEP = "\x1f"
+
+
 def user_permissions(
     db: Session, user_id: uuid.UUID, *, facility_id: uuid.UUID | None = None
 ) -> list[dict]:
@@ -353,15 +358,26 @@ def user_permissions(
     `user_role` is facility-scoped, so `facility_id` narrows the calculation to
     the roles held at one facility.
     """
+    # OR across roles is MAX over 0/1, which both MySQL and PostgreSQL support
+    # (bool_or is PostgreSQL only). Role names are aggregated with the
+    # dialect's own function and split back into a list below.
+    mysql = db.bind.dialect.name == "mysql"
+    roles = (
+        func.group_concat(
+            func.distinct(Role.name).op("SEPARATOR")(literal_column(f"'{ROLE_SEP}'"))
+        )
+        if mysql
+        else func.array_agg(func.distinct(Role.name))
+    )
     stmt = (
         select(
             RoleModulePermission.module_id,
             RoleModule.module_name,
-            func.bool_or(RoleModulePermission.read_access).label("read_access"),
-            func.bool_or(
-                func.coalesce(RoleModulePermission.write_access, False)
+            func.max(cast(RoleModulePermission.read_access, Integer)).label("read_access"),
+            func.max(
+                cast(func.coalesce(RoleModulePermission.write_access, False), Integer)
             ).label("write_access"),
-            func.array_agg(func.distinct(Role.name)).label("granted_by_roles"),
+            roles.label("granted_by_roles"),
         )
         .select_from(UserRole)
         .join(Role, Role.id == UserRole.role_id)
@@ -380,7 +396,9 @@ def user_permissions(
             "module_name": r.module_name,
             "read_access": bool(r.read_access),
             "write_access": bool(r.write_access),
-            "granted_by_roles": sorted(r.granted_by_roles),
+            "granted_by_roles": sorted(
+                r.granted_by_roles.split(ROLE_SEP) if mysql else r.granted_by_roles
+            ),
         }
         for r in db.execute(stmt).all()
     ]

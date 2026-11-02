@@ -137,7 +137,7 @@ export const Reservations = () => {
   const pageSize = parseInt(entriesPerPage) || 10;
   useScrollToTop(currentPage);
 
-  // --- Live data from PostgreSQL via backend APIs ---------------------------
+  // --- Live data from the BSS database via backend APIs ---------------------------
   const staysQuery = useStays({
     page: currentPage,
     page_size: pageSize,
