@@ -15,9 +15,15 @@ from app.api.v1.endpoints import (
     stays_write, telemetry,
 )
 from app.core.config import settings
+from app.integrations.api.router import router as integrations_router
 
 api_router = APIRouter()
 api_router.include_router(health.router)
+
+# HTNG / FIAS integration operations (docs/HTNG_FIAS_ARCHITECTURE.md). Mounting
+# opens no socket and starts no worker; the integration runtime is built lazily
+# on first use, and every vendor-facing path is disabled by default.
+api_router.include_router(integrations_router)
 
 # Phase 2.4 -- HMS Web authentication (Admin + Manager only).
 api_router.include_router(auth.router)

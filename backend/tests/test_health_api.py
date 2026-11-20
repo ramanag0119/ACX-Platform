@@ -414,6 +414,30 @@ DELIVERED_PATHS = {
     # Reference data -- Country and Gender options
     f"{V1}/countries",
     f"{V1}/countries/genders",
+    # HTNG / FIAS integration operations (docs/HTNG_FIAS_ARCHITECTURE.md).
+    # Operator routes are RBAC + facility scoped; htng/inbound is disabled by
+    # default and authenticates integration clients, not HMS users.
+    f"{V1}/integrations/health",
+    f"{V1}/integrations/readiness",
+    f"{V1}/integrations/adapters",
+    f"{V1}/integrations/messages",
+    f"{V1}/integrations/messages/{{message_id}}",
+    f"{V1}/integrations/messages/{{message_id}}/redrive",
+    f"{V1}/integrations/dlq",
+    f"{V1}/integrations/outbox",
+    f"{V1}/integrations/metrics",
+    f"{V1}/integrations/audit",
+    f"{V1}/integrations/htng/inbound",
+    # Integration routes served since the hardening rounds (were missing here).
+    f"{V1}/integrations/facilities/health",
+    f"{V1}/integrations/mappings",
+    f"{V1}/integrations/mappings/{{mapping_id}}",
+    # Read-only integration observability (docs/HTNG_FIAS_OBSERVABILITY_API_DESIGN.md).
+    f"{V1}/integrations/observability/overview",
+    f"{V1}/integrations/observability/messages",
+    f"{V1}/integrations/observability/dlq",
+    # Windowed per-protocol aggregates for the HTNG / FIAS monitoring charts.
+    f"{V1}/integrations/observability/metrics",
 }
 
 
