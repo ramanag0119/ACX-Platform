@@ -11,6 +11,7 @@ import { useQueries, useQuery, type UseQueryOptions } from "@tanstack/react-quer
 import { ApiError, type QueryParams } from "./client";
 import * as api from "./endpoints";
 import * as reportApi from "./reports";
+import * as integrationApi from "./integrations";
 import * as writeApi from "./writes";
 import { MAX_PAGE_SIZE, type Page } from "./types";
 
@@ -414,3 +415,40 @@ export const useCurrencies = (params?: QueryParams) =>
   useApiQuery(["currencies", params], () => api.listCurrencies(params), {
     staleTime: 10 * 60_000,
   });
+
+// --- HTNG / FIAS integration observability (read-only) ---------------------
+
+/**
+ * One overview request serves the Overview, HTNG and FIAS screens: they share
+ * this query key, so moving between them reuses the cached answer. It is
+ * refreshed once a minute while a screen is open; the backend's own figures
+ * are durable aggregates, so polling faster would only add load.
+ */
+export const useIntegrationOverview = () =>
+  useApiQuery(["integrations", "overview"], (signal) => integrationApi.getIntegrationOverview(signal), {
+    refetchInterval: 60_000,
+  });
+
+/** Server-side filtered and paginated; the params ARE the query key. */
+export const useIntegrationMessages = (params: QueryParams, options?: EnabledOption) =>
+  useApiQuery(
+    ["integrations", "messages", params],
+    (signal) => integrationApi.searchIntegrationMessages(params, signal),
+    { placeholderData: (previous) => previous, ...options },
+  );
+
+export const useIntegrationDeadLetters = (params: QueryParams, options?: EnabledOption) =>
+  useApiQuery(
+    ["integrations", "dlq", params],
+    (signal) => integrationApi.listIntegrationDeadLetters(params, signal),
+    { placeholderData: (previous) => previous, ...options },
+  );
+
+/** Windowed per-protocol aggregates for the monitoring charts. Polled like the
+ *  overview; the previous window stays visible while a new one loads. */
+export const useIntegrationMetrics = (params: QueryParams, options?: EnabledOption) =>
+  useApiQuery(
+    ["integrations", "metrics", params],
+    (signal) => integrationApi.getIntegrationMetrics(params, signal),
+    { placeholderData: (previous) => previous, refetchInterval: 60_000, ...options },
+  );
