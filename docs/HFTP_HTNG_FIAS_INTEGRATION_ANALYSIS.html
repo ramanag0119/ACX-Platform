@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>HFTP Integration Analysis</title>
+<style>
+  @page { size: A4; margin: 18mm 17mm 18mm 17mm; }
+  :root{ --ink:#1c2530; --muted:#5b6672; --line:#d6dbe1; --soft:#f3f5f7; --navy:#173b6c;
+         --green:#1f7a4a; --green-soft:#e7f4ec; --amber:#9a5b06; --amber-soft:#fcf1df; --red:#a4261b; --red-soft:#fbeceb; --blue-soft:#e9f0fa; }
+  *{ box-sizing:border-box; }
+  html,body{ background:#fff; }
+  body{ font-family:"Segoe UI", Arial, sans-serif; color:var(--ink); font-size:10.3pt; line-height:1.5; margin:0; }
+  h1{ font-size:19pt; color:var(--navy); margin:0 0 4px; line-height:1.2; }
+  h2{ font-size:12.5pt; color:var(--navy); margin:20px 0 6px; padding-bottom:3px; border-bottom:1.5px solid var(--line); }
+  h3{ font-size:10.8pt; margin:12px 0 4px; }
+  p{ margin:5px 0 8px; }
+  ul,ol{ margin:4px 0 8px; padding-left:20px; } li{ margin:2px 0; }
+  table{ border-collapse:collapse; width:100%; margin:6px 0 10px; font-size:9.5pt; }
+  tr{ page-break-inside:avoid; }
+  th,td{ border:1px solid var(--line); padding:5px 7px; text-align:left; vertical-align:top; }
+  th{ background:var(--soft); font-weight:600; }
+  .meta{ color:var(--muted); font-size:9.3pt; margin-bottom:14px; }
+  .meta td{ border:none; padding:1px 12px 1px 0; }
+  .box{ border:1px solid var(--line); border-left:4px solid var(--navy); background:var(--blue-soft); padding:9px 12px; margin:10px 0; border-radius:3px; page-break-inside:avoid; }
+  .box.green{ border-left-color:var(--green); background:var(--green-soft); }
+  .box.amber{ border-left-color:var(--amber); background:var(--amber-soft); }
+  .box.red{ border-left-color:var(--red); background:var(--red-soft); }
+  .box b.t{ display:block; margin-bottom:3px; }
+  .ans{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:10px 0; }
+  .meta td{ white-space:nowrap; } .meta td:nth-child(2), .meta td:nth-child(4){ white-space:normal; }
+  .ans > div{ border:1px solid var(--line); border-radius:5px; padding:8px 10px; page-break-inside:avoid; }
+  .ans .q{ font-size:8.6pt; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
+  .ans .a{ font-size:12pt; font-weight:700; margin:2px 0; }
+  .no{ color:var(--red); } .yes{ color:var(--green); } .part{ color:var(--amber); }
+  .tag{ display:inline-block; font-size:8.3pt; font-weight:600; padding:0 6px; border-radius:9px; border:1px solid; white-space:nowrap; }
+  .t-v{ color:var(--green); background:var(--green-soft); border-color:#a8d6bb; }
+  .t-u{ color:var(--amber); background:var(--amber-soft); border-color:#eccb95; }
+  .small{ font-size:8.8pt; color:var(--muted); }
+  .src{ font-size:8.6pt; word-break:break-all; }
+  .src li{ margin:3px 0; }
+  .brk{ page-break-before:always; }
+  figure{ margin:8px 0 12px; page-break-inside:avoid; } figcaption{ font-size:8.6pt; color:var(--muted); text-align:center; }
+  svg text{ font-family:"Segoe UI", Arial, sans-serif; }
+</style>
+</head>
+<body>
+
+<div class="small" style="letter-spacing:.1em;text-transform:uppercase">ACX Platform · HMS External Integration · Analysis</div>
+<h1>Can HFTP Be Integrated into Our HTNG / FIAS Module?</h1>
+<p style="font-size:11.5pt;color:#334;margin-top:2px">Assessment of HFTP, HTNG and FIAS access, API keys, cost and the recommended next step</p>
+<table class="meta">
+  <tr><td><b>Prepared for</b></td><td>Owner / management</td><td><b>Date</b></td><td>20 November 2026</td></tr>
+  <tr><td><b>Scope</b></td><td>HMS HTNG &amp; FIAS integration module and its monitoring dashboard</td><td><b>Status of module</b></td><td>Foundation implemented, vendor validation pending</td></tr>
+</table>
+
+<h2>1. Executive Summary</h2>
+<div class="ans">
+  <div><div class="q">Can we integrate HFTP into our module / dashboard?</div><div class="a no">No, there is nothing to integrate</div>HFTP is a professional association (finance and technology). It does not operate a hotel-data service or an integration API.</div>
+  <div><div class="q">Should we apply to HFTP for an API key?</div><div class="a no">No, HFTP does not issue one</div>No API key or developer programme from HFTP was found. Integration credentials come from the hotel's <b>PMS vendor</b>.</div>
+  <div><div class="q">Is HTNG owned by HFTP?</div><div class="a part">No, HTNG is part of AHLA</div>HTNG was absorbed by the American Hotel &amp; Lodging Association (announced March 2021). HFTP is only a partner of HTNG.</div>
+  <div><div class="q">Are the specifications free?</div><div class="a part">Partly</div>HTNG specifications have historically been published publicly once ratified. The Oracle FIAS specification is publicly downloadable, but under Oracle licence terms. Production use needs a vendor or Oracle agreement.</div>
+</div>
+
+<div class="box green"><b class="t">Recommendation</b>
+  <b>Do not apply to HFTP</b>, and do not budget for an HFTP API key. Spend the effort on what actually unblocks the module:
+  <ol style="margin:4px 0 0">
+    <li>Confirm the target PMS vendor and product (decision HF-03). <b>This is the single gating decision.</b></li>
+    <li>Download the free HTNG specifications and the public Oracle FIAS specification now, for <b>internal reference only</b>, to reduce technical risk (no cost).</li>
+    <li>Once the vendor is known, request credentials, sandbox and certification from <b>that vendor</b> (for Oracle OPERA: the Oracle partner programme / OHIP).</li>
+  </ol>
+  HTNG (AHLA) or HFTP membership is <b>optional</b>. It is useful for networking and industry visibility, but no integration needs it.</div>
+
+<h2>2. Background: What We Asked and Why It Matters</h2>
+<p>Our HMS has an integration module that receives guest check-in and check-out events from a hotel's Property Management System (PMS) over two industry protocols:</p>
+<ul>
+  <li><b>HTNG</b>: XML messages over a web service (SOAP / HTTP).</li>
+  <li><b>FIAS</b>: Oracle's record-based protocol over a TCP link, used by Oracle OPERA and Suite8.</li>
+</ul>
+<p>The module and its five-page monitoring dashboard are built and tested on synthetic data. Two items block production:</p>
+<ul>
+  <li><b>HF-07 / HF-08</b>: the HTNG schema and security profile.</li>
+  <li><b>HF-11 / HF-06</b>: the FIAS specification and link rules.</li>
+</ul>
+<p>Both depend on the vendor decision <b>HF-03</b>. The question was whether HFTP could supply the missing piece, or a key that lets us connect.</p>
+
+<h2>3. Who Is Who in Hotel Integration Standards</h2>
+<table>
+  <tr><th style="width:17%">Organisation</th><th style="width:30%">What it is</th><th>What it provides to us</th><th style="width:15%">API / keys?</th></tr>
+  <tr><td><b>HFTP</b><br><span class="small">Hospitality Financial &amp; Technology Professionals</span></td><td>Professional association for hotel finance and technology people. Runs the HITEC conference and owns the USALI accounting standard.</td><td>Events, certification, research, USALI licensing, an AI / data-standards initiative. Partner of HTNG and OpenTravel.</td><td>None found</td></tr>
+  <tr><td><b>HTNG</b><br><span class="small">Hospitality Technology Next Generation</span></td><td>Standards body that publishes hotel interface specifications. <b>Part of AHLA since 2021.</b></td><td>Interface specifications (XML schemas, message definitions), workgroups, self-certification.</td><td>None. It publishes standards; it does not host a service.</td></tr>
+  <tr><td><b>AHLA</b></td><td>American Hotel &amp; Lodging Association. Owns HTNG.</td><td>Membership and industry-partner programmes that include HTNG workgroups.</td><td>None</td></tr>
+  <tr><td><b>OpenTravel Alliance</b></td><td>Travel messaging standards. Many HTNG messages are based on OpenTravel schemas.</td><td>Base XML schemas.</td><td>None</td></tr>
+  <tr><td><b>Oracle Hospitality</b></td><td>Vendor of OPERA PMS. <b>Owner of FIAS.</b></td><td>FIAS specification, partner and validation programmes, OHIP cloud APIs.</td><td><b>Yes</b> (OHIP application key, partner access)</td></tr>
+  <tr><td><b>Other PMS vendors</b></td><td>Protel, Mews, Cloudbeds and others</td><td>Each publishes its own HTNG profile or REST API.</td><td><b>Yes</b>, per vendor</td></tr>
+</table>
+
+<figure>
+<svg viewBox="0 0 700 170" width="100%">
+  <defs><marker id="m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#475569"/></marker></defs>
+  <rect x="10" y="10" width="200" height="60" rx="8" fill="#f3f5f7" stroke="#94a3b8"/>
+  <text x="110" y="35" text-anchor="middle" font-size="12.5" font-weight="700">HFTP</text>
+  <text x="110" y="54" text-anchor="middle" font-size="10.5" fill="#5b6672">association · no data flow</text>
+  <rect x="10" y="95" width="200" height="60" rx="8" fill="#f3f5f7" stroke="#94a3b8"/>
+  <text x="110" y="120" text-anchor="middle" font-size="12.5" font-weight="700">HTNG (AHLA) · Oracle FIAS</text>
+  <text x="110" y="139" text-anchor="middle" font-size="10.5" fill="#5b6672">documents / rules only</text>
+  <rect x="260" y="95" width="190" height="60" rx="8" fill="#e9f0fa" stroke="#173b6c"/>
+  <text x="355" y="120" text-anchor="middle" font-size="12.5" font-weight="700">Hotel's PMS vendor</text>
+  <text x="355" y="139" text-anchor="middle" font-size="10.5" fill="#5b6672">credentials · sandbox · live data</text>
+  <rect x="500" y="95" width="190" height="60" rx="8" fill="#e7f4ec" stroke="#1f7a4a"/>
+  <text x="595" y="120" text-anchor="middle" font-size="12.5" font-weight="700">Our HMS module</text>
+  <text x="595" y="139" text-anchor="middle" font-size="10.5" fill="#5b6672">HTNG / FIAS adapters</text>
+  <line x1="450" y1="125" x2="498" y2="125" stroke="#173b6c" stroke-width="2" marker-end="url(#m)"/>
+  <text x="474" y="116" text-anchor="middle" font-size="9.5" fill="#173b6c">messages</text>
+  <path d="M210,125 C240,125 240,165 595,160 L595,157" fill="none" stroke="#94a3b8" stroke-width="1.3" stroke-dasharray="4 3" marker-end="url(#m)"/>
+  <text x="380" y="168" text-anchor="middle" font-size="9.5" fill="#5b6672">specifications we build against</text>
+  <line x1="110" y1="70" x2="110" y2="93" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="2 3"/>
+  <text x="122" y="86" font-size="9.5" fill="#5b6672">partner only</text>
+</svg>
+<figcaption>Figure 1 · Data and credentials come from the PMS vendor. HFTP is not in the data path.</figcaption>
+</figure>
+
+<h2 class="brk">4. Detailed Findings</h2>
+
+<h3>Finding 1: HFTP offers no integration API or API key <span class="tag t-v">verified</span></h3>
+<p>HFTP's public activity covers the HITEC conference, the USALI accounting standard and its vendor "stamp" licensing programme, certifications, a PII task force, a code of digital responsibility, and an AI Collective planning AI data-standards guidance. None of the sources reviewed describe an API, developer portal or key issuance.</p>
+<p><b>Implication:</b> there is nothing from HFTP to plug into the HTNG or FIAS adapters or to show on the dashboard. Applying to HFTP would not produce a credential.</p>
+
+<h3>Finding 2: HTNG is owned by AHLA, not HFTP <span class="tag t-v">verified</span></h3>
+<p>AHLA and HTNG announced on 25 March 2021 that HTNG would become part of AHLA, keeping the HTNG brand. AHLA material from 2025 describes HTNG as "part of AHLA". HFTP and HTNG had a 2018 partnership and merged their European conference into HITEC Europe, but they are separate organisations. In 2022 HFTP's CEO publicly referred to AHLA's takeover of HTNG.</p>
+
+<h3>Finding 3: HTNG specifications are documents, mostly public <span class="tag t-u">partly verified</span></h3>
+<p>Published sources state that HTNG releases ratified specifications publicly, "in most cases", with some exceptions. Some sources also say the OpenTravel-based XML is free to download. These sources are several years old. We could not load htng.org during this review, so the current download terms should be checked on the site before relying on them.</p>
+<p><b>Implication for us:</b> the public HTNG XSD / WSDL set can seed the XSD library our HTNG adapter needs (linked to HF-39). It <b>does not</b> close HF-07. Each PMS vendor implements its own subset (profile), and we still need that vendor's profile, endpoints and security rules (HF-08).</p>
+
+<h3>Finding 4: FIAS is Oracle's; the specification is public but licensed <span class="tag t-v">verified</span></h3>
+<p>Oracle hosts <i>Oracle Hospitality Hotel Property Interface IFC8 FIAS Specification, Release 2.20.25 (May 2022)</i> on docs.oracle.com. We downloaded and inspected it. It contains exactly what our FIAS adapter is waiting for:</p>
+<ul>
+  <li>Record formats</li>
+  <li>Link control records (LS / LA / LE / LD / LR / LC)</li>
+  <li>Timeouts</li>
+  <li>Connection authentication</li>
+  <li>TLS option</li>
+  <li>Database resynchronisation</li>
+</ul>
+<p>However, the document carries Oracle's standard notice:</p>
+<p style="margin-left:14px;font-style:italic">"provided under a license agreement containing restrictions on use and disclosure … Except as expressly permitted in your license agreement or allowed by law, you may not use, copy, reproduce … modify … or display any part."</p>
+<p><b>Implication:</b></p>
+<ul>
+  <li>We can use it now as a <b>technical reference</b> to validate our FIAS framework against the real record and link rules. This materially de-risks HF-11 and HF-06.</li>
+  <li>Production use, Oracle validation and the hotel-side interface licence must go through Oracle or the hotel's OPERA contract.</li>
+  <li><b>Legal should confirm</b> how far we may use the document before an Oracle agreement exists.</li>
+  <li>The hotel may run a different FIAS version, so the vendor must still confirm the record set.</li>
+</ul>
+
+<h3>Finding 5: API keys come from the PMS vendor <span class="tag t-v">verified</span></h3>
+<p>For Oracle's cloud platform (OHIP), every API call must carry an <b>Application Key</b>. The key is issued and managed in the OHIP Developer Portal and must not be shared across organisations. Oracle documentation and secondary sources indicate that <b>production access</b> also needs an Oracle PartnerNetwork (OPN) reference and/or an Oracle Cloud Marketplace listing, confirmed by e-mail to Oracle's hospitality integrations team. The sources differ on which of the two is mandatory, so this should be confirmed with Oracle. Other PMS vendors run their own partner and key processes.</p>
+<p><b>Implication:</b> our decision register already lists "vendor REST" as one protocol option (HF-04). If the pilot hotel uses OPERA Cloud, Oracle may steer new partners to OHIP REST APIs rather than legacy FIAS. That would change which adapter we finish first.</p>
+
+<h2>5. Impact on Our HTNG / FIAS Module and Dashboard</h2>
+<table>
+  <tr><th style="width:24%">Area</th><th>Effect of this analysis</th><th style="width:17%">Related item</th></tr>
+  <tr><td>HFTP integration</td><td>None. No code or dashboard change is needed or possible.</td><td>—</td></tr>
+  <tr><td>Dashboard</td><td>No new data source. The "Vendor validation" status still depends on vendor documents and sign-off.</td><td>HF-07, HF-11, HF-09</td></tr>
+  <tr><td>HTNG adapter</td><td>Public HTNG schemas can be loaded as a reference XSD library. The vendor profile is still required.</td><td>HF-07, HF-08, HF-39</td></tr>
+  <tr><td>FIAS adapter</td><td>The public Oracle spec lets us check our framing, link start-up and ACK/heartbeat against Oracle's real rules, ahead of the vendor. It stays "reference" until the vendor confirms the version and legal clears use.</td><td>HF-11, HF-06</td></tr>
+  <tr><td>Protocol choice</td><td>If the vendor is Oracle OPERA Cloud, evaluate OHIP REST next to FIAS / HTNG.</td><td>HF-03, HF-04</td></tr>
+  <tr><td>Credentials</td><td>Obtained from the PMS vendor (e.g. OHIP application key), handled through our approved secrets channel.</td><td>HF-09, HF-22</td></tr>
+</table>
+
+<h2>6. Cost View</h2>
+<table>
+  <tr><th style="width:36%">Item</th><th>Cost</th><th style="width:20%">Confidence</th></tr>
+  <tr><td>HFTP API key</td><td>Not applicable. It does not exist.</td><td><span class="tag t-v">verified</span></td></tr>
+  <tr><td>HTNG specifications download</td><td>Historically free for ratified specs</td><td><span class="tag t-u">confirm on site</span></td></tr>
+  <tr><td>Oracle FIAS specification (reference copy)</td><td>Free to download; licence restrictions apply</td><td><span class="tag t-v">verified</span></td></tr>
+  <tr><td>HFTP / HTNG (AHLA) membership</td><td>Optional. Fees not published in the sources reviewed. A past joint offer gave 20% off the first year when joining both.</td><td><span class="tag t-u">request quote</span></td></tr>
+  <tr><td>Oracle partner validation of a legacy interface</td><td>One third-party source quotes USD 7,000–15,000 one-time. Not an Oracle price.</td><td><span class="tag t-u">unverified</span></td></tr>
+  <tr><td>OPN membership / Marketplace listing (OHIP route)</td><td>Oracle partner fees apply; amount not established here</td><td><span class="tag t-u">confirm with Oracle</span></td></tr>
+  <tr><td>Hotel-side interface licence (OPERA)</td><td>Usually part of the hotel's Oracle contract; the hotel pays</td><td><span class="tag t-u">confirm with hotel</span></td></tr>
+</table>
+
+<h2>7. Recommended Actions</h2>
+<table>
+  <tr><th style="width:4%">#</th><th>Action</th><th style="width:17%">Owner</th><th style="width:13%">Cost</th><th style="width:15%">When</th></tr>
+  <tr><td>1</td><td><b>Close HF-03:</b> name the pilot hotel's PMS vendor, product (OPERA 5 / OPERA Cloud / other), version and hosting.</td><td>Owner / PO</td><td>None</td><td><b>Now</b>. Gates everything else.</td></tr>
+  <tr><td>2</td><td>Do <b>not</b> apply to HFTP for an API key. Record this decision.</td><td>Owner</td><td>None</td><td>Now</td></tr>
+  <tr><td>3</td><td>Download the public HTNG specifications and the Oracle FIAS 2.20.25 spec into a restricted internal folder (not the public repo). Engineering compares the adapters against them as a <b>reference-only</b> exercise.</td><td>Engineering</td><td>Staff time</td><td>Now (parallel)</td></tr>
+  <tr><td>4</td><td>Legal reviews the Oracle licence notice and confirms permitted use before an Oracle agreement exists.</td><td>Legal</td><td>Staff time</td><td>Now (parallel)</td></tr>
+  <tr><td>5</td><td>After HF-03: send the prepared vendor request package (documents, sandbox, credentials, certification process).</td><td>Project lead</td><td>None</td><td>After #1</td></tr>
+  <tr><td>6</td><td>If the vendor is Oracle: get the OPN / Marketplace and validation requirements and fees from Oracle in writing. Compare FIAS vs OHIP REST.</td><td>Project lead</td><td>Oracle fees (TBC)</td><td>After #1</td></tr>
+  <tr><td>7</td><td>Optional: get an AHLA / HTNG industry-partner quote if management wants workgroup access, certification badges or HITEC visibility.</td><td>Owner</td><td>Membership (TBC)</td><td>Any time</td></tr>
+</table>
+
+<h2>8. Risks and Caveats</h2>
+<ul>
+  <li><b>Licence risk.</b> Building production code directly from Oracle's FIAS document without an Oracle agreement may breach its terms. Hence actions #3 and #4.</li>
+  <li><b>Version risk.</b> The public FIAS document is release 2.20.25 (2022). The hotel's installed interface may differ. The vendor must confirm.</li>
+  <li><b>Profile risk.</b> Generic HTNG schemas do not guarantee compatibility with a specific vendor's HTNG implementation.</li>
+  <li><b>Source age.</b> Some statements about HTNG publication terms and membership offers come from older articles. htng.org and Oracle's partner page could not be loaded during this review (empty response / HTTP 403). Confirm directly before committing budget.</li>
+  <li><b>No engineering blocker.</b> None of the above changes the current status. The module is ready, and it is waiting on vendor identification and approvals.</li>
+</ul>
+
+<div class="box"><b class="t">Bottom line</b>
+  HFTP is an industry association. It is not a technology provider we connect to, so there is no HFTP API key to apply for. The keys and the final specifications we need come from the hotel's PMS vendor. The fastest way forward is to <b>confirm the vendor (HF-03)</b>. Meanwhile, we can use the free public HTNG and Oracle FIAS documents, as reference only, to reduce risk.</div>
+
+<h2>Sources</h2>
+<ol class="src">
+  <li>AHLA – "AHLA Integrates HTNG, Strengthening Technology Expertise, Advocacy Focus" (Mar 2021): https://www.hospitalitynet.org/news/4103641.html · https://www.ahla.com/node/2169</li>
+  <li>HFTP, HTNG Sign Partnership Agreement: https://hotelbusiness.com/hftp-htng-sign-partnership-agreement/</li>
+  <li>HFTP and HTNG partner for HITEC Europe: https://news.hftp.org/details/4094931.html</li>
+  <li>HFTP Board rejects AHLA merger offer (references AHLA takeover of HTNG): https://news.hftp.org/details/4110267.html</li>
+  <li>HFTP, HSMAI and AHLA/HTNG AI Coordinating Council: https://www.hospitalitynet.org/news/4135455</li>
+  <li>HFTP USALI and stamp licensing: https://www.hospitalitynet.org/news/4124901.html · https://www.hospitalitynet.org/news/4125006</li>
+  <li>HFTP AI Collective roadmap (HITEC 2026): https://hospitalitynet.org/news/4133003</li>
+  <li>HFTP and OpenTravel partnership: https://opentravel.org/news/hftp-and-opentravel-announce-newest-partnership-in-systems-standards-horizon/</li>
+  <li>HFTP / HTNG joint membership discount: https://www.hotel-online.com/?p=239721</li>
+  <li>HTNG specification releases: https://www.htng.org/news/358947/HTNG-Releases-New-and-Updated-Interface-Specifications.htm · https://www.altexsoft.com/blog/hotel-tech-specifications-htng-opentravel/</li>
+  <li>Oracle IFC8 FIAS Specification 2.20.25 (May 2022): https://docs.oracle.com/cd/E94145_01/docs/HGBU-HPI-IFC8-FIAS-Specification2.25.pdf</li>
+  <li>Oracle OHIP – Application Key: https://docs.oracle.com/en/industries/hospitality/integration-platform/ohips/c_subscr_key.htm</li>
+  <li>Oracle OHIP FAQs / user guide: https://docs.oracle.com/en/industries/hospitality/integration-platform/ohipu/c_faqs.htm</li>
+  <li>Oracle Hospitality partner integration programmes: https://www.oracle.com/hospitality/partner-integration/</li>
+  <li>OPERA PMS integration overview (third-party, cost estimate): https://www.altexsoft.com/blog/opera-pms-integration/</li>
+  <li>Internal: docs/HTNG_FIAS_DECISION_REGISTER.md (HF-03, HF-04, HF-06, HF-07, HF-08, HF-09, HF-11, HF-39)</li>
+</ol>
+<p class="small">Research performed 20 November 2026 using public web sources. Items marked "unverified" or "confirm" must be confirmed with the named organisation before any spend.</p>
+
+</body>
+</html>

@@ -1,0 +1,1002 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>HTNG &amp; FIAS Integration – Team Explanation (Tanglish)</title>
+<style>
+  @page { size: A4; margin: 16mm 15mm 16mm 15mm; }
+  :root{
+    --ink:#1f2933; --muted:#5b6672; --line:#d9dee4; --soft:#f4f6f8;
+    --blue:#1d5fa8; --blue-soft:#e6f0fb; --green:#1f7a4a; --green-soft:#e5f4ec;
+    --amber:#a8650a; --amber-soft:#fdf2e0; --red:#b42318; --red-soft:#fdeceb;
+    --violet:#5b3fa8; --violet-soft:#efeafb; --grey-soft:#eef0f2;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ background:#fff; }
+  body{ font-family:"Segoe UI", Arial, sans-serif; color:var(--ink); font-size:10.4pt; line-height:1.5; margin:0; }
+  h1{ font-size:20pt; margin:0 0 6px; color:var(--blue); line-height:1.2; }
+  h2{ font-size:13pt; margin:18px 0 6px; color:var(--ink); }
+  h3{ font-size:11pt; margin:14px 0 4px; color:var(--blue); }
+  p{ margin:5px 0 7px; }
+  ul,ol{ margin:4px 0 8px 0; padding-left:20px; }
+  li{ margin:2px 0; }
+  .chapter{ page-break-before:always; }
+  .chapnum{ font-size:9pt; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin-bottom:2px; }
+  .lead{ font-size:11pt; color:#334; }
+  table{ border-collapse:collapse; width:100%; margin:6px 0 10px; font-size:9.6pt; page-break-inside:auto; }
+  tr{ page-break-inside:avoid; }
+  th,td{ border:1px solid var(--line); padding:5px 7px; text-align:left; vertical-align:top; }
+  th{ background:var(--soft); font-weight:600; }
+  .num{ text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .box{ border:1px solid var(--line); border-left:4px solid var(--blue); background:var(--blue-soft); padding:8px 11px; margin:8px 0; border-radius:4px; page-break-inside:avoid; }
+  .box.green{ border-left-color:var(--green); background:var(--green-soft); }
+  .box.amber{ border-left-color:var(--amber); background:var(--amber-soft); }
+  .box.red{ border-left-color:var(--red); background:var(--red-soft); }
+  .box.violet{ border-left-color:var(--violet); background:var(--violet-soft); }
+  .box b.t{ display:block; margin-bottom:2px; }
+  .say{ border:1px dashed #9bb3cc; background:#fafcff; padding:7px 11px; margin:6px 0 10px; border-radius:4px; font-style:italic; page-break-inside:avoid; }
+  .say:before{ content:"Team / client kitta sollunga: "; font-style:normal; font-weight:600; color:var(--blue); }
+  .badge{ display:inline-block; padding:0 7px; border-radius:10px; font-size:8.6pt; font-weight:600; border:1px solid; white-space:nowrap; }
+  .b-red{ color:var(--red); background:var(--red-soft); border-color:#f3b8b2; }
+  .b-green{ color:var(--green); background:var(--green-soft); border-color:#a9d9bf; }
+  .b-amber{ color:var(--amber); background:var(--amber-soft); border-color:#efcf9c; }
+  .b-grey{ color:#4a5561; background:var(--grey-soft); border-color:#c9cfd6; }
+  .b-dash{ color:#4a5561; background:#fff; border:1px dashed #8a96a3; }
+  .kpis{ display:grid; grid-template-columns:repeat(6,1fr); gap:6px; margin:8px 0; }
+  .kpi{ border:1px solid var(--line); border-radius:6px; padding:6px 7px; background:#fff; }
+  .kpi .l{ font-size:7.8pt; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); }
+  .kpi .v{ font-size:16pt; font-weight:700; line-height:1.15; }
+  .kpi .s{ font-size:7.6pt; color:var(--muted); }
+  .kpicard{ border:1px solid var(--line); border-radius:6px; padding:8px 11px; margin:9px 0; page-break-inside:avoid; }
+  .kpicard h3{ margin-top:0; }
+  .kpicard .row{ display:grid; grid-template-columns:112px 1fr; gap:3px 10px; }
+  .kpicard .k{ color:var(--muted); font-weight:600; font-size:9.3pt; }
+  .cover{ height:255mm; display:flex; flex-direction:column; justify-content:space-between; }
+  .cover .top{ margin-top:30mm; }
+  .cover h1{ font-size:27pt; }
+  .cover .sub{ font-size:13pt; color:#334; margin-top:8px; }
+  .cover .status{ margin-top:18px; display:inline-block; padding:6px 12px; border:1.5px solid var(--amber); color:var(--amber); background:var(--amber-soft); border-radius:6px; font-weight:700; letter-spacing:.03em; }
+  .cover .meta{ font-size:10pt; color:var(--muted); border-top:1px solid var(--line); padding-top:10px; }
+  .toc{ columns:2; column-gap:24px; font-size:10pt; }
+  .toc div{ break-inside:avoid; padding:2px 0; border-bottom:1px dotted var(--line); }
+  figure{ margin:8px 0 12px; page-break-inside:avoid; }
+  figcaption{ font-size:8.8pt; color:var(--muted); margin-top:3px; text-align:center; }
+  svg text{ font-family:"Segoe UI", Arial, sans-serif; }
+  .two{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .small{ font-size:9pt; color:var(--muted); }
+  .script p{ margin:6px 0; }
+  .script .who{ font-weight:700; color:var(--blue); }
+  .avoid{ page-break-inside:avoid; }
+</style>
+</head>
+<body>
+
+<!-- ============ COVER ============ -->
+<section class="cover">
+  <div class="top">
+    <div class="chapnum">HMS · External Integration</div>
+    <h1>HTNG &amp; FIAS Integration<br>Simple-aa Purinjukka Oru Guide</h1>
+    <div class="sub">Team-kum client-kum explain panna: enna build pannirukom, HMS-la idhu enna pannudhu, dashboard-la ovvoru page-um enna kaattudhu, innum enna pending</div>
+    <div class="status">FOUNDATION IMPLEMENTED — VENDOR VALIDATION PENDING</div>
+    <div class="box amber" style="margin-top:22px">
+      <b class="t">Mudhalla idhu therinjukonga</b>
+      Ippo endha real hotel vendor-um namma system-oda connect aagala. Indha document-la varra
+      ellaa numbers-um (Inbound 42, Pending 13, …) <b>test-ku namma create panna demo data</b>.
+      Calculation mattum real system-la real-aa nadakkudhu.
+    </div>
+  </div>
+  <div class="meta">
+    Prepared: 20 November 2026 · Language: Tanglish · Level: beginner (HTNG / FIAS build pannaadhavangalukkum puriyum)<br>
+    Source: ACX-Platform repository (backend/app/integrations, frontend/src/features/integrations, docs/HTNG_FIAS_*)
+  </div>
+</section>
+
+<!-- ============ TOC ============ -->
+<section class="chapter">
+  <h1>Indha Document-la Enna Irukku</h1>
+  <p class="lead">Mudhal 5 chapter <b>"enna, yen, eppadi"</b> nu solludhu. Adutha 6 chapter <b>dashboard-la ovvoru page-um</b> explain pannudhu. Kadaisi chapters FAQ-um, neenga presentation-la apdiye pesa oru <b>ready script</b>-um.</p>
+  <div class="toc">
+    <div>1. Oru Simple Story — Hotel-la Enna Nadakkudhu?</div>
+    <div>2. HTNG Enna? FIAS Enna?</div>
+    <div>3. HMS-la Idhu Edhukku Use Aagudhu?</div>
+    <div>4. Full Workflow — Oru Message-oda Payanam</div>
+    <div>5. Namma HMS-la Enna Enna Integrate Pannirukom</div>
+    <div>6. Ippo Varaikkum Enna Pannirukom</div>
+    <div>7. Innum Enna Pending? Yen?</div>
+    <div>8. Eppadi Implement Panna Porom — Roadmap</div>
+    <div>9. Dashboard — 5 Pages Oru Paarvai</div>
+    <div>10. Overview Page (Full Explanation)</div>
+    <div>11. HTNG Monitoring Page</div>
+    <div>12. FIAS Monitoring Page</div>
+    <div>13. Message Logs Page</div>
+    <div>14. Failed Messages / DLQ Page</div>
+    <div>15. Numbers Mock-aa Live-aa?</div>
+    <div>16. Status Words Dictionary</div>
+    <div>17. Common Kelvigal (FAQ)</div>
+    <div>18. Presentation Script (Apdiye Pesalaam)</div>
+    <div>19. Oru Page Summary</div>
+  </div>
+
+  <h2>Indha document-a eppadi use pannalaam</h2>
+  <table>
+    <tr><th style="width:32%">Neenga yaaru</th><th>Enna padinga</th></tr>
+    <tr><td>Client / manager (5 nimisham dhaan irukku)</td><td>Chapter 1, 3, 7, 19</td></tr>
+    <tr><td>Pudhu team member</td><td>Chapter 1 to 8 full-aa, appuram 10</td></tr>
+    <tr><td>Support / operations team</td><td>Chapter 9 to 17</td></tr>
+    <tr><td>Presentation kudukka poreenga</td><td>Chapter 18 script + Chapter 4 diagram</td></tr>
+  </table>
+
+  <div class="box">
+    <b class="t">Indha document-la varra mukkiyamaana 6 words</b>
+    <table style="margin:4px 0 0">
+      <tr><td style="width:24%"><b>PMS</b></td><td>Hotel front desk software (vendor-oda). Check-in, check-out ellam inga dhaan first nadakkum.</td></tr>
+      <tr><td><b>HMS</b></td><td>Namma product. Rooms, stays, devices, housekeeping ellam manage pannudhu.</td></tr>
+      <tr><td><b>Message</b></td><td>PMS namma HMS-ku anuppura oru "seidhi". Udharanam: "Room 204-la guest check-in aanaanga".</td></tr>
+      <tr><td><b>Inbound / Outbound</b></td><td>Inbound = vendor-la irundhu namakku varradhu. Outbound = naama vendor-ku anuppuradhu.</td></tr>
+      <tr><td><b>Worker</b></td><td>Background-la run aagura oru program. Save aana messages-a eduthu HMS-la apply pannum.</td></tr>
+      <tr><td><b>DLQ</b></td><td>Dead Letter Queue. Fail aana messages-a podura "complaint box". Oru aal paarthu dhaan fix pannanum.</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ============ CH 1 ============ -->
+<section class="chapter">
+  <div class="chapnum">Chapter 1</div>
+  <h1>Oru Simple Story — Hotel-la Enna Nadakkudhu?</h1>
+  <p class="lead">Oru hotel-la rendu software irukku nu nenachukonga.</p>
+
+  <div class="two">
+    <div class="box"><b class="t">PMS (Property Management System)</b>
+      Hotel-oda front desk software. Oracle Opera, Protel maadhiri vendor products. Reservation, check-in, check-out, bill ellam inga dhaan.</div>
+    <div class="box violet"><b class="t">HMS (namma product)</b>
+      Rooms, guest stays, service requests, devices, energy, housekeeping ellathayum manage pannudhu.</div>
+  </div>
+
+  <h2>Problem enna?</h2>
+  <p>Guest <b>Mr. Kumar</b> front desk-la check-in pannaaru. Front desk staff andha check-in-a <b>PMS-la</b> enter pannuvaanga. Aana namma <b>HMS-ku</b> idhu theriyaadhu. Adhanaala:</p>
+  <ul>
+    <li>Room innum "Vacant"-aa dhaan kaattum.</li>
+    <li>Room devices welcome mode-ku poagaadhu.</li>
+    <li>Housekeeping-ku update varaadhu.</li>
+    <li>Staff idhai HMS-la thirumba type pannanum. Time waste, mistakes-um varum.</li>
+  </ul>
+
+  <h2>Solution</h2>
+  <p>PMS-um HMS-um <b>automatic-aa pesanum</b>. PMS-la check-in aana udane, adhu oru message-aa HMS-ku varanum. HMS adhai eduthu room-a "Occupied" nu maathanum. Indha "pesura bridge" dhaan indha project.</p>
+
+  <figure>
+  <svg viewBox="0 0 700 150" width="100%">
+    <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#475569"/></marker></defs>
+    <rect x="10" y="35" width="170" height="80" rx="10" fill="#eef0f2" stroke="#64748b"/>
+    <text x="95" y="68" text-anchor="middle" font-size="14" font-weight="700" fill="#1f2933">Hotel PMS</text>
+    <text x="95" y="88" text-anchor="middle" font-size="11" fill="#475569">front desk · check-in</text>
+    <rect x="265" y="35" width="170" height="80" rx="10" fill="#e5f4ec" stroke="#1f7a4a"/>
+    <text x="350" y="62" text-anchor="middle" font-size="14" font-weight="700" fill="#1f2933">Integration bridge</text>
+    <text x="350" y="82" text-anchor="middle" font-size="11" fill="#475569">HTNG door / FIAS door</text>
+    <text x="350" y="99" text-anchor="middle" font-size="11" fill="#475569">(indha project)</text>
+    <rect x="520" y="35" width="170" height="80" rx="10" fill="#efeafb" stroke="#5b3fa8"/>
+    <text x="605" y="68" text-anchor="middle" font-size="14" font-weight="700" fill="#1f2933">Namma HMS</text>
+    <text x="605" y="88" text-anchor="middle" font-size="11" fill="#475569">room "Occupied"</text>
+    <line x1="180" y1="75" x2="263" y2="75" stroke="#475569" stroke-width="1.8" marker-end="url(#ar)"/>
+    <line x1="435" y1="75" x2="518" y2="75" stroke="#475569" stroke-width="1.8" marker-end="url(#ar)"/>
+    <text x="222" y="66" text-anchor="middle" font-size="10.5" fill="#475569">message</text>
+    <text x="477" y="66" text-anchor="middle" font-size="10.5" fill="#475569">update</text>
+  </svg>
+  <figcaption>Figure 1 · PMS → bridge → HMS. Staff thirumba type panna vendaam.</figcaption>
+  </figure>
+
+  <div class="say">Hotel-oda front desk software-la nadakkura check-in, check-out ellam namma HMS-ku automatic-aa varra maadhiri oru bridge build pannirukom.</div>
+</section>
+
+<!-- ============ CH 2 ============ -->
+<section class="chapter">
+  <div class="chapnum">Chapter 2</div>
+  <h1>HTNG Enna? FIAS Enna?</h1>
+  <p class="lead">PMS-um HMS-um pesa oru <b>common language (protocol)</b> vendum. Hotel industry-la popular-aa rendu language irukku: HTNG, FIAS.</p>
+
+  <h2>HTNG — "courier-la letter anuppura maadhiri"</h2>
+  <p><b>HTNG</b> = Hospitality Technology Next Generation. Idhu hotel industry standards.</p>
+  <ul>
+    <li>Ovvoru message-um oru <b>XML document</b> (structured letter maadhiri).</li>
+    <li>PMS adhai internet / network vazhiya namma server-oda oru <b>web address</b>-ku anuppum (HTTP / SOAP).</li>
+    <li>Ovvoru message-um thani thani-aa varum. "Letter vandhuchu → reply panrom."</li>
+  </ul>
+
+  <h2>FIAS — "always-on phone line maadhiri"</h2>
+  <p><b>FIAS</b> = Fidelio Interface Application Specification. Idhu Oracle Opera maadhiri PMS-ku romba common.</p>
+  <ul>
+    <li>PMS-um namma system-um oru <b>TCP connection</b> (continuous line) open vachirukkum.</li>
+    <li>Andha line-la chinna chinna <b>text records</b> anuppum. Udharanam: "GI|RN204|…" (GI = Guest In).</li>
+    <li>Line alive-aa irukkaa nu check panna "heartbeat" (naadi) messages-um varum.</li>
+  </ul>
+
+  <table>
+    <tr><th style="width:22%"></th><th>HTNG</th><th>FIAS</th></tr>
+    <tr><td><b>Simple-aa</b></td><td>Courier letter</td><td>Always-on phone line</td></tr>
+    <tr><td><b>Eppadi varum</b></td><td>Web service (HTTP + SOAP + XML)</td><td>TCP link-la records</td></tr>
+    <tr><td><b>Yaar use pannuvaanga</b></td><td>Modern / cloud PMS vendors</td><td>Oracle Opera maadhiri traditional PMS</td></tr>
+    <tr><td><b>Rules enga irukku</b></td><td>Vendor-oda WSDL / XSD files (HF-07)</td><td>Official FIAS manual (HF-11)</td></tr>
+    <tr><td><b>Namma code</b></td><td>Ready <span class="badge b-grey">switch OFF</span></td><td>Ready <span class="badge b-grey">link start pannala</span></td></tr>
+  </table>
+
+  <h2>Yen rendu-um build pannom?</h2>
+  <p>Endha PMS vendor-oda connect pannanum nu <b>innum decide aagala (decision HF-03)</b>. Avanga endha language pesuvaanga nu-um theriyaadhu (HF-04). Sila vendor FIAS mattum, sila vendor HTNG mattum, sila vendor rendu-um support pannuvaanga.</p>
+  <p>Adhanaala rendukkum common-aa varra parts-a (security, save, retry, monitoring) <b>oru dhadava</b> build pannom. Protocol-specific parts-a "vendor rules vandha udane plug panra maadhiri" ready-aa vachirukom. <b>Vendor rules-a guess panni code ezhudhala.</b></p>
+
+  <div class="box"><b class="t">Udharanam</b>
+    Oru vendor-oda exact XML format theriyaama guess panni code ezhudhinaa, real hotel-la wrong room-ku check-in poagalaam. Adhanaala official document vandha appuram dhaan final format fix pannuvom.</div>
+  <div class="say">Rendu protocol-kum common foundation ready. Vendor yaarunu confirm aagi, avanga official documents kudutha udane andha protocol-a final pannuvom.</div>
+</section>
+
+<!-- ============ CH 3 ============ -->
+<section class="chapter">
+  <div class="chapnum">Chapter 3</div>
+  <h1>HMS-la Idhu Edhukku Use Aagudhu?</h1>
+
+  <h2>Mudhal phase-la handle panra events</h2>
+  <table>
+    <tr><th style="width:24%">PMS-la nadakkuradhu</th><th>HMS-la enna aaganum</th><th style="width:26%">Ippo status</th></tr>
+    <tr><td><b>Guest check-in</b></td><td>Stay "active" aagum, room <b>Occupied</b> aagum (HMS business rules padi)</td><td>Code ready · <span class="badge b-amber">approval gate closed</span></td></tr>
+    <tr><td><b>Guest check-out</b></td><td>Stay close aagum</td><td>Code ready · <span class="badge b-amber">approval gate closed</span></td></tr>
+  </table>
+  <p class="small">"Gate closed" = code irukku, aana business approvals (HF-01, HF-02, HF-05, HF-19) varra varaikkum HMS data-va real-aa maathaadhu. Safety lock maadhiri.</p>
+
+  <h2>Indha integration kudukkura benefits</h2>
+  <table>
+    <tr><th style="width:24%">Benefit</th><th>Simple-aa</th></tr>
+    <tr><td><b>Automation</b></td><td>Check-in / check-out staff type pannaame HMS-la reflect aagum</td></tr>
+    <tr><td><b>Accuracy</b></td><td>PMS-um HMS-um same data vachirukkum. Mismatch varaadhu.</td></tr>
+    <tr><td><b>Speed</b></td><td>Guest room-ku poga munnaadiye room ready-aa irukkum</td></tr>
+    <tr><td><b>No duplicate</b></td><td>Same message rendu thadavai vandhaalum oru thadavai dhaan apply aagum</td></tr>
+    <tr><td><b>No data loss</b></td><td>Fail aana message-um lose aagaadhu. DLQ-la safe-aa irukkum.</td></tr>
+    <tr><td><b>Hotel privacy</b></td><td>Oru hotel-oda data vera hotel user-ku theriyaadhu</td></tr>
+    <tr><td><b>Audit</b></td><td>Enna nadandhuchu, eppo, yaar nu ellame record aagum</td></tr>
+    <tr><td><b>Visibility</b></td><td>Dashboard-la messages, fails, backlog ellam paakkalaam</td></tr>
+  </table>
+
+  <div class="box green"><b class="t">Client-ku oru line-la</b>
+    "Hotel front desk-la nadakkura check-in, check-out ellam namma HMS-ku safe-aa, duplicate illaama, correct hotel-ku, correct order-la automatic-aa varum. Ellathayum dashboard-la monitor pannalaam."</div>
+</section>
+
+<!-- ============ CH 4 ============ -->
+<section class="chapter">
+  <div class="chapnum">Chapter 4</div>
+  <h1>Full Workflow — Oru Message-oda Payanam</h1>
+  <p class="lead">Mr. Kumar Room 204-la check-in pannaaru. Andha information HMS-ku eppadi varudhu nu step by step paarpom.</p>
+
+  <figure>
+  <svg viewBox="0 0 700 360" width="100%">
+    <defs><marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#475569"/></marker></defs>
+    <!-- row 1 -->
+    <g font-size="11">
+    <rect x="5" y="15" width="150" height="70" rx="8" fill="#eef0f2" stroke="#64748b"/>
+    <text x="80" y="38" text-anchor="middle" font-weight="700" font-size="12">1. Check-in at PMS</text>
+    <text x="80" y="56" text-anchor="middle" fill="#475569">Front desk</text>
+    <text x="80" y="71" text-anchor="middle" fill="#475569">Room 204</text>
+
+    <rect x="182" y="15" width="150" height="70" rx="8" fill="#e6f0fb" stroke="#1d5fa8"/>
+    <text x="257" y="38" text-anchor="middle" font-weight="700" font-size="12">2. Message varudhu</text>
+    <text x="257" y="56" text-anchor="middle" fill="#475569">HTNG (web) or</text>
+    <text x="257" y="71" text-anchor="middle" fill="#475569">FIAS (TCP line)</text>
+
+    <rect x="359" y="15" width="150" height="70" rx="8" fill="#e6f0fb" stroke="#1d5fa8"/>
+    <text x="434" y="38" text-anchor="middle" font-weight="700" font-size="12">3. Door checks</text>
+    <text x="434" y="56" text-anchor="middle" fill="#475569">Login correct-aa?</text>
+    <text x="434" y="71" text-anchor="middle" fill="#475569">Hotel? Format?</text>
+
+    <rect x="536" y="15" width="155" height="70" rx="8" fill="#e5f4ec" stroke="#1f7a4a"/>
+    <text x="613" y="38" text-anchor="middle" font-weight="700" font-size="12">4. Safe-aa save</text>
+    <text x="613" y="56" text-anchor="middle" fill="#475569">Database-la</text>
+    <text x="613" y="71" text-anchor="middle" fill="#475569">status = PENDING</text>
+    </g>
+    <line x1="155" y1="50" x2="180" y2="50" stroke="#475569" stroke-width="1.6" marker-end="url(#a2)"/>
+    <line x1="332" y1="50" x2="357" y2="50" stroke="#475569" stroke-width="1.6" marker-end="url(#a2)"/>
+    <line x1="509" y1="50" x2="534" y2="50" stroke="#475569" stroke-width="1.6" marker-end="url(#a2)"/>
+    <!-- reject branch -->
+    <line x1="434" y1="85" x2="434" y2="118" stroke="#b42318" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#a2)"/>
+    <rect x="352" y="120" width="164" height="38" rx="6" fill="#fdeceb" stroke="#b42318"/>
+    <text x="434" y="136" text-anchor="middle" font-size="10.5">Thappu-na REJECT</text>
+    <text x="434" y="150" text-anchor="middle" font-size="10.5" fill="#475569">(save aagaadhu, count aagaadhu)</text>
+    <!-- down to worker -->
+    <path d="M613,85 L613,200 L520,200" fill="none" stroke="#475569" stroke-width="1.6" marker-end="url(#a2)"/>
+    <g font-size="11">
+    <rect x="359" y="175" width="160" height="70" rx="8" fill="#fdf2e0" stroke="#a8650a"/>
+    <text x="439" y="198" text-anchor="middle" font-weight="700" font-size="12">5. Worker edukkum</text>
+    <text x="439" y="216" text-anchor="middle" fill="#475569">Background program</text>
+    <text x="439" y="231" text-anchor="middle" fill="#475569">oru oru-aa process</text>
+
+    <rect x="182" y="175" width="150" height="70" rx="8" fill="#efeafb" stroke="#5b3fa8"/>
+    <text x="257" y="198" text-anchor="middle" font-weight="700" font-size="12">6. HMS update</text>
+    <text x="257" y="216" text-anchor="middle" fill="#475569">Stay active,</text>
+    <text x="257" y="231" text-anchor="middle" fill="#475569">Room Occupied</text>
+
+    <rect x="5" y="175" width="150" height="70" rx="8" fill="#e5f4ec" stroke="#1f7a4a"/>
+    <text x="80" y="198" text-anchor="middle" font-weight="700" font-size="12">7. Result</text>
+    <text x="80" y="216" text-anchor="middle" fill="#475569">Success = PROCESSED</text>
+    <text x="80" y="231" text-anchor="middle" fill="#475569">+ audit record</text>
+    </g>
+    <line x1="359" y1="210" x2="334" y2="210" stroke="#475569" stroke-width="1.6" marker-end="url(#a2)"/>
+    <line x1="182" y1="210" x2="157" y2="210" stroke="#475569" stroke-width="1.6" marker-end="url(#a2)"/>
+    <!-- failure branches -->
+    <rect x="182" y="275" width="150" height="58" rx="6" fill="#fdf2e0" stroke="#a8650a"/>
+    <text x="257" y="295" text-anchor="middle" font-size="10.5" font-weight="700">Temporary problem</text>
+    <text x="257" y="310" text-anchor="middle" font-size="10.5" fill="#475569">AWAITING RETRY</text>
+    <text x="257" y="324" text-anchor="middle" font-size="10.5" fill="#475569">(max 5 attempts)</text>
+    <rect x="359" y="275" width="160" height="58" rx="6" fill="#fdeceb" stroke="#b42318"/>
+    <text x="439" y="295" text-anchor="middle" font-size="10.5" font-weight="700">Permanent / 5 tries fail</text>
+    <text x="439" y="310" text-anchor="middle" font-size="10.5" fill="#475569">FAILED → DLQ</text>
+    <text x="439" y="324" text-anchor="middle" font-size="10.5" fill="#475569">(oru aal paarkkanum)</text>
+    <line x1="257" y1="245" x2="257" y2="273" stroke="#a8650a" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#a2)"/>
+    <line x1="332" y1="304" x2="357" y2="304" stroke="#b42318" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#a2)"/>
+    <path d="M182,304 L120,304 L120,262 L400,262 L420,247" fill="none" stroke="#a8650a" stroke-width="1.2" stroke-dasharray="3 3" marker-end="url(#a2)"/>
+    <text x="60" y="290" font-size="10" fill="#a8650a">wait panni</text>
+    <text x="60" y="303" font-size="10" fill="#a8650a">thirumba try</text>
+    <!-- dashboard -->
+    <rect x="545" y="275" width="146" height="58" rx="8" fill="#e6f0fb" stroke="#1d5fa8"/>
+    <text x="618" y="298" text-anchor="middle" font-size="12" font-weight="700">8. Dashboard</text>
+    <text x="618" y="316" text-anchor="middle" font-size="10.5" fill="#475569">ellathayum kaattum</text>
+  </svg>
+  <figcaption>Figure 2 · Oru check-in message PMS-la irundhu HMS dashboard varaikkum</figcaption>
+  </figure>
+
+  <table>
+    <tr><th style="width:5%">#</th><th style="width:22%">Step</th><th>Simple explanation</th></tr>
+    <tr><td>1</td><td>PMS-la event</td><td>Front desk Mr. Kumar-a Room 204-la check-in pannaanga.</td></tr>
+    <tr><td>2</td><td>Message anuppudhu</td><td>PMS andha info-va HTNG (web) or FIAS (TCP line) vazhiya namma door-ku anuppum.</td></tr>
+    <tr><td>3</td><td>Door checks</td><td>Correct vendor-aa (login)? Endha hotel (facility mapping)? Format correct-aa? Edhaavadhu thappu-na <b>reject</b> pannidum. Andha message save aagaadhu.</td></tr>
+    <tr><td>4</td><td>Safe-aa save</td><td>Correct-aana message-a database-la <b>PENDING</b> status-la save pannum. Duplicate-aa irundhaa pudhu row create aagaadhu.</td></tr>
+    <tr><td>5</td><td>Worker</td><td>Background-la run aagura worker program pending messages-a oru oru-aa edukkum. Same guest-oda messages correct order-la dhaan process aagum.</td></tr>
+    <tr><td>6</td><td>HMS update</td><td>HMS business rules use panni stay-a active aakkum, room-a Occupied aakkum. <i>(Ippo approval gate closed.)</i></td></tr>
+    <tr><td>7</td><td>Result</td><td>Success-na <b>PROCESSED</b> + audit record. Temporary problem-na <b>retry</b> (5s, 10s, 20s… max 15 nimisham gap; total 5 attempts). Permanent problem-na <b>DLQ</b>.</td></tr>
+    <tr><td>8</td><td>Dashboard</td><td>Indha ellaa status-um dashboard-la count-aa, list-aa theriyum.</td></tr>
+  </table>
+
+  <div class="box amber"><b class="t">Ippo real-aa enna nadakkudhu?</b>
+    Step 2 (real vendor message varradhu) ippo nadakkala. Step 5 (worker) ippo run aagala. Step 6 (HMS update) approval gate-naala closed. Indha ellaa steps-um <b>test environment-la synthetic messages vachu</b> end-to-end work aagudhu nu prove pannirukom.</div>
+</section>
+
+<!-- ============ CH 5 ============ -->
+<section class="chapter">
+  <div class="chapnum">Chapter 5</div>
+  <h1>Namma HMS-la Enna Enna Integrate Pannirukom</h1>
+  <p class="lead">Idhu thani app illa. Existing HMS backend-kulla-um frontend-kulla-um dhaan build pannirukom. Pudhu login, pudhu permission system edhuvum create pannala. Already irukuradhaye reuse pannirukom.</p>
+
+  <table>
+    <tr><th style="width:26%">HMS part</th><th>Integration adha eppadi use pannudhu</th></tr>
+    <tr><td><b>HMS backend (FastAPI)</b></td><td>Integration module <code>backend/app/integrations</code> HMS backend-kulla dhaan irukku. Adhoda APIs HMS API router-la mount aagirukku.</td></tr>
+    <tr><td><b>HMS database</b></td><td>Integration-ku 7 pudhu tables design pannirukom (messages, outbox, idempotency, audit…). <span class="badge b-amber">DBA approval pending (HF-39)</span></td></tr>
+    <tr><td><b>Stays module</b></td><td>Check-in / check-out message vandhaa, HMS-oda existing stay logic-a dhaan call pannum. Pudhu shortcut illa, same business rules dhaan.</td></tr>
+    <tr><td><b>Rooms</b></td><td>Check-in aanaa room "Occupied" aagum. Idhu stay logic vazhiya dhaan nadakkum.</td></tr>
+    <tr><td><b>Facilities (hotels)</b></td><td>Vendor anuppura hotel code-a namma HMS facility-oda map pannum (facility mapping). Wrong hotel-ku data poagaadhu.</td></tr>
+    <tr><td><b>Login + RBAC (permissions)</b></td><td>Dashboard paarkka existing HMS login. <b>Facility Management "read"</b> permission vendum. Illana "Access denied".</td></tr>
+    <tr><td><b>Facility scope</b></td><td>Ovvoru user-um avangalukku assign aana hotels-oda messages mattum dhaan paarppaanga.</td></tr>
+    <tr><td><b>HMS frontend</b></td><td>Sidebar-la pudhu <b>"Integrations"</b> group. Adhula 5 pages. Same HMS layout, same design.</td></tr>
+    <tr><td><b>Audit</b></td><td>HMS-la endha change aanaalum, adhe transaction-la audit record-um ezhudhum.</td></tr>
+    <tr><td><b>Background service</b></td><td>Worker-um FIAS link-um run panna oru thani integration service process build pannirukom. <span class="badge b-grey">ippo start pannala</span></td></tr>
+  </table>
+
+  <figure>
+  <svg viewBox="0 0 700 215" width="100%">
+    <rect x="5" y="5" width="690" height="205" rx="10" fill="#fafbfc" stroke="#cbd5e1"/>
+    <text x="20" y="26" font-size="12" font-weight="700" fill="#475569">Namma HMS platform</text>
+    <rect x="20" y="40" width="200" height="70" rx="8" fill="#e6f0fb" stroke="#1d5fa8"/>
+    <text x="120" y="66" text-anchor="middle" font-size="12" font-weight="700">Integration module</text>
+    <text x="120" y="84" text-anchor="middle" font-size="10.5" fill="#475569">HTNG door · FIAS door</text>
+    <text x="120" y="99" text-anchor="middle" font-size="10.5" fill="#475569">save · retry · DLQ · audit</text>
+    <rect x="250" y="40" width="200" height="70" rx="8" fill="#efeafb" stroke="#5b3fa8"/>
+    <text x="350" y="66" text-anchor="middle" font-size="12" font-weight="700">Existing HMS modules</text>
+    <text x="350" y="84" text-anchor="middle" font-size="10.5" fill="#475569">Stays · Rooms · Facilities</text>
+    <text x="350" y="99" text-anchor="middle" font-size="10.5" fill="#475569">Login · Permissions</text>
+    <rect x="480" y="40" width="200" height="70" rx="8" fill="#e5f4ec" stroke="#1f7a4a"/>
+    <text x="580" y="66" text-anchor="middle" font-size="12" font-weight="700">HMS database</text>
+    <text x="580" y="84" text-anchor="middle" font-size="10.5" fill="#475569">existing tables +</text>
+    <text x="580" y="99" text-anchor="middle" font-size="10.5" fill="#475569">7 integration tables (pending)</text>
+    <rect x="20" y="130" width="660" height="62" rx="8" fill="#fdf2e0" stroke="#a8650a"/>
+    <text x="350" y="155" text-anchor="middle" font-size="12" font-weight="700">HMS frontend → Sidebar "Integrations"</text>
+    <text x="350" y="174" text-anchor="middle" font-size="10.5" fill="#475569">Overview · HTNG Monitoring · FIAS Monitoring · Message Logs · Failed Messages / DLQ (read-only)</text>
+    <line x1="220" y1="75" x2="250" y2="75" stroke="#475569" stroke-width="1.5"/>
+    <line x1="450" y1="75" x2="480" y2="75" stroke="#475569" stroke-width="1.5"/>
+  </svg>
+  <figcaption>Figure 3 · Integration HMS-oda oru part. Thani system illa.</figcaption>
+  </figure>
+  <div class="say">Idhu HMS-oda oru pudhu module. Existing login, permissions, stays logic, database ellathayum reuse pannudhu.</div>
+</section>
+
+<!-- ============ CH 6 ============ -->
+<section class="chapter">
+  <div class="chapnum">Chapter 6</div>
+  <h1>Ippo Varaikkum Enna Pannirukom</h1>
+  <p class="lead">Engineering foundation <b>mudinjiduchu</b>. Vendor illaama panna mudinja ellaa velaiyum pannirukom.</p>
+
+  <table>
+    <tr><th style="width:30%">Work</th><th>Enna pannirukom</th><th style="width:16%">Status</th></tr>
+    <tr><td><b>Common foundation</b></td><td>Vendor login check, hotel mapping, safe save, duplicate block, retry, DLQ, redrive (approval-oda), ordering, audit</td><td><span class="badge b-green">Done</span></td></tr>
+    <tr><td><b>HTNG door</b></td><td>Web service endpoint, XML read panra framework, security checks</td><td><span class="badge b-green">Done</span> <span class="badge b-amber">vendor spec waiting</span></td></tr>
+    <tr><td><b>FIAS door</b></td><td>TCP connection handling, records read panra framework, ACK / heartbeat / reconnect logic</td><td><span class="badge b-green">Done</span> <span class="badge b-amber">vendor spec waiting</span></td></tr>
+    <tr><td><b>HMS check-in / check-out handler</b></td><td>Message-a HMS stay logic-ku connect pannradhu</td><td><span class="badge b-green">Done</span> <span class="badge b-amber">gate closed</span></td></tr>
+    <tr><td><b>Background worker service</b></td><td>Pending messages-a process panra program</td><td><span class="badge b-green">Done</span> <span class="badge b-grey">not deployed</span></td></tr>
+    <tr><td><b>Monitoring APIs</b></td><td>Dashboard-ku data kudukkura 3 read-only APIs</td><td><span class="badge b-green">Done</span></td></tr>
+    <tr><td><b>Dashboard (5 pages)</b></td><td>Overview, HTNG, FIAS, Message Logs, DLQ</td><td><span class="badge b-green">Done</span></td></tr>
+    <tr><td><b>Simulator</b></td><td>Fake FIAS PMS maadhiri pesura test tool (vendor illaama test panna)</td><td><span class="badge b-green">Done</span></td></tr>
+    <tr><td><b>Documents</b></td><td>Architecture, security, DB design, DBA package, vendor request package, runbooks, decision registers</td><td><span class="badge b-green">Done</span></td></tr>
+  </table>
+
+  <h2>Test panni prove pannirukom</h2>
+  <div class="kpis" style="grid-template-columns:repeat(5,1fr)">
+    <div class="kpi"><div class="l">Backend tests</div><div class="v">517</div><div class="s">integration suite</div></div>
+    <div class="kpi"><div class="l">Certification</div><div class="v">40</div><div class="s">PASS · 5 blocked (vendor)</div></div>
+    <div class="kpi"><div class="l">Frontend tests</div><div class="v">49/49</div><div class="s">dashboard</div></div>
+    <div class="kpi"><div class="l">E2E API checks</div><div class="v">90/90</div><div class="s">real backend + MySQL</div></div>
+    <div class="kpi"><div class="l">E2E browser</div><div class="v">56/56</div><div class="s">screen = database</div></div>
+  </div>
+  <ul>
+    <li><b>Certification scenarios:</b> HTNG 15, FIAS 15, HMS 10 synthetic scenarios ellam pass. 5 scenarios <b>vendor documents illaama run panna mudiyaadhu</b>, adhanaala "blocked".</li>
+    <li><b>Full-stack E2E:</b> Real HMS backend + real MySQL (thani test database) + real browser. Screen-la therira ovvoru number-um database count-oda match aagudhu nu check pannom.</li>
+    <li><b>Failure tests:</b> Database stop pannom, wrong password, expired login, corrupt data. Ellaa case-layum dashboard correct-aa behave pannuchu.</li>
+  </ul>
+  <div class="box green"><b class="t">Simple-aa</b> Vendor illaama panna mudinja ellaa velaiyum mudinjiduchu, test-um pass aagiduchu. Vendor kitta irundhu documents vandha udane adutha step-ku poagalaam.</div>
+</section>
+
+<!-- ============ CH 7 ============ -->
+<section class="chapter">
+  <div class="chapnum">Chapter 7</div>
+  <h1>Innum Enna Pending? Yen?</h1>
+  <p class="lead">Pending items ellam <b>namma code problem illa</b>. Vendor-um business / DBA / security approvals-um dhaan. Mottham <b>29 decisions pending</b>. Ippo varaikkum <b>0 approved</b>.</p>
+
+  <table>
+    <tr><th style="width:12%">Code</th><th style="width:34%">Enna vendum</th><th>Yaar kudukkanum</th><th style="width:22%">Yen mukkiyam</th></tr>
+    <tr><td><b>HF-03</b></td><td>Endha PMS vendor, product, version</td><td>Product Owner</td><td><b>Ellathukkum first step</b></td></tr>
+    <tr><td>HF-04</td><td>HTNG-aa FIAS-aa (endha protocol)</td><td>Vendor</td><td>Endha door open pannanum</td></tr>
+    <tr><td>HF-07, HF-08</td><td>HTNG schema / profile, security rules</td><td>Vendor</td><td>HTNG final format</td></tr>
+    <tr><td>HF-11, HF-06, HF-05</td><td>FIAS manual, link rules, property code</td><td>Vendor</td><td>FIAS final format</td></tr>
+    <tr><td>HF-09</td><td>Vendor test environment + credentials</td><td>Vendor</td><td>Real test panna</td></tr>
+    <tr><td>HF-39</td><td>Database tables approval</td><td>DBA</td><td>Real HMS DB-la tables create panna</td></tr>
+    <tr><td>HF-01, 02, 05, 19</td><td>HMS-la live-aa update panna business approval</td><td>Business / Hotel Ops</td><td>Gate open panna</td></tr>
+    <tr><td>HF-20 to 26</td><td>Network, TLS, credentials channel, hosting</td><td>Ops / Security</td><td>Production setup</td></tr>
+  </table>
+
+  <h2>Ippo dashboard-la yen "Not ready" kaattudhu?</h2>
+  <ul>
+    <li>Vendor validation pending</li>
+    <li>Business approvals pending</li>
+    <li>DBA approval pending</li>
+    <li>Integration switch OFF (safety-kaaga)</li>
+    <li>Live HMS update gate closed</li>
+  </ul>
+  <div class="box"><b class="t">Mukkiyam</b> "Not ready" na <b>"broken" illa</b>. Approvals varra varaikkum system thaane "naan production-ku ready illa" nu honest-aa solludhu.</div>
+
+  <h2>Gap: real HMS database</h2>
+  <p>E2E test thani test database-la nadandhuchu. Namma running dev HMS database-la integration tables innum <b>create pannala</b>, yen-na migration DBA approval-ku wait pannudhu (HF-39). Approval vandhu migration apply aanaa, dev / prod HMS-layum dashboard data kaattum.</p>
+  <div class="say">Namma side code ready, test-um pass aagiduchu. Ippo vendor confirmation-um approvals-um dhaan pending. Idhu engineering delay illa.</div>
+</section>
+
+<!-- ============ CH 8 ============ -->
+<section class="chapter">
+  <div class="chapnum">Chapter 8</div>
+  <h1>Eppadi Implement Panna Porom — Roadmap</h1>
+  <p class="lead">Idhu <b>dependency order</b>. Oru step mudiyaama adutha step-ku pona, guess panni build panna vendi varum. Adhai naama panna maattom.</p>
+
+  <figure>
+  <svg viewBox="0 0 700 175" width="100%">
+    <defs><marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#475569"/></marker></defs>
+    <g font-size="10.5">
+    <rect x="2" y="20" width="102" height="92" rx="8" fill="#e5f4ec" stroke="#1f7a4a"/>
+    <text x="53" y="40" text-anchor="middle" font-weight="700" font-size="11.5">Phase 0</text>
+    <text x="53" y="58" text-anchor="middle">Foundation</text>
+    <text x="53" y="73" text-anchor="middle">+ dashboard</text>
+    <text x="53" y="100" text-anchor="middle" font-weight="700" fill="#1f7a4a">DONE ✓</text>
+
+    <rect x="118" y="20" width="102" height="92" rx="8" fill="#fdf2e0" stroke="#a8650a"/>
+    <text x="169" y="40" text-anchor="middle" font-weight="700" font-size="11.5">Phase 1</text>
+    <text x="169" y="58" text-anchor="middle">Vendor</text>
+    <text x="169" y="73" text-anchor="middle">confirm</text>
+    <text x="169" y="100" text-anchor="middle" font-weight="700" fill="#a8650a">HF-03 · NEXT</text>
+
+    <rect x="234" y="20" width="102" height="92" rx="8" fill="#eef0f2" stroke="#64748b"/>
+    <text x="285" y="40" text-anchor="middle" font-weight="700" font-size="11.5">Phase 2</text>
+    <text x="285" y="58" text-anchor="middle">Documents</text>
+    <text x="285" y="73" text-anchor="middle">+ sandbox</text>
+    <text x="285" y="100" text-anchor="middle" fill="#475569">HF-07/11/09</text>
+
+    <rect x="350" y="20" width="102" height="92" rx="8" fill="#eef0f2" stroke="#64748b"/>
+    <text x="401" y="40" text-anchor="middle" font-weight="700" font-size="11.5">Phase 3</text>
+    <text x="401" y="58" text-anchor="middle">Configure</text>
+    <text x="401" y="73" text-anchor="middle">protocol</text>
+    <text x="401" y="100" text-anchor="middle" fill="#475569">official spec</text>
+
+    <rect x="466" y="20" width="102" height="92" rx="8" fill="#eef0f2" stroke="#64748b"/>
+    <text x="517" y="40" text-anchor="middle" font-weight="700" font-size="11.5">Phase 4</text>
+    <text x="517" y="58" text-anchor="middle">Vendor test</text>
+    <text x="517" y="73" text-anchor="middle">+ validation</text>
+    <text x="517" y="100" text-anchor="middle" fill="#475569">sign-off</text>
+
+    <rect x="582" y="20" width="114" height="92" rx="8" fill="#e6f0fb" stroke="#1d5fa8"/>
+    <text x="639" y="40" text-anchor="middle" font-weight="700" font-size="11.5">Phase 5</text>
+    <text x="639" y="58" text-anchor="middle">Go-live</text>
+    <text x="639" y="73" text-anchor="middle">(pilot hotel)</text>
+    <text x="639" y="100" text-anchor="middle" fill="#475569">switch ON</text>
+    </g>
+    <line x1="104" y1="66" x2="116" y2="66" stroke="#475569" stroke-width="1.5" marker-end="url(#a3)"/>
+    <line x1="220" y1="66" x2="232" y2="66" stroke="#475569" stroke-width="1.5" marker-end="url(#a3)"/>
+    <line x1="336" y1="66" x2="348" y2="66" stroke="#475569" stroke-width="1.5" marker-end="url(#a3)"/>
+    <line x1="452" y1="66" x2="464" y2="66" stroke="#475569" stroke-width="1.5" marker-end="url(#a3)"/>
+    <line x1="568" y1="66" x2="580" y2="66" stroke="#475569" stroke-width="1.5" marker-end="url(#a3)"/>
+    <rect x="118" y="128" width="450" height="36" rx="6" fill="#efeafb" stroke="#5b3fa8" stroke-dasharray="5 3"/>
+    <text x="343" y="144" text-anchor="middle" font-size="10.5" font-weight="700">Parallel-aa ippave start pannalaam: DBA approval (HF-39) · business approvals · security / infra decisions</text>
+    <text x="343" y="158" text-anchor="middle" font-size="10" fill="#475569">Vendor-ku wait panna vendaam</text>
+  </svg>
+  <figcaption>Figure 4 · Roadmap. Phase 1 dhaan ippo blocker.</figcaption>
+  </figure>
+
+  <table>
+    <tr><th style="width:13%">Phase</th><th style="width:30%">Enna nadakkum</th><th>Simple explanation</th></tr>
+    <tr><td><b>0 · Done</b></td><td>Foundation + dashboard + tests</td><td>Common engine, rendu doors, monitoring ready.</td></tr>
+    <tr><td><b>1 · Next</b></td><td>Vendor confirm (HF-03)</td><td>Product Owner endha PMS vendor nu confirm pannanum. Vendor request letter already draft-aa ready.</td></tr>
+    <tr><td><b>2</b></td><td>Documents + sandbox</td><td>Vendor kitta official manual / schema, test environment, test login vaanganum.</td></tr>
+    <tr><td><b>3</b></td><td>Protocol configure</td><td>Official rules-a namma framework-la "verified official"-aa plug pannuvom. Vendor samples vachu test pannuvom.</td></tr>
+    <tr><td><b>4</b></td><td>Vendor test + validation</td><td>Vendor test environment-oda real messages exchange. Issues fix panni ellaa tests-um thirumba run pannuvom. Vendor sign-off vaanguvom.</td></tr>
+    <tr><td><b>5</b></td><td>Go-live</td><td>DBA migration apply, deployment + rollback plan, monitoring owner, approvals code-la record, appram switch ON. Mudhalla oru pilot hotel.</td></tr>
+  </table>
+
+  <h2>Eppo mudiyum?</h2>
+  <div class="box amber"><b class="t">Honest answer</b>
+    Fixed date solla mudiyaadhu. Adhu <b>vendor eppo confirm aagudhu, avanga eppo documents-um sandbox-um kudukkuraanga</b> nu-ra vishayatha porutthu dhaan irukku. Engineering side ready. HF-03 answer vandhu vendor documents kaila vandha udane, Phase 3–4-ku effort estimate kudukkalaam.
+    <br>Indha velaiyai <b>ippave parallel-aa</b> start pannalaam: DBA approval (HF-39), security values (HF-21), business approvals.</div>
+  <div class="say">Next step ondre ondru dhaan: vendor yaarunu confirm pannanum. Adhu vandha udane request anuppi documents vaangi configure pannuvom. Date vendor response-a porutthu dhaan.</div>
+</section>
+
+<!-- ============ CH 9 ============ -->
+<section class="chapter">
+  <div class="chapnum">Chapter 9</div>
+  <h1>Dashboard — 5 Pages Oru Paarvai</h1>
+  <p class="lead">HMS sidebar-la <b>"Integrations"</b> group-la 5 pages irukku. Ellaa pages-um <b>read-only</b>. Paakka mattum mudiyum, edhaiyum maatha mudiyaadhu.</p>
+
+  <table>
+    <tr><th style="width:24%">Page</th><th>Oru line-la</th><th style="width:26%">Yaar use pannuvaanga</th></tr>
+    <tr><td><b>Overview</b></td><td>HTNG + FIAS rendu-oda health, message counts. Ellaam oru screen-la.</td><td>Manager, client, project owner</td></tr>
+    <tr><td><b>HTNG Monitoring</b></td><td>HTNG mattum full detail</td><td>Integration / support team</td></tr>
+    <tr><td><b>FIAS Monitoring</b></td><td>FIAS mattum full detail. HTNG page layout dhaan, extra-aa links table irukku.</td><td>Integration / support team</td></tr>
+    <tr><td><b>Message Logs</b></td><td>Messages-a filter panni search panna</td><td>Support team</td></tr>
+    <tr><td><b>Failed Messages / DLQ</b></td><td>Fail aana messages-a paakka</td><td>Support team</td></tr>
+  </table>
+
+  <h2>Ellaa pages-kum common rules</h2>
+  <ul>
+    <li><b>Permission:</b> "Facility Management – read" vendum. Illana "Access denied".</li>
+    <li><b>Hotel scope:</b> Ungalukku assign aana hotels-oda data mattum dhaan theriyum.</li>
+    <li><b>Honest values:</b> Measure panna mudiyaadha value-ku <span class="badge b-dash">Not observable</span> or <span class="badge b-dash">Unavailable</span> nu kaattum. Poi-aa "0" kaattaadhu.</li>
+    <li><b>Time:</b> Message time = namma system accept panna time. Screen-la unga computer timezone-la (IST) kaattum.</li>
+    <li><b>Read-only:</b> Fail aana message-a thirumba run panna (redrive) dashboard-la button illa. Adhu write permission + reason-oda backend API vazhiya mattum dhaan pannalaam. Audit-um record aagum.</li>
+  </ul>
+</section>
+
+<!-- ============ CH 10 OVERVIEW ============ -->
+<section class="chapter">
+  <div class="chapnum">Chapter 10</div>
+  <h1>Overview Page</h1>
+  <p class="lead">Idhu oru <b>"health check" screen</b>. Manager oru paarvai paartha udane 3 kelvikku badhil kidaikkanum: (1) HTNG, FIAS ready-aa? (2) Evlo messages vandhuchu, evlo pending, evlo fail? (3) Latest-aa enna nadandhuchu?</p>
+
+  <figure>
+  <svg viewBox="0 0 700 250" width="100%">
+    <rect x="2" y="2" width="696" height="246" rx="8" fill="#fafbfc" stroke="#cbd5e1"/>
+    <text x="16" y="22" font-size="11" font-weight="700">Integrations Overview</text>
+    <text x="684" y="22" font-size="9.5" text-anchor="end" fill="#64748b">Your facilities only · updated 11:07 am · [Refresh]</text>
+    <rect x="14" y="32" width="218" height="58" rx="6" fill="#fff" stroke="#cbd5e1"/><text x="24" y="50" font-size="10.5" font-weight="700">HTNG</text><text x="24" y="66" font-size="9.5" fill="#b42318">Not ready</text><text x="24" y="80" font-size="9.5" fill="#64748b">Disabled · Backlog stalled</text>
+    <rect x="241" y="32" width="218" height="58" rx="6" fill="#fff" stroke="#cbd5e1"/><text x="251" y="50" font-size="10.5" font-weight="700">FIAS</text><text x="251" y="66" font-size="9.5" fill="#b42318">Not ready</text><text x="251" y="80" font-size="9.5" fill="#64748b">Not observable · Backlog stalled</text>
+    <rect x="468" y="32" width="218" height="58" rx="6" fill="#fff" stroke="#cbd5e1"/><text x="478" y="50" font-size="10.5" font-weight="700">Vendor validation</text><text x="478" y="66" font-size="9.5" fill="#a8650a">Vendor validation pending</text>
+    <text x="16" y="108" font-size="10" font-weight="700" fill="#475569">Message activity</text>
+    <g font-size="9">
+      <rect x="14" y="114" width="107" height="44" rx="5" fill="#fff" stroke="#cbd5e1"/><text x="22" y="128" fill="#64748b">INBOUND</text><text x="22" y="150" font-size="15" font-weight="700">42</text>
+      <rect x="126" y="114" width="107" height="44" rx="5" fill="#fff" stroke="#cbd5e1"/><text x="134" y="128" fill="#64748b">OUTBOUND</text><text x="134" y="150" font-size="15" font-weight="700">3</text>
+      <rect x="238" y="114" width="107" height="44" rx="5" fill="#fff" stroke="#cbd5e1"/><text x="246" y="128" fill="#64748b">PENDING</text><text x="246" y="150" font-size="15" font-weight="700">13</text>
+      <rect x="350" y="114" width="107" height="44" rx="5" fill="#fff" stroke="#cbd5e1"/><text x="358" y="128" fill="#64748b">FAILED</text><text x="358" y="150" font-size="15" font-weight="700">5</text>
+      <rect x="462" y="114" width="107" height="44" rx="5" fill="#fff" stroke="#cbd5e1"/><text x="470" y="128" fill="#64748b">AWAITING RETRY</text><text x="470" y="150" font-size="15" font-weight="700">5</text>
+      <rect x="574" y="114" width="112" height="44" rx="5" fill="#fff" stroke="#cbd5e1"/><text x="582" y="128" fill="#64748b">DLQ</text><text x="582" y="150" font-size="15" font-weight="700">5</text>
+    </g>
+    <rect x="14" y="168" width="334" height="36" rx="6" fill="#fff" stroke="#cbd5e1"/><text x="24" y="190" font-size="10" font-weight="700">HTNG health panel</text>
+    <rect x="352" y="168" width="334" height="36" rx="6" fill="#fff" stroke="#cbd5e1"/><text x="362" y="190" font-size="10" font-weight="700">FIAS health panel</text>
+    <rect x="14" y="210" width="334" height="30" rx="6" fill="#fff" stroke="#cbd5e1"/><text x="24" y="229" font-size="10" font-weight="700">Recent messages (latest 5)</text>
+    <rect x="352" y="210" width="334" height="30" rx="6" fill="#fff" stroke="#cbd5e1"/><text x="362" y="229" font-size="10" font-weight="700">Latest failures (latest 5)</text>
+  </svg>
+  <figcaption>Figure 5 · Overview page layout (demo values)</figcaption>
+  </figure>
+
+  <h2>10.1 Mela irukura 3 status cards</h2>
+  <table>
+    <tr><th style="width:21%">Row</th><th style="width:15%">HTNG</th><th style="width:16%">FIAS</th><th>Artham + eppadi decide aagudhu</th></tr>
+    <tr><td><b>Production readiness</b></td><td><span class="badge b-red">Not ready</span></td><td><span class="badge b-red">Not ready</span></td><td>Oru checklist. Vendor validation, business approval, DBA approval, switch ON, gate open: ivai <b>ellame</b> OK aanaa dhaan "Ready". Ippo pala items pending.</td></tr>
+    <tr><td><b>Connection</b></td><td><span class="badge b-grey">Disabled</span></td><td><span class="badge b-dash">Not observable</span></td><td>HTNG: door switch OFF (deliberate, safety-kaaga). FIAS: TCP link start-e pannala, adhanaala state theriyaadhu. <b>"Down" illa, "theriyaadhu".</b></td></tr>
+    <tr><td><b>Processing</b></td><td><span class="badge b-red">Backlog stalled</span></td><td><span class="badge b-red">Backlog stalled</span></td><td>Oldest pending message <b>15 nimishathukku mela</b> wait pannaa "stalled". Worker run aagaadhadhaala varudhu (HTNG oldest ≈ 17 mani neram, FIAS ≈ 28 mani neram). Crash illa.</td></tr>
+    <tr><td><b>Vendor validation</b></td><td colspan="2"><span class="badge b-amber">Vendor validation pending</span></td><td>Vendor official spec vachu, vendor test environment-la verify pannoma nu solludhu. Live check illa. Approval register-a paarthu decide aagudhu.</td></tr>
+  </table>
+  <p><b>Processing status-oda ellaa values:</b>
+    <span class="badge b-green">Idle · no backlog</span> pending edhuvum illa ·
+    <span class="badge b-amber">Processing backlog</span> pending irukku, 15 min-kulla ·
+    <span class="badge b-red">Backlog stalled</span> 15 min-ku mela ·
+    <span class="badge b-dash">Unavailable</span> DB tables illa.</p>
+
+  <h2>10.2 Message activity — 6 KPI cards</h2>
+  <div class="box"><b class="t">Mudhalla 3 rules (idhu purinjaa ellaa card-um easy)</b>
+    <ol style="margin:2px 0 0">
+      <li><b>Time limit illa.</b> "Inniku" count illa. Database-la ippo store aagi irukura <b>ellaa</b> messages-um count aagum.</li>
+      <li><b>Unga hotels mattum.</b> Login panna user-oda facilities-oda messages mattum count aagum.</li>
+      <li><b>HTNG + FIAS serthu.</b> Ovvoru card-um rendu protocol-um add panni kaattum.</li>
+    </ol>
+  </div>
+
+  <div class="kpicard"><h3>INBOUND — "Received from vendors" · demo: 42</h3><div class="row">
+    <div class="k">Idhu enna?</div><div>Vendor-la irundhu vandhu, namma system accept panni save panna ellaa incoming messages-oda total. Endha status-la irundhaalum count aagum.</div>
+    <div class="k">Calculation</div><div>Incoming messages table-la ellaa rows-um count → HTNG <b>24</b> + FIAS <b>18</b> = <b>42</b></div>
+    <div class="k">Count aagaadhu</div><div>Duplicate messages, reject aana messages (wrong login, unknown hotel, bad format)</div>
+    <div class="k">Gavanam</div><div>Message Logs page default-aa last 7 days mattum kaattum. Adhanaala anga 38, inga 42 nu varum. Rendu-um correct dhaan.</div>
+  </div></div>
+
+  <div class="kpicard"><h3>OUTBOUND — "Queued or sent to vendors" · demo: 3</h3><div class="row">
+    <div class="k">Idhu enna?</div><div>Namma HMS vendor-ku thirumba anuppa ready panna messages (reply / update).</div>
+    <div class="k">Calculation</div><div>Outbox table-la ellaa rows → HTNG 2 + FIAS 1 = <b>3</b>. Moonum "queued".</div>
+    <div class="k">Yen send aagala?</div><div>Anuppura part (outbox relay) start pannala. Vendor address-um configure aagala (HF-24).</div>
+  </div></div>
+
+  <div class="kpicard"><h3>PENDING — "Waiting to be processed" · demo: 13</h3><div class="row">
+    <div class="k">Idhu enna?</div><div>Innum <b>mudiyaadha</b> incoming messages</div>
+    <div class="k">Calculation</div><div><b>PENDING</b> (worker innum edukkala) + <b>PROCESSING</b> (ippo process aagudhu) + <b>AWAITING RETRY</b> (retry-ku wait) → HTNG 8 + FIAS 5 = <b>13</b></div>
+    <div class="k">Yen kuraiyala?</div><div>Worker run aagala. Adhanaala pending messages appadiye irukku.</div>
+  </div></div>
+
+  <div class="kpicard"><h3>FAILED — "Inbound, moved to the DLQ" · demo: 5</h3><div class="row">
+    <div class="k">Idhu enna?</div><div>System "mudiyaadhu" nu give up panna incoming messages</div>
+    <div class="k">Eppo fail aagum?</div><div><b>Permanent problem</b> (wrong data, HMS rule reject) → first try-laye fail. <b>Temporary problem</b> (HMS busy, timeout) → 5 attempts try pannum, appavum sari aagalana fail.</div>
+    <div class="k">Calculation</div><div>Incoming status = DEAD_LETTER → HTNG 3 + FIAS 2 = <b>5</b>. Demo reason: "Rejected by HMS business rule".</div>
+  </div></div>
+
+  <div class="kpicard"><h3>AWAITING RETRY — "Scheduled for another attempt" · demo: 5</h3><div class="row">
+    <div class="k">Idhu enna?</div><div>Temporary problem-naala fail aagi, automatic-aa thirumba try panna schedule aana messages</div>
+    <div class="k">Retry gap</div><div>5 sec → 10 → 20 → 40 … max 15 nimisham. Total 5 attempts.</div>
+    <div class="k">Calculation</div><div>Status = RETRY_WAIT → HTNG 3 + FIAS 2 = <b>5</b></div>
+    <div class="k">Gavanam</div><div>Indha 5 messages <b>Pending 13-kulla already count aagirukku</b>.</div>
+  </div></div>
+
+  <div class="kpicard"><h3>DLQ — "Inbound and outbound" · demo: 5</h3><div class="row">
+    <div class="k">Idhu enna?</div><div>Dead Letter Queue-la irukura ellaa messages: incoming failed + outgoing failed</div>
+    <div class="k">Calculation</div><div>Inbound failed 5 + Outbound failed 0 = <b>5</b></div>
+    <div class="k">Gavanam</div><div>Failed-um DLQ-um add panna koodaadhu. Failed 5 already DLQ-kulla irukku.</div>
+  </div></div>
+
+  <h2>10.3 Cards-a add pannalaamaa? Illa!</h2>
+  <table>
+    <tr><th>Card A</th><th>Card B</th><th>Same message rendu-layum varumaa?</th></tr>
+    <tr><td>Pending</td><td>Awaiting retry</td><td><b>Aamaam</b>. Retry messages Pending-kulla irukku.</td></tr>
+    <tr><td>Failed</td><td>DLQ</td><td><b>Aamaam</b>. Failed ellame DLQ-kulla irukku.</td></tr>
+    <tr><td>Inbound</td><td>Pending / Failed / Retry</td><td><b>Aamaam</b>. Ellame Inbound-oda part.</td></tr>
+    <tr><td>Pending</td><td>Failed</td><td>Illa</td></tr>
+    <tr><td>Inbound</td><td>Outbound</td><td>Illa (vera vera table)</td></tr>
+  </table>
+  <div class="box green"><b class="t">Correct kanakku</b>
+    <b>Inbound = Processed + Pending + Failed → 42 = 24 + 13 + 5</b><br>
+    <span class="small">Processed (24) Overview-la card-aa illa. HTNG / FIAS pages-la irukku (HTNG 13 + FIAS 11).</span></div>
+
+  <h2>10.4 HTNG health / FIAS health panels</h2>
+  <p>Mela irukura numbers-a <b>protocol-wise pirichu</b> kaattum.</p>
+  <table>
+    <tr><th style="width:26%">Row</th><th>Artham</th><th class="num">HTNG</th><th class="num">FIAS</th></tr>
+    <tr><td>Connection</td><td>Switch / link status</td><td class="num">Disabled</td><td class="num">Not observable</td></tr>
+    <tr><td>Authentication</td><td>Vendor login setup + hotel mapping irukkaa</td><td class="num">Configured</td><td class="num">Configured</td></tr>
+    <tr><td>Processing</td><td>Backlog status</td><td class="num">Stalled</td><td class="num">Stalled</td></tr>
+    <tr><td>Last successful processing</td><td>Kadaisiyaa success aana message time</td><td class="num">demo time</td><td class="num">demo time</td></tr>
+    <tr><td>Inbound / Outbound</td><td>Indha protocol mattum</td><td class="num">24 / 2</td><td class="num">18 / 1</td></tr>
+    <tr><td>Pending / Awaiting retry</td><td>Indha protocol mattum</td><td class="num">8 / 3</td><td class="num">5 / 2</td></tr>
+    <tr><td>Failed (DLQ)</td><td>Incoming + outgoing failed</td><td class="num">3</td><td class="num">2</td></tr>
+    <tr><td>Latest failure</td><td>Kadaisiyaa fail aana reason + time</td><td colspan="2" class="num">Rejected by HMS business rule</td></tr>
+  </table>
+
+  <h2>10.5 Recent messages / Latest failures</h2>
+  <ul>
+    <li><b>Recent messages:</b> last 7 days-la vandha latest 5 incoming messages. Protocol, message type (Check-in / Check-out), hotel, status, time kaattum.</li>
+    <li><b>Latest failures:</b> DLQ-la latest 5 failed messages. Reason, hotel, time kaattum.</li>
+    <li>"All messages", "Failed messages" buttons → full pages-ku pogum.</li>
+  </ul>
+
+  <h2>10.6 Refresh</h2>
+  <ul>
+    <li>Page <b>ovvoru 60 second-kkum</b> automatic-aa refresh aagum. Refresh button press panna udane aagum.</li>
+    <li>Mela "updated 11:07 am" = server data ready panna time.</li>
+    <li>Refresh pannaa message time maaraadhu. Counts, backlog age, "updated" time mattum maarum.</li>
+  </ul>
+</section>
+
+<!-- ============ CH 11 HTNG ============ -->
+<section class="chapter">
+  <div class="chapnum">Chapter 11</div>
+  <h1>HTNG Monitoring Page</h1>
+  <p class="lead">Overview-la HTNG card-a "zoom" panni paakkura maadhiri. HTNG-oda door, login, backlog, messages, failures, vendor status ellathayum section section-aa kaattum.</p>
+
+  <table>
+    <tr><th style="width:5%">#</th><th style="width:22%">Section</th><th>Enna kaattum</th><th style="width:22%">Demo-la</th></tr>
+    <tr><td>1</td><td><b>Status summary</b></td><td>4 badges: Connection, Authentication, Processing, Vendor validation</td><td>Disabled · Configured · Stalled · Pending</td></tr>
+    <tr><td>2</td><td><b>Connection</b></td><td>
+      <b>Integration:</b> main switch ON-aa OFF-aa<br>
+      <b>Inbound endpoint:</b> HTNG door (web address) open-aa<br>
+      <b>Vendor endpoint (outbound):</b> vendor-ku reply anuppa address configure aagirukka</td>
+      <td>Switched off · Disabled · not configured (HF-24)</td></tr>
+    <tr><td>3</td><td><b>Authentication</b><br><span class="small">Senders and facility mappings</span></td><td>
+      <b>Active senders:</b> evlo vendor logins enable aagirukku<br>
+      <b>Facility mappings:</b> evlo hotel codes namma facility-oda map aagirukku<br>
+      <b>Rejected messages:</b> door-laye reject aanavai (wrong login / hotel / format)<br>
+      <b>Sign-in failures:</b> wrong password attempts</td>
+      <td>Configured. Theriyaadha value-ku "Not currently observable".</td></tr>
+    <tr><td>4</td><td><b>Processing</b><br><span class="small">Inbound message backlog</span></td><td>
+      <b>Oldest pending message:</b> evlo neram-aa wait pannudhu<br>
+      <b>Stall threshold:</b> 15 minutes<br>
+      <b>Worker activity:</b> worker alive-aa (heartbeat)</td>
+      <td>≈ 17 hours · Backlog stalled</td></tr>
+    <tr><td>5</td><td><b>Message statistics</b><br><span class="small">retained rows, lifetime illa</span></td><td>Inbound, <b>Processed</b>, Pending, Awaiting retry, Failed (DLQ), Outbound</td>
+      <td>24 · 13 · 8 · 3 · 3 · 2</td></tr>
+    <tr><td>6</td><td><b>Recent messages</b></td><td>Latest 10 HTNG incoming messages, newest first</td><td>Check-in / Check-out rows</td></tr>
+    <tr><td>7</td><td><b>Failed messages</b></td><td>Latest 5 HTNG DLQ entries + "Latest failure" reason</td><td>Rejected by HMS business rule</td></tr>
+    <tr><td>8</td><td><b>Vendor validation</b></td><td>Ovvoru message direction-kum (inbound / outbound) specification status + endha decision-ku wait pannudhu</td><td>Test only / Blocked · waiting on HF-07, HF-08</td></tr>
+    <tr><td>9</td><td><b>Readiness</b></td><td>8 checkpoints (keezha table)</td><td>Production: Not ready</td></tr>
+  </table>
+
+  <h2>Readiness — 8 checkpoints</h2>
+  <table>
+    <tr><th style="width:28%">Checkpoint</th><th>Simple-aa</th><th style="width:22%">Ippo</th></tr>
+    <tr><td>Transport</td><td>Door open-aa</td><td>Disabled</td></tr>
+    <tr><td>Authentication</td><td>Vendor login + hotel mapping setup</td><td>Configured</td></tr>
+    <tr><td>Processing</td><td>Backlog health</td><td>Stalled</td></tr>
+    <tr><td>Synthetic certification</td><td>Namma test results dashboard-ku publish aagirukkaa</td><td>Not reported</td></tr>
+    <tr><td>Vendor validation</td><td>Vendor verify pannaangalaa</td><td>Pending</td></tr>
+    <tr><td>Business approval</td><td>Live HMS update-ku business OK</td><td>Pending (gate closed)</td></tr>
+    <tr><td>DBA schema approval</td><td>Tables-ku DBA OK</td><td>Pending (HF-39)</td></tr>
+    <tr><td><b>Production readiness</b></td><td>Mela ellame OK-aa</td><td><span class="badge b-red">Not ready</span></td></tr>
+  </table>
+  <div class="say">HTNG page-la door ippo deliberately close pannirukom. Login setup ready. Worker run aagaadhadhaala backlog stalled-nu kaattudhu. Vendor HTNG schema-um security profile-um (HF-07, HF-08) vandha appuram dhaan validation start aagum.</div>
+</section>
+
+<!-- ============ CH 12 FIAS ============ -->
+<section class="chapter">
+  <div class="chapnum">Chapter 12</div>
+  <h1>FIAS Monitoring Page</h1>
+  <p class="lead">HTNG page-oda <b>same layout</b> dhaan. Vidhyaasam ellam <b>Connection</b> section-la dhaan, yen-na FIAS oru continuous TCP line.</p>
+
+  <h2>HTNG page-la irundhu enna vidhyaasam?</h2>
+  <table>
+    <tr><th style="width:26%">Section</th><th>FIAS-la enna kaattum</th><th style="width:24%">Demo-la</th></tr>
+    <tr><td><b>Connection</b></td><td>
+      <b>Active connections:</b> ippo evlo TCP links connected<br>
+      <b>Links:</b> evlo links register aagirukku<br>
+      <b>FIAS links table:</b> Link name · State (connected / reconnecting…) · Connected since · Last error</td>
+      <td><span class="badge b-dash">Not observable</span></td></tr>
+    <tr><td><b>Processing</b></td><td>Same as HTNG</td><td>Oldest ≈ 28 hours · Stalled</td></tr>
+    <tr><td><b>Message statistics</b></td><td>Inbound, Processed, Pending, Retry, Failed, Outbound</td><td>18 · 11 · 5 · 2 · 2 · 1</td></tr>
+    <tr><td><b>Vendor validation</b></td><td>Waiting on FIAS manual, link rules, property code</td><td>HF-11, HF-06, HF-05</td></tr>
+  </table>
+
+  <h2>"Not observable" yen?</h2>
+  <p>FIAS link-a open pannradhu <b>integration service</b> process. Andha process ippo endha environment-layum start pannala. Dashboard-ku andha link-oda state paakka vazhi illa. Adhanaala:</p>
+  <ul>
+    <li>"Connected" nu poi solla maattom.</li>
+    <li>"Down / Disconnected" nu-um solla maattom. Adhu-um poi.</li>
+    <li><b>"Not observable" = "theriyaadhu"</b>. Grey dashed badge-la kaattum, red colour-la illa.</li>
+  </ul>
+
+  <h2>FIAS-ku special-aa build pannadhu (simple-aa)</h2>
+  <table>
+    <tr><th style="width:26%">Feature</th><th>Artham</th></tr>
+    <tr><td>Framing</td><td>Continuous line-la oru record enga start, enga end nu kandupidikkiradhu</td></tr>
+    <tr><td>ACK</td><td>"Message vandhuchu" nu PMS-ku confirm pannradhu</td></tr>
+    <tr><td>Heartbeat</td><td>Line alive-aa nu periodic-aa check pannradhu</td></tr>
+    <tr><td>Reconnect</td><td>Line cut aanaa thaane thirumba connect aagradhu</td></tr>
+    <tr><td>Resync</td><td>Reconnect aanappuram missed data-va sync pannradhu</td></tr>
+    <tr><td>Simulator</td><td>Fake FIAS PMS maadhiri behave panra test tool. Real vendor illaama test panna use pannom.</td></tr>
+  </table>
+  <div class="box amber"><b class="t">Gavanam</b> Framing characters, record format, ACK rules ellam ippo <b>test-only (synthetic)</b>. Official FIAS manual vandha appuram dhaan "verified official" aagum.</div>
+  <div class="say">FIAS-ku code ready, simulator-la test-um aagiduchu. Real link start panna vendor-oda FIAS manual-um link rules-um vendum. Adhanaala ippo "Not observable" kaattudhu. Adhu down illa.</div>
+</section>
+
+<!-- ============ CH 13 MESSAGE LOGS ============ -->
+<section class="chapter">
+  <div class="chapnum">Chapter 13</div>
+  <h1>Message Logs Page</h1>
+  <p class="lead">"Inbound HTNG and FIAS messages for your facilities". Oru specific message-a thedi kandupidikka support team use panra page.</p>
+
+  <h2>Filters</h2>
+  <table>
+    <tr><th style="width:24%">Filter</th><th>Options</th><th style="width:28%">Default</th></tr>
+    <tr><td>Protocol</td><td>All protocols / HTNG / FIAS</td><td>All</td></tr>
+    <tr><td>Status</td><td>Pending, Processing, Awaiting retry, Processed, Failed…</td><td>All statuses</td></tr>
+    <tr><td>Facility</td><td>Ungalukku assign aana hotels mattum</td><td>All my facilities</td></tr>
+    <tr><td>From / To date</td><td>Date range (max 31 days)</td><td><b>Last 7 days</b></td></tr>
+    <tr><td>Rows</td><td>Oru page-la evlo rows (max 100)</td><td>—</td></tr>
+  </table>
+
+  <h2>Table-la enna theriyum</h2>
+  <p>Ovvoru row-um oru message. Columns: <b>Message</b> (type: Check-in / Check-out), <b>Protocol</b>, <b>Facility</b>, <b>Status</b>, <b>Received</b>, <b>Processed</b>, <b>Retries</b>, <b>Failure reason</b>. Newest first. Message-oda full content (guest details) <b>kaattaadhu</b>. Metadata mattum dhaan. Privacy-kaaga.</p>
+
+  <h2>Useful tips</h2>
+  <ul>
+    <li>Filters URL-la save aagum. Link-a copy panni team-ku share pannaa, avangalukkum same filtered view varum.</li>
+    <li>Thappaana date (From &gt; To) pottaa alert kaattum.</li>
+    <li>Filter-ku match aagalana "No messages match these filters".</li>
+    <li>Overview Inbound (42) vs inga (38): inga default last 7 days dhaan. 4 messages 12 naal pazhasu.</li>
+  </ul>
+  <div class="say">Edhaavadhu oru hotel-oda check-in HMS-la varalai nu complaint vandhaa, Message Logs-la andha hotel + date filter pottu message vandhuchaa, endha status-la irukku nu paakkalaam.</div>
+</section>
+
+<!-- ============ CH 14 DLQ ============ -->
+<section class="chapter">
+  <div class="chapnum">Chapter 14</div>
+  <h1>Failed Messages / DLQ Page</h1>
+  <p class="lead">"Messages that could not be processed after their retry attempts · <b>read-only</b>". Fail aana messages-a mattum kaattura page.</p>
+
+  <h2>Failure summary cards</h2>
+  <table>
+    <tr><th style="width:26%">Card</th><th>Artham</th><th class="num" style="width:12%">Demo</th></tr>
+    <tr><td><b>Total in DLQ</b></td><td>Inbound + outbound, ellaa failed messages</td><td class="num">5</td></tr>
+    <tr><td><b>HTNG inbound</b></td><td>Fail aana HTNG incoming messages</td><td class="num">3</td></tr>
+    <tr><td><b>FIAS inbound</b></td><td>Fail aana FIAS incoming messages</td><td class="num">2</td></tr>
+    <tr><td><b>Outbound</b></td><td>Vendor-ku anuppa mudiyaadha messages</td><td class="num">0</td></tr>
+  </table>
+
+  <h2>Filters + table</h2>
+  <ul>
+    <li>Filters: Protocol, Facility, Date.</li>
+    <li>Columns: <b>Message</b>, <b>Facility</b>, <b>Failure category</b> (Permanent / Transient), <b>Failure reason</b> (safe-aana short text, guest details illa), <b>Retry attempts</b>, <b>Last attempt</b>, <b>Reprocessing</b>.</li>
+    <li><b>Reprocessing</b> column: indha message-a redrive panna mudiyumaa (status DLQ-la irukkaa + unga kitta write permission irukkaa) nu mattum kaattum. Button illa.</li>
+  </ul>
+
+  <h2>Fail aana message-a eppadi fix pannuvom?</h2>
+  <ol>
+    <li>Support team indha page-la reason paarppaanga.</li>
+    <li>Root cause fix pannuvaanga (udharanam: hotel mapping add, HMS data correct).</li>
+    <li><b>Write permission</b> irukura authorised person <b>reason-oda</b> "redrive" pannuvaanga. Idhu backend API vazhiya mattum dhaan.</li>
+    <li>Message thirumba PENDING aagi worker process pannum. Audit record-um aagum.</li>
+  </ol>
+  <div class="box"><b class="t">Yen dashboard-la redrive button illa?</b> Thappaana redrive HMS data-va double update pannalaam. Adhanaala controlled, audited, permission-oda mattum dhaan. Dashboard paakka mattum.</div>
+</section>
+
+<!-- ============ CH 15 MOCK vs LIVE ============ -->
+<section class="chapter">
+  <div class="chapnum">Chapter 15</div>
+  <h1>Numbers Mock-aa Live-aa?</h1>
+  <p class="lead">Team / client kandippa kekkura kelvi: "Inbound 42 — idhu real-aa?"</p>
+
+  <table>
+    <tr><th style="width:24%">Layer</th><th style="width:16%">Status</th><th>Explanation</th></tr>
+    <tr><td><b>Calculation (formula)</b></td><td><span class="badge b-green">LIVE</span></td><td>Frontend-la endha number-um hardcode illa. Backend database-la real <b>COUNT query</b> run panni dhaan anuppudhu. Oru row add aanaa number maarum.</td></tr>
+    <tr><td><b>Data (messages)</b></td><td><span class="badge b-amber">SYNTHETIC</span></td><td>Database-la irukura 42 messages <b>test-ku namma create pannadhu</b>. Real hotel / vendor traffic illa. Guest details-um illa, marker text mattum.</td></tr>
+    <tr><td><b>Backend</b></td><td><span class="badge b-green">Real HMS backend</span></td><td>E2E test real HMS FastAPI app + real MySQL vachu dhaan nadandhuchu. Aana adhu <b>thani test database</b>, namma main HMS DB illa.</td></tr>
+  </table>
+
+  <h2>3 test setups</h2>
+  <table>
+    <tr><th style="width:22%">Setup</th><th>Backend</th><th>Database</th><th style="width:26%">Purpose</th></tr>
+    <tr><td>Visual QA</td><td>Mock server (fixtures)</td><td>Illa</td><td>Design / layout check</td></tr>
+    <tr><td><b>Full-stack E2E</b></td><td><b>Real HMS backend</b></td><td><b>Real MySQL (test DB)</b></td><td>Numbers correct-aa nu proof (90 + 56 checks)</td></tr>
+    <tr><td>Dev HMS</td><td>Running HMS</td><td>Real HMS DB</td><td>Innum test pannala. Tables DBA approval-ku wait.</td></tr>
+  </table>
+
+  <div class="box green"><b class="t">Oru line-la</b> <b>"Formula live, data demo."</b> Real vendor connect aanaa formula maaraadhu, data source mattum real traffic-aa maarum.</div>
+  <div class="say">Dashboard real HMS backend-la irundhu real database count edukkudhu. Ippo andha database-la irukuradhu test messages. Vendor connect aana appuram real hotel messages varum.</div>
+</section>
+
+<!-- ============ CH 16 DICTIONARY ============ -->
+<section class="chapter">
+  <div class="chapnum">Chapter 16</div>
+  <h1>Status Words Dictionary</h1>
+  <table>
+    <tr><th style="width:30%">Screen-la</th><th>Simple artham</th></tr>
+    <tr><td><span class="badge b-red">Not ready</span></td><td>Production-ku ready illa (approvals / vendor pending). Broken illa.</td></tr>
+    <tr><td><span class="badge b-grey">Disabled</span></td><td>Switch OFF (deliberate)</td></tr>
+    <tr><td><span class="badge b-green">Enabled</span></td><td>Switch ON</td></tr>
+    <tr><td><span class="badge b-dash">Not observable</span></td><td>Dashboard-ku theriyaadhu. Down illa, unknown.</td></tr>
+    <tr><td><span class="badge b-dash">Unavailable</span></td><td>Data edukka mudiyala (DB tables illa / error). "0" illa.</td></tr>
+    <tr><td><span class="badge b-green">Idle · no backlog</span></td><td>Pending edhuvum illa, ellame clear</td></tr>
+    <tr><td><span class="badge b-amber">Processing backlog</span></td><td>Pending irukku, aana 15 min-kulla</td></tr>
+    <tr><td><span class="badge b-red">Backlog stalled</span></td><td>Oldest pending 15 min-ku mela wait pannudhu</td></tr>
+    <tr><td><span class="badge b-green">Configured</span></td><td>Vendor login + hotel mapping setup irukku</td></tr>
+    <tr><td><span class="badge b-amber">Vendor validation pending</span></td><td>Vendor innum verify pannala</td></tr>
+    <tr><td><span class="badge b-grey">Pending</span> (message)</td><td>Save aachu, worker innum edukkala</td></tr>
+    <tr><td><span class="badge b-grey">Processing</span></td><td>Worker ippo process pannudhu</td></tr>
+    <tr><td><span class="badge b-green">Processed</span></td><td>Success-aa mudinjadhu</td></tr>
+    <tr><td><span class="badge b-amber">Awaiting retry</span></td><td>Temporary problem, thirumba try panna wait</td></tr>
+    <tr><td><span class="badge b-red">Failed</span></td><td>Give up, DLQ-la irukku</td></tr>
+    <tr><td><span class="badge b-amber">Test only</span> / <span class="badge b-red">Blocked</span></td><td>Vendor spec illa. Synthetic test mattum / real-aa run aagaadhu.</td></tr>
+    <tr><td>Not currently observable</td><td>Indha particular number-a dashboard-aal paakka mudiyaadhu</td></tr>
+  </table>
+</section>
+
+<!-- ============ CH 17 FAQ ============ -->
+<section class="chapter">
+  <div class="chapnum">Chapter 17</div>
+  <h1>Common Kelvigal (FAQ)</h1>
+  <table>
+    <tr><th style="width:38%">Kelvi</th><th>Badhil</th></tr>
+    <tr><td>Dashboard-la numbers irukke, vendor connect aagiducha?</td><td>Illa. Idhu demo / test data. Endha vendor-um connect aagala.</td></tr>
+    <tr><td>Mock data vachu dhaan work aagudhaa?</td><td>Illa. Real HMS backend, real database query dhaan. Data mattum synthetic. (Chapter 15)</td></tr>
+    <tr><td>"Backlog stalled": system crash aagiducha?</td><td>Illa. Worker ippo run aagala (switch OFF). Messages safe-aa pending-la irukku.</td></tr>
+    <tr><td>FIAS "Not observable": FIAS down-aa?</td><td>Illa. Link start-e pannala, adhanaala theriyaadhu.</td></tr>
+    <tr><td>HTNG "Disabled": network problem-aa?</td><td>Illa. Safety-kaaga switch OFF pannirukom.</td></tr>
+    <tr><td>Pending 13 + Retry 5 = 18-aa?</td><td>Illa. 5 already 13-kulla irukku.</td></tr>
+    <tr><td>Failed 5 + DLQ 5 = 10-aa?</td><td>Illa. Same 5 messages dhaan.</td></tr>
+    <tr><td>Overview 42, Message Logs 38: yen?</td><td>Overview-la time limit illa. Logs default last 7 days.</td></tr>
+    <tr><td>Dashboard-la irundhu failed message-a thirumba run pannalaamaa?</td><td>Illa. Dashboard read-only. Redrive backend API vazhiya, permission + reason-oda mattum.</td></tr>
+    <tr><td>0 vs Unavailable?</td><td>0 = check pannom, onnum illa. Unavailable = check panna mudiyala.</td></tr>
+    <tr><td>Oru hotel user vera hotel data paakka mudiyumaa?</td><td>Mudiyaadhu. Facility scope backend-laye enforce aagudhu.</td></tr>
+    <tr><td>Same message rendu thadavai vandhaa?</td><td>Oru thadavai dhaan save aagum, oru thadavai dhaan HMS-la apply aagum.</td></tr>
+    <tr><td>Eppo production?</td><td>Vendor confirm (HF-03) → documents → configure → vendor validation → approvals → go-live. Date vendor response-a porutthu.</td></tr>
+    <tr><td>Yen vendor format-a guess panni ippave mudikka koodaadhu?</td><td>Thappaana guess-naala wrong room / wrong hotel update aagalaam. Official spec vachu dhaan final pannanum.</td></tr>
+  </table>
+</section>
+
+<!-- ============ CH 18 SCRIPT ============ -->
+<section class="chapter script">
+  <div class="chapnum">Chapter 18</div>
+  <h1>Presentation Script (Apdiye Pesalaam)</h1>
+  <p class="small">Approx 7–8 nimisham. [Screen] = andha neram enna kaattanum.</p>
+
+  <p><span class="who">1. Opening (30 sec)</span><br>
+  "Ellarukkum vanakkam. Inniku HTNG &amp; FIAS integration pathi pesa poren. Simple-aa sonna, hotel front desk software-la nadakkura check-in, check-out ellam namma HMS-ku automatic-aa kondu varra bridge idhu."</p>
+
+  <p><span class="who">2. Problem (45 sec)</span> [Figure 1]<br>
+  "Hotel-la PMS nu oru front desk software irukkum. Guest check-in anga dhaan nadakkum. Aana namma HMS-ku adhu theriyaadhu. Room innum vacant-aa kaattum, staff thirumba type pannanum. Indha gap-a fill panna dhaan indha integration."</p>
+
+  <p><span class="who">3. HTNG &amp; FIAS (1 min)</span><br>
+  "PMS-um HMS-um pesa rendu popular language irukku. HTNG courier-la letter anuppura maadhiri, web service. FIAS always-on phone line maadhiri, TCP connection. Endha vendor nu innum decide aagaadhadhaala rendukkum ready pannirukom. Vendor rules-a guess pannala. Official documents vandha udane plug pannuvom."</p>
+
+  <p><span class="who">4. Workflow (1 min)</span> [Figure 2]<br>
+  "Message vandhaa mudhalla door-la check pannum: correct vendor-aa, correct hotel-aa, format sari-aa. Appuram database-la safe-aa save aagum. Worker eduthu HMS-la stay-a active pannum, room-a occupied aakkum. Temporary problem-na thaane retry pannum. Permanent problem-na DLQ-ku pogum. Ellame dashboard-la theriyum."</p>
+
+  <p><span class="who">5. Enna pannirukom (45 sec)</span><br>
+  "Common engine, rendu doors, HMS stay connection, background worker, monitoring APIs, 5-page dashboard ellam ready. 517 backend tests, 40 certification scenarios, real backend-oda full end-to-end test 146 checks ellam pass aagiduchu."</p>
+
+  <p><span class="who">6. Dashboard demo (2 min)</span> [Overview page]<br>
+  "Idhu Overview. Mela HTNG, FIAS cards. 'Not ready'-nu kaattudhu, yen-na approvals pending. Broken illa. HTNG 'Disabled', switch OFF pannirukom. FIAS 'Not observable', link start pannala. Keezha 6 cards: Inbound 42 total messages vandhuchu, Pending 13 innum mudiyala, Failed 5 DLQ-la irukku. Gavanam: Retry 5 Pending-kulla irukku, Failed 5 DLQ-kulla irukku. Add panna koodaadhu."<br>
+  [HTNG page] "Idhu HTNG mattum detail-aa: door status, login setup, backlog, stats, latest failures, vendor validation."<br>
+  [FIAS page] "FIAS-um same layout, extra-aa links table."<br>
+  [Message Logs] "Oru specific message-a hotel, date, status vachu thedalaam."<br>
+  [DLQ] "Fail aana messages, reason-oda. Read-only. Fix panna authorised person audit-oda redrive pannuvaanga."</p>
+
+  <p><span class="who">7. Numbers real-aa? (30 sec)</span><br>
+  "Ippo therira numbers test data. Aana calculation real HMS backend-la real database query. Formula live, data demo."</p>
+
+  <p><span class="who">8. Pending + next step (1 min)</span> [Figure 4]<br>
+  "Engineering side ready. Pending ellam external: vendor confirmation, vendor documents, DBA, business, security approvals. Next step ondre ondru: endha PMS vendor nu confirm pannanum (HF-03). Adhu vandha udane documents vaangi, configure panni, vendor-oda test panni, sign-off vaangi, pilot hotel-la go-live pannuvom. DBA-um business approvals-um ippave parallel-aa start pannalaam."</p>
+
+  <p><span class="who">9. Closing (15 sec)</span><br>
+  "Summary: bridge ready, tested, monitored. Vendor confirm aanaa next phase start. Questions?"</p>
+</section>
+
+<!-- ============ CH 19 SUMMARY ============ -->
+<section class="chapter">
+  <div class="chapnum">Chapter 19</div>
+  <h1>Oru Page Summary</h1>
+  <table>
+    <tr><th style="width:28%">Kelvi</th><th>Badhil</th></tr>
+    <tr><td><b>Enna build pannom?</b></td><td>Hotel PMS → namma HMS automatic bridge (HTNG + FIAS) + 5-page monitoring dashboard</td></tr>
+    <tr><td><b>HMS-la enna pannum?</b></td><td>Check-in → stay active + room Occupied; check-out → stay close</td></tr>
+    <tr><td><b>HMS-la enna integrate aagirukku?</b></td><td>Backend module, stays logic, facilities, login + permissions, database (pending), sidebar + 5 pages, audit</td></tr>
+    <tr><td><b>Ready-aa irukuradhu</b></td><td>Foundation, rendu doors (framework), HMS handler, worker, APIs, dashboard, simulator, tests</td></tr>
+    <tr><td><b>Pending</b></td><td>Vendor confirm (HF-03), vendor documents, sandbox, DBA approval, business / security approvals</td></tr>
+    <tr><td><b>Dashboard numbers</b></td><td>Formula live (real DB COUNT), data synthetic (test)</td></tr>
+    <tr><td><b>Status</b></td><td><span class="badge b-amber">FOUNDATION IMPLEMENTED — VENDOR VALIDATION PENDING</span></td></tr>
+    <tr><td><b>Next step</b></td><td>Product Owner vendor confirm pannanum (HF-03)</td></tr>
+    <tr><td><b>Eppo live?</b></td><td>Vendor response-a porutthu. Engineering blocker illa.</td></tr>
+  </table>
+
+  <h2>Overview cards oru paarvai</h2>
+  <div class="kpis">
+    <div class="kpi"><div class="l">Inbound</div><div class="v">42</div><div class="s">ellaa incoming</div></div>
+    <div class="kpi"><div class="l">Outbound</div><div class="v">3</div><div class="s">queued, not sent</div></div>
+    <div class="kpi"><div class="l">Pending</div><div class="v">13</div><div class="s">incl. retry</div></div>
+    <div class="kpi"><div class="l">Failed</div><div class="v">5</div><div class="s">inbound DLQ</div></div>
+    <div class="kpi"><div class="l">Retry</div><div class="v">5</div><div class="s">inside Pending</div></div>
+    <div class="kpi"><div class="l">DLQ</div><div class="v">5</div><div class="s">in + out</div></div>
+  </div>
+  <p class="small">Inbound 42 = Processed 24 + Pending 13 + Failed 5. Ellaa values-um demo / synthetic data.</p>
+
+  <div class="box"><b class="t">Detail-aa therinjukka (repo docs)</b>
+    <span class="small">HTNG_FIAS_OVERVIEW_KPI_EXPLANATION_TANGLISH.pdf · HTNG_FIAS_COMPLETE_PROJECT_EXPLANATION_TANGLISH.pdf · HTNG_FIAS_MASTER_PROJECT_COMPLETION_PLAN.md · HTNG_FIAS_FULLSTACK_E2E_VERIFICATION_REPORT.md</span></div>
+</section>
+
+</body>
+</html>
