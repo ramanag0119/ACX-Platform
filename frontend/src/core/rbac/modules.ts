@@ -77,6 +77,11 @@ export const ROUTE_MODULE: Record<string, HmsModule> = {
   "/tickets": "tickets",
   "/manage/tickets": "tickets",
   "/key-settings": "default_key",
+  // HTNG / FIAS integration monitoring. The backend gates every
+  // /integrations/observability endpoint on `facility_management` read (no
+  // integration module exists in role_module), so the screens use the same
+  // grant. Longest-prefix lookup covers every /integrations/* screen.
+  "/integrations": "facility_management",
 };
 
 /** Longest-prefix lookup, so `/reports/occupancy` resolves to `reports`. */

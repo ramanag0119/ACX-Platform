@@ -26,6 +26,12 @@ import {
   Info,
   UserCheck,
   Cpu,
+  Network,
+  Activity,
+  Server,
+  Cable,
+  ListChecks,
+  AlertOctagon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/core/contexts/AuthContext";
@@ -372,6 +378,21 @@ export const AppSidebar = ({ collapsed }: AppSidebarProps) => {
         { to: "/holidays", label: "Holidays", icon: PartyPopper },
         { to: "/events", label: "Events", icon: CalendarDays },
         { to: "/tickets", label: "Tickets", icon: Ticket },
+      ],
+    },
+    // Integrations: read-only HTNG / FIAS monitoring. Every child resolves to
+    // `facility_management` through moduleForPath, so the group is hidden
+    // from roles without that read grant.
+    {
+      to: "/integrations",
+      icon: Network,
+      label: "Integrations",
+      subItems: [
+        { to: "/integrations", label: "Overview", icon: Activity },
+        { to: "/integrations/htng", label: "HTNG Monitoring", icon: Server },
+        { to: "/integrations/fias", label: "FIAS Monitoring", icon: Cable },
+        { to: "/integrations/messages", label: "Message Logs", icon: ListChecks },
+        { to: "/integrations/dlq", label: "Failed Messages / DLQ", icon: AlertOctagon },
       ],
     },
     { to: "/reports/occupancy", icon: FileText, label: "Reports" },

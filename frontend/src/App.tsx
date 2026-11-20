@@ -28,6 +28,10 @@ import RoomDevices from "@/features/config/pages/RoomDevices";
 import Offers from "@/features/marketing/pages/Offers";
 import Holidays from "@/features/marketing/pages/Holidays";
 import Events from "@/features/marketing/pages/Events";
+import IntegrationOverview from "@/features/integrations/pages/IntegrationOverview";
+import { FiasMonitoring, HtngMonitoring } from "@/features/integrations/pages/ProtocolMonitoring";
+import MessageLogs from "@/features/integrations/pages/MessageLogs";
+import DeadLetters from "@/features/integrations/pages/DeadLetters";
 
 const queryClient = new QueryClient();
 
@@ -85,6 +89,13 @@ const App = () => (
               <Route path="/energy-view" element={<Navigate to="/occupancy" replace />} />
               <Route path="/room-view" element={<Navigate to="/occupancy" replace />} />
               <Route path="/key-settings" element={<KeySettings />} />
+              {/* HTNG / FIAS integrations: read-only monitoring, guarded on
+                  `facility_management` like the backend endpoints it reads. */}
+              <Route path="/integrations" element={<IntegrationOverview />} />
+              <Route path="/integrations/htng" element={<HtngMonitoring />} />
+              <Route path="/integrations/fias" element={<FiasMonitoring />} />
+              <Route path="/integrations/messages" element={<MessageLogs />} />
+              <Route path="/integrations/dlq" element={<DeadLetters />} />
               <Route path="/about" element={<About />} />
             </Route>
             <Route path="*" element={<NotFound />} />
