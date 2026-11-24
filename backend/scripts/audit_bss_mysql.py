@@ -19,6 +19,7 @@ from pathlib import Path
 from sqlalchemy import create_engine, text
 
 from app.core.config import settings
+from app.core.vault import VaultError
 
 OUT = Path(__file__).resolve().parent / "bss_mysql_schema.json"
 FORBIDDEN = {
@@ -36,9 +37,15 @@ def q(sql: str) -> str:
 
 
 def main() -> int:
-    if not settings.MYSQL_PASSWORD:
-        print("MYSQL_PASSWORD is empty. Supply it from the vault:")
-        print("  secure-local\\run_with_secret.py -- python -m scripts.audit_bss_mysql")
+    # Credentials come from the KeePass vault in `backend/etc/`; an unopenable
+    # vault or an unfilled entry raises VaultError with an actionable message.
+    try:
+        if not settings.MYSQL_PASSWORD:
+            print("The vault entry 'MYSQL_BSS' holds no password.")
+            print("Open backend/etc/hmsBackend.kdbx in KeePass and set it.")
+            return 2
+    except VaultError as exc:
+        print(exc)
         return 2
 
     from app.db.session import CONNECT_ARGS

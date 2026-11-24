@@ -20,6 +20,13 @@ pydantic==2.12.5
 pydantic-settings==2.7.1
 python-dotenv==1.0.1
 
+# --- Credential vault ---
+# app/core/vault.py reads the BSS host, port, user, password, database and
+# SSL_CA_Path out of backend/etc/hmsBackend.kdbx. Without this the application
+# cannot resolve a single database setting, so it is a hard runtime dependency,
+# not a developer convenience.
+pykeepass==4.2.0
+
 # --- Testing ---
 pytest==9.1.1
 

@@ -32,6 +32,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.core.config import settings
+from app.core.vault import VaultError
 
 PASS, FAIL, WARN = "PASS", "FAIL", "WARN"
 
@@ -42,16 +43,23 @@ def line(step: str, status: str, detail: str = "") -> None:
 
 def main() -> int:
     print("BSS MySQL connection verification (read-only)")
-    print(f"  target: {settings.MYSQL_USER}@{settings.MYSQL_HOST}:"
-          f"{settings.MYSQL_PORT}/{settings.MYSQL_DATABASE}")
-    print()
 
-    if not settings.MYSQL_PASSWORD:
-        line("password configured", FAIL, "MYSQL_PASSWORD is empty")
-        print("\n  Supply it from the vault:")
-        print("    secure-local\\run_with_secret.py --check")
+    # Every MYSQL_* setting is read from the KeePass vault, so an unopenable
+    # vault or an unfilled entry fails here -- before any target can even be
+    # named. Reported as a FAIL line rather than a traceback: this script is a
+    # checklist, and a missing password is an expected state, not a crash.
+    try:
+        target = (f"{settings.MYSQL_USER}@{settings.MYSQL_HOST}:"
+                  f"{settings.MYSQL_PORT}/{settings.MYSQL_DATABASE}")
+    except VaultError as exc:
+        print()
+        line("vault credentials", FAIL, str(exc).splitlines()[0])
+        print(f"\n{exc}")
         return 2
-    line("password configured", PASS, "(value not shown)")
+
+    print(f"  target: {target}")
+    print()
+    line("vault credentials", PASS, "(password not shown)")
 
     try:
         ssl_args = settings.mysql_ssl_args
