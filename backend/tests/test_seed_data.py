@@ -443,14 +443,35 @@ def test_room_statuses_cover_the_four_ikanos_values(session):
 
 
 def test_no_price_was_smuggled_onto_package(session):
-    """`packages` has no price column, and none may hide in metadata either.
-    OPEN DECISION #10 is still unresolved."""
+    """No room tariff may be invented. OPEN DECISION #10 is still unresolved.
+
+    `package.price` now EXISTS -- e5b9c3d71f48 added it because the model
+    declares it and `app/services/catalog.py` reads it. What must never
+    happen is a VALUE appearing in it: b3c4d5e6f7a8 back-fills 4500 / 2500 /
+    1800 by room name, and those numbers are derived from nothing.
+
+    So the assertion moved from "the column must not exist" to "the column
+    must be empty", which is the stronger guarantee -- it keeps holding once
+    the column is legitimately present, and it still fails the moment someone
+    writes a tariff the business has not decided.
+    """
     cols = session.execute(
         text("SELECT column_name FROM information_schema.columns "
              f"WHERE table_schema='{SCHEMA_NAME}' AND table_name='package'")
     ).scalars().all()
-    assert "price" not in cols
-    assert not any("price" in c or "rate" in c or "tariff" in c for c in cols)
+    # `price` is the only price-shaped column allowed, and only while empty.
+    assert not any(
+        ("rate" in c or "tariff" in c) or ("price" in c and c != "price")
+        for c in cols
+    ), f"an unapproved price-like column appeared on package: {cols}"
+
+    priced = session.execute(
+        text("SELECT COUNT(*) FROM package WHERE price IS NOT NULL")
+    ).scalar_one()
+    assert priced == 0, (
+        f"{priced} package row(s) carry a price. Room tariffs are OPEN "
+        "DECISION #10 and must not be seeded or back-filled."
+    )
 
 
 def test_only_service_items_carry_a_price(session):
@@ -462,6 +483,10 @@ def test_only_service_items_carry_a_price(session):
     assert {(t, c) for t, c in priced} == {
         ("service_category_item", "price_per_unit"),
         ("service_request_item", "price_per_unit"),
+        # Present since e5b9c3d71f48 but deliberately unvalued -- the
+        # all-NULL guarantee is asserted by
+        # test_no_price_was_smuggled_onto_package above.
+        ("package", "price"),
     }
     n = session.execute(
         select(func.count()).select_from(ServiceCategoryItem)

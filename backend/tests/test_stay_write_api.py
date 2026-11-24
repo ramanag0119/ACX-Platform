@@ -555,9 +555,16 @@ def _track_room_conditions(cleanup, db, room_id):
         {"value": room_id},
     )
     for condition_id, status in original:
+        # MySQL upsert. This was `ON CONFLICT ... DO UPDATE SET ... EXCLUDED`,
+        # which is PostgreSQL-only and therefore raised on every teardown.
+        # Cleanup.run() is best-effort, so the failure was swallowed and the
+        # room's original conditions were simply never restored -- quietly
+        # changing the starting state for whatever test ran next.
         cleanup.sql(
-            "INSERT INTO amenity_condition_status (amenity_id, amenity_condition_id, status) "
-            "VALUES (:value, :c, :s) ON CONFLICT (amenity_id, amenity_condition_id) DO UPDATE SET status = EXCLUDED.status",
+            "INSERT INTO amenity_condition_status "
+            "(amenity_id, amenity_condition_id, status) "
+            "VALUES (:value, :c, :s) AS new "
+            "ON DUPLICATE KEY UPDATE status = new.status",
             {"value": room_id, "c": condition_id, "s": status},
         )
 

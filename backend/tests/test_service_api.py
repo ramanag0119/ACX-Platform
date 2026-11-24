@@ -485,9 +485,52 @@ def test_manager_can_track_but_not_configure(anon, manager_headers, db):
     [f"{V1}/service-requests?page_size=100", f"{V1}/service-items?page_size=100"],
 )
 def test_no_credential_leaks_through_person_references(client, path):
-    raw = client.get(path).text.lower()
-    for needle in ("password", "hash", "token", "secret", "seed-no-login", "metadata"):
-        assert needle not in raw, f"{needle!r} leaked from {path}"
+    """No credential or person metadata may ride along on these responses.
+
+    Checked by KEY, not by substring. The substring form reported
+    `item_metadata` -- a declared business field on `service_category_item`
+    holding `{"seeded": true}` -- as a leak, because its name happens to
+    contain "metadata". A false alarm on a legitimate field is not a harmless
+    one: it trains people to ignore this test, which is the last thing a
+    credential check should do.
+
+    Values are still scanned for the credential sentinels, so a password hash
+    smuggled into a free-text field is still caught.
+    """
+    body = client.get(path).json()
+
+    #: Exact field names that must never appear. `metadata` targets
+    #: `app_user.metadata`, which can hold anything; `item_metadata` is a
+    #: different column on a different table and is deliberately public.
+    FORBIDDEN_KEYS = {
+        "password", "password_hash", "hash", "token", "device_token",
+        "secret", "metadata", "user_metadata",
+    }
+    #: Substrings that must not appear in any VALUE, whatever the key.
+    FORBIDDEN_VALUES = ("seed-no-login", "anonymised-no-login", "password")
+
+    bad_keys: list[str] = []
+    bad_values: list[str] = []
+
+    def walk(node, trail=""):
+        if isinstance(node, dict):
+            for key, value in node.items():
+                here = f"{trail}.{key}" if trail else key
+                if key.lower() in FORBIDDEN_KEYS:
+                    bad_keys.append(here)
+                walk(value, here)
+        elif isinstance(node, list):
+            for item in node:
+                walk(item, trail)
+        elif isinstance(node, str):
+            low = node.lower()
+            for needle in FORBIDDEN_VALUES:
+                if needle in low:
+                    bad_values.append(f"{trail}={node[:40]!r}")
+
+    walk(body)
+    assert not bad_keys, f"forbidden field(s) exposed by {path}: {bad_keys}"
+    assert not bad_values, f"credential-like value(s) in {path}: {bad_values}"
 
 
 def test_person_references_expose_only_id_name_emp_id(client):

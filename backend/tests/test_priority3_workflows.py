@@ -10,6 +10,8 @@ Run: python -m pytest tests/test_priority3_workflows.py -q
 
 from __future__ import annotations
 
+import json
+
 import io
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -120,11 +122,16 @@ def test_role_notification_preferences_crud(api, db, unique, cleanup):
 
     assert created["notification_preferences"] == prefs
 
-    # Verify directly in PostgreSQL
+    # Verify directly in the database. Read through text(), so the value
+    # arrives as the driver gives it: psycopg2 deserialises JSONB, PyMySQL
+    # returns the raw JSON text. Decode before comparing rather than
+    # asserting one driver's representation.
     db_prefs = db.execute(
         text("SELECT notification_preferences FROM role WHERE id = :rid"),
         {"rid": created["id"]},
     ).scalar()
+    if isinstance(db_prefs, (str, bytes)):
+        db_prefs = json.loads(db_prefs)
     assert db_prefs == prefs
 
     # Reload via GET endpoint
@@ -144,11 +151,14 @@ def test_role_notification_preferences_crud(api, db, unique, cleanup):
     updated = r_patch.json()
     assert updated["notification_preferences"] == new_prefs
 
-    # Verify update in PostgreSQL
+    # Verify the update in the database. Same driver difference as above:
+    # PyMySQL returns JSON as text, psycopg2 returns it decoded.
     db_updated = db.execute(
         text("SELECT notification_preferences FROM role WHERE id = :rid"),
         {"rid": created["id"]},
     ).scalar()
+    if isinstance(db_updated, (str, bytes)):
+        db_updated = json.loads(db_updated)
     assert db_updated == new_prefs
 
 
