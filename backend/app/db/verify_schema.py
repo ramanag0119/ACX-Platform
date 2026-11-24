@@ -29,8 +29,44 @@ from app.models.enums import ALL_ENUMS
 #: Schema for the SQLAlchemy inspector: None is the connection's default,
 #: which on MySQL is the database itself.
 SCHEMA = None
-#: What `information_schema.*.table_schema` holds for HMS tables.
-SCHEMA_NAME = settings.MYSQL_DATABASE
+
+
+def schema_name() -> str:
+    """What `information_schema.*.table_schema` holds for HMS tables.
+
+    Resolved from the engine the session layer is CURRENTLY bound to, not from
+    `settings`. That distinction is the whole point.
+
+    `settings.MYSQL_DATABASE` is a vault-backed property, so it always answers
+    `inspironics_app`. `tests/db_isolation.bind_test_database()` rebinds
+    `app.db.session.engine` to the test database but cannot change a vault
+    property -- so a module-level `SCHEMA_NAME = settings.MYSQL_DATABASE`
+    left the suite split-brained: queries ran against
+    `inspironics_app_test` while every `information_schema` filter said
+    `inspironics_app`, matched nothing, and `scalar_one()` raised. It is not a
+    stale expectation; it makes the suite unrunnable against ANY test database.
+
+    `app.db.session` is imported inside the function so the CURRENT engine is
+    read on every call -- `from ... import engine` would copy the object and
+    miss a later rebind.
+    """
+    import app.db.session as session_module
+
+    return session_module.engine.url.database
+
+
+def __getattr__(name: str):
+    """Keep the `SCHEMA_NAME` constant working, but resolve it lazily.
+
+    Seven test modules do `from app.db.verify_schema import SCHEMA_NAME` and
+    interpolate it into SQL. PEP 562 lets that keep working unchanged while
+    the value follows the active engine, so the fix needs no edits at ~20 call
+    sites. A real module-level assignment would shadow this hook -- hence
+    there is deliberately no `SCHEMA_NAME = ...` above.
+    """
+    if name == "SCHEMA_NAME":
+        return schema_name()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 #: Tables from the superseded Phase 1 39-table foundation. None may survive.
 RETIRED_PHASE1_TABLES = frozenset(
@@ -95,7 +131,7 @@ def live_enums(conn) -> dict[str, list[str]]:
             ORDER BY t.typname, e.enumsortorder
             """
         ),
-        {"schema": SCHEMA_NAME},
+        {"schema": schema_name()},
     )
     out: dict[str, list[str]] = {}
     for name, label in rows:
@@ -178,14 +214,14 @@ def main() -> int:
                 "SELECT count(*) FROM information_schema.table_constraints "
                 "WHERE table_schema = :s AND constraint_type = 'FOREIGN KEY'"
             ),
-            {"s": SCHEMA_NAME},
+            {"s": schema_name()},
         ).scalar()
         n_uq = conn.execute(
             text(
                 "SELECT count(*) FROM information_schema.table_constraints "
                 "WHERE table_schema = :s AND constraint_type = 'UNIQUE'"
             ),
-            {"s": SCHEMA_NAME},
+            {"s": schema_name()},
         ).scalar()
         n_ix = conn.execute(
             text(
@@ -194,7 +230,7 @@ def main() -> int:
                 if mysql
                 else "SELECT count(*) FROM pg_indexes WHERE schemaname = :s"
             ),
-            {"s": SCHEMA_NAME},
+            {"s": schema_name()},
         ).scalar()
         rev = conn.execute(text("SELECT version_num FROM alembic_version")).scalar()
 
