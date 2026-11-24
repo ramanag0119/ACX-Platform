@@ -207,6 +207,17 @@ APPROVED_TABLES: tuple[str, ...] = (
     "battery_life_stat",
     "sensor_operation_stat",
     "room_device_map",
+    # Added after the blueprint's 92, by approved migration:
+    #   room_status_condition_applicability (c7a1b2d3e4f5) -- the room-status
+    #     x condition policy the occupancy screen and every stay-lifecycle
+    #     write read through `_has_blocking_condition`.
+    #   currency (d8e4f1a6b207) -- ISO 4217 master, joined by stay, service
+    #     and catalogue reads.
+    # Both were declared by the models long before MySQL had them; listing
+    # them here is what lets `test_no_unapproved_table_exists` stay a real
+    # guard instead of a permanent failure.
+    "room_status_condition_applicability",
+    "currency",
     # H -- job orders (3)
     "job_order",
     "job_order_device",
@@ -268,6 +279,35 @@ LOOKUP_TABLES: frozenset[str] = frozenset(
         "entity_type",
         "activity_type",
         "occasion_type",
+        # `Currency` is declared `SmallIntLookupPk` -- a seeded SMALLINT id,
+        # autoincrement=False, exactly like every entry above. Listing it here
+        # is what the model already says; leaving it out would class it as a
+        # T2 entity and assert a UUID primary key it does not have.
+        "currency",
+    }
+)
+
+#: Configuration tables HMS created itself, with a documented exemption from
+#: the blueprint's §2.3 primary-key policy and its `legacy_id` rule.
+#:
+#: Both rules exist to carry IKANOS forward: a UUID primary key replaces the
+#: IKANOS integer surrogate, and `legacy_id` preserves the original so the two
+#: systems can still be reconciled. A table that never existed in IKANOS has
+#: no original integer to preserve and nothing to reconcile against, so
+#: applying either rule would add a column and a key format that mean nothing.
+#:
+#: `room_status_condition_applicability` (migration c7a1b2d3e4f5) is policy
+#: data: 42 rows seeded by the migration itself, keyed by
+#: (room_status, condition_id) through `uq_room_status_condition`. Its `id` is
+#: an INT AUTO_INCREMENT surrogate that nothing references -- confirmed: the
+#: table has ZERO inbound foreign keys -- so a UUID would buy no stability.
+#:
+#: This set is deliberately narrow. A table belongs here only if HMS created
+#: it AND nothing foreign-keys to its surrogate id; anything else still owes
+#: the blueprint a UUID and a legacy_id.
+CONFIG_TABLES: frozenset[str] = frozenset(
+    {
+        "room_status_condition_applicability",
     }
 )
 
@@ -314,6 +354,7 @@ __all__ = [
     "enums",
     "APPROVED_TABLES",
     "LOOKUP_TABLES",
+    "CONFIG_TABLES",
     "HIGH_VOLUME_TABLES",
     "COMPOSITE_PK_TABLES",
     # A

@@ -1,108 +1,136 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { useTheme } from "@/core/contexts/ThemeContext";
 import { DataState } from "@/core/components/DataState";
-import { useCaleidoAtWork } from "@/lib/api/hooks";
+import { useOperationalKpis } from "@/lib/api/hooks";
 import { useSurfaceTokens } from "@/core/styles/surfaceTokens";
+import type { CaleidoRange, OperationalKPIRead } from "@/lib/api/types";
 
 /**
- * The four rings are the real `daily_dual_data_point` KPI rows.
+ * The four operational KPIs: Smart Rooms Online, Service Request Status,
+ * Rooms For Check-Out, Pending Bookings.
  *
- * dp_1 / dp_2 are the stored numerator and denominator, and the percentage the
- * ring draws is computed FROM THEM BY THE BACKEND -- GET
- * /daily-data-points/summary returns one aggregated row per metric_type (the
- * most recent snapshot in the window) with the ratio already resolved. Nothing
- * here selects a record or does arithmetic on the data. The metric_type strings
- * are exactly the ones the table stores.
+ * WHAT CHANGED AND WHY. This card used to read `daily_dual_data_point`, a
+ * table of pre-computed daily snapshots. Nothing has written to it since
+ * 2026-08-17, so with the Today filter the window held no rows and the card
+ * rendered "No daily KPI data points recorded". The business data was fine;
+ * the snapshot was stale. It now reads GET /dashboard/caleido-at-work, which
+ * computes the same four indicators from the live records.
+ *
+ * NOTHING IS CALCULATED HERE. The backend returns `percentage`, `numerator`,
+ * `denominator`, `count` and `detail` already resolved. This file chooses a
+ * colour and draws an arc; it never divides, defaults or substitutes.
+ *
+ * THREE DISTINCT STATES, deliberately not collapsed:
+ *   unavailable  -- `available === false`: the figure cannot be known (no
+ *                   device-to-room mapping, OSS unreachable). Shows "-" and
+ *                   the backend's reason. NEVER 0 %.
+ *   no ratio     -- available, but `percentage === null` because the
+ *                   denominator is 0 (nothing raised in this period). Shows
+ *                   the real count with "-" for the ring.
+ *   a value      -- draws the arc.
  */
 
-interface CircularProgressProps {
-  value: number;
-  label: string;
-  color: string;
-  showDash?: boolean;
+const RANGES: { key: CaleidoRange; label: string }[] = [
+  { key: "today", label: "Today" },
+  { key: "week", label: "Week" },
+  { key: "month", label: "Month" },
+];
+
+/** Ring colour per KPI. Presentation only -- it encodes nothing about data. */
+const COLORS: Record<string, string> = {
+  smart_rooms_online: "hsl(265,70%,58%)",
+  service_request_status: "hsl(145,70%,45%)",
+  rooms_for_checkout: "hsl(28,85%,55%)",
+  pending_bookings: "hsl(205,75%,52%)",
+};
+
+interface RingProps {
+  kpi: OperationalKPIRead;
   isDark: boolean;
-  detail?: string;
 }
 
-const CircularProgress = ({ value, label, color, showDash, isDark, detail }: CircularProgressProps) => {
+const Ring = ({ kpi, isDark }: RingProps) => {
   const radius = 18;
   const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (Math.min(Math.max(value, 0), 100) / 100) * circumference;
   const titleColor = isDark ? "#dde2ed" : "#1F1B3A";
   const mutedColor = isDark ? "#8b95a9" : "#8A86A8";
+  const color = COLORS[kpi.key] ?? "hsl(145,70%,45%)";
+
+  const hasRatio = kpi.available && kpi.percentage !== null;
+  const pct = hasRatio ? Math.min(Math.max(kpi.percentage as number, 0), 100) : 0;
+  const strokeDashoffset = circumference - (pct / 100) * circumference;
+
+  /* Headline: the percentage when there is one; otherwise the real count
+     (a true zero is worth showing); otherwise "-" for unknown. */
+  const headline = hasRatio
+    ? `${kpi.percentage}%`
+    : kpi.available && kpi.count !== null
+      ? String(kpi.count)
+      : "-";
+
+  const sub = kpi.available ? kpi.detail : (kpi.unavailable_reason ?? "Unavailable");
 
   return (
-    /* min-w-0 + shrink-0: a long label ("Service Request Status") truncates
-       rather than widening the grid track. */
     <div className="flex items-center gap-3 min-w-0">
       <div className="relative w-12 h-12 shrink-0">
         <svg className="w-12 h-12 -rotate-90" viewBox="0 0 44 44">
-          <circle cx="22" cy="22" r={radius} fill="none" stroke={isDark ? "rgba(255,255,255,0.08)" : "rgba(124,92,255,0.1)"} strokeWidth="3" />
           <circle
-            cx="22" cy="22" r={radius} fill="none" stroke={color} strokeWidth="3"
-            strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} strokeLinecap="round"
+            cx="22" cy="22" r={radius} fill="none"
+            stroke={isDark ? "rgba(255,255,255,0.08)" : "rgba(124,92,255,0.1)"}
+            strokeWidth="3"
           />
+          {hasRatio && (
+            <circle
+              cx="22" cy="22" r={radius} fill="none" stroke={color} strokeWidth="3"
+              strokeDasharray={circumference} strokeDashoffset={strokeDashoffset}
+              strokeLinecap="round"
+            />
+          )}
         </svg>
+        {/* A dimmed dot marks "no arc to draw", so an unavailable ring is
+            visibly different from a genuine 0 % rather than just empty. */}
+        {!hasRatio && (
+          <span
+            className="absolute inset-0 flex items-center justify-center text-[10px]"
+            style={{ color: mutedColor }}
+            aria-hidden
+          >
+            ●
+          </span>
+        )}
       </div>
       <div className="min-w-0">
-        <p style={{ color: titleColor }} className="font-medium text-lg truncate">
-          {showDash ? "-" : `${value}%`}
+        <p
+          style={{ color: kpi.available ? titleColor : mutedColor }}
+          className="font-medium text-lg truncate"
+        >
+          {headline}
         </p>
-        <p style={{ color: mutedColor }} className="text-xs uppercase tracking-wide truncate" title={label}>{label}</p>
-        {detail && <p style={{ color: mutedColor }} className="text-[10px] truncate" title={detail}>{detail}</p>}
+        <p
+          style={{ color: mutedColor }}
+          className="text-xs uppercase tracking-wide truncate"
+          title={kpi.label}
+        >
+          {kpi.label}
+        </p>
+        {sub && (
+          <p style={{ color: mutedColor }} className="text-[10px] truncate" title={sub}>
+            {sub}
+          </p>
+        )}
       </div>
     </div>
   );
 };
 
-/** Ring label -> the `metric_type` value stored in the table. */
-const RINGS: { metricType: string; label: string; color: string }[] = [
-  { metricType: "smart room", label: "Smart Rooms Online", color: "hsl(0,70%,50%)" },
-  { metricType: "service request", label: "Service Request Status", color: "hsl(145,70%,45%)" },
-  { metricType: "checkout", label: "Rooms For Check-Out", color: "hsl(145,70%,45%)" },
-  { metricType: "booking", label: "Pending Bookings", color: "hsl(145,70%,45%)" },
-];
-
-/** The existing Today/Week/Month picker, mapped to a real date filter. */
-const RANGE_DAYS: Record<string, number> = { Today: 0, Week: 6, Month: 29 };
-
-const isoDaysAgo = (days: number) => {
-  const date = new Date();
-  date.setDate(date.getDate() - days);
-  return date.toISOString().slice(0, 10);
-};
-
 export const CaleidoAtWork = () => {
   const { isDark } = useTheme();
-  const [range, setRange] = useState<keyof typeof RANGE_DAYS>("Today");
+  const [range, setRange] = useState<CaleidoRange>("today");
 
-  /**
-   * One aggregated row per metric, straight from the backend.
-   *
-   * This used to request a PAGE of raw `daily_dual_data_point` rows -- every
-   * metric type, up to twenty of them -- then pick the newest row per type
-   * here and divide dp_1 by dp_2 in the browser. Both the record selection and
-   * the percentage now happen in SQL, so the component receives exactly the
-   * four ratios it draws and nothing to choose between.
-   *
-   * The window is sent to the API and is part of the query key, so switching
-   * period refetches instead of re-reading the previous period's rows.
-   */
-  const query = useCaleidoAtWork({
-    metric_date_from: isoDaysAgo(RANGE_DAYS[range]),
-  });
-
-  const latest = useMemo(() => {
-    const map = new Map<string, { value: number; detail: string }>();
-    for (const metric of query.data?.metrics ?? []) {
-      map.set(metric.metric_type, {
-        value: metric.percentage,
-        detail: `${metric.dp_1} / ${metric.dp_2}`,
-      });
-    }
-    return map;
-  }, [query.data]);
+  /* `range` is part of the query key, so switching period refetches instead
+     of showing the previous window's numbers. */
+  const query = useOperationalKpis({ range });
 
   const {
     cardBg,
@@ -114,69 +142,65 @@ export const CaleidoAtWork = () => {
     controlBorder: selectBorder,
   } = useSurfaceTokens();
 
+  const kpis = query.data?.kpis ?? [];
+
   return (
-    /* h-full: Alerts sits beside this card and sets the row height, so without
-       it the card stopped short and the page showed through the grid cell. */
     <div
       className="rounded-lg p-4 h-full min-w-0 flex flex-col transition-all duration-250 ease hover:-translate-y-0.5"
       style={{ background: cardBg, border: cardBorder, boxShadow: cardShadow }}
     >
       <div className="flex items-center justify-between mb-4 shrink-0 gap-3">
-        <h3 style={{ color: titleColor }} className="font-medium">Caleido At work</h3>
+        <h3 style={{ color: titleColor }} className="font-medium">
+          Caleido At work
+        </h3>
         <div className="flex items-center gap-2">
           <select
             className="text-sm px-3 py-1.5 rounded border-none outline-none transition-colors duration-200"
             style={{ backgroundColor: selectBg, color: titleColor, border: selectBorder }}
             value={range}
-            onChange={(event) => setRange(event.target.value as keyof typeof RANGE_DAYS)}
+            onChange={(event) => setRange(event.target.value as CaleidoRange)}
+            aria-label="KPI period"
           >
-            <option>Today</option>
-            <option>Week</option>
-            <option>Month</option>
+            {RANGES.map((option) => (
+              <option key={option.key} value={option.key}>
+                {option.label}
+              </option>
+            ))}
           </select>
           <button
             style={{ color: mutedColor }}
-            className="hover:opacity-100 opacity-70 transition-opacity"
+            className="hover:opacity-100 opacity-70 transition-opacity disabled:opacity-40"
             onClick={() => query.refetch()}
+            disabled={query.isFetching}
             title="Refresh"
+            aria-label="Refresh KPIs"
           >
-            <RefreshCw className="h-4 w-4" />
+            <RefreshCw className={`h-4 w-4 ${query.isFetching ? "animate-spin" : ""}`} />
           </button>
         </div>
       </div>
 
-      {/* Body starts at the top, the same contract every other dashboard panel
-          uses (Energy, Occupancy, Alerts, Recent Activity). This card used to
-          be the one exception -- `justify-center` floated the dials down the
-          middle so their spare height sat above AND below them, which left its
-          content on a different line from the Alerts list beside it.
-
-          The dials are fixed size, so spare height has to go somewhere; it now
-          collects at the bottom like any other short panel rather than pushing
-          the content out of alignment with its neighbour. */}
       <div className="flex-1 min-h-0 min-w-0 flex flex-col">
         <DataState
           isLoading={query.isLoading}
           error={query.error}
-          isEmpty={latest.size === 0}
-          emptyTitle="No daily KPI data points recorded"
+          isEmpty={kpis.length === 0}
+          emptyTitle="No operational KPIs available"
         >
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {RINGS.map((ring) => {
-              const point = latest.get(ring.metricType);
-              return (
-                <CircularProgress
-                  key={ring.metricType}
-                  value={point?.value ?? 0}
-                  detail={point?.detail}
-                  label={ring.label}
-                  color={ring.color}
-                  showDash={!point}
-                  isDark={isDark}
-                />
-              );
-            })}
+            {kpis.map((kpi) => (
+              <Ring key={kpi.key} kpi={kpi} isDark={isDark} />
+            ))}
           </div>
+          {/* The window the backend actually applied. `live` KPIs are not
+              scoped by it, which is why each ring carries its own detail
+              line rather than this being presented as one global period. */}
+          {query.data && (
+            <p style={{ color: mutedColor }} className="text-[10px] mt-3 shrink-0">
+              Period {query.data.period_from} to {query.data.period_to} · live
+              indicators show current state
+            </p>
+          )}
         </DataState>
       </div>
     </div>

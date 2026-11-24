@@ -418,6 +418,17 @@ def check_out(
             ).scalars().all():
                 db.delete(r_row)
 
+            # The session is autoflush=False, so nothing above has reached the
+            # database yet -- and everything below ASKS the database. Without
+            # this flush, `ensure_available_room_default_condition` runs its
+            # "is an in-house stay holding this room?" query against rows that
+            # still show `actual_checkout_time IS NULL`, concludes the guest is
+            # still in the room, and returns without setting anything. The room
+            # ends up Available with NO condition instead of Ready to Occupy.
+            # The deletes just above need flushing for the same reason: unsent,
+            # they still look like active conditions worth preserving.
+            db.flush()
+
             if _has_blocking_condition(db, allocation.room_id):
                 _set_room_status(db, allocation.room_id, ROOM_UNAVAILABLE)
             else:
@@ -503,6 +514,11 @@ def cancel_stay(
 
         stay.status = STAY_CANCELLED
         stay.modified_by = actor_id
+        # autoflush=False, and the release path below queries the database for
+        # a PENDING stay holding each room. Unflushed, this stay still reads as
+        # 'pending', so `ensure_available_room_default_condition` treats the
+        # room as spoken for and leaves it with no condition at all.
+        db.flush()
         for allocation in _stay_rooms(db, stay_id):
             if _has_blocking_condition(db, allocation.room_id):
                 _set_room_status(db, allocation.room_id, ROOM_UNAVAILABLE)
@@ -619,6 +635,11 @@ def reallocate_room(
         old_room_id = allocation.room_id
         allocation.room_id = room_id
         allocation.package_id = new_room.package_id
+        # autoflush=False: until this lands, the database still shows the
+        # allocation pointing at the OLD room, so the release checks below see
+        # an in-house stay there and leave the vacated room without its
+        # Ready to Occupy condition.
+        db.flush()
 
         if _has_blocking_condition(db, old_room_id):
             _set_room_status(db, old_room_id, ROOM_UNAVAILABLE)

@@ -206,9 +206,22 @@ class RoomStatusConditionApplicability(Base, TimestampMixin):
 class Package(HMSBase, UUIDPk):
     """Room package / rate plan. IKANOS `packages`. ADAPT.
 
-    `price` is NOT a column: `packages` has no price in the dump. The only
-    price in the schema is `service_category_item.price_per_unit`.
-    Room tariff has no source -> blueprint §11.3 / OPEN DECISION #10.
+    `price` EXISTS as a column but is intentionally UNVALUED -- every row is
+    NULL, and must stay that way until the room tariff is decided
+    (blueprint §11.3 / OPEN DECISION #10).
+
+    IKANOS `packages` has no price, so there is no source to migrate from.
+    The column is carried because this model declares it and
+    `app/services/catalog.py` reads it; `PackageRead.price` is
+    `Decimal | None`, so NULL is a valid response and the UI simply shows no
+    price. Migration e5b9c3d71f48 adds the column and writes nothing into it;
+    b3c4d5e6f7a8's 4500 / 2500 / 1800 back-fill is deliberately NOT ported,
+    because those figures are derived from nothing.
+
+    `tests/test_seed_data.py::test_no_price_was_smuggled_onto_package` fails
+    if any value ever appears here. The only priced columns in the schema are
+    `service_category_item.price_per_unit` and
+    `service_request_item.price_per_unit`.
     """
 
     __tablename__ = "package"

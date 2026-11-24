@@ -25,11 +25,25 @@ import os
 # set in the real environment still wins.
 os.environ.setdefault("OSS_ENABLED", "false")
 
+# Database isolation. MUST run before `app.db.session` is imported below (and
+# before conftest_writes.py imports SessionLocal), because `from X import Y`
+# copies the object and would keep a handle on the production sessionmaker.
+# Without HMS_TEST_DATABASE_URL this aborts the session rather than letting the
+# write suites create rows in `inspironics_app`. See tests/db_isolation.py.
+from tests.db_isolation import active_schema, bind_test_database
+
+_DB_MODE = bind_test_database()
+
 import pytest
 from sqlalchemy import text
 
 from app.core.security import create_access_token
 from app.db.session import SessionLocal
+
+
+def pytest_report_header() -> list[str]:
+    """Make the target database impossible to miss in the run output."""
+    return [f"HMS database: {_DB_MODE}", f"bound schema: {active_schema()}"]
 
 
 def _user_id(username: str):

@@ -3,7 +3,6 @@ import { EnergyConsumptionChart } from "../components/EnergyConsumptionChart";
 import { OccupancyStatisticsChart } from "@/features/occupancy/components/OccupancyStatisticsChart";
 import { CaleidoAtWork } from "../components/CaleidoAtWork";
 import { AlertsPanel } from "../components/AlertsPanel";
-import { RecentActivityPanel } from "../components/RecentActivityPanel";
 import { DashboardKPIs } from "../components/DashboardKPIs";
 import { StatusSection } from "../components/StatusSection";
 import { RoomDetailsPanel } from "@/features/occupancy/components/RoomDetailsPanel";
@@ -102,15 +101,6 @@ const Dashboard = () => {
           <AlertsPanel />
         </div>
       </div>
-
-      {/* Third Row - Recent activity */}
-      {canRead("dashboard") && (
-        <div className="grid gap-4 grid-cols-1">
-          <div className="min-w-0">
-            <RecentActivityPanel />
-          </div>
-        </div>
-      )}
 
       {/* Status Section with Buildings, Floors, Rooms */}
       <DataState

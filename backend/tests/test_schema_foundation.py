@@ -24,17 +24,23 @@ from app.db.verify_schema import (
     SCHEMA_NAME,
     detect_cycles,
     live_enums,
+    schema_name,
 )
 from app.models import (
     APPROVED_TABLES,
     COMPOSITE_PK_TABLES,
+    CONFIG_TABLES,
     HIGH_VOLUME_TABLES,
     LOOKUP_TABLES,
     Base,
 )
 from app.models.enums import ALL_ENUMS
 
-EXPECTED_TABLE_COUNT = 93
+#: The blueprint's 92, plus `room_device_map` (a3f1c8e2d904), then
+#: `room_status_condition_applicability` (c7a1b2d3e4f5) and `currency`
+#: (d8e4f1a6b207). Kept equal to `len(APPROVED_TABLES)` -- the point of the
+#: count is to catch a table arriving WITHOUT being added to that list.
+EXPECTED_TABLE_COUNT = 95
 
 #: Native PostgreSQL features (GIN/BRIN, TIMESTAMPTZ, named enums, identity)
 #: have MySQL equivalents that are checked differently; see each test.
@@ -63,10 +69,17 @@ def tables(insp):
 
 
 def test_database_is_the_bss_mysql(conn):
-    assert conn.execute(text("SELECT database()")).scalar() == settings.MYSQL_DATABASE
+    """The connection must be the one the session layer is bound to.
+
+    Compared against the ACTIVE engine, not `settings.MYSQL_DATABASE`. The
+    latter is vault-backed and always answers `inspironics_app`, so against a
+    test database this asserted that the suite was pointed at production --
+    the exact arrangement tests/db_isolation.py exists to prevent.
+    """
+    assert conn.execute(text("SELECT database()")).scalar() == schema_name()
 
 
-def test_blueprint_declares_92_tables():
+def test_blueprint_declares_the_expected_table_count():
     assert len(APPROVED_TABLES) == EXPECTED_TABLE_COUNT
     assert len(set(APPROVED_TABLES)) == EXPECTED_TABLE_COUNT, "duplicate table name"
 
@@ -75,7 +88,7 @@ def test_models_register_exactly_the_approved_tables():
     assert set(Base.metadata.tables) == set(APPROVED_TABLES)
 
 
-def test_database_has_exactly_92_tables(tables):
+def test_database_has_exactly_the_expected_tables(tables):
     assert len(tables) == EXPECTED_TABLE_COUNT
 
 
@@ -171,9 +184,11 @@ def test_t3_high_volume_tables_use_bigint_identity(insp, conn, table_name):
 
 
 def test_t2_entity_tables_use_uuid_pk(insp):
-    tiered = LOOKUP_TABLES | HIGH_VOLUME_TABLES | COMPOSITE_PK_TABLES
+    # CONFIG_TABLES are exempt: HMS created them, so there is no IKANOS
+    # integer surrogate for a UUID to replace. See app/models/__init__.py.
+    tiered = LOOKUP_TABLES | HIGH_VOLUME_TABLES | COMPOSITE_PK_TABLES | CONFIG_TABLES
     entity_tables = sorted(set(APPROVED_TABLES) - tiered)
-    # 93 - 16 lookup - 12 high-volume - 14 composite
+    # 95 approved - 17 lookup - 12 high-volume - 14 composite - 1 config
     assert len(entity_tables) == 51
     wrong = {}
     for t in entity_tables:
@@ -214,7 +229,10 @@ def test_legacy_id_present_and_unique_on_surrogate_key_tables(insp):
     """Tables whose IKANOS integer surrogate key is replaced by a UUID or an
     identity value carry it as `legacy_id`. Lookup tables (the IKANOS id IS
     the PK) and composite-natural-key tables have no surrogate to preserve."""
-    expected = set(APPROVED_TABLES) - LOOKUP_TABLES - COMPOSITE_PK_TABLES
+    # CONFIG_TABLES have no IKANOS origin, so no legacy id to preserve.
+    expected = (
+        set(APPROVED_TABLES) - LOOKUP_TABLES - COMPOSITE_PK_TABLES - CONFIG_TABLES
+    )
     for t in sorted(expected):
         cols = {c["name"] for c in insp.get_columns(t, schema=SCHEMA)}
         assert "legacy_id" in cols, f"{t} is missing legacy_id"
@@ -376,6 +394,19 @@ def test_unique_constraints_match_the_models(insp):
             tuple(sorted(u["column_names"]))
             for u in insp.get_unique_constraints(name, schema=SCHEMA)
         }
+        if MYSQL:
+            # MySQL has no UNIQUE CONSTRAINT distinct from a unique index, so
+            # `Column(unique=True, index=True)` -- which SQLAlchemy renders as
+            # a unique Index, NOT a UniqueConstraint -- reflects back through
+            # get_unique_constraints() and looked like an unexpected extra.
+            # Count a unique index as satisfying the requirement. `expected`
+            # is widened rather than `actual` narrowed, so a unique index the
+            # models do NOT declare is still reported.
+            expected |= {
+                tuple(sorted(ix.columns.keys()))
+                for ix in table.indexes
+                if ix.unique
+            }
         if expected != actual:
             mismatched[name] = (sorted(expected), sorted(actual))
     assert not mismatched, f"unique constraint mismatch: {mismatched}"
@@ -627,7 +658,16 @@ def test_facility_uid_is_only_on_facility(insp):
 @pytest.mark.parametrize(
     "table_name,column,reason",
     [
-        ("package", "price", "no price column exists in IKANOS `packages`"),
+        # ("package", "price", ...) was here. The column now exists, added by
+        # e5b9c3d71f48 because `app/models/amenity.py` declares it and
+        # `app/services/catalog.py` reads it. It is NOT populated: every row
+        # is NULL, and the room-tariff values remain a business decision
+        # (blueprint §11.3 / OPEN DECISION #10).
+        # The guard against INVENTED PRICES did not go away -- it moved from
+        # "the column must not exist" to "the column must hold no values", in
+        # tests/test_seed_data.py::test_no_price_was_smuggled_onto_package.
+        # That is the stronger check: it would also catch a price arriving in
+        # a column this list never named.
         ("invoice", "status", "no status column exists in IKANOS `invoices`"),
         ("device", "ip_address", "documented in CPA §8, absent from the DB"),
         ("device", "mac_address", "documented in CPA §8, absent from the DB"),

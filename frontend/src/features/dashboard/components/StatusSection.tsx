@@ -183,8 +183,13 @@ export const StatusSection = ({
 
   return (
     <div className="space-y-4">
-      {/* Status Header */}
+      {/* Status + Building -- ONE container, as on the IKANOS dashboard: the
+          Status header and its filters sit at the top, the Building block
+          directly beneath them inside the same box, separated by a rule rather
+          than by a gap between two cards. Both sections keep their own scoped
+          health legend, which is what the reference layout shows too. */}
       <div className="rounded-lg p-4 transition-all duration-250 ease hover:-translate-y-0.5" style={cardStyle}>
+        {/* Status header */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h3 style={{ color: titleColor }} className="font-medium">Status</h3>
           <div className="flex flex-wrap items-center gap-4">
@@ -202,15 +207,14 @@ export const StatusSection = ({
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Buildings Section */}
-      <div className="rounded-lg p-4 transition-all duration-250 ease hover:-translate-y-0.5" style={cardStyle}>
-        <div className="flex items-center justify-between mb-4">
-          <h3 style={{ color: titleColor }} className="font-medium">Building</h3>
-          <DeviceHealthLegend scope={{}} />
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Building, nested inside the same box */}
+        <div className="mt-4 pt-4 border-t" style={{ borderColor: bldDefaultBorder }}>
+          <div className="flex items-center justify-between mb-4">
+            <h3 style={{ color: titleColor }} className="font-medium">Building</h3>
+            <DeviceHealthLegend scope={{}} />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {buildings.map((building) => (
             <div
               key={building.id}
@@ -253,7 +257,8 @@ export const StatusSection = ({
                 </div>
               </div>
             </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
 

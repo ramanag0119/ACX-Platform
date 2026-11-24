@@ -85,7 +85,6 @@ export const COUNT_SOURCES = {
   occupancy: { list: api.listOccupancy, module: "occupancy" },
   stays: { list: api.listStays, module: "bookings" },
   "service-requests": { list: api.listServiceRequests, module: "service_tracking" },
-  activities: { list: api.listActivities, module: "dashboard" },
   notifications: { list: api.listNotifications, module: "dashboard" },
   rooms: { list: api.listRooms, module: "facility_management" },
 } satisfies Record<string, CountSourceEntry>;
@@ -246,8 +245,6 @@ export const useNotifications = (params?: QueryParams) =>
   useApiQuery(["notifications", params], () => api.listNotifications(params));
 export const useNotificationTemplates = (params?: QueryParams) =>
   useApiQuery(["notification-templates", params], () => api.listNotificationTemplates(params));
-export const useActivities = (params?: QueryParams) =>
-  useApiQuery(["activities", params], () => api.listActivities(params));
 
 // --- Occupancy & stays -----------------------------------------------------
 
@@ -339,6 +336,14 @@ export const useDailyDataPoints = (params?: QueryParams) =>
  *  reusing the previous window's metrics. */
 export const useCaleidoAtWork = (params?: QueryParams) =>
   useApiQuery(["caleido-at-work", params], () => api.getCaleidoAtWork(params));
+/**
+ * The four live operational KPIs behind Caleido At Work.
+ *
+ * `range` is in the query key, so Today/Week/Month refetches rather than
+ * re-reading the previous window's figures.
+ */
+export const useOperationalKpis = (params?: QueryParams) =>
+  useApiQuery(["operational-kpis", params], () => api.getOperationalKpis(params));
 
 // ---------------------------------------------------------------------------
 // Phase 3.0 reads: tables that gained an endpoint alongside their writes

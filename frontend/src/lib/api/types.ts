@@ -711,24 +711,6 @@ export interface NotificationTemplateRead {
   updated_on: string;
 }
 
-export interface ActivityRead {
-  id: number;
-  activity_type_id: number;
-  activity_type_name: string | null;
-  entity_type_id: number;
-  entity_type_name: string | null;
-  entity_id: number;
-  facility_id: string;
-  actor: UserRef | null;
-  stay_id: string | null;
-  data_version: number;
-  activity_response_ids: string | null;
-  notifier_count: number;
-  unread_count: number;
-  created_on: string;
-  updated_on: string;
-}
-
 // ---------------------------------------------------------------------------
 // Occupancy & stays (Phase 2.8)
 // ---------------------------------------------------------------------------
@@ -1083,6 +1065,47 @@ export interface CaleidoMetricRead {
 export interface CaleidoAtWorkRead {
   /** At most one entry per metric_type. */
   metrics: CaleidoMetricRead[];
+}
+
+/** Window for the `period` KPIs. `live` KPIs ignore it by design. */
+export type CaleidoRange = "today" | "week" | "month";
+
+/**
+ * One Caleido At Work ring, computed from live records by
+ * GET /dashboard/caleido-at-work.
+ *
+ * `percentage` is NULLABLE on purpose: a ring with no computable ratio must
+ * render "-", never a substituted 0 %. `available === false` means the figure
+ * cannot be known at all; a genuine zero is `available === true` with
+ * `numerator === 0`. The UI must keep those two apart.
+ */
+export interface OperationalKPIRead {
+  key:
+    | "smart_rooms_online"
+    | "service_request_status"
+    | "rooms_for_checkout"
+    | "pending_bookings";
+  label: string;
+  /** `live` = current state, unaffected by the window. `period` = windowed activity. */
+  semantics: "live" | "period";
+  source: "BSS" | "BSS+OSS";
+  available: boolean;
+  unavailable_reason: string | null;
+  numerator: number | null;
+  denominator: number | null;
+  percentage: number | null;
+  count: number | null;
+  detail: string;
+  window_from: string | null;
+  window_to: string | null;
+}
+
+export interface OperationalKPIsRead {
+  range: CaleidoRange;
+  period_from: string;
+  period_to: string;
+  generated_at: string;
+  kpis: OperationalKPIRead[];
 }
 
 export interface DailyDataPointRead {

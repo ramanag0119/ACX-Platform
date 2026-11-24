@@ -24,8 +24,13 @@ class EnergyStatRead(ORMModel):
         examples=["101-mik"],
         description="Free text, varchar(11). There is no FK to `device`.",
     )
-    facility_id: uuid.UUID
-    amenity_id: uuid.UUID
+    # Nullable on the OSS side only. OSS is site/customer-scoped and has no
+    # room concept (INTEGRATION_MAPPING decision 1), exactly as `facility_id` /
+    # `amenity_id` were widened for devices. HMS fills these in from
+    # `room_device_map` when it knows the mapping; null means "OSS does not
+    # know this device's room", never "no room".
+    facility_id: uuid.UUID | None = None
+    amenity_id: uuid.UUID | None = None
     amenity_name: str | None = Field(default=None, examples=["101"])
     building_id: uuid.UUID | None = None
     building_name: str | None = None

@@ -1,17 +1,16 @@
-"""Notification dispatch and in-app activity feed read APIs (Phase 2.7).
+"""Notification dispatch read APIs (Phase 2.7).
 
     GET /api/v1/notification-templates · /{id}   notification_template
     GET /api/v1/notifications          · /{id}   notification (+ receivers)
-    GET /api/v1/activities             · /{id}   activity (+ per-user read state)
 
-TWO SYSTEMS, BOTH EXPOSED. IKANOS separates the in-app feed from the dispatch
-queue and they use different status vocabularies:
+DISPATCH ONLY. IKANOS also keeps an in-app feed (`activity` ->
+`activity_notifier`, status '0'/'1'/'2' = unread/read/clear). Its tables
+remain, but HMS Web no longer exposes or consumes them -- the Recent
+Activity panel that was their only reader has been removed. What is served
+here is the dispatch queue:
 
-    activity -> activity_notifier      status '0'/'1'/'2' = unread/read/clear
     notification -> notification_receiver -> notification_result
                                        status pending/processing/processed/error
-
-Collapsing them would misrepresent the design, so both halves are returned.
 
 NO ALERT LINK EXISTS. `notification.reference_id` is a bare BIGINT with no
 foreign key. It holds an `activity.id` in the seeded data, but the schema
@@ -46,9 +45,6 @@ from app.schemas.filters import (
 )
 from app.schemas.health import ErrorResponse
 from app.schemas.notification import (
-    ActivityDetail,
-    ActivityNotifierRead,
-    ActivityRead,
     NotificationDetail,
     NotificationRead,
     NotificationReceiverRead,
@@ -74,10 +70,6 @@ notification_templates_router = APIRouter(
 )
 notifications_router = APIRouter(
     prefix="/notifications", tags=["notifications"],
-    dependencies=DASHBOARD_READ, responses=AUTH_RESPONSES,
-)
-activities_router = APIRouter(
-    prefix="/activities", tags=["notifications"],
     dependencies=DASHBOARD_READ, responses=AUTH_RESPONSES,
 )
 
@@ -149,7 +141,7 @@ def get_template(template_id: uuid.UUID, db: DbSession) -> NotificationTemplateD
     description=(
         "`notification.status` is DELIVERY state (pending/processing/"
         "processed/error), not read/unread. Read state lives on "
-        "`activity_notifier` -- see /activities."
+        "`activity_notifier`, which HMS Web does not expose."
     ),
 )
 def list_notifications(
@@ -201,70 +193,4 @@ def get_notification(notification_id: int, db: DbSession) -> NotificationDetail:
     return NotificationDetail(
         **NotificationRead.model_validate(row).model_dump(),
         receivers=[NotificationReceiverRead.model_validate(r) for r in receivers],
-    )
-
-
-# ---------------------------------------------------------------------------
-# activity (in-app feed)
-# ---------------------------------------------------------------------------
-
-
-@activities_router.get(
-    "",
-    response_model=Page[ActivityRead],
-    summary="List activity-feed entries",
-    description=(
-        "The in-app feed behind the header bell. `unread_count` counts "
-        "`activity_notifier` rows with status '0'."
-    ),
-)
-def list_activities(
-    db: DbSession,
-    page: int = PageParam,
-    page_size: int = SizeParam,
-    facility_id: uuid.UUID | None = Query(None),
-    activity_type_id: int | None = Query(None),
-    entity_type_id: int | None = Query(
-        None, description="1 Booking, 2 Occupancy, 3 Service Requests, "
-                          "4 Maintenance Requests, 5 Default Key"
-    ),
-    actor_id: uuid.UUID | None = Query(None, description="Who caused the event"),
-    stay_id: uuid.UUID | None = Query(None),
-    app_user_id: uuid.UUID | None = Query(
-        None, description="Recipient, via activity_notifier"
-    ),
-    unread_only: bool | None = Query(
-        None, description="Has at least one notifier with status '0'"
-    ),
-    created_from: datetime | None = Query(None),
-    created_to: datetime | None = Query(None),
-) -> Page[ActivityRead]:
-    rows, total = svc.list_activities(
-        db, page=page, page_size=page_size, facility_id=facility_id,
-        activity_type_id=activity_type_id, entity_type_id=entity_type_id,
-        actor_id=actor_id, stay_id=stay_id, app_user_id=app_user_id,
-        unread_only=unread_only, created_from=created_from, created_to=created_to,
-    )
-    return Page[ActivityRead](
-        items=[ActivityRead.model_validate(r) for r in rows],
-        page=page, page_size=page_size, total=total,
-    )
-
-
-@activities_router.get(
-    "/{activity_id}",
-    response_model=ActivityDetail,
-    responses=NOT_FOUND,
-    summary="Get an activity with per-user read state",
-)
-def get_activity(activity_id: int, db: DbSession) -> ActivityDetail:
-    row = svc.get_activity(db, activity_id)
-    if row is None:
-        raise _missing("Activity", activity_id)
-    return ActivityDetail(
-        **ActivityRead.model_validate(row).model_dump(),
-        notifiers=[
-            ActivityNotifierRead.model_validate(n)
-            for n in svc.activity_notifiers(db, activity_id)
-        ],
     )

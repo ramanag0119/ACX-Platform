@@ -14,8 +14,45 @@ import pytest
 from sqlalchemy import text
 
 from app.core.config import settings
+from app.db.session import engine
 
 V1 = settings.API_V1_PREFIX
+
+#: This suite was written against PostgreSQL, so several assertions compared
+#: `information_schema` type names and Python types that differ on MySQL. The
+#: BSS database is MySQL; the expectations below are selected by dialect
+#: rather than relaxed, so each engine is still checked exactly.
+MYSQL = engine.dialect.name == "mysql"
+
+#: GUID() renders as native UUID on PostgreSQL and CHAR(36) on MySQL.
+UUID_DATA_TYPE = "char" if MYSQL else "uuid"
+#: Numeric(10, 2) is reported as `decimal` by MySQL, `numeric` by PostgreSQL.
+DECIMAL_DATA_TYPE = "decimal" if MYSQL else "numeric"
+
+
+def as_bool(value):
+    """A truth value as the driver returned it.
+
+    PostgreSQL BOOLEAN arrives as a Python bool; MySQL stores it as
+    TINYINT(1) and PyMySQL hands back 1 / 0. `assert x is True` therefore
+    failed on a perfectly correct row.
+    """
+    return bool(value)
+
+
+def as_json(value):
+    """A JSON column as the driver returned it.
+
+    psycopg2 deserialises JSONB automatically, PyMySQL returns the raw text,
+    so a raw-SQL read of the same column yields a list on one engine and a
+    str on the other. SQLAlchemy's JSON type handles this through the ORM --
+    this helper is only for tests reading via `text()`.
+    """
+    if isinstance(value, (str, bytes)):
+        import json
+
+        return json.loads(value)
+    return value
 
 pytestmark = pytest.mark.usefixtures("require_seeded")
 
@@ -43,11 +80,25 @@ def test_energy_stat_device_foreign_key_schema(db):
     ).fetchone()
     assert col_info is not None, "device_id column missing on energy_stat table"
     assert col_info[0] == "NO", "device_id must be NOT NULL on energy_stat"
-    assert col_info[1] == "uuid", "device_id must be UUID type"
+    assert col_info[1] == UUID_DATA_TYPE, (
+        f"device_id must be the GUID type for this dialect "
+        f"({UUID_DATA_TYPE}), got {col_info[1]}"
+    )
 
-    # Check foreign key constraint
+    # Check foreign key constraint.
+    # `information_schema.constraint_column_usage` is a PostgreSQL view that
+    # MySQL does not implement -- it answered 1109 "Unknown table
+    # CONSTRAINT_COLUMN_USAGE". `key_column_usage` carries the referenced
+    # table and column on MySQL and exists on both engines, so the same
+    # relationship is asserted either way.
     fk_info = db.execute(
         text(
+            "SELECT constraint_name, referenced_table_name, referenced_column_name "
+            "FROM information_schema.key_column_usage "
+            "WHERE table_schema = DATABASE() "
+            "  AND table_name = 'energy_stat' "
+            "  AND referenced_table_name = 'device'"
+            if MYSQL else
             "SELECT tc.constraint_name, ccu.table_name, ccu.column_name "
             "FROM information_schema.table_constraints AS tc "
             "JOIN information_schema.constraint_column_usage AS ccu "
@@ -226,7 +277,7 @@ def test_currency_master_table_schema_and_seeds(db):
     assert "INR" in currency_map
     assert currency_map["INR"][3] == "₹"
     assert currency_map["INR"][4] == 2
-    assert currency_map["INR"][5] is True
+    assert as_bool(currency_map["INR"][5]) is True
 
     assert "USD" in currency_map
     assert currency_map["USD"][3] == "$"
@@ -309,7 +360,7 @@ def test_package_pricing_schema_and_persistence(api, db, cleanup, unique):
         )
     ).fetchone()
     assert price_col is not None, "price column missing on package"
-    assert price_col[0] == "numeric"
+    assert price_col[0] == DECIMAL_DATA_TYPE
     assert price_col[1] == 10
     assert price_col[2] == 2
 
