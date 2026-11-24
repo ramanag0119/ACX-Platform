@@ -9,7 +9,7 @@ has to change.
 from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
-    access, access_write, alerts, auth, devices, devices_write, energy,
+    access, access_write, alerts, auth, dashboard, devices, devices_write, energy,
     facilities, facility_write, health, job_orders, maintenance, notifications,
     occupancy, oss_proxy, reports, room_devices, services, services_write, stays,
     stays_write, telemetry,
@@ -21,6 +21,10 @@ api_router.include_router(health.router)
 
 # Phase 2.4 -- HMS Web authentication (Admin + Manager only).
 api_router.include_router(auth.router)
+
+# Dashboard composition -- the Caleido At Work operational KPIs, computed from
+# live BSS records and OSS liveness instead of the stale daily snapshot table.
+api_router.include_router(dashboard.dashboard_router)
 
 # Phase 2.2 -- facility and property hierarchy (read-only).
 api_router.include_router(facilities.facilities_router)
@@ -114,7 +118,6 @@ api_router.include_router(alerts.value_alerts_router)
 # Phase 2.7 -- notification dispatch and the in-app activity feed (read-only).
 api_router.include_router(notifications.notification_templates_router)
 api_router.include_router(notifications.notifications_router)
-api_router.include_router(notifications.activities_router)
 
 # Phase 2.8 -- stays (reservations), invoices and room occupancy (read-only).
 api_router.include_router(stays.stays_router)

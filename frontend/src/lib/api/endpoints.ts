@@ -16,7 +16,6 @@
 
 import { apiClient, type QueryParams } from "./client";
 import type {
-  ActivityRead,
   AlertRead,
   AlertTypeRead,
   AmenityConditionRead,
@@ -44,6 +43,7 @@ import type {
   ModuleRead,
   NotificationRead,
   NotificationTemplateRead,
+  OperationalKPIsRead,
   OccupancyDailyPoint,
   OccupancyDetail,
   OccupancyKPIMetadata,
@@ -166,8 +166,6 @@ export const listNotifications = (params?: QueryParams) =>
   apiClient.get<Page<NotificationRead>>("/notifications", params);
 export const listNotificationTemplates = (params?: QueryParams) =>
   apiClient.get<Page<NotificationTemplateRead>>("/notification-templates", params);
-export const listActivities = (params?: QueryParams) =>
-  apiClient.get<Page<ActivityRead>>("/activities", params);
 
 // --- Occupancy & stays (Phase 2.8) -----------------------------------------
 
@@ -216,6 +214,16 @@ export const listDailyDataPoints = (params?: QueryParams) =>
 /** The Caleido At Work rings, aggregated backend-side -- one row per metric. */
 export const getCaleidoAtWork = (params?: QueryParams) =>
   apiClient.get<CaleidoAtWorkRead>("/daily-data-points/summary", params);
+
+/**
+ * The four operational Caleido At Work KPIs, computed from live records.
+ *
+ * Distinct from `getCaleidoAtWork` above, which reads the pre-computed
+ * `daily_dual_data_point` snapshots. That table stopped being written, so the
+ * dashboard reads this instead; the snapshot endpoint is left in place.
+ */
+export const getOperationalKpis = (params?: QueryParams) =>
+  apiClient.get<OperationalKPIsRead>("/dashboard/caleido-at-work", params);
 
 // --- Currencies & Telemetry Ingestion ---------------------------------------
 

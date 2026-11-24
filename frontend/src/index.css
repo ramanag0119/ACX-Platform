@@ -1917,8 +1917,15 @@ html.dark .bg-slate-900 label {
   color: #94a3b8 !important;
 }
 
-/* Hide SVG input icons on the left */
-.bg-slate-900 .relative svg {
+/* Hide the decorative SVG input icons on the left.
+
+   Scoped to the non-interactive icon wrappers -- the left icons sit in a
+   `div.absolute.pointer-events-none`. The selector used to be a blanket
+   `.relative svg`, which also hid icons inside BUTTONS in the same field:
+   the password reveal toggle rendered at the right size and was clickable,
+   but its eye icon computed to `display: none`, so there was nothing to see
+   and the control looked missing. Keep interactive icons visible. */
+.bg-slate-900 .relative > div.pointer-events-none svg {
   display: none !important;
 }
 

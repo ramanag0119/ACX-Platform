@@ -1,7 +1,6 @@
 import { Loader2 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import {
-  Activity,
   AlertTriangle,
   BedDouble,
   ClipboardList,
@@ -17,7 +16,6 @@ import { cn } from "@/lib/utils";
 import { scrollPanelIntoView } from "@/hooks/use-scroll-to-top";
 import { useCardSurfaceStyle, useSurfaceTokens } from "@/core/styles/surfaceTokens";
 import { ALERTS_PANEL_ID } from "./AlertsPanel";
-import { ACTIVITY_PANEL_ID } from "./RecentActivityPanel";
 import { useAuth } from "@/core/contexts/AuthContext";
 import { ApiError, describeApiError } from "@/lib/api/client";
 import { useAmenityStatuses, useCount, useEnergySummary, useOccupancyKpis } from "@/lib/api/hooks";
@@ -409,25 +407,6 @@ const EnergyTile = ({ enabled }: { enabled: boolean }) => {
   );
 };
 
-const ActivityTile = ({ enabled }: { enabled: boolean }) => {
-  const all = useCount("activities", undefined, enabled);
-  return (
-    <Tile
-      label="Activities"
-      // Recent Activity below on THIS page is the activity list (GET
-      // /activities) -- the same rows this tile counts. There is no activity
-      // log route, so the tile reveals that panel.
-      panelId={ACTIVITY_PANEL_ID}
-      icon={Activity}
-      accent={BLUE}
-      value={all.total}
-      detail="operational events recorded"
-      isLoading={all.isLoading}
-      error={all.error}
-    />
-  );
-};
-
 /**
  * Tiles are rendered only where the backend's own permission projection says
  * the module is readable. This is UX, not enforcement: the API re-checks every
@@ -444,7 +423,6 @@ export const DashboardKPIs = () => {
       {canRead("bookings") && <StayTile enabled />}
       {canRead("service_tracking") && <ServiceTile enabled />}
       {canRead("reports") && <EnergyTile enabled />}
-      {canRead("dashboard") && <ActivityTile enabled />}
     </div>
   );
 };
