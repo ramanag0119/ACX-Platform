@@ -18,6 +18,7 @@ from app.api.v1.endpoints import oss_proxy
 from app.core import oss_routes
 from app.core.config import settings
 from app.db.session import get_db
+from app.services import device_type_map
 from app.services import occupancy as occ
 from app.services import oss_client
 from app.services import room_devices
@@ -130,7 +131,14 @@ def test_proxy_keeps_repeated_query_params(monkeypatch):
     assert seen["params"] == [("status", "1"), ("status", "2"), ("page", "1")]
 
 
-def test_proxy_503_when_oss_unavailable(monkeypatch):
+def test_proxy_falls_back_to_stored_when_oss_unavailable(monkeypatch):
+    """A list route serves stored BSS data rather than failing the screen.
+
+    This replaced an earlier assertion that the proxy returned 503 here. The
+    503 was the whole problem: OSS runs as its own process, so a restart blanked
+    device screens even though HMS held the data. Detail routes still 503 --
+    see the next test for why that one must not fall back.
+    """
     app = _app()
     app.dependency_overrides[get_current_user] = lambda: _User()
 
@@ -138,8 +146,142 @@ def test_proxy_503_when_oss_unavailable(monkeypatch):
         raise oss_client.OssUnavailable("down")
     monkeypatch.setattr(oss_client, "forward", boom)
     r = TestClient(app).get("/devices")
+    assert r.status_code == 200
+    assert r.headers["X-HMS-Data-Source"] == "stored"
+    assert "items" in r.json()
+
+
+def test_proxy_503_when_oss_unavailable_and_no_stored_form(monkeypatch):
+    """Detail routes keep failing loudly.
+
+    An id minted by OSS addresses a row in `insp_iot`; it does not identify a
+    BSS row, so a "stored" lookup could only 404 or hit an unrelated record.
+    """
+    app = _app()
+    app.dependency_overrides[get_current_user] = lambda: _User()
+
+    def boom(*a, **k):
+        raise oss_client.OssUnavailable("down")
+    monkeypatch.setattr(oss_client, "forward", boom)
+    r = TestClient(app).get("/devices/9d1c1a2e-0000-0000-0000-000000000000")
     assert r.status_code == 503
     assert r.json()["error"]["code"] == "oss_unavailable"
+
+
+def test_live_responses_are_labelled_live(monkeypatch):
+    app = _app()
+    app.dependency_overrides[get_current_user] = lambda: _User()
+    monkeypatch.setattr(
+        oss_client, "forward",
+        lambda *a, **k: (200, {"items": [], "page": 1, "page_size": 20, "total": 0}),
+    )
+    r = TestClient(app).get("/devices")
+    assert r.headers["X-HMS-Data-Source"] == "live"
+
+
+def test_oss_error_is_passed_through_not_masked_by_stored_data(monkeypatch):
+    """OSS answering 500 is a real error; stale rows must not hide it."""
+    app = _app()
+    app.dependency_overrides[get_current_user] = lambda: _User()
+    monkeypatch.setattr(
+        oss_client, "forward",
+        lambda *a, **k: (500, {"error": {"code": "oss_boom", "message": "x"}}),
+    )
+    r = TestClient(app).get("/devices")
+    assert r.status_code == 500
+    assert r.json()["error"]["code"] == "oss_boom"
+
+
+def test_oss_404_is_passed_through(monkeypatch):
+    app = _app()
+    app.dependency_overrides[get_current_user] = lambda: _User()
+    monkeypatch.setattr(
+        oss_client, "forward",
+        lambda *a, **k: (404, {"error": {"code": "not_found", "message": "x"}}),
+    )
+    assert TestClient(app).get("/devices/abc").status_code == 404
+
+
+def test_resource_with_no_oss_source_falls_back_to_stored(monkeypatch):
+    """`oss_adapter_not_mapped` means OSS has no table for this, permanently.
+
+    `/other-device-readings` has no third-party-meter table in insp_iot, while
+    HMS holds real rows. Falling back is not masking an outage -- OSS answered,
+    and its answer was "I cannot serve this at all".
+    """
+    app = FastAPI()
+    app.include_router(oss_proxy._build("/other-device-readings", "caleido_network"))
+    app.dependency_overrides[get_current_user] = lambda: _User()
+    monkeypatch.setattr(
+        oss_client, "forward",
+        lambda *a, **k: (
+            503,
+            {"error": {"code": oss_proxy.NO_OSS_SOURCE, "message": "no source"}},
+        ),
+    )
+    r = TestClient(app).get("/other-device-readings")
+    assert r.status_code == 200
+    assert r.headers["X-HMS-Data-Source"] == "stored"
+
+
+def test_strict_mode_never_reads_oss_data_from_mysql(monkeypatch):
+    """OSS_FALLBACK_TO_STORED=false must make the rule absolute.
+
+    This is the mode the MySQL cleanup requires: once the duplicated OSS
+    tables are dropped there is nothing to fall back to, so strict mode has to
+    be switched on BEFORE they are removed and verified to fail cleanly.
+    """
+    monkeypatch.setattr(settings, "OSS_FALLBACK_TO_STORED", False)
+    app = _app()
+    app.dependency_overrides[get_current_user] = lambda: _User()
+
+    def boom(*a, **k):
+        raise oss_client.OssUnavailable("down")
+    monkeypatch.setattr(oss_client, "forward", boom)
+
+    r = TestClient(app).get("/devices")
+    assert r.status_code == 503
+    assert r.json()["error"]["code"] == "oss_unavailable"
+    assert "X-HMS-Data-Source" not in r.headers
+
+
+def test_strict_mode_also_refuses_the_no_source_fallback(monkeypatch):
+    """Even a permanently unmapped resource must not read MySQL in strict mode."""
+    monkeypatch.setattr(settings, "OSS_FALLBACK_TO_STORED", False)
+    app = FastAPI()
+    app.include_router(oss_proxy._build("/other-device-readings", "caleido_network"))
+    app.dependency_overrides[get_current_user] = lambda: _User()
+    monkeypatch.setattr(
+        oss_client, "forward",
+        lambda *a, **k: (
+            503,
+            {"error": {"code": oss_proxy.NO_OSS_SOURCE, "message": "no source"}},
+        ),
+    )
+    r = TestClient(app).get("/other-device-readings")
+    assert r.status_code == 503
+    assert r.json()["error"]["code"] == oss_proxy.NO_OSS_SOURCE
+
+
+def test_fallback_is_on_by_default():
+    """The shipped default keeps screens working through an OSS restart."""
+    assert settings.OSS_FALLBACK_TO_STORED is True
+
+
+def test_unmapped_detail_path_still_503s(monkeypatch):
+    """No stored form exists for a detail route, so the 503 must survive."""
+    app = _app()
+    app.dependency_overrides[get_current_user] = lambda: _User()
+    monkeypatch.setattr(
+        oss_client, "forward",
+        lambda *a, **k: (
+            503,
+            {"error": {"code": oss_proxy.NO_OSS_SOURCE, "message": "no source"}},
+        ),
+    )
+    r = TestClient(app).get("/devices/abc")
+    assert r.status_code == 503
+    assert r.json()["error"]["code"] == oss_proxy.NO_OSS_SOURCE
 
 
 def test_proxy_403_when_user_lacks_grant():
@@ -168,6 +310,11 @@ def _devices_app(monkeypatch, *, mapped=(MAPPED,)) -> tuple[TestClient, dict]:
     app.include_router(oss_proxy._build_devices("caleido_network"))
     app.dependency_overrides[get_current_user] = lambda: _User()
     app.dependency_overrides[get_db] = lambda: None
+    # This app stubs the database out entirely, so the DB-backed device-type
+    # translation is stubbed too. Its own behaviour is covered against real
+    # reference rows in tests/test_device_type_map_and_fallback.py.
+    monkeypatch.setattr(device_type_map, "by_name", lambda db: {})
+    monkeypatch.setattr(device_type_map, "name_for_bss_id", lambda db, v: None)
     monkeypatch.setattr(room_devices, "device_ids_at", lambda db, **f: list(mapped))
     monkeypatch.setattr(
         room_devices, "locations_for",

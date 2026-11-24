@@ -196,7 +196,11 @@ def _apply_filters(stmt, registry: list[dict], filters: dict):
         name = val
         if str(val).isdigit():
             name = next((r["name"] for r in registry if r["id"] == int(val)), None)
-        stmt = stmt.where(D.c.device_type == name)
+        # Matched case-insensitively: the derived ordinal is positional and is
+        # NOT comparable to a BSS `device_type.id`, so HMS sends the NAME. The
+        # two sides spell it differently ("Intellihub" in BSS, "IntelliHub" in
+        # OSS), and an exact match would silently return zero devices.
+        stmt = stmt.where(func.lower(D.c.device_type) == func.lower(name))
     if filters.get("node_type"):
         stmt = stmt.where(D.c.node_type == filters["node_type"])
     if filters.get("status"):
